@@ -73,6 +73,28 @@ var profile: UiScale.Profile
 func set_data(d: FlightHudData) -> void
 func readout_rects() -> Array[Rect2]
 func font_size() -> int
+
+class_name Fmt extends RefCounted         # ui/i18n/fmt.gd (UX-29, 06 s11); separators and units from content/ui/i18n.json
+const PARAMS_PATH: String
+static func param_str(key: String) -> String
+static func param_num(key: String) -> float
+static func supported() -> Array
+static func normalize(locale: String) -> String                   # "fi_FI" -> "fi"; unsupported -> default_locale
+static func separator(locale: String, key: String) -> String
+static func integer(n: int, locale: String) -> String             # en "12,400", fi "12 400" (U+202F)
+static func decimal(x: float, digits: int, locale: String) -> String
+static func distance_m(metres: float, locale: String) -> String   # "850 m", en "1.2 km", fi "1,2 km"
+static func clock_24h(seconds_of_day: int) -> String
+static func duration(seconds: int) -> String
+
+class_name LocaleSelect extends RefCounted   # ui/i18n/locale_select.gd; App._ready calls setup()
+static func resolve(os_locale: String, override_code: String) -> String
+static func register_translations(dir: String) -> int            # loads <dir>/<code>.po into TranslationServer
+static func saved_override(path: String) -> String
+static func save_override(path: String, code: String) -> Error
+static func apply(code: String) -> String
+static func set_pseudo(enabled: bool) -> void
+static func setup() -> String                                     # --ui_locale=, saved override, then OS language; --pseudo_locale
 ```
 
 ## Invariants
@@ -82,11 +104,12 @@ func font_size() -> int
 - U3: the HUD root rect is the display safe area converted to du, clipped to the canvas, inset by `safe_margin_du` (8).
 - U4: every `UiTokens` colour equals its `palette.json` entry (test-enforced); regenerate the file, never hand-edit.
 - U6: instruments read only `FlightHudData`; altitude is `|pos| - Sphere.PLANET_RADIUS`, bands and uplink thresholds are in `hud.json` (06 s6.2); text never below `font_du_min` (9).
+- U7: locale = `--ui_locale`, then saved override (`user://settings.cfg` [ui] locale), then OS language; only `fi` is Finnish. Finnish gaps fall back to English (`locale/fallback="en"`), never to the key. `.po` files are built from `content/locale/src/*.csv` (+ `en.json`) by `tools/locale/build_po.py`; CI fails on a stale PO, missing id, placeholder mismatch or `max_len`.
 - U5: thresholds and clamps live in `godot/content/ui/ui_scale.json`, not in code.
 
 ## Data owned
 
-`godot/content/ui/ui_scale.json` (scale, profile threshold, safe margin). `scenes/ui/hud_root.tscn`, `godot/content/ui/hud.json`, `scenes/ui/flight_instruments.tscn`.
+`godot/content/ui/ui_scale.json` (scale, profile threshold, safe margin). `godot/content/ui/i18n.json` (locales, separators, units). `scenes/ui/hud_root.tscn`, `godot/content/ui/hud.json`, `scenes/ui/flight_instruments.tscn`.
 
 ## Events emitted / consumed
 
@@ -101,6 +124,8 @@ Layout runs on boot and window resize only; no per-frame cost.
 - `godot/test/unit/ui/test_ui_scale.gd` (U1-U3, profile selection, safe insets, HudRoot)
 - `godot/test/unit/ui/test_ui_tokens.gd` (U4)
 - `godot/test/unit/ui/test_hud_math.gd` (U6: pitch, ladder, bank, limb dip, heading wrap, bands, uplink)
+
+- `godot/test/unit/ui/test_fmt.gd` (en/fi formats), `test_locale_select.gd` (U7); Python: `tools/tests/test_locale.py`
 
 ## How to add X (recipes for the cheapest tier)
 
