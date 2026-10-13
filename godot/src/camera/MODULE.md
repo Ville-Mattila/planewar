@@ -103,4 +103,7 @@ hot sim path (one camera, one call per frame). Measured by the UX-02 spike.
 
 - UX-11 `ChaseController`, UX-13 `OrbitController`, UX-14 `TransitionPlayer` and `NearFarPolicy` (RefCounted)
   consume this math. UX-02 records the final constants in `camera.json`.
-- Near/far constants are `const` here until `camera.json` exists.
+- Near/far and orbit constants are `const` here until `camera.json` exists: interim confirmed by R0 B.10 A-43
+  (`docs/reviews/R0-amendments-03.md`). ADR-09 binds sim-affecting constants; camera tuning is presentation (06 s5.1).
+  UX-02 records the values; the first controller task after it (UX-11 or UX-13) reads the file and these `const`
+  values become its documented defaults. `content/ui/*.json` needs no schema (03 s9.4 covers `content/defs/`).
