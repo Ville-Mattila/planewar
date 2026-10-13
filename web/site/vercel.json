@@ -5,8 +5,19 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
       ]
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "task/*": false,
+      "spike/*": false
+    }
+  },
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- ."
 }

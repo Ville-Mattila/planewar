@@ -1184,9 +1184,10 @@
       " R0 C1-18",
       " 04 NET-06"
     ],
-    "status": "review",
-    "pr": 53,
-    "note": "local 364 tests pass; CI blocked by GitHub billing; CQ-4..CQ-7 for architect; encode cost ~10.8 ms for 8 clients vs 4.0 ms budget"
+    "status": "done",
+    "pr": "public#1",
+    "note": "CQ-4..CQ-7 for architect; encode ~10.8 ms for 8 clients vs 4.0 ms budget (measure on pinned runner, NET-08/S-SIM-1)",
+    "merged": "2026-10-13"
   },
   {
     "id": "NET-10",
