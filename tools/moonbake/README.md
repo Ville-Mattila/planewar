@@ -40,3 +40,8 @@ stored deflate blocks so its bytes do not depend on the zlib build.
 - Check codes: M4a (lat) / M4b (depth), X1 (no node inside a flatten disc, 03 s8.2).
 
 Tests: `python -m unittest discover -s tools/tests` (`test_sphere_parity`, `test_seams`, `test_moonbake`).
+
+Prerequisites (TA-17, `tools/tests/gates.py`): numpy from `tools/requirements.txt`, and real LFS blobs under
+`godot/content/maps/` and `godot/assets/textures/` (run `git lfs pull` in a fresh worktree). On a dev machine a missing
+prerequisite skips the affected tests with a message; with `CI` set (GitHub Actions) it fails instead. `python -I`
+ignores the user site-packages, so numpy installed per-user is invisible there and the numpy tests skip locally.

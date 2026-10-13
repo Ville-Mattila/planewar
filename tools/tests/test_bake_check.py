@@ -14,16 +14,22 @@ from pathlib import Path
 TOOLS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TOOLS))
 
+import gates  # noqa: E402
+
 try:
     import bake_check
-except ImportError:  # numpy is installed by CI (tools/requirements.txt)
+except ImportError as exc:  # numpy is installed by CI (tools/requirements.txt)
+    gates.numpy_import_failed(exc)
     bake_check = None
 
 TINY_DIR = TOOLS.parent / "godot/content/maps/tiny_test"
 
 
-@unittest.skipIf(bake_check is None, "numpy not installed")
+@unittest.skipIf(bake_check is None, gates.NUMPY_SKIP)
 class BakeCheck(unittest.TestCase):
+    def setUp(self) -> None:
+        gates.require_blobs(TINY_DIR)  # every case compares committed binaries with a fresh bake
+
     def copy_of_tiny(self, td: str) -> Path:
         dst = Path(td) / "tiny_test"
         shutil.copytree(TINY_DIR, dst, ignore=shutil.ignore_patterns("preview.png"))

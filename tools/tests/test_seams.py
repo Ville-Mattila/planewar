@@ -11,12 +11,15 @@ from pathlib import Path
 TOOLS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TOOLS))
 
+import gates  # noqa: E402
+
 try:
     import numpy as np
     from moonbake import seam
     from moonbake.bake import bake
     from moonbake.recipe import load_recipe
-except ImportError:
+except ImportError as exc:  # numpy is installed by CI (tools/requirements.txt)
+    gates.numpy_import_failed(exc)
     np = None
 
 TINY = TOOLS.parent / "godot/content/maps/tiny_test/recipe.json"
@@ -26,7 +29,7 @@ def _edge(a: "np.ndarray", edge: int) -> "np.ndarray":
     return [a[:, 0], a[:, -1], a[0, :], a[-1, :]][edge]
 
 
-@unittest.skipIf(np is None, "numpy not installed")
+@unittest.skipIf(np is None, gates.NUMPY_SKIP)
 class Seams(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
