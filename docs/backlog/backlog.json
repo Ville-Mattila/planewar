@@ -823,7 +823,7 @@
     "status": "done",
     "merged": "2026-10-13",
     "pr": "public#4",
-    "note": "loader is Terrain.load_map (load shadows a global); sim/MODULE.md at 300 lines"
+    "note": "Terrain.load_map in 03 s6.2/s8.4 and sim/MODULE.md cap decided by R0 B.10 A-46, A-47"
   },
   {
     "id": "TA-14",
@@ -844,7 +844,8 @@
       " R0 C1-19",
       " 03 TA-14"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; sim/pilot_input.gd comment names PilotWire.to_wire/from_wire (R0 B.10 A-46); if sim/MODULE.md needs lines, the How-to-add-X recipes move to 03 s15.4 with a pointer (A-47)"
   },
   {
     "id": "TA-18",
@@ -1188,9 +1189,10 @@
       " 04 NET-06"
     ],
     "status": "done",
-    "pr": "public#1",
-    "note": "CQ-4..CQ-7 for architect; encode ~10.8 ms for 8 clients vs 4.0 ms budget (measure on pinned runner, NET-08/S-SIM-1)",
-    "merged": "2026-10-13"
+    "pr": 1,
+    "note": "CQ-4..CQ-7 closed by R0 B.10 A-36..A-40 (NET-48, NET-49)",
+    "merged": "2026-10-13",
+    "pr_archive": 53
   },
   {
     "id": "NET-10",
@@ -1222,7 +1224,8 @@
     "depends_on": [
       "NET-05",
       "NET-06",
-      "TA-18"
+      "TA-18",
+      "NET-49"
     ],
     "milestone": "M2",
     "acceptance": "interest_test; tiering + encode for 8 clients fits the 4.0 ms p95 row on the pinned perf runner",
@@ -2670,7 +2673,8 @@
     ],
     "status": "done",
     "merged": "2026-10-13",
-    "pr": "public#3"
+    "pr": "public#3",
+    "note": "silent-pilot buttons and NQ10 closed by R0 B.10 A-44, A-45; PilotInput comment -> TA-14 (A-46)"
   },
   {
     "id": "NET-04",
@@ -2699,7 +2703,8 @@
     "tier": "Sonnet",
     "size_days": 1.5,
     "depends_on": [
-      "NET-06"
+      "NET-06",
+      "NET-48"
     ],
     "milestone": "M3",
     "acceptance": "Keyframe after a 33-tick ack gap exactly once; no periodic keyframe; every C entity refreshed within 300 ticks; refresh bytes at 700 C entities <= 1.8 KB/s",
@@ -2763,7 +2768,8 @@
       "NET-06",
       "NET-07",
       "TA-18",
-      "TEST-02"
+      "TEST-02",
+      "NET-48"
     ],
     "milestone": "M3",
     "acceptance": "Contract test green on NetSimView; extrapolation stops at 3 ticks; clock converges within 2 s under TARGET; ClientSession.tick <= 1.0 ms PC",
@@ -2773,7 +2779,8 @@
       " R0 C2-12",
       " 04 NET-17"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; acks complete ticks only (R0 B.10 A-36)"
   },
   {
     "id": "UX-24",
@@ -2977,7 +2984,8 @@
     "acceptance": "No flips or NaN in a 1 deg pole sweep; no tester rates discomfort above 1 (0-3) after 15 min; constants recorded in camera.json",
     "docs": [
       "06 s13",
-      " 06 UX-02"
+      " 06 UX-02",
+      "R0-amendments-03 A-43"
     ],
     "status": "todo"
   },
@@ -3977,7 +3985,8 @@
       " R0 C2-04",
       " 04 NET-18"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; local input reuse during a stall applies the A-44 button mask (BOOST/BRAKE held, FLIP/DOCK/RELEASE/FIRE cleared)"
   },
   {
     "id": "NET-19",
@@ -6507,7 +6516,7 @@
     "status": "done",
     "merged": "2026-10-13",
     "pr": 48,
-    "note": "EntityId.is_projectile has no upper bound at PROJECTILE_SLOT_END; architect to decide"
+    "note": "decided: is_projectile stays open-ended; the store validates (R0 B.10 A-42)"
   },
   {
     "id": "TA-47",
@@ -6547,7 +6556,7 @@
     "status": "done",
     "merged": "2026-10-13",
     "pr": 52,
-    "note": "zero fuel also disables the brake; idle burn assumes docked ships are not stepped (architect to confirm)"
+    "note": "confirmed: zero fuel disables the brake; docked ships are not stepped (R0 B.10 A-41)"
   },
   {
     "id": "NET-47",
@@ -6569,5 +6578,41 @@
     "status": "done",
     "merged": "2026-10-13",
     "pr": 45
+  },
+  {
+    "id": "NET-48",
+    "title": "net: SNAPSHOT flags bits 6-7 packet index; complete-tick ack; every emitted frame usable; last_split removed; max_packets default 4 (R0 B.10 A-36)",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "NET-06"
+    ],
+    "milestone": "M2",
+    "acceptance": "A 3-packet tick with the middle packet dropped is never acked and the next complete tick becomes the baseline; 04 s3.5 53 B example unchanged; codec_delta_test 3,000 ticks with random splits keeps identical baselines; HAS_PILOT on index > 0 and index > LAST index are MALFORMED; PROTOCOL_VERSION stays 1",
+    "docs": [
+      "R0-amendments-03 A-36",
+      "04 s3.4"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-49",
+    "title": "net: client-independent FULL/C-BLIP byte cache in prepare_tick; canonical-schedule 8-client bench_snapshot with perf/history.jsonl row (R0 B.10 A-40)",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 1,
+    "depends_on": [
+      "NET-06"
+    ],
+    "milestone": "M2",
+    "acceptance": "BENCH_SNAPSHOT canonical mode (A 40 / B 15 Hz / C 2 Hz + 3 refresh, 8 clients, ack delays 3/6/10) prints prepare_us and encode_sum_us and appends to perf/history.jsonl; per-client encode at the canonical schedule not above the pre-change number; snapshot bytes identical before and after the cache",
+    "docs": [
+      "R0-amendments-03 A-40",
+      "04 s3.4",
+      "04 s4.1",
+      "03 s4.2"
+    ],
+    "status": "todo"
   }
 ]
