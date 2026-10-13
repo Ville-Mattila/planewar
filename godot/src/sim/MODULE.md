@@ -164,7 +164,8 @@ enum Kind { SPAWN, DEATH, HIT, BOMB_IMPACT, DOCKED, SERVICED, LAUNCHED, ORDER_DO
             SALVAGE_DELIVERED, LANDING, SHIELD_COLLAPSE, POSSESS_REQUESTED, CANISTER_DEPLOYED, CANISTER_COLLECTED }   # 0-33 frozen
 var kind: Kind; var tick: int; var a: int; var b: int; var pos: Vector3; var value: float; var team: int; var extra: PackedByteArray
 
-class_name Terrain extends RefCounted;  func height_at(dir: Vector3) -> float;  func normal_at(dir: Vector3) -> Vector3   # 03 s6.2; read-only after load; flat-datum stub until TA-13
+class_name Terrain extends RefCounted;  func load_map(map_dir: String) -> Error;  func height_at(dir: Vector3) -> float;  func normal_at(dir: Vector3) -> Vector3   # 03 s6.2/s8.4 (TA-13); read-only after load; flat datum until load_map
+func biome_at(dir: Vector3) -> int;  func surface_point(dir: Vector3) -> Vector3;  func slope_deg_at(cell: int) -> float;  func slope_deg_at_dir(dir: Vector3) -> float; func height_texel(face: int, x: int, y: int) -> int;  func is_loaded() -> bool;  var map_hash: String;  var face_resolution: int   # cell = face*n*n + j*n + i; SHA-256 per file + map_hash verified; mismatch -> ERR_FILE_CORRUPT / ERR_INVALID_DATA, sampler stays flat
 class_name EntityStore extends RefCounted                                    # 03 s3.2 arrays as public typed vars; alloc(range) / free(slot) / alive(id)
 func alloc(entity_kind: int, tick: int) -> int;  func free_slot(slot_index: int, tick: int) -> bool   # (TA-11) NULL_ID when the range is full; free = gen bump + clear_slot + quarantine
 func alive(id: int) -> bool;  func id_of(slot_index: int) -> int;  func clear_slot(s: int) -> void;  func live_count() -> int
@@ -232,7 +233,7 @@ default +) over the first `flip_duration_s / 2`, then a half loop; ends upright,
 - S6: no float literal other than 0.0, 0.5, 1.0, 2.0, -1.0 appears in `src/sim/**` (D6); every sim constant lives in a def (ADR-09).
 - S7: the only RNG is `SimWorld.rng` and its forks.
 - S8: `Kinematics.step_ship` and `sim/steer/` are pure (no Node, RNG, Time or global state).
-- S9: `height_at` is identical on every peer for identical map files (SHA verified at load).
+- S9: `height_at` is identical on every peer for identical map files (SHA verified at load; test_terrain.gd flipped-byte, vectors, seam tests).
 - S10: `apply_command` validates ownership, rights, caps, cost, placement (`Build.can_place`), phase and rate before accepting; the rate limit is 04's token bucket per player (10 commands/s sustained, burst 30; `REJECTED_RATE`); a rejected command has no effect.
 - S11: `CommandSinkBase.drive` never writes the input slot of a POSSESSED entity.
 - S12: `CANCEL_PRODUCE` / `CANCEL_BUILD` succeed only for the player who queued/placed the item, or a teammate if that player is disconnected, eliminated or a bot (R0 C3-08).
