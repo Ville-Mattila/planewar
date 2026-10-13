@@ -1,6 +1,6 @@
 # net - MODULE.md
 
-Contract for `godot/src/net/**`, v0.5 (NET-01 protocol, NET-02 field codec, NET-05 roster, NET-11 transports, NET-47 R0 B.9 A-23/A-24/A-26/A-28). Source of truth: 04 s2-s5 and s13, R0 Part B (B.3 enumerations,
+Contract for `godot/src/net/**`, v0.6 (NET-01 protocol, NET-02 field codec, NET-05 roster, NET-06 snapshot codec, NET-11 transports, NET-47 R0 B.9 A-23/A-24/A-26/A-28). Source of truth: 04 s2-s5 and s13, R0 Part B (B.3 enumerations,
 B.4 deps, B.5 signatures). A change to "Public API", "Wire layout" or "Invariants" is a contract change: update the
 contract tests first, in the same PR (ADR-11); any wire-layout change bumps `Protocol.PROTOCOL_VERSION` and goes
 through the Architect (10 s4); `tools/gen_module_api.py --check` (TA-27) must pass; this file stays <= 300 lines
@@ -13,7 +13,7 @@ through the Architect (10 s4); `tools/gen_module_api.py --check` (TA-27) must pa
 | May depend on | `core`, `content`; named `sim` types only: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain` (`tools/deps.json`) |
 | Must never touch | Nodes in codec/protocol code, `server/` (feature lane), `platform/`, `presentation`, `ui`; no `Thread` and no `WorkerThreadPool` (web is single-threaded, 03 s11); WebSocket only on web in v1.0 (WebRTC is v1.1, S-NET-2) |
 | Autoloads used | `Log` (never in per-entity loops) |
-| Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `Transport`/`LocalTransport`/`FaultModel` (NET-11) landed. Everything else is planned per 04 s19. |
+| Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `SnapshotCodec` and its baselines (NET-06), `Transport`/`LocalTransport`/`FaultModel` (NET-11) landed. Everything else is planned per 04 s19. |
 
 ## Public API
 
@@ -31,16 +31,14 @@ const CH_CONTROL: int; const CH_INPUT: int; const CH_SNAPSHOT: int; const CH_EVE
 enum ChannelMode { RELIABLE_ORDERED, UNRELIABLE, UNRELIABLE_SEQUENCED }
 const CHANNEL_MODE: PackedInt32Array                  # indexed by channel
 const MAX_UNRELIABLE_BYTES: int; const MAX_RELIABLE_BYTES: int; const HASH_BYTES: int; const SECRET_BYTES: int
-const PILOT_INPUT_BYTES: int; const INPUT_MAX_COUNT: int; const COMMAND_PAYLOAD_MAX: int
-const SLOT_SPECTATOR: int; const SLOT_NONE: int; const DOCTRINE_HIDDEN: int; const ROSTER_NONE: int
+const PILOT_INPUT_BYTES: int; const INPUT_MAX_COUNT: int; const COMMAND_PAYLOAD_MAX: int; const SLOT_SPECTATOR: int; const SLOT_NONE: int; const DOCTRINE_HIDDEN: int; const ROSTER_NONE: int
 const CATALOGUE_STRIDE: int; const CATALOGUE: PackedInt32Array   # rows [id, channel, max_bytes], 04 s2.3 order
 const NAMES: PackedStringArray                        # in CATALOGUE row order
 static func row_of(id: int) -> int                    # -1 when unknown or reserved
 static func is_known(id: int) -> bool;  static func is_reserved(id: int) -> bool;  static func is_client_to_server(id: int) -> bool
 static func channel_of(id: int) -> int                # -1 when unknown
 static func max_bytes(id: int) -> int                 # parser limit incl. the id byte; 0 when unknown
-static func channel_allows(channel: int, id: int) -> bool
-static func name_of(id: int) -> String;  static func message_count() -> int
+static func channel_allows(channel: int, id: int) -> bool;  static func name_of(id: int) -> String;  static func message_count() -> int
 # Wire enums owned by 04: Platform, InputClass, Role, ChatScope, LeaveReason, KeyframeRequest, RefuseReason,
 #   KeyframeScope, ChatStatus, PlayerStatus, MatchEndReason, RosterRemoveReason, AdminNotice, SessionPhase.
 # Wire mirrors of R0 B.3 sim enums: CommandKind, ResultCode, BuildReject, EventKind, ReleaseReason,
@@ -54,17 +52,14 @@ const POS_EN_HALF: float; const POS_U_MIN: float; const POS_U_SPAN: float   # 12
 const POS_LEVELS: int; const POS_EN_QUANTUM: float; const POS_U_QUANTUM: float   # 65536; 3.906 cm; 6.25 cm
 const POS_INVALID: int; const CELL_COUNT: int        # -1; 384 interest cells (Sphere.GRID_INTEREST)
 const QUAT_FULL_MAX: int; const QUAT_COARSE_MAX: int; const QUAT_COARSE_SPARE_SHIFT: int; const QUAT_COARSE_SPARE_MASK: int
-const VEL_UNIT: float; const VEL_MAX: int; const HP_MAX: int
-const FLAG_CONTROL_MASK: int; const FLAG_DOCKED: int; const FLAG_FIRING: int; const FLAG_BOOSTING: int
-const FLAG_BRAKING: int; const FLAG_CLASS_BIT: int; const FLAG_DYING: int
-const POS_BYTES: int; const QUAT_BYTES: int; const QUAT_COARSE_BYTES: int; const VEL_BYTES: int
-const HP_BYTES: int; const FLAGS_BYTES: int; const AI_TAG_BYTES: int; const FULL_RECORD_BYTES: int   # 8 4 3 3 1 1 1; 19
+const VEL_UNIT: float; const VEL_MAX: int; const HP_MAX: int; const FLAG_CONTROL_MASK: int; const FLAG_DOCKED: int; const FLAG_FIRING: int
+const FLAG_BOOSTING: int; const FLAG_BRAKING: int; const FLAG_CLASS_BIT: int; const FLAG_DYING: int
+const POS_BYTES: int; const QUAT_BYTES: int; const QUAT_COARSE_BYTES: int; const VEL_BYTES: int; const HP_BYTES: int; const FLAGS_BYTES: int; const AI_TAG_BYTES: int; const FULL_RECORD_BYTES: int   # 8 4 3 3 1 1 1; 19
 static func cell_centre(cell: int) -> Vector3;  static func cell_frame(cell: int) -> Basis   # datum centre; ENU columns
 static func quantize_pos(p: Vector3) -> int           # packed vec3q: cell | e << 16 | n << 32 | u << 48 (clamps)
 static func dequantize_pos(q: int) -> Vector3         # ZERO for an invalid cell
 static func pos_in_range(p: Vector3) -> bool          # false when quantize_pos would clamp; true -500 m..ceiling_hard_m
-static func pack_pos(cell: int, e: int, n: int, u: int) -> int
-static func pos_cell(q: int) -> int;  static func pos_e(q: int) -> int;  static func pos_n(q: int) -> int;  static func pos_u(q: int) -> int
+static func pack_pos(cell: int, e: int, n: int, u: int) -> int;  static func pos_cell(q: int) -> int;  static func pos_e(q: int) -> int;  static func pos_n(q: int) -> int;  static func pos_u(q: int) -> int
 static func quantize_quat(q: Quaternion) -> int       # quat_s3, u32
 static func dequantize_quat(bits: int) -> Quaternion  # unit for any input bits
 static func quantize_quat_coarse(q: Quaternion, spare7: int) -> int   # u24: 17 quaternion bits + 7 caller bits
@@ -72,17 +67,13 @@ static func dequantize_quat_coarse(bits: int) -> Quaternion;  static func coarse
 const SPARE_LOW_MASK: int; const SPARE_CLASS_BIT: int; const SPARE_DYING: int; const FLAGS_DROPPED_BY_B: int   # 0x1F 0x20 0x40; 0x20
 static func flags_to_spare(f: int) -> int;  static func spare_to_flags(s: int) -> int   # tier-B flags (A-24); braking reads false
 static func quantize_vel(v: Vector3, cell: int) -> int   # 3 x i8 at 2 m/s in cell ENU; 0 for an invalid cell
-static func dequantize_vel(bits: int, cell: int) -> Vector3
-static func quantize_hp(hp01: float) -> int;  static func dequantize_hp(b: int) -> float
-static func make_flags(control_state: int, bits: int) -> int;  static func flags_control(f: int) -> int
-static func quantize_ai_tag(tag: int) -> int
+static func dequantize_vel(bits: int, cell: int) -> Vector3;  static func quantize_hp(hp01: float) -> int;  static func dequantize_hp(b: int) -> float
+static func make_flags(control_state: int, bits: int) -> int;  static func flags_control(f: int) -> int;  static func quantize_ai_tag(tag: int) -> int
 static func write_pos(buf: PackedByteArray, at: int, q: int) -> int;  static func read_pos(buf: PackedByteArray, at: int) -> int
 static func write_u32(buf: PackedByteArray, at: int, v: int) -> int;  static func read_u32(buf: PackedByteArray, at: int) -> int
 static func write_u24(buf: PackedByteArray, at: int, v: int) -> int;  static func read_u24(buf: PackedByteArray, at: int) -> int
     # writers return the next offset or -1 (nothing written); readers return -1 / POS_INVALID when short
-```
 
-```gdscript
 class_name Roster extends RefCounted                  # net/roster.gd (04 s3.1); roster index == sim slot, 1,280 entries
 const CAPACITY: int; const REASON_COUNT: int; const NEVER: int   # 1280; 3; -1
 func add(slot: int, generation: int, def_id: int, owner: int, team: int, tag: String = "") -> bool   # replaces; false out of range
@@ -106,11 +97,8 @@ var roster: Roster;  var requests_sent: int;  var removed_slots: PackedInt32Arra
 func on_meta(bytes: PackedByteArray) -> int;  func on_remove(bytes: PackedByteArray) -> int
 func hold(now_tick: int, snap_tick: int, bytes: PackedByteArray, missing: PackedInt32Array) -> void
 func take_ready(out_ticks: PackedInt32Array, out_bytes: Array[PackedByteArray]) -> int   # held records whose indices all arrived
-func poll(now_tick: int) -> PackedByteArray           # drops records held >= 30 ticks; one REQUEST_KEYFRAME(ROSTER_GAP) per batch, <= 1 / 5 s
-func held_count() -> int
-```
+func held_count() -> int;  func poll(now_tick: int) -> PackedByteArray   # drops records held >= 30 ticks; one REQUEST_KEYFRAME(ROSTER_GAP) per batch, <= 1 / 5 s
 
-```gdscript
 class_name Transport extends RefCounted               # net/transport.gd (04 s6.1); signals fire synchronously from poll()
 enum DisconnectReason { TIMEOUT, REMOTE_CLOSE, LOCAL_CLOSE, ERROR }   # append-only
 signal connected(conn: int);  signal disconnected(conn: int, reason: int);  signal packet(conn: int, channel: int, bytes: PackedByteArray)
@@ -133,8 +121,7 @@ class_name LocalClock extends RefCounted              # virtual time, 30 Hz tick
 func now_ms() -> float;  func tick() -> int;  func advance_tick() -> void;  func advance_ms(ms: float) -> void
 class_name LocalPipe extends RefCounted               # one link direction
 var model: FaultModel;  var sent_unreliable: int;  var dropped_unreliable: int;  var stale_dropped: int
-func _init(clock: LocalClock) -> void
-func configure(m: FaultModel, stream: StringName) -> void;  func pending_count() -> int;  func push(channel: int, bytes: PackedByteArray) -> void
+func _init(clock: LocalClock) -> void;  func configure(m: FaultModel, stream: StringName) -> void;  func pending_count() -> int;  func push(channel: int, bytes: PackedByteArray) -> void
 func collect(out_channels: PackedInt32Array, out_bytes: Array[PackedByteArray]) -> void   # appends the packets due now
 
 class_name FaultModel extends RefCounted              # net/fault_model.gd (04 s15.1)
@@ -144,6 +131,69 @@ var bandwidth_kbps: float; var burst_loss: Array[Vector2i]            # [from_ti
 func stall_at(tick: int, ms: float) -> void;  func in_burst(tick: int) -> bool;  func has_stall() -> bool
 static func preset(which: Preset, seed_arg: int = 1) -> FaultModel
 static func tick_to_ms(tick: int) -> float;  func burst_end_tick(tick: int) -> int;  func stall_adjust(send_ms: float, at_ms: float) -> float
+
+class_name SnapshotFrame extends RefCounted           # net/snapshot_frame.gd: prepare_tick input, rows 0..count-1 (SimView adapter: NET-15)
+var tick: int;  var count: int;  var slot: PackedInt32Array;  var pos: PackedVector3Array;  var vel: PackedVector3Array;  var rot: PackedVector4Array
+var hp01: PackedFloat32Array;  var flags: PackedByteArray;  var ai_tag: PackedByteArray;  var team: PackedByteArray;  var gravity: PackedByteArray
+var under_fire: PackedByteArray;  var visible_mask: PackedInt32Array;  func resize(n: int) -> void
+func set_entity(i: int, slot_id: int, p: Vector3, v: Vector3, q: Quaternion, hp: float, flag_byte: int, team_id: int, tag: int = 0, has_gravity: bool = false, visible: int = 0) -> void
+
+class_name SnapshotCodec extends RefCounted           # net/snapshot_codec.gd: shared cache (indexed by roster index) + per-client encode
+const HEADER_BYTES: int; const MAX_PACKET_BYTES: int; const MAX_PACKETS_PER_TICK: int; const SECTION_MAX: int; const TEAM_MAX: int; const CAPACITY: int
+const GAP_MAX: int; const GAP_ESCAPE: int; const FULL_BODY_BYTES: int; const SMALL_SHIFT: int; const SMALL_MAX: int; const POS_SEND_MIN: int; const LARGE_MAX: int
+const MASK_POS_SMALL: int; const MASK_POS_LARGE: int; const MASK_ORI: int; const MASK_VEL: int; const MASK_HP: int; const MASK_FLAGS: int; const MASK_CELL_CHANGED: int; const MASK_FULL: int
+enum Tier { A, B, C }
+enum Kind { NONE, FULL, DELTA, BLIP }
+var gravity: float;  var dt: float;  var prepare_count: int;  var cache_tick: int;  var max_packets: int;  var deferred: int
+var n_full: int;  var n_delta: int;  var n_blip: int;  var n_pos_small: int;  var n_pos_large: int   # cumulative record counters
+var c_tick: PackedInt32Array;  var c_pos: PackedInt64Array;  var c_ori: PackedInt64Array;  var c_coarse: PackedInt32Array;  var c_vel: PackedInt32Array;  var c_fine: PackedInt64Array
+var c_hp: PackedByteArray;  var c_flags: PackedByteArray;  var c_ai: PackedByteArray;  var c_team: PackedByteArray;  var c_grav: PackedByteArray;  var c_blip: PackedInt32Array
+func _init(gravity_mps2: float, tick_hz: int) -> void;  func prepare_tick(frame: SnapshotFrame) -> void   # once per tick, before any encode
+func coarse_of(s: int) -> int;  func blip_of(s: int) -> int;  func team_visible(team: int) -> PackedInt32Array   # lazy per tick; C candidates
+func encode(store: BaselineStore, tick: int, a: PackedInt32Array, b: PackedInt32Array, c: PackedInt32Array, pilot: PilotBlock, out: Array[PackedByteArray]) -> int
+static func pos_mask(res: Vector3i) -> int;  static func wire_residual(mask: int, res: Vector3i) -> Vector3i;  static func applied_residual(mask: int, res: Vector3i) -> Vector3i
+static func delta_body_bytes(mask: int, tier_b: bool, own: bool) -> int
+
+class_name SnapshotWriter extends RefCounted          # net/snapshot_writer.gd: packet assembly for encode()
+var packets: int;  func start(tick: int, base_tick: int, pilot: PilotBlock, out: Array[PackedByteArray], limit: int) -> void
+func place(s: int, tier: int, body: int) -> bool;  func finish() -> int;  func put_u24(v: int) -> void
+func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int) -> void
+func put_delta(mask: int, res: Vector3i, ori: int, tier_b: bool, vel: int, hp: int, flags: int, ai_tag: int) -> void
+
+class_name SnapshotDecoder extends RefCounted         # net/snapshot_decoder.gd: validate the whole packet, then apply
+enum Status { OK, MALFORMED, STALE, NO_BASELINE, MISSING_ROSTER }
+const MAX_RECORDS: int;  var store: BaselineStore;  var roster: Roster;  var gravity_def: PackedByteArray;  var gravity: float;  var dt: float
+var pilot: PilotBlock;  var pilot_tick: int;  var missing: PackedInt32Array;  var malformed: int;  var records_applied: int
+func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) -> void;  func current() -> BaselineFrame;  func decode(bytes: PackedByteArray) -> int
+
+class_name BaselineStore extends RefCounted           # net/baseline_store.gd: ring of DEPTH (32) frames per client
+const DEPTH: int;  var team: int;  var acked_tick: int;  var newest_tick: int;  var last_split: bool;  func _init(team_id: int = 0) -> void
+func frame_at(t: int) -> BaselineFrame;  func begin(t: int, base_tick: int) -> BaselineFrame;  func ack(t: int) -> void;  func base_for(t: int) -> int;  func reset() -> void
+
+class_name BaselineFrame extends RefCounted           # net/baseline_frame.gd: what one client holds per roster index after a tick
+const CAPACITY: int; const ORI_UNKNOWN: int
+var tick: int;  var base_tick: int;  var usable: bool;  var present: PackedByteArray;  var pos: PackedInt64Array;  var ori: PackedInt64Array;  var ori_c: PackedInt32Array
+var vel: PackedInt64Array;  var hp: PackedByteArray;  var flags: PackedByteArray;  var ai: PackedByteArray;  var blip: PackedInt32Array;  var etick: PackedInt32Array
+func clear(t: int) -> void;  func copy_from(src: BaselineFrame, t: int) -> void;  func set_blip(i: int, t: int, blip_bits: int) -> void
+func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void
+func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: int, ori_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void
+static func coarse_of_full(ori_bits: int) -> int;  func same_state(other: BaselineFrame) -> bool;  func state_hash() -> int
+
+class_name DeadReckon                                 # net/dead_reckon.gd: static, scalar float64 so both ends agree
+const BLIP_E8_MAX: int; const BLIP_ALT_STEP: float; const BLIP_ALT_MAX6: int; const BLIP_UNKNOWN: int; const FINE_PER_MPS: int
+enum BlipState { MOVING, STATIC, UNDER_FIRE, DYING }
+static func dr_levels(pos_q: int, fine: int, dticks: int, grav: bool, g: float, dt: float) -> Vector3i
+static func dr_fine(pos_q: int, fine: int, dticks: int, grav: bool, g: float, dt: float) -> int;  static func pack_fine(e: int, n: int, u: int) -> int
+static func fine_axis(fine: int, axis: int) -> int;  static func fine_from_bits(bits: int) -> int;  static func bits_from_fine(fine: int) -> int
+static func vel_close(a: int, b: int) -> bool;  static func levels_ok(l: Vector3i) -> bool;  static func make_blip(pos_q: int, alt_m: float, state: int) -> int
+static func blip_pos(cell: int, blip: int) -> int;  static func blip_state(blip: int) -> int
+
+class_name PilotBlock extends RefCounted              # net/pilot_block.gd: 15 B, wire integers, clamped on write
+const BYTES: int
+enum Boost { READY, ACTIVE, COOLDOWN }
+var fuel_ds: int;  var ammo: int;  var bombs: int;  var rockets: int;  var hull: int;  var incoming_rockets: int;  var boost_state: int;  var flip_cooldown: int
+var dock_state: int;  var service_refuel: int;  var service_rearm: int;  var service_repair: int;  static func boost_byte(phase: int, remaining01: float) -> int
+func write(buf: PackedByteArray, at: int) -> int;  func read(buf: PackedByteArray, at: int) -> bool;  func copy_from(o: PilotBlock) -> void;  func to_bytes() -> PackedByteArray
 ```
 
 Link semantics (04 s15.1; deterministic: each pipe draws from `Rng.new(seed_value).fork("s2c:<conn>" | "c2s:<conn>")`):
@@ -155,7 +205,7 @@ GOOD 40 ms +-5, 0.5 %; TARGET 100 ms +-15, 3 %, 1 % reorder; BAD 250 ms +-40, 5 
 MOBILE_SWITCH = TARGET + loss window ticks 900-1019; TAB_STALL = GOOD + 45 s stall at tick 1,200. The 04 name `seed`
 is `seed_value` (`seed` is a GDScript global); presets are `FaultModel.preset()`, not `test/net/presets.gd`.
 
-Planned (04 s19; signatures land with their task): `codec_commands.gd` (NET-04), `SnapshotCodec` (NET-06/07), `Interest` (NET-08), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`,
+Planned (04 s19; signatures land with their task): `codec_commands.gd` (NET-04), `KEYFRAME` + rolling refresh (NET-07), `Interest` (NET-08), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`,
 `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10), `ReplayWriter`/`ReplayReader` (NET-25).
 
 ## Wire layout
@@ -177,6 +227,15 @@ Flags = control state bits 0-1, then DOCKED, FIRING, BOOSTING, BRAKING, CLASS_BI
 spare bits (A-24): spare 0-4 = flags 0-4, spare 5 = flags bit 6, spare 6 = flags bit 7; BRAKING is dropped.
 `CHAT_RELAY` (0x8C) Max is 222, as in 04 s2.3 (A-26). `SessionPhase` is defined only in `Protocol` (A-28).
 
+SNAPSHOT (04 s3.4, s3.5; NET-06): header id, tick u32, baseline_tick u32 (0 = no baseline, FULL only), flags; sections
+A, B, C in that order, each a u8 count (1-255) then records. A record starts with the roster-index gap: u8 1-254 from the
+previous record of the packet (the chain runs across sections and restarts per packet; 0 only for index 0 as the first
+record), or 0xFF + u16 index. Next byte 0xFF = FULL (vec3q, quat_s3, vel, hp, flags, +ai_tag own team); otherwise A/B: a
+DELTA mask (bit 7 and bit 6 clear, not both POS bits), groups in mask-bit order; C: a C-BLIP (e8 clamped to 254 so it
+never reads 0xFF, n8, alt6 | state << 6). POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x
+i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 =
+ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends the first packet of a tick.
+
 ## Invariants
 
 - N1: every id in 04 s2.3 is defined exactly once, on the channel 04 s2.1 lists; a message received on another
@@ -190,15 +249,20 @@ spare bits (A-24): spare 0-4 = flags 0-4, spare 5 = flags bit 6, spare 6 = flags
   every point from -500 m to `ceiling_hard_m` (A-23); quat_s3 <= 0.4 deg; coarse <= 6 deg; velocity <= 1 m/s per ENU axis; hp <= 0.5/255.
 - N8: `Codec` quantisers and decoders allocate nothing and never error: any input bits decode to a defined value
   (unit quaternion, ZERO, or the -1 / POS_INVALID sentinel).
+- N9: the server mirror (`BaselineStore` per client) and the client's frame for every fully received tick are
+  identical (`same_state`): both change only through `BaselineFrame.set_*` with `DeadReckon` arithmetic. A frame is a
+  delta baseline only when its tick went out as one packet (`usable`); `prepare_tick` runs once per tick.
+- N10: `SnapshotDecoder.decode` validates the whole packet before applying; anything but OK changes nothing.
 
 ## Data owned
 
-The wire catalogue and enums above. No def files are read by `Protocol`.
+The wire catalogue and enums above. No def files are read by `Protocol`; `rules.gravity` / `tick_hz` reach the codec as arguments.
 
 ## Performance budget
 
 Bandwidth: 04 s4.6 (24 KB/s typical, 30 KB/s cap per client, 01 s8.3). CPU: the 03 s4.2 "events + interest +
-encode + replay" row (R0 B.7) covers `prepare_tick` and per-client encoding; `Protocol` lookups are O(1).
+encode + replay" row (R0 B.7) covers `prepare_tick` and per-client encoding; `Protocol` lookups are O(1). NET-06
+measured (400 entities, desktop, p50): prepare_tick 1.26 ms, encode 1.1-1.2 ms and decode 0.53 ms per client.
 
 ## Test entry points
 
@@ -208,23 +272,29 @@ against sim/MODULE.md and R0 B.3, PROTOCOL_VERSION).
 edge midpoints, cube edges, the -500 m..ceiling_hard_m envelope (A-23); tier-B flag mapping (A-24); quaternions incl. canonical sign; velocity, hp, flags, ai_tag; byte sizes).
 `godot/test/net/test_codec_full_records.gd` (400 FULL bodies through the byte helpers; truncated reads).
 `godot/test/perf/bench_codec.gd` (encode/decode of 400 entities; prints BENCH_CODEC).
-
+NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example byte for byte, residual masks, dead reckoning, blip,
+pilot block, A-24 on the wire), `test/unit/net/test_snapshot_malformed.gd` (truncations, header/record faults, 20,000
+mutations), `test/net/test_snapshot_delta.gd` (codec_delta_test 3,000 ticks, per-tier accuracy, falling bombs),
+`test/net/test_snapshot_budget.gd` (splitting, 255-record sections, bandwidth at 400 entities, determinism, one
+prepare_tick for 8 clients, late ENTITY_META); `test/perf/bench_snapshot.gd` (prints BENCH_SNAPSHOT). Helper `test/net/snap_rig.gd`.
 `godot/test/unit/net/test_roster.gd` + `godot/test/net/test_roster_sync.gd` (NET-05: add/remove with every reason, meta/remove round trips and sizes, malformed rejected, held record applied after meta, timeout at exactly 30 ticks with one REQUEST_KEYFRAME, re-add in the hold window, determinism, LocalTransport pair).
 `godot/test/unit/net/test_transport_local.gd` (NET-11: channel ordering/reliability, determinism per seed, burst, stall, bandwidth, close, stats).
 `godot/test/net/test_fault_presets.gd` (NET-11: loss/latency/reorder/dup statistics per preset over 6,000 packets, MOBILE_SWITCH, TAB_STALL).
-
-Planned (named here, not yet on disk): godot/test/net/ integration suites (04 s15.2), interest benchmarks,
-fuzz_test.gd (NET-23).
+Planned: interest benchmarks (NET-08), fuzz_test.gd (NET-23).
 
 ## How to add X
 
 **A message id.** Needs the Architect (contract change): add the row to 04 s2.3 and the channel list in s2.1, then
-the constant, `CATALOGUE` row and `NAMES` entry here in the same PR, bump `PROTOCOL_VERSION`, and run
-`test_protocol.gd`.
+the constant, `CATALOGUE` row and `NAMES` entry here in the same PR, bump `PROTOCOL_VERSION`, run `test_protocol.gd`.
 
 **A wire enum value.** Append only; for sim mirrors, append in `sim/MODULE.md` first (sim lane), then here.
 
 ## Open items
 
-None. Closed by NET-47 under R0 B.9: CQ-1 position range (A-23, `POS_EN_HALF` 1,280 m), CQ-2 tier-B flag drop
-(A-24, BRAKING), CQ-3 coarse bound (A-25, decoder normative), CHAT_RELAY 222 (A-26), `SessionPhase` home (A-28).
+NET-02 CQ-1..3, CHAT_RELAY and `SessionPhase` were closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 asks the Architect:
+- CQ-4: SNAPSHOT has no packet index, so a split tick cannot become a baseline; `max_packets` defaults to 1 and
+  overflow is deferred. Proposal: flags bits 6-7 = packet index (wire change, PROTOCOL_VERSION 2).
+- CQ-5: 04 does not say how section C tells FULL from C-BLIP; e8 is clamped to 254 (0xFF = FULL mask).
+- CQ-6: 04 s3.4 POS_SMALL text (12.5 cm, +-15.9 m) predates A-23: now 15.6 cm, +-19.8 m E/N (bytes unchanged).
+- CQ-7 (baseline semantics, bytes unchanged): residuals under one POS_SMALL step are not sent; entries keep velocity at
+  1/1024 m/s (no re-quantising on gravity re-base); gravity VEL is sent only past one 2 m/s step from dead reckoning.
