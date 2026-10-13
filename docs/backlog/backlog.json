@@ -1545,7 +1545,9 @@
       "06 s11",
       " 06 UX-29"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": "public#5"
   },
   {
     "id": "ART-04",

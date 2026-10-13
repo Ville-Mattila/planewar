@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://7dul26neuf8n"
+
+[deps]
+
+files=["res://content/locale/src/barks.en.translation", "res://content/locale/src/barks.fi.translation", "res://content/locale/src/barks.max.translation", "res://content/locale/src/barks.context.translation", "res://content/locale/src/barks.note.translation"]
+
+source_file="res://content/locale/src/barks.csv"
+dest_files=["res://content/locale/src/barks.en.translation", "res://content/locale/src/barks.fi.translation", "res://content/locale/src/barks.max.translation", "res://content/locale/src/barks.context.translation", "res://content/locale/src/barks.note.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

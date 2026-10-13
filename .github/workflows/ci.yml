@@ -43,6 +43,12 @@ jobs:
         run: python -m pip install -r tools/requirements.txt
       - name: tools unit tests
         run: python -m unittest discover -s tools/tests
+      - name: locale tables, PO freshness and pseudolocale (UX-29; docs/06 s11)
+        run: |
+          python tools/locale/check_locale.py
+          python tools/locale/build_po.py --check
+          python tools/locale/build_po.py --pseudo --out "$RUNNER_TEMP/pseudo"
+          python tools/locale/check_locale.py --pseudo-dir "$RUNNER_TEMP/pseudo"
       - name: moonbake validate every map recipe (M1-M11 and schema; every PR, TA-15 / TA-17)
         run: |
           for r in godot/content/maps/*/recipe.json; do

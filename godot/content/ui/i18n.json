@@ -1,0 +1,18 @@
+{
+  "_doc": "docs/06 s11: supported UI locales, number formats and selection. Fmt and LocaleSelect read this; no format literals in code.",
+  "default_locale": "en",
+  "supported": ["en", "fi"],
+  "po_dir": "res://content/locale",
+  "settings_path": "user://settings.cfg",
+  "settings_section": "ui",
+  "settings_key": "locale",
+  "auto": "auto",
+  "formats": {
+    "en": {"group": ",", "decimal": "."},
+    "fi": {"group": "\u202f", "decimal": ","}
+  },
+  "unit_m": "m",
+  "unit_km": "km",
+  "km_from_m": 1000.0,
+  "km_digits": 1
+}
