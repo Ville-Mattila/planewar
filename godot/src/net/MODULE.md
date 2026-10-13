@@ -193,26 +193,43 @@ enum Boost { READY, ACTIVE, COOLDOWN }
 var fuel_ds: int;  var ammo: int;  var bombs: int;  var rockets: int;  var hull: int;  var incoming_rockets: int;  var boost_state: int;  var flip_cooldown: int
 var dock_state: int;  var service_refuel: int;  var service_rearm: int;  var service_repair: int;  static func boost_byte(phase: int, remaining01: float) -> int
 func write(buf: PackedByteArray, at: int) -> int;  func read(buf: PackedByteArray, at: int) -> bool;  func copy_from(o: PilotBlock) -> void;  func to_bytes() -> PackedByteArray
+
+class_name PilotWire                                  # net/pilot_wire.gd: 8-byte PilotInput wire form (04 s2.4, R0 C2-09); static, pure
+const BYTES: int; const THRUST_SCALE: float; const AXIS_SCALE: float; const BUTTONS_MASK: int; const OFF_RESERVED_A: int; const OFF_RESERVED_B: int; const OFF_TICK_LO: int
+static func to_wire(input: PilotInput, tick: int) -> PackedByteArray;  static func write_into(buf: PackedByteArray, at: int, input: PilotInput, tick: int) -> int   # bytes 5-6 always 0
+static func from_wire(bytes: PackedByteArray, offset: int, into: PilotInput = null) -> PilotInput   # null when short; reserved bytes not checked here
+static func quantized(input: PilotInput) -> PilotInput   # what the server sees; the client predicts with this
+static func tick_lo_at(bytes: PackedByteArray, offset: int) -> int;  static func reserved_zero(bytes: PackedByteArray, offset: int) -> bool;  static func axis_byte(a: float) -> int;  static func axis_value(b: int) -> float
+
+class_name InputCodec                                 # net/input_codec.gd: INPUT 0x04 (12 B header + count x 8; 36 B at count 3); static
+const HEADER_BYTES: int; const OFF_EPOCH: int; const OFF_BASE: int; const OFF_ACK: int; const OFF_COUNT: int;  enum Status { OK, MALFORMED }
+static func encode(epoch: int, base_tick: int, ack_tick: int, inputs: Array[PilotInput], count: int) -> PackedByteArray   # empty when count not 1-3
+static func validate(bytes: PackedByteArray) -> int   # V-INP shape: id, length, count 1-3, reserved bytes 0, tick_lo == (base + i) & 255
+static func packet_bytes(count: int) -> int;  static func epoch_of(bytes: PackedByteArray) -> int;  static func base_tick_of(bytes: PackedByteArray) -> int;  static func ack_tick_of(bytes: PackedByteArray) -> int;  static func count_of(bytes: PackedByteArray) -> int
+
+class_name InputSender extends RefCounted             # net/input_sender.gd: client side, 3-tick redundancy
+var epoch: int;  var packets_built: int;  func reset(new_epoch: int) -> void
+func push(tick: int, input: PilotInput) -> PilotInput   # consecutive ticks; returns the quantised input to predict with
+func build(ack_tick: int) -> PackedByteArray            # newest <= 3 ticks, newest last; empty before the first push
+
+class_name InputBuffer extends RefCounted             # net/input_buffer.gd: server jitter buffer per player (04 s5.1; R0 C2-08)
+const RING: int; const WINDOW_PAST: int; const WINDOW_FUTURE: int; const DECAY_TICKS: int; const DECAY_FACTOR: float; const KEEP_BUTTONS: int; const STRIKE_EVERY: int   # 64; 2; 8; 10; 0.5; 100
+var epoch: int;  var bridge: bool;  var miss_run: int;  var ack_tick: int;  var current: PilotInput;  var strikes: int;  var bridge_raised: int
+var accepted: int;  var duplicates: int;  var late: int;  var rejected_window: int;  var rejected_epoch: int;  var rejected_malformed: int
+func begin_epoch(new_epoch: int) -> void                # possession change: clears, starts in bridge, A is never replayed for B
+func submit(packet: PackedByteArray, current_tick: int) -> int   # inputs stored; -1 whole packet rejected; per input window [tick - 2, tick + 8]
+func take(tick: int) -> PilotInput                      # stored input, else decayed previous (axes x 0.5 per tick, thrust held) <= 10 ticks, then bridge (once)
 ```
 
-Link semantics (04 s15.1; deterministic: each pipe draws from `Rng.new(seed_value).fork("s2c:<conn>" | "c2s:<conn>")`):
-CH_CONTROL / CH_EVENTS (reliable ordered) are delayed, never lost, delivered in send order, held to the end of a
-burst or stall window. CH_INPUT may be lost, duplicated, reordered. CH_SNAPSHOT (unreliable sequenced) additionally
-drops anything older than the newest delivered. A stall holds both directions and releases the backlog at its end.
-Bandwidth limit: serialisation delay, then unreliable packets queued > 250 ms are dropped. Presets (one-way): LAN 0/0/0;
-GOOD 40 ms +-5, 0.5 %; TARGET 100 ms +-15, 3 %, 1 % reorder; BAD 250 ms +-40, 5 %, 2 % reorder, 0.5 % dup;
-MOBILE_SWITCH = TARGET + loss window ticks 900-1019; TAB_STALL = GOOD + 45 s stall at tick 1,200. The 04 name `seed`
-is `seed_value` (`seed` is a GDScript global); presets are `FaultModel.preset()`, not `test/net/presets.gd`.
+Link semantics (04 s15.1; deterministic: each pipe draws from `Rng.new(seed_value).fork("s2c:<conn>" | "c2s:<conn>")`): CH_CONTROL / CH_EVENTS (reliable ordered) are delayed, never lost, in send order, held to the end of a burst or stall window. CH_INPUT may be lost, duplicated, reordered. CH_SNAPSHOT (unreliable sequenced) additionally drops anything older than the newest delivered. A stall holds both directions and releases the backlog at its end.
+Bandwidth limit: serialisation delay, then unreliable packets queued > 250 ms are dropped. Presets (one-way): LAN 0/0/0; GOOD 40 ms +-5, 0.5 %; TARGET 100 ms +-15, 3 %, 1 % reorder; BAD 250 ms +-40, 5 %, 2 % reorder, 0.5 % dup; MOBILE_SWITCH = TARGET + loss window ticks 900-1019; TAB_STALL = GOOD + 45 s stall at tick 1,200. The 04 name `seed` is `seed_value` (`seed` is a GDScript global); presets are `FaultModel.preset()`, not `test/net/presets.gd`.
 
-Planned (04 s19; signatures land with their task): `codec_commands.gd` (NET-04), `KEYFRAME` + rolling refresh (NET-07), `Interest` (NET-08), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`,
-`NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10), `ReplayWriter`/`ReplayReader` (NET-25).
+Planned (04 s19): `codec_commands.gd` (NET-04), `KEYFRAME` + rolling refresh (NET-07), `Interest` (NET-08), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10), `ReplayWriter`/`ReplayReader` (NET-25).
 
 ## Wire layout
 
-04 s2.3 is the catalogue; `Protocol.CATALOGUE` is that table as data (id, channel, Max B) and is pinned to the doc
-by `test_protocol.gd`. Multi-byte integers are little-endian (04 s3.5 worked example). Every packet's first byte is
-the message id; ids 0x0E-0x7F and 0x94-0xFF are reserved (0x70-0x7F / 0xF0-0xFF for v1.1 WebRTC signalling) and
-0x00 is never valid.
+04 s2.3 is the catalogue; `Protocol.CATALOGUE` is that table as data (id, channel, Max B) and is pinned to the doc by `test_protocol.gd`. Multi-byte integers are little-endian (04 s3.5 worked example). Every packet's first byte is
+the message id; ids 0x0E-0x7F and 0x94-0xFF are reserved (0x70-0x7F / 0xF0-0xFF for v1.1 WebRTC signalling) and 0x00 is never valid.
 
 Field layouts (`Codec`, 04 s3.2-s3.3): vec3q = cell u16, e u16, n u16, u u16 with `e = dot(p - c, east)` etc. in the
 ADR-03 ENU frame of `c = Sphere.cell_center_dir(cell, GRID_INTEREST) * PLANET_RADIUS`, level k = -1280 + k * 3.906 cm
@@ -222,19 +239,16 @@ x y z w order (ties: lowest index), bits 2-11 / 12-21 / 22-31 the other three as
 Coarse = u24 LE: index bits 0-1, 5-bit codes (scale 15 * sqrt(2)) at bits 2, 7, 12, caller bits 17-23; the encoder may
 step one code to its other neighbour when that lowers the angular error (decoder unchanged). Velocity = i8 e, n, u at
 2 m/s in the ENU frame of the record's position cell (04 s3.5 `37 00 F4` = (110, 0, -24) m/s). hp = round(hp01 * 255).
-Flags = control state bits 0-1, then DOCKED, FIRING, BOOSTING, BRAKING, CLASS_BIT, DYING (bits 2-7). Tier-B coarse
-spare bits (A-24): spare 0-4 = flags 0-4, spare 5 = flags bit 6, spare 6 = flags bit 7; BRAKING is dropped.
+Flags = control state bits 0-1, then DOCKED, FIRING, BOOSTING, BRAKING, CLASS_BIT, DYING (bits 2-7). Tier-B coarse spare bits (A-24): spare 0-4 = flags 0-4, spare 5 = flags bit 6, spare 6 = flags bit 7; BRAKING is dropped.
 `CHAT_RELAY` (0x8C) Max is 222, as in 04 s2.3 (A-26). `SessionPhase` is defined only in `Protocol` (A-28).
 
-SNAPSHOT (04 s3.4, s3.5; NET-06): header id, tick u32, baseline_tick u32 (0 = no baseline, FULL only), flags (bits 6-7 =
-packet index 0-3, LAST on the highest index, R0 B.10 A-36; NET-06 rejects them set, NET-48 applies the index); sections
+SNAPSHOT (04 s3.4, s3.5; NET-06): header id, tick u32, baseline_tick u32 (0 = no baseline, FULL only), flags (bits 6-7 = packet index 0-3, LAST on the highest index, R0 B.10 A-36; NET-06 rejects them set, NET-48 applies the index); sections
 A, B, C in that order, each a u8 count (1-255) then records. A record starts with the roster-index gap: u8 1-254 from the
 previous record of the packet (the chain runs across sections and restarts per packet; 0 only for index 0 as the first
 record), or 0xFF + u16 index. Next byte 0xFF = FULL (vec3q, quat_s3, vel, hp, flags, +ai_tag own team); otherwise A/B: a
 DELTA mask (bit 7 and bit 6 clear, not both POS bits), groups in mask-bit order; C: a C-BLIP (e8 clamped to 254 so it
 never reads 0xFF, n8, alt6 | state << 6). POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x
-i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 =
-ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends the first packet of a tick.
+i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 = ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends the first packet of a tick.
 
 ## Invariants
 
@@ -269,17 +283,9 @@ the row stays; NET-49 caches FULL / C-BLIP bytes once per tick; NET-08 measures 
 
 ## Test entry points
 
-`godot/test/unit/net/test_protocol.gd` (NET-01: catalogue ids/channels/sizes parsed from 04 s2.1/s2.3, enum ordinals
-against sim/MODULE.md and R0 B.3, PROTOCOL_VERSION).
-`godot/test/unit/net/test_codec_roundtrip.gd` (NET-02 codec_roundtrip_test: 10,000 random points, all cell corners and
-edge midpoints, cube edges, the -500 m..ceiling_hard_m envelope (A-23); tier-B flag mapping (A-24); quaternions incl. canonical sign; velocity, hp, flags, ai_tag; byte sizes).
-`godot/test/net/test_codec_full_records.gd` (400 FULL bodies through the byte helpers; truncated reads).
-`godot/test/perf/bench_codec.gd` (encode/decode of 400 entities; prints BENCH_CODEC).
-NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example byte for byte, residual masks, dead reckoning, blip,
-pilot block, A-24 on the wire), `test/unit/net/test_snapshot_malformed.gd` (truncations, header/record faults, 20,000
-mutations), `test/net/test_snapshot_delta.gd` (codec_delta_test 3,000 ticks, per-tier accuracy, falling bombs),
-`test/net/test_snapshot_budget.gd` (splitting, 255-record sections, bandwidth at 400 entities, determinism, one
-prepare_tick for 8 clients, late ENTITY_META); `test/perf/bench_snapshot.gd` (prints BENCH_SNAPSHOT). Helper `test/net/snap_rig.gd`.
+`test/unit/net/test_protocol.gd` (NET-01 catalogue vs 04 s2.1/s2.3, enum ordinals, PROTOCOL_VERSION); `test/unit/net/test_codec_roundtrip.gd` (NET-02 codec_roundtrip_test: 10,000 points, cell corners, A-23 envelope, A-24 flags, quaternions, velocity, hp, sizes); `test/net/test_codec_full_records.gd`; `test/perf/bench_codec.gd` (BENCH_CODEC).
+NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example, masks, dead reckoning, blip, pilot block, A-24), `test_snapshot_malformed.gd` (20,000 mutations), `test/net/test_snapshot_delta.gd` (3,000 ticks), `test_snapshot_budget.gd` (splitting, bandwidth, determinism); `test/perf/bench_snapshot.gd` (BENCH_SNAPSHOT); helper `test/net/snap_rig.gd`.
+NET-03: `test/unit/net/test_pilot_wire.gd` (all byte values round trip, reserved bytes, V-INP shape, 20,000 mutations), `test_input_buffer.gd` (window, duplicates, stale epoch, strikes, 10-tick decay then one bridge, hand-off, determinism), `test/net/test_input_link.gd` (LocalTransport: BAD preset recovers single/double loss, triple loss drops one tick, silence bridge once, slow client, determinism).
 `godot/test/unit/net/test_roster.gd` + `godot/test/net/test_roster_sync.gd` (NET-05: add/remove with every reason, meta/remove round trips and sizes, malformed rejected, held record applied after meta, timeout at exactly 30 ticks with one REQUEST_KEYFRAME, re-add in the hold window, determinism, LocalTransport pair).
 `godot/test/unit/net/test_transport_local.gd` (NET-11: channel ordering/reliability, determinism per seed, burst, stall, bandwidth, close, stats).
 `godot/test/net/test_fault_presets.gd` (NET-11: loss/latency/reorder/dup statistics per preset over 6,000 packets, MOBILE_SWITCH, TAB_STALL).
@@ -287,14 +293,8 @@ Planned: interest benchmarks (NET-08), fuzz_test.gd (NET-23).
 
 ## How to add X
 
-**A message id.** Needs the Architect (contract change): add the row to 04 s2.3 and the channel list in s2.1, then
-the constant, `CATALOGUE` row and `NAMES` entry here in the same PR, bump `PROTOCOL_VERSION`, run `test_protocol.gd`.
-
-**A wire enum value.** Append only; for sim mirrors, append in `sim/MODULE.md` first (sim lane), then here.
+**A message id.** Architect (contract change): add the row to 04 s2.3 and s2.1, then the constant, `CATALOGUE` row and `NAMES` entry here, bump `PROTOCOL_VERSION`, run `test_protocol.gd`. **A wire enum value.** Append only; sim mirrors: append in `sim/MODULE.md` first.
 
 ## Open items
 
-NET-02 CQ-1..3, CHAT_RELAY and `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 and its perf
-note: closed by R0 B.10 A-36..A-40 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 are ratified as written above. Pending
-code: NET-48 (A-36 packet index, complete-tick ack, every frame `usable`, `last_split` removed, `max_packets` default 4;
-`PROTOCOL_VERSION` stays 1, OWNER) and NET-49 (A-40 FULL / C-BLIP byte cache, canonical-schedule 8-client bench row).
+NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 + perf note and NET-03's questions: closed by R0 B.10 A-36..A-40, A-44..A-46 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 and the silence rule (keep BOOST / BRAKE, drop FLIP / DOCK / RELEASE / FIRE1/2; 10 ticks, NQ10 closed) are ratified as written above. Pending code: NET-48 (A-36 packet index, complete-tick ack, every frame `usable`, `last_split` removed, `max_packets` default 4; `PROTOCOL_VERSION` stays 1, OWNER); NET-49 (A-40 FULL / C-BLIP byte cache, canonical-schedule 8-client bench row); sim lane: `PilotInput`'s `to_bytes` comment (A-46; the wire form is `PilotWire`).

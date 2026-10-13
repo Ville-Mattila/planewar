@@ -820,7 +820,10 @@
       "03 s6.3",
       " 03 TA-13"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": "public#4",
+    "note": "loader is Terrain.load_map (load shadows a global); sim/MODULE.md at 300 lines"
   },
   {
     "id": "TA-14",
@@ -1184,9 +1187,10 @@
       " R0 C1-18",
       " 04 NET-06"
     ],
-    "status": "review",
-    "pr": 53,
-    "note": "local 364 tests pass; CI blocked by GitHub billing; CQ-4..CQ-7 for architect; encode cost ~10.8 ms for 8 clients vs 4.0 ms budget"
+    "status": "done",
+    "pr": "public#1",
+    "note": "CQ-4..CQ-7 for architect; encode ~10.8 ms for 8 clients vs 4.0 ms budget (measure on pinned runner, NET-08/S-SIM-1)",
+    "merged": "2026-10-13"
   },
   {
     "id": "NET-10",
@@ -1541,7 +1545,9 @@
       "06 s11",
       " 06 UX-29"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": "public#5"
   },
   {
     "id": "ART-04",
@@ -2662,7 +2668,9 @@
       " R0 C2-09",
       " 04 NET-03"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": "public#3"
   },
   {
     "id": "NET-04",
@@ -3060,7 +3068,9 @@
       "06 s6",
       " 06 UX-16"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": "archive#47+#50"
   },
   {
     "id": "UX-17",

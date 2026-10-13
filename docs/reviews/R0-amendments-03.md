@@ -1,11 +1,11 @@
-# R0 amendments 03: NET-06 CQ-4..CQ-7, snapshot encode budget, TA-48, TA-46, UX-10 follow-ups (A-36..A-43)
+# R0 amendments 03: NET-06 CQ-4..CQ-7, snapshot encode budget, TA-48, TA-46, UX-10, NET-03, TA-13 follow-ups (A-36..A-47)
 
 | Field | Value |
 |---|---|
 | **Register id** | R0 Part B, new subsection B.10 (append-only). No ADR is amended, so no `docs/adr/ADR-NN-amendment-*.md` and no line in 01's amendment log (10 s4.2): the wire layout is 04's, the tick budget row is 03 s4.2 / R0 B.7 and does not move, ADR-09 is read as written. |
 | **Status** | Decided by the Architect 2026-10-13; A-36's `PROTOCOL_VERSION` and A-40's plan are OWNER items with the defaults stated and applied. |
 | **Date** | 2026-10-13 |
-| **Raised by** | NET-06 (archive PR #53, public #1) "Open items" CQ-4..CQ-7 in `godot/src/net/MODULE.md` and its perf note; TA-48 (archive PR #52) and TA-46 (archive PR #48) backlog notes; UX-10 (archive PR #41) `camera/MODULE.md` Open items. |
+| **Raised by** | NET-06 (archive PR #53, public #1) "Open items" CQ-4..CQ-7 in `godot/src/net/MODULE.md` and its perf note; TA-48 (archive PR #52) and TA-46 (archive PR #48) backlog notes; UX-10 (archive PR #41) `camera/MODULE.md` Open items; NET-03 (public #3) `net/MODULE.md` Open items (silent-pilot buttons, NQ10, `PilotInput` comment); TA-13 (public #4) backlog note (`Terrain.load_map`, `sim/MODULE.md` at 300 lines). |
 | **Decided by** | Architect (Fable), 10 s4.1 "Change" row (a wire-layout change and a baseline-semantics ratification); the owner rules on the OWNER items. |
 | **Size** (10 s4.1) | One wire-layout change before any shipped wire (A-36: two reserved flag bits gain a meaning; no byte moves). Four ratifications of code already merged (A-37, A-39, A-41, A-42). Two doc corrections (A-38, A-43). One perf plan with two new tasks and no budget change (A-40). No reorders, no deletes, no new def field, no `deps.json` edge. |
 
@@ -159,13 +159,52 @@ task that lands after UX-02 (UX-11 or UX-13, whichever merges first) reads `came
 the file's documented defaults. No new task; UX-02's `docs` gains this record. `content/ui/*.json` files have no schema
 requirement today (`hud.json`, `ui_scale.json` precede it; 03 s9.4 covers `content/defs/`), so no schema task either.
 
+## A-44 (NET-03) Silent-pilot buttons
+
+**Context.** 04 s5.1 and 05 C13 said "reuse the previous input with stick axes decayed 50 % per tick, thrust held" and
+nothing about the buttons byte. NET-03's `InputBuffer` keeps `BOOST | BRAKE` (`KEEP_BUTTONS`) and clears FLIP, DOCK,
+RELEASE, FIRE1 and FIRE2 on every reused tick.
+
+**Decision.** Ratified. BOOST and BRAKE are held states like thrust and decay with the tank, not with the link; FLIP,
+DOCK, RELEASE and FIRE are momentary actions whose replay has consequences no silent pilot intended (a flip every
+tick, ammo spent, the possession ended, the assist engaged). 04 s5.1 / s5.5 and 05 C13 carry the rule; `Prediction`
+(NET-18) applies the same mask to its own local reuse so the predicted and authoritative ships agree during a stall.
+
+**Alternatives.** Replay the whole byte: the RELEASE case alone rules it out. Clear every button: a boosting ship that
+loses its link for 300 ms would lurch; thrust is held for the same reason.
+
+## A-45 (NQ10) Silent-pilot window: 10 ticks
+
+**Decision.** 10 ticks (R0 C2-08). 05 C13 in its stage-3 text already says ticks 1-10 then `LINK_BRIDGE`; the stage-2
+"60 ticks" that NQ10 recorded was the transport-timeout scale (60 s web), not the reuse window. NET-03 ships
+`InputBuffer.DECAY_TICKS = 10`; 05's `ControlMachine` (AI-02) mirrors one named constant and `handoff_test` (NET-19)
+pins both. 04 s17 NQ10 is marked closed; no doc loses, so nothing else is patched.
+
+## A-46 (TA-13, NET-03) Doc errata
+
+**Decision.** (1) 03 s6.2 and s8.4 now name the loader `Terrain.load_map(map_dir)`, as TA-13 built it and
+`sim/MODULE.md` already lists it (`load` shadows a GDScript global). (2) `PilotInput`'s wire form is
+`PilotWire.to_wire` / `from_wire` in `net/` (04 s2.4; NET-03); the `sim/pilot_input.gd` doc comment that promised
+`to_bytes` / `from_bytes` is wrong and is a sim-lane follow-up folded into the next sim task that touches
+`pilot_input.gd` or `sim/MODULE.md` (TA-14 by order); the Architect edits no `.gd` file and a 0.1-day task for a
+comment is not worth a wave slot. `sim/MODULE.md` Open items records it.
+
+## A-47 `sim/MODULE.md` at the 300-line cap again (TA-13)
+
+**Decision.** A-21 stands: the register, signatures and invariants are never compressed to make room. This PR
+collapses the "Open items" prose (closed follow-ups into one bullet each), which is the same move A-21 made. The
+named release valve for the next sim task that needs lines (TA-14 by order): the "How to add X" recipes are not a
+contract under 10 s4 (Public API, Invariants, Events, Test entry points are), so they move to 03 s15.4 with a one-line
+pointer left in the file. 05-lane subsystems keep opening `godot/src/sim/<subsystem>/MODULE.md` per A-21. Splitting the
+sim lane's own classes into subdirectories would be a code move (not the Architect's) for a housekeeping problem.
+
 ## Register and impact
 
 | Item | Entry |
 |---|---|
-| **Affected MODULE.md files** | `godot/src/net/MODULE.md` (Wire layout: SNAPSHOT flags bits 6-7 packet index, complete-tick ack rule, section C discriminator, baseline policies; N9 wording; Open items closed; Performance budget: the per-record shape and the A-40 plan). `godot/src/core/MODULE.md` (Open items: A-42). `godot/src/camera/MODULE.md` (Open items: A-43). No Public API block changes in this PR; NET-48 changes `BaselineStore` (drops `last_split`) and `SnapshotCodec.max_packets` default with its contract tests. |
-| **Affected tasks (backlog patch for the owner)** | New: **NET-48** net, Opus, 0.5 d, M2, depends NET-06: SNAPSHOT flags bits 6-7 packet index; client completes a tick only with indices 0..last; every emitted frame usable; `last_split` deleted; `max_packets` default 4; malformed rules of A-36; `test_snapshot_malformed.gd` / `test_snapshot_budget.gd` / `test_snapshot_codec.gd` updated first; `PROTOCOL_VERSION` stays 1 (acceptance: a 3-packet tick with the middle packet dropped is never acked and the next complete tick becomes the baseline; the 53 B example unchanged; `codec_delta_test` 3,000 ticks with random splits identical baselines). **NET-49** net, Opus, 1 d, M2, depends NET-06: client-independent FULL / C-BLIP byte cache in `prepare_tick`; canonical-schedule 8-client `bench_snapshot.gd` (A 40 / B 15 Hz / C 2 Hz + 3 refresh, ack delays 3/6/10) writing prepare + encode sum to `perf/history.jsonl` (acceptance: BENCH_SNAPSHOT canonical mode printed and recorded; encode per client at the canonical schedule not above the pre-change number; delta/budget tests unchanged). Changed: **NET-08** depends_on += NET-49 (acceptance unchanged: the 4.0 ms row on the pinned runner); **NET-07** depends_on += NET-48 (rolling-refresh FULLs in section C use the A-37 discriminator; splitting semantics); **NET-17** depends_on += NET-48 and acceptance += "acks complete ticks only (A-36)"; **NET-06** status `review` -> `done`, `pr` 53 (archive) / 1 (public), note "CQ-4..CQ-7 closed by R0 B.10 A-36..A-40"; **TA-48** note -> "confirmed, R0 B.10 A-41"; **TA-46** note -> "decided, R0 B.10 A-42"; **UX-02** docs += "R0-amendments-03 A-43". No re-tier, no milestone move. |
-| **Affected docs** | R0 Part B.10 (new, append-only); 03 s3.1 (A-42 sentence), s4.1 (rule 9), s4.2 (row 12 notes), revision log; 04 s3.4 (flags, record table, dead reckoning, baseline rule), s3.5 (comments), s4.6 (one sentence), s19 (NET-48, NET-49 rows), revision log. 01, 02, 05, 06 unchanged (06 s5.1 already names `camera.json`; 02 s2.3 already states the fuel rule). 09 s2.3 is regenerated from `backlog.json` and is not hand-edited (10 s3.7). |
+| **Affected MODULE.md files** | `godot/src/net/MODULE.md` (Wire layout: SNAPSHOT flags bits 6-7 packet index, complete-tick ack rule, section C discriminator, baseline policies; N9 wording; Open items closed incl. NET-03's; Performance budget: the per-record shape and the A-40 plan; NET-11 link-semantics prose re-wrapped to fit the cap, text unchanged). `godot/src/core/MODULE.md` (Open items: A-42). `godot/src/camera/MODULE.md` (Open items: A-43). `godot/src/sim/MODULE.md` (Open items collapsed; A-41, A-42, A-46, A-47 recorded; 296 lines). No Public API block changes in this PR; NET-48 changes `BaselineStore` (drops `last_split`) and `SnapshotCodec.max_packets` default with its contract tests. |
+| **Affected tasks (backlog patch for the owner)** | New: **NET-48** net, Opus, 0.5 d, M2, depends NET-06: SNAPSHOT flags bits 6-7 packet index; client completes a tick only with indices 0..last; every emitted frame usable; `last_split` deleted; `max_packets` default 4; malformed rules of A-36; `test_snapshot_malformed.gd` / `test_snapshot_budget.gd` / `test_snapshot_codec.gd` updated first; `PROTOCOL_VERSION` stays 1 (acceptance: a 3-packet tick with the middle packet dropped is never acked and the next complete tick becomes the baseline; the 53 B example unchanged; `codec_delta_test` 3,000 ticks with random splits identical baselines). **NET-49** net, Opus, 1 d, M2, depends NET-06: client-independent FULL / C-BLIP byte cache in `prepare_tick`; canonical-schedule 8-client `bench_snapshot.gd` (A 40 / B 15 Hz / C 2 Hz + 3 refresh, ack delays 3/6/10) writing prepare + encode sum to `perf/history.jsonl` (acceptance: BENCH_SNAPSHOT canonical mode printed and recorded; encode per client at the canonical schedule not above the pre-change number; delta/budget tests unchanged). Changed: **NET-08** depends_on += NET-49 (acceptance unchanged: the 4.0 ms row on the pinned runner); **NET-07** depends_on += NET-48 (rolling-refresh FULLs in section C use the A-37 discriminator; splitting semantics); **NET-17** depends_on += NET-48 and acceptance += "acks complete ticks only (A-36)"; **NET-06** status `review` -> `done`, `pr` 53 (archive) / 1 (public), note "CQ-4..CQ-7 closed by R0 B.10 A-36..A-40"; **TA-48** note -> "confirmed, R0 B.10 A-41"; **TA-46** note -> "decided, R0 B.10 A-42"; **UX-02** docs += "R0-amendments-03 A-43"; **TA-14** acceptance += "`pilot_input.gd` comment names `PilotWire` (A-46); if `sim/MODULE.md` needs lines, recipes move to 03 s15.4 (A-47)"; **NET-18** acceptance += "local reuse applies the A-44 button mask"; **NET-03** and **TA-13** notes -> "closed by R0 B.10 A-44..A-47". No re-tier, no milestone move. |
+| **Affected docs** | R0 Part B.10 (new, append-only); 03 s3.1 (A-42 sentence), s4.1 (rule 9), s4.2 (row 12 notes), s6.2 and s8.4 (`load_map`), revision log; 04 s3.4 (flags, record table, dead reckoning, baseline rule), s3.5 (comments), s4.6 (one sentence), s5.1 and s5.5 (A-44 buttons, A-45), s17 (NQ10 closed), s19 (NET-48, NET-49 rows), revision log; 05 s2.3 C13 (A-44, A-45), revision log. 01, 02, 06 unchanged (06 s5.1 already names `camera.json`; 02 s2.3 already states the fuel rule). 09 s2.3 is regenerated from `backlog.json` and is not hand-edited (10 s3.7). |
 | **Contract tests to update first** | None in this PR (no schema, enum or signature changes; `tools/tests` untouched). NET-48: `godot/test/unit/net/test_snapshot_malformed.gd` (bits 6-7 no longer malformed; index rules), `godot/test/unit/net/test_snapshot_codec.gd` (53 B example, index 0 + LAST), `godot/test/net/test_snapshot_budget.gd` (split tick acked and used as a baseline), `godot/test/net/test_snapshot_delta.gd` (random splits). NET-49: `godot/test/perf/bench_snapshot.gd`, `godot/test/net/test_snapshot_budget.gd` (bytes identical before and after the cache). |
 | **Gate** | `python tools/validate_content.py`, `python -m unittest discover -s tools/tests`, `python tools/check_deps.py`, `python tools/extract_doc_examples.py --check`, `python tools/gen_module_api.py --check` green in this PR (prose-only MODULE.md edits). |
 
@@ -181,7 +220,11 @@ requirement today (`hud.json`, `ui_scale.json` precede it; 03 s9.4 covers `conte
   {"op": "edit", "id": "NET-06", "status": "done", "merged": "2026-10-13", "pr": 1, "pr_archive": 53, "note": "CQ-4..CQ-7 closed by R0 B.10 A-36..A-40 (NET-48, NET-49)"},
   {"op": "edit", "id": "TA-48", "note": "confirmed: zero fuel disables the brake; docked ships are not stepped (R0 B.10 A-41)"},
   {"op": "edit", "id": "TA-46", "note": "decided: is_projectile stays open-ended; the store validates (R0 B.10 A-42)"},
-  {"op": "edit", "id": "UX-02", "docs_add": ["R0-amendments-03 A-43"]}
+  {"op": "edit", "id": "UX-02", "docs_add": ["R0-amendments-03 A-43"]},
+  {"op": "edit", "id": "TA-14", "acceptance_append": "; sim/pilot_input.gd comment names PilotWire.to_wire/from_wire (R0 B.10 A-46); if sim/MODULE.md needs lines, the How-to-add-X recipes move to 03 s15.4 with a pointer (A-47)"},
+  {"op": "edit", "id": "NET-18", "acceptance_append": "; local input reuse during a stall applies the A-44 button mask (BOOST/BRAKE held, FLIP/DOCK/RELEASE/FIRE cleared)"},
+  {"op": "edit", "id": "NET-03", "note": "silent-pilot buttons and NQ10 closed by R0 B.10 A-44, A-45; PilotInput comment -> TA-14 (A-46)"},
+  {"op": "edit", "id": "TA-13", "note": "Terrain.load_map in 03 s6.2/s8.4 and sim/MODULE.md cap decided by R0 B.10 A-46, A-47"}
 ]
 ```
 
@@ -189,5 +232,5 @@ requirement today (`hud.json`, `ui_scale.json` precede it; 03 s9.4 covers `conte
 
 | Role | Name | Date | Verdict |
 |---|---|---|---|
-| Architect | Fable 5.1 | 2026-10-13 | A-36..A-43 decided; A-36 `PROTOCOL_VERSION` (default 1) and A-40 over-budget branch (default: PM-01 decides with S-SIM-1) are OWNER items |
+| Architect | Fable 5.1 | 2026-10-13 | A-36..A-47 decided; A-36 `PROTOCOL_VERSION` (default 1) and A-40 over-budget branch (default: PM-01 decides with S-SIM-1) are OWNER items |
 | Owner | | | |

@@ -164,7 +164,8 @@ enum Kind { SPAWN, DEATH, HIT, BOMB_IMPACT, DOCKED, SERVICED, LAUNCHED, ORDER_DO
             SALVAGE_DELIVERED, LANDING, SHIELD_COLLAPSE, POSSESS_REQUESTED, CANISTER_DEPLOYED, CANISTER_COLLECTED }   # 0-33 frozen
 var kind: Kind; var tick: int; var a: int; var b: int; var pos: Vector3; var value: float; var team: int; var extra: PackedByteArray
 
-class_name Terrain extends RefCounted;  func height_at(dir: Vector3) -> float;  func normal_at(dir: Vector3) -> Vector3   # 03 s6.2; read-only after load; flat-datum stub until TA-13
+class_name Terrain extends RefCounted;  func load_map(map_dir: String) -> Error;  func height_at(dir: Vector3) -> float;  func normal_at(dir: Vector3) -> Vector3   # 03 s6.2/s8.4 (TA-13); read-only after load; flat datum until load_map
+func biome_at(dir: Vector3) -> int;  func surface_point(dir: Vector3) -> Vector3;  func slope_deg_at(cell: int) -> float;  func slope_deg_at_dir(dir: Vector3) -> float; func height_texel(face: int, x: int, y: int) -> int;  func is_loaded() -> bool;  var map_hash: String;  var face_resolution: int   # cell = face*n*n + j*n + i; SHA-256 per file + map_hash verified; mismatch -> ERR_FILE_CORRUPT / ERR_INVALID_DATA, sampler stays flat
 class_name EntityStore extends RefCounted                                    # 03 s3.2 arrays as public typed vars; alloc(range) / free(slot) / alive(id)
 func alloc(entity_kind: int, tick: int) -> int;  func free_slot(slot_index: int, tick: int) -> bool   # (TA-11) NULL_ID when the range is full; free = gen bump + clear_slot + quarantine
 func alive(id: int) -> bool;  func id_of(slot_index: int) -> int;  func clear_slot(s: int) -> void;  func live_count() -> int
@@ -232,7 +233,7 @@ default +) over the first `flip_duration_s / 2`, then a half loop; ends upright,
 - S6: no float literal other than 0.0, 0.5, 1.0, 2.0, -1.0 appears in `src/sim/**` (D6); every sim constant lives in a def (ADR-09).
 - S7: the only RNG is `SimWorld.rng` and its forks.
 - S8: `Kinematics.step_ship` and `sim/steer/` are pure (no Node, RNG, Time or global state).
-- S9: `height_at` is identical on every peer for identical map files (SHA verified at load).
+- S9: `height_at` is identical on every peer for identical map files (SHA verified at load; test_terrain.gd flipped-byte, vectors, seam tests).
 - S10: `apply_command` validates ownership, rights, caps, cost, placement (`Build.can_place`), phase and rate before accepting; the rate limit is 04's token bucket per player (10 commands/s sustained, burst 30; `REJECTED_RATE`); a rejected command has no effect.
 - S11: `CommandSinkBase.drive` never writes the input slot of a POSSESSED entity.
 - S12: `CANCEL_PRODUCE` / `CANCEL_BUILD` succeed only for the player who queued/placed the item, or a teammate if that player is disconnected, eliminated or a bot (R0 C3-08).
@@ -287,13 +288,9 @@ with `minimum`/`maximum` from the 01 anchor tolerance, and to the `*Def` class i
 
 ## Open items
 
-- CONTRACT-0 Q1-Q8: `docs/reviews/R0-amendments-01.md` (R0 B.8): own files for `ShipState` / `ProjectileState` (A-7, A-8); views above
-  (A-8); `CapsDef` is content's; per-file weapon / projectile namespaces (A-1: resolve `WeaponDef.projectile` via `ContentDB.projectile_index`,
-  never `def_index`); A-3 settled 2026-10-13: Foundry's x0.85 applies to `weapon_mount: ship` only.
-- Amendments 02 (`docs/reviews/R0-amendments-02.md`, R0 B.9, 2026-10-13): A-11 flip form, A-12 `step_projectile` `out`,
-  A-13 `brake_fade_mps`, A-14 fixture rule, A-20 projectile quarantine 0, A-21 subsystem `MODULE.md` rule. Code follow-ups (sim lane):
-  TA-43 done (`step_projectile(..., out)`; the step-6 system passes one reused scratch); TA-44 done (`brake_fade_mps` read);
-  TA-48 done (A-29 flip redirect, A-32 fuel burn; `FlightCommonDef` reads A-29..A-35; A-30/A-31/A-34/A-35 consumers: TA-14, AI-10).
-- TA-45 done (R0 B.9 A-14): `Kinematics` takes content's `ShipDef` / `FlightCommonDef` / `RulesDef` / `ProjectileDef`;
-  `sim/fixture/` is deleted. Tests parse the canonical fixture with `*Def.from_dict` or the shipped defs via `ContentLoader`.
+- CONTRACT-0 Q1-Q8 (`docs/reviews/R0-amendments-01.md`, R0 B.8): own files for `ShipState` / `ProjectileState` (A-7, A-8); views above (A-8); `CapsDef` is content's; per-file weapon / projectile namespaces (A-1: resolve `WeaponDef.projectile` via `ContentDB.projectile_index`, never `def_index`); A-3 settled 2026-10-13: Foundry's x0.85 applies to `weapon_mount: ship` only.
+- Amendments 02 (`docs/reviews/R0-amendments-02.md`, R0 B.9): A-11 flip form, A-12 `step_projectile` `out`, A-13 `brake_fade_mps`, A-14 fixture rule, A-20 projectile quarantine 0, A-21 subsystem `MODULE.md` rule; code follow-ups TA-43, TA-44, TA-45, TA-48 all done (`Kinematics` takes content's `*Def` types, `sim/fixture/` deleted; A-30/A-31/A-34/A-35 consumers: TA-14, AI-10).
+- Amendments 03 (`docs/reviews/R0-amendments-03.md`, R0 B.10): A-41 DOCKED ships are not stepped (03 s4.1 rule 9); A-42 `is_projectile`
+  open-ended; A-46 `pilot_input.gd`'s comment must name `PilotWire.to_wire` / `from_wire` (net), not `to_bytes` (next sim task touching
+  it, TA-14 by order); A-47 when this file needs lines, move "How to add X" to 03 s15.4 and leave a pointer (register never compressed).
 - Owners: TA-11 entity store, TA-12 kinematics, TA-14 projectiles, TA-18 tick driver + `LocalSimView` (+ `possessed` live list), TA-22 S-SIM-1, TA-37 vision, TA-38 ground motion; 05 lane `sim/steer/`, `sim/orders/`, `sim/control/`.

@@ -774,7 +774,7 @@ Projectiles never collide with projectiles (the SL-5 canister, when built, is a 
 
 ```gdscript
 class_name Terrain extends RefCounted
-func load(map_dir: String) -> Error                 # reads 6 x face{f}.height.u16 and face{f}.biome.u8 (Section 8)
+func load_map(map_dir: String) -> Error             # reads 6 x face{f}.height.u16 and face{f}.biome.u8 (Section 8); not `load`, which shadows a GDScript global (TA-13, R0 B.10 A-46)
 func height_at(dir: Vector3) -> float                # metres above datum, bilinear over the u16 face, identical on server and client
 func normal_at(dir: Vector3) -> Vector3              # from 3 samples (dir, dir + du, dir + dv) in the tangent plane, du = dv = one texel
 func biome_at(dir: Vector3) -> int                   # nearest texel, u8
@@ -1060,7 +1060,7 @@ Total raw: 12.6 + 6.3 + 6.3 + 0.4 MB = 25.6 MB; the web map pack carries only he
 
 ### 8.4 Loader (`sim/terrain.gd` + `content/map_def.gd`)
 
-`MapDef` (a `Def`) holds `id`, `dir`, `map_hash`, `features` (resource nodes, slots, neutral structures), `rules_overrides`. `Terrain.load(dir)` reads the four face sets with `FileAccess.get_buffer` into `PackedByteArray`s, verifies each SHA-256 against `meta.json` (a mismatch is a hard error: a corrupt map on one peer would desync vision and collision), and asserts `radius_m == Sphere.PLANET_RADIUS` and the relief range. Load time budget: 30 MB read + 6 hashes: ~150 ms on PC, ~600 ms on Android-mid, under the loading screen.
+`MapDef` (a `Def`) holds `id`, `dir`, `map_hash`, `features` (resource nodes, slots, neutral structures), `rules_overrides`. `Terrain.load_map(dir)` reads the four face sets with `FileAccess.get_buffer` into `PackedByteArray`s, verifies each SHA-256 against `meta.json` (a mismatch is a hard error: a corrupt map on one peer would desync vision and collision), and asserts `radius_m == Sphere.PLANET_RADIUS` and the relief range. Load time budget: 30 MB read + 6 hashes: ~150 ms on PC, ~600 ms on Android-mid, under the loading screen.
 
 ### 8.5 Edge seaming and determinism of sampling
 
@@ -1890,4 +1890,4 @@ Every register row applied (R0 = `docs/reviews/R0-resolution-register.md`) and t
 | 03 amendments 2-3 | 1.1, 7.3, 7.10 | no Jolt in v1; chunk triangle wording |
 | R0 B.8 A-1, A-7, A-8 (CONTRACT-0 amendments 01) | 5.2, 15.3 | `ShipState` and `ProjectileState` as own files; `def_index` scoped to entity defs plus `weapon_index` / `projectile_index`; `CapsDef` fields; N2 wording |
 | R0 B.9 A-8..A-22 (CONTRACT-0 amendments 02, 2026-10-13) | 2.6, 2.8, 3.1, 5.1, 5.2, 5.3, 9.2, 13, 15.3, 15.4, TA-10, TA-11 | flat `EDGE_NEIGHBOUR` (stride 3) and the C3 round trip; `is_occluded_by_datum` endpoint semantics; projectile range quarantines 0 ticks (owner); `flight_common.brake_fade_mps`; `step_projectile(..., out)`; sequential flip (half roll, half loop) with the end-state invariant, phase order OWNER; `launch_pad`, `pause_scope`, `caps_web_mobile` in 9.2; `quality_tiers.json` + schema to TA-47; `ContentDB` gains `wing`, `callsigns`, `barks`, `supply_canister`, `missions` and N8; subsystem `MODULE.md` rule for `sim/` |
-| R0 B.10 A-40..A-42 (CONTRACT-0 amendments 03, 2026-10-13) | 3.1, 4.1, 4.2 | `is_projectile` open-ended, the store validates; rule 9: step 5 skips DOCKED ships (idle burn is flight-only); row 12 notes carry NET-06's measured encode cost and the A-40 plan (budget unchanged, NET-49 cache + canonical bench, NET-08 gate, PM-01 branch) |
+| R0 B.10 A-40..A-42, A-46, A-47 (CONTRACT-0 amendments 03, 2026-10-13) | 3.1, 4.1, 4.2, 6.2, 8.4, 15.4 | `is_projectile` open-ended, the store validates; rule 9: step 5 skips DOCKED ships (idle burn is flight-only); row 12 notes carry NET-06's measured encode cost and the A-40 plan (budget unchanged, NET-49 cache + canonical bench, NET-08 gate, PM-01 branch); `Terrain.load_map` (not `load`); `sim/MODULE.md` cap: recipes move to 15.4 when the next sim task needs the lines (A-47) |
