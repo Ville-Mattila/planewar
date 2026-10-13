@@ -164,4 +164,6 @@ split into a second static class (e.g. `SphereCells`) before crossing it.
   `docs/reviews/R0-amendments-02.md`: A-8 (flat `EDGE_NEIGHBOUR`), A-9 (C3 as stated above is canonical; 03 s2.6 mirrors
   it), A-10 (`is_occluded_by_datum` semantics; TA-37 adds the both-endpoints-below-datum vector).
 - TA-46 appended `EntityId.PROJECTILE_SLOT_END` (6,144, exclusive; R0 B.9 A-20); `sim/projectile_store.gd` derives
-  `SLOT_COUNT` from it.
+  `SLOT_COUNT` from it. `is_projectile` stays open-ended (`slot >= PROJECTILE_SLOT_MIN`, 03 s3.1; R0 B.10 A-42,
+  `docs/reviews/R0-amendments-03.md`): it classifies the range, the store validates the index and generation, and no
+  allocator mints a slot at or above `PROJECTILE_SLOT_END`. Decoders validate ids against the store, not the predicate.

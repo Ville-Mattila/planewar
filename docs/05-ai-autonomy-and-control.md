@@ -185,7 +185,7 @@ Guards are evaluated by `ControlMachine` inside `SimWorld.apply_command` (tick s
 | C10 | POSSESSED | `HANDOVER(q)` by p | `request_from = q`, request age <= 10 s, q in match; q's current possession (if any) released this tick | `possessor = q`; overlay `LINK_BRIDGE` until q's first input; p's input is never replayed | POSSESSED | `RELEASED(reason=HANDOVER)` + `HANDOVER` + `POSSESSED` |
 | C11 | POSSESSED | altitude >= hard ceiling (control check) | - | as C9 but overlay `RECOVER_CEILING` | ORDERED / AUTO | `RELEASED(reason=CEILING)` + `CEILING_RELEASE` |
 | C12 | POSSESSED | possessor's transport timed out (60 s web / 15 s native) | - | as C9 | ORDERED / AUTO | `RELEASED(reason=DISCONNECT)` |
-| C13 | POSSESSED | no human input this tick while connected | - | ticks 1-10 without input: reuse the previous input with stick axes decayed 50 % per tick, thrust held; from tick 11: overlay `LINK_BRIDGE` (state stays POSSESSED until C12) | POSSESSED | `ALERT(LINK_WEAK)` once, on entering `LINK_BRIDGE` |
+| C13 | POSSESSED | no human input this tick while connected | - | ticks 1-10 without input: reuse the previous input with stick axes decayed 50 % per tick, thrust held, BOOST / BRAKE held, FLIP / DOCK / RELEASE / FIRE1 / FIRE2 cleared (a momentary action is never replayed; R0 B.10 A-44; 10 ticks confirmed, NQ10 closed, A-45); from tick 11: overlay `LINK_BRIDGE` (state stays POSSESSED until C12) | POSSESSED | `ALERT(LINK_WEAK)` once, on entering `LINK_BRIDGE` |
 | C14 | POSSESSED | human input arrives during `LINK_BRIDGE` | - | clear overlay | POSSESSED | - |
 | C15 | any | entity dies | - | if POSSESSED, release first; clear control fields | - | `RELEASED(reason=DEATH)`, `DEATH(entity, killer, cause)` |
 | C16 | POSSESSED | possessor's team loses its last Core, or match ends | - | as C9 | AUTO | `RELEASED(reason=MATCH)` |
@@ -1184,4 +1184,5 @@ Revised 2026-10-10 against `reviews/R0-resolution-register.md` and 01 v1.1.
 | C3-21 | Adjutant entries go to the Adjutant lane of the single feed | s8 |
 | 05 AR-1 | Accepted; `SET_ADJUTANT` payload and validation; s12 emptied | s8, s12 |
 | R0 B.8 A-5, A-6 (CONTRACT-0 amendments 01) | Rosters are per phase only (R0 B.1 shape); Adjutant profiles carry `promise: null` and are validated against the `normal` cadence | s7.7, s8 |
+| R0 B.10 A-44, A-45 (CONTRACT-0 amendments 03, 2026-10-13) | C13 silent-pilot reuse: BOOST / BRAKE held, FLIP / DOCK / RELEASE / FIRE bits cleared; the 10-tick window is confirmed (04 NQ10 closed) | s2.3 (C13) |
 

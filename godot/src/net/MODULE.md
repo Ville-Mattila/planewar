@@ -1,8 +1,9 @@
 # net - MODULE.md
 
 Contract for `godot/src/net/**`, v0.6 (NET-01 protocol, NET-02 field codec, NET-05 roster, NET-06 snapshot codec, NET-11 transports, NET-47 R0 B.9 A-23/A-24/A-26/A-28). Source of truth: 04 s2-s5 and s13, R0 Part B (B.3 enumerations,
-B.4 deps, B.5 signatures). A change to "Public API", "Wire layout" or "Invariants" is a contract change: update the contract tests first, in the same PR (ADR-11); any wire-layout change bumps `Protocol.PROTOCOL_VERSION` and goes
-through the Architect (10 s4); `tools/gen_module_api.py --check` (TA-27) must pass; this file stays <= 300 lines (ADR-14). NET-38 writes the final contract.
+B.4 deps, B.5 signatures). A change to "Public API", "Wire layout" or "Invariants" is a contract change: contract tests
+first, same PR (ADR-11); a wire-layout change goes through the Architect (10 s4) and bumps `Protocol.PROTOCOL_VERSION`
+once a wire has shipped (R0 B.9 A-23, B.10 A-36); `gen_module_api.py --check` must pass; <= 300 lines (ADR-14). NET-38 writes the final contract.
 
 | Field | Value |
 |---|---|
@@ -220,11 +221,8 @@ func submit(packet: PackedByteArray, current_tick: int) -> int   # inputs stored
 func take(tick: int) -> PilotInput                      # stored input, else decayed previous (axes x 0.5 per tick, thrust held) <= 10 ticks, then bridge (once)
 ```
 
-Link semantics (04 s15.1; deterministic: each pipe draws from `Rng.new(seed_value).fork("s2c:<conn>" | "c2s:<conn>")`):
-CH_CONTROL / CH_EVENTS (reliable ordered) are delayed, never lost, delivered in send order, held to the end of a burst or stall window. CH_INPUT may be lost, duplicated, reordered. CH_SNAPSHOT (unreliable sequenced) additionally
-drops anything older than the newest delivered. A stall holds both directions and releases the backlog at its end.
-Bandwidth limit: serialisation delay, then unreliable packets queued > 250 ms are dropped. Presets (one-way): LAN 0/0/0; GOOD 40 ms +-5, 0.5 %; TARGET 100 ms +-15, 3 %, 1 % reorder; BAD 250 ms +-40, 5 %, 2 % reorder, 0.5 % dup;
-MOBILE_SWITCH = TARGET + loss window ticks 900-1019; TAB_STALL = GOOD + 45 s stall at tick 1,200. The 04 name `seed` is `seed_value` (`seed` is a GDScript global); presets are `FaultModel.preset()`, not `test/net/presets.gd`.
+Link semantics (04 s15.1; deterministic: each pipe draws from `Rng.new(seed_value).fork("s2c:<conn>" | "c2s:<conn>")`): CH_CONTROL / CH_EVENTS (reliable ordered) are delayed, never lost, in send order, held to the end of a burst or stall window. CH_INPUT may be lost, duplicated, reordered. CH_SNAPSHOT (unreliable sequenced) additionally drops anything older than the newest delivered. A stall holds both directions and releases the backlog at its end.
+Bandwidth limit: serialisation delay, then unreliable packets queued > 250 ms are dropped. Presets (one-way): LAN 0/0/0; GOOD 40 ms +-5, 0.5 %; TARGET 100 ms +-15, 3 %, 1 % reorder; BAD 250 ms +-40, 5 %, 2 % reorder, 0.5 % dup; MOBILE_SWITCH = TARGET + loss window ticks 900-1019; TAB_STALL = GOOD + 45 s stall at tick 1,200. The 04 name `seed` is `seed_value` (`seed` is a GDScript global); presets are `FaultModel.preset()`, not `test/net/presets.gd`.
 
 Planned (04 s19): `codec_commands.gd` (NET-04), `KEYFRAME` + rolling refresh (NET-07), `Interest` (NET-08), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10), `ReplayWriter`/`ReplayReader` (NET-25).
 
@@ -244,7 +242,7 @@ step one code to its other neighbour when that lowers the angular error (decoder
 Flags = control state bits 0-1, then DOCKED, FIRING, BOOSTING, BRAKING, CLASS_BIT, DYING (bits 2-7). Tier-B coarse spare bits (A-24): spare 0-4 = flags 0-4, spare 5 = flags bit 6, spare 6 = flags bit 7; BRAKING is dropped.
 `CHAT_RELAY` (0x8C) Max is 222, as in 04 s2.3 (A-26). `SessionPhase` is defined only in `Protocol` (A-28).
 
-SNAPSHOT (04 s3.4, s3.5; NET-06): header id, tick u32, baseline_tick u32 (0 = no baseline, FULL only), flags; sections
+SNAPSHOT (04 s3.4, s3.5; NET-06): header id, tick u32, baseline_tick u32 (0 = no baseline, FULL only), flags (bits 6-7 = packet index 0-3, LAST on the highest index, R0 B.10 A-36; NET-06 rejects them set, NET-48 applies the index); sections
 A, B, C in that order, each a u8 count (1-255) then records. A record starts with the roster-index gap: u8 1-254 from the
 previous record of the packet (the chain runs across sections and restarts per packet; 0 only for index 0 as the first
 record), or 0xFF + u16 index. Next byte 0xFF = FULL (vec3q, quat_s3, vel, hp, flags, +ai_tag own team); otherwise A/B: a
@@ -266,7 +264,9 @@ i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = c
 - N8: `Codec` quantisers and decoders allocate nothing and never error: any input bits decode to a defined value
   (unit quaternion, ZERO, or the -1 / POS_INVALID sentinel).
 - N9: the server mirror (`BaselineStore` per client) and the client's frame for every fully received tick are
-  identical (`same_state`): both change only through `BaselineFrame.set_*` with `DeadReckon` arithmetic. A frame is a delta baseline only when its tick went out as one packet (`usable`); `prepare_tick` runs once per tick.
+  identical (`same_state`): both change only through `BaselineFrame.set_*` with `DeadReckon` arithmetic. A frame is a
+  delta baseline only when the client acknowledged it, which it does only for a complete tick (every packet index
+  received; A-36, NET-48; before NET-48 only a one-packet tick is `usable`); `prepare_tick` runs once per tick.
 - N10: `SnapshotDecoder.decode` validates the whole packet before applying; anything but OK changes nothing.
 
 ## Data owned
@@ -275,8 +275,11 @@ The wire catalogue and enums above. No def files are read by `Protocol`; `rules.
 
 ## Performance budget
 
-Bandwidth: 04 s4.6 (24 KB/s typical, 30 KB/s cap per client, 01 s8.3). CPU: the 03 s4.2 "events + interest + encode + replay" row (R0 B.7) covers `prepare_tick` and per-client encoding; `Protocol` lookups are O(1). NET-06
-measured (400 entities, desktop, p50): prepare_tick 1.26 ms, encode 1.1-1.2 ms and decode 0.53 ms per client.
+Bandwidth: 04 s4.6 (24 KB/s typical, 30 KB/s cap per client, 01 s8.3). CPU: the 03 s4.2 "events + interest +
+encode + replay" row (R0 B.7) covers `prepare_tick` and per-client encoding; `Protocol` lookups are O(1). NET-06
+measured (400 entities, desktop, p50): prepare_tick 1.26 ms, encode 1.1-1.2 ms (~3 us per record, every entity every
+tick) and decode 0.53 ms per client; at the 04 s4.1 schedule 8 clients extrapolate to ~5.8 ms, over the row. R0 B.10 A-40:
+the row stays; NET-49 caches FULL / C-BLIP bytes once per tick; NET-08 measures on the pinned runner; A/B deltas are per client.
 
 ## Test entry points
 
@@ -294,5 +297,4 @@ Planned: interest benchmarks (NET-08), fuzz_test.gd (NET-23).
 
 ## Open items
 
-NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase` closed by NET-47 (A-23..A-26, A-28). NET-06 asks the Architect: CQ-4 SNAPSHOT has no packet index, so a split tick cannot become a baseline (proposal: flags bits 6-7, PROTOCOL_VERSION 2); CQ-5 04 does not say how section C tells FULL from C-BLIP (e8 clamped to 254); CQ-6 04 s3.4 POS_SMALL text predates A-23 (now 15.6 cm, +-19.8 m E/N, bytes unchanged); CQ-7 sub-step residuals are not sent, entries keep velocity at 1/1024 m/s, gravity VEL is sent only past one 2 m/s step.
-NET-03 asks: `PilotInput`'s doc comment (sim) says `to_bytes`/`from_bytes` land with NET-03; the wire form lives in `net/PilotWire` (04 s2.4 `to_wire`/`from_wire`), sim comment needs updating (sim lane). Silence (R0 C2-08) drops FLIP/DOCK/RELEASE/FIRE bits in reused inputs (04 silent; NQ10 tick count 10 vs 60 is still open).
+NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 + perf note and NET-03's questions: closed by R0 B.10 A-36..A-40, A-44..A-46 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 and the silence rule (keep BOOST / BRAKE, drop FLIP / DOCK / RELEASE / FIRE1/2; 10 ticks, NQ10 closed) are ratified as written above. Pending code: NET-48 (A-36 packet index, complete-tick ack, every frame `usable`, `last_split` removed, `max_packets` default 4; `PROTOCOL_VERSION` stays 1, OWNER); NET-49 (A-40 FULL / C-BLIP byte cache, canonical-schedule 8-client bench row); sim lane: `PilotInput`'s `to_bytes` comment (A-46; the wire form is `PilotWire`).

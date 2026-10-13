@@ -288,13 +288,9 @@ with `minimum`/`maximum` from the 01 anchor tolerance, and to the `*Def` class i
 
 ## Open items
 
-- CONTRACT-0 Q1-Q8: `docs/reviews/R0-amendments-01.md` (R0 B.8): own files for `ShipState` / `ProjectileState` (A-7, A-8); views above
-  (A-8); `CapsDef` is content's; per-file weapon / projectile namespaces (A-1: resolve `WeaponDef.projectile` via `ContentDB.projectile_index`,
-  never `def_index`); A-3 settled 2026-10-13: Foundry's x0.85 applies to `weapon_mount: ship` only.
-- Amendments 02 (`docs/reviews/R0-amendments-02.md`, R0 B.9, 2026-10-13): A-11 flip form, A-12 `step_projectile` `out`,
-  A-13 `brake_fade_mps`, A-14 fixture rule, A-20 projectile quarantine 0, A-21 subsystem `MODULE.md` rule. Code follow-ups (sim lane):
-  TA-43 done (`step_projectile(..., out)`; the step-6 system passes one reused scratch); TA-44 done (`brake_fade_mps` read);
-  TA-48 done (A-29 flip redirect, A-32 fuel burn; `FlightCommonDef` reads A-29..A-35; A-30/A-31/A-34/A-35 consumers: TA-14, AI-10).
-- TA-45 done (R0 B.9 A-14): `Kinematics` takes content's `ShipDef` / `FlightCommonDef` / `RulesDef` / `ProjectileDef`;
-  `sim/fixture/` is deleted. Tests parse the canonical fixture with `*Def.from_dict` or the shipped defs via `ContentLoader`.
+- CONTRACT-0 Q1-Q8 (`docs/reviews/R0-amendments-01.md`, R0 B.8): own files for `ShipState` / `ProjectileState` (A-7, A-8); views above (A-8); `CapsDef` is content's; per-file weapon / projectile namespaces (A-1: resolve `WeaponDef.projectile` via `ContentDB.projectile_index`, never `def_index`); A-3 settled 2026-10-13: Foundry's x0.85 applies to `weapon_mount: ship` only.
+- Amendments 02 (`docs/reviews/R0-amendments-02.md`, R0 B.9): A-11 flip form, A-12 `step_projectile` `out`, A-13 `brake_fade_mps`, A-14 fixture rule, A-20 projectile quarantine 0, A-21 subsystem `MODULE.md` rule; code follow-ups TA-43, TA-44, TA-45, TA-48 all done (`Kinematics` takes content's `*Def` types, `sim/fixture/` deleted; A-30/A-31/A-34/A-35 consumers: TA-14, AI-10).
+- Amendments 03 (`docs/reviews/R0-amendments-03.md`, R0 B.10): A-41 DOCKED ships are not stepped (03 s4.1 rule 9); A-42 `is_projectile`
+  open-ended; A-46 `pilot_input.gd`'s comment must name `PilotWire.to_wire` / `from_wire` (net), not `to_bytes` (next sim task touching
+  it, TA-14 by order); A-47 when this file needs lines, move "How to add X" to 03 s15.4 and leave a pointer (register never compressed).
 - Owners: TA-11 entity store, TA-12 kinematics, TA-14 projectiles, TA-18 tick driver + `LocalSimView` (+ `possessed` live list), TA-22 S-SIM-1, TA-37 vision, TA-38 ground motion; 05 lane `sim/steer/`, `sim/orders/`, `sim/control/`.
