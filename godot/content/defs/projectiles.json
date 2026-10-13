@@ -1,0 +1,158 @@
+{
+  "_doc": "R0 B.1 projectiles.json: ProjectileDef[] (owner 02). Values from 02 s4.2 table and R0 B.5 motion rule. Fields shown as '-' in 02 are omitted (default 0 / false / null). Projectile ids are a per-file namespace (R0 B.8 A-1); 'bomb' is both a weapon and a projectile. flak_shell fuse is timed (predicted intercept + 0.3 s, early burst within fuse_radius_m, 02 s4.2). supply_canister is candidate SL-5: its speed, lifetime and radius are not in 02 and its numbers live in 08 SL-5 (commander_verbs.json). Mesh paths per 07 s10 (proj_<id>).",
+  "projectiles": [
+    {
+      "id": "slug_light",
+      "status": "core",
+      "tags": ["projectile"],
+      "_doc": "02 s4.2 slug_light row; R0 B.1 canonical: straight, 700 m/s, 1.15 s, no gravity, not transported, radius 0.5, contact, hp 0 (indestructible)",
+      "presentation": {
+        "mesh": "res://assets/models/projectiles/proj_slug_light.glb"
+      },
+      "behaviour": "straight",
+      "speed_mps": 700,
+      "lifetime_s": 1.15,
+      "gravity": false,
+      "transport": false,
+      "radius_m": 0.5,
+      "fuse": "contact",
+      "shield_absorbed": false,
+      "hp": 0
+    },
+    {
+      "id": "slug_heavy",
+      "status": "core",
+      "tags": ["projectile"],
+      "_doc": "02 s4.2 slug_heavy row; R0 B.1 canonical: straight, 700 m/s, 1.15 s, no gravity, not transported, radius 0.6, contact, hp 0",
+      "presentation": {
+        "mesh": "res://assets/models/projectiles/proj_slug_heavy.glb"
+      },
+      "behaviour": "straight",
+      "speed_mps": 700,
+      "lifetime_s": 1.15,
+      "gravity": false,
+      "transport": false,
+      "radius_m": 0.6,
+      "fuse": "contact",
+      "shield_absorbed": false,
+      "hp": 0
+    },
+    {
+      "id": "bomb",
+      "status": "core",
+      "tags": ["projectile"],
+      "_doc": "02 s4.2 bomb row (eject 40 m/s down, blast 15 / 20 structure, contact incl. terrain, arm 0.5 s); R0 B.1 canonical: ballistic, gravity, transported, shield absorbed, hp 0",
+      "presentation": {
+        "mesh": "res://assets/models/projectiles/proj_bomb.glb"
+      },
+      "behaviour": "ballistic",
+      "speed_mps": 0,
+      "eject_down_mps": 40,
+      "lifetime_s": 30,
+      "gravity": true,
+      "transport": true,
+      "radius_m": 1.0,
+      "blast_radius_m": 15,
+      "blast_radius_structure_m": 20,
+      "fuse": "contact",
+      "arm_s": 0.5,
+      "shield_absorbed": true,
+      "hp": 0
+    },
+    {
+      "id": "rocket",
+      "status": "core",
+      "tags": ["projectile"],
+      "_doc": "02 s4.2 rocket row (guided at 250 m/s, proximity fuse radius 4, blast 4 / 4); R0 B.1 canonical: guided, transported, shield absorbed, arm 0.2 s, hp 0",
+      "presentation": {
+        "mesh": "res://assets/models/projectiles/proj_rocket.glb"
+      },
+      "behaviour": "guided",
+      "speed_mps": 250,
+      "lifetime_s": 6.0,
+      "gravity": false,
+      "transport": true,
+      "radius_m": 0.8,
+      "blast_radius_m": 4,
+      "blast_radius_structure_m": 4,
+      "fuse": "proximity",
+      "fuse_radius_m": 4,
+      "arm_s": 0.2,
+      "shield_absorbed": true,
+      "hp": 0
+    },
+    {
+      "id": "flak_shell",
+      "status": "core",
+      "tags": ["projectile"],
+      "_doc": "02 s4.2 flak_shell row (timed fuse, early burst within 12 m, blast 25); R0 B.1 canonical: straight, 300 m/s, 5.0 s, no gravity, not transported, radius 0.5, arm 0.5 s, hp 0",
+      "presentation": {
+        "mesh": "res://assets/models/projectiles/proj_flak_shell.glb"
+      },
+      "behaviour": "straight",
+      "speed_mps": 300,
+      "lifetime_s": 5.0,
+      "gravity": false,
+      "transport": false,
+      "radius_m": 0.5,
+      "blast_radius_m": 25,
+      "fuse": "timed",
+      "fuse_radius_m": 12,
+      "arm_s": 0.5,
+      "shield_absorbed": false,
+      "hp": 0
+    },
+    {
+      "id": "rail_slug",
+      "status": "core",
+      "tags": ["projectile"],
+      "_doc": "02 s4.2 rail_slug row; R0 B.1 canonical: straight, 1500 m/s, 1.7 s, no gravity, not transported, radius 0.5, contact, hp 0",
+      "presentation": {
+        "mesh": "res://assets/models/projectiles/proj_rail_slug.glb"
+      },
+      "behaviour": "straight",
+      "speed_mps": 1500,
+      "lifetime_s": 1.7,
+      "gravity": false,
+      "transport": false,
+      "radius_m": 0.5,
+      "fuse": "contact",
+      "shield_absorbed": false,
+      "hp": 0
+    },
+    {
+      "id": "siege_shell",
+      "status": "core",
+      "tags": ["projectile"],
+      "_doc": "02 s4.2 siege_shell row (lofted up to 110 m/s, blast 12 / 12, contact incl. terrain, arm 1.0 s); R0 B.1 canonical: ballistic, gravity, transported, shield absorbed, hp 0",
+      "presentation": {
+        "mesh": "res://assets/models/projectiles/proj_siege_shell.glb"
+      },
+      "behaviour": "ballistic",
+      "speed_mps": 110,
+      "lifetime_s": 12,
+      "gravity": true,
+      "transport": true,
+      "radius_m": 1.0,
+      "blast_radius_m": 12,
+      "blast_radius_structure_m": 12,
+      "fuse": "contact",
+      "arm_s": 1.0,
+      "shield_absorbed": true,
+      "hp": 0
+    },
+    {
+      "id": "supply_canister",
+      "status": "candidate",
+      "tags": ["projectile"],
+      "_doc": "02 s4.2 supply_canister row (candidate, SL-5); 08 SL-5 and R0 B.1: behaviour rendezvous, hp 30; speed, lifetime and radius come from 08 SL-5 (commander_verbs.json) and are not set here",
+      "presentation": {
+        "mesh": "res://assets/models/projectiles/proj_supply_canister.glb"
+      },
+      "behaviour": "rendezvous",
+      "transport": true,
+      "shield_absorbed": false,
+      "hp": 30
+    }
+  ]
+}

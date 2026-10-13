@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rules.schema.json",
+  "title": "RulesDef (godot/content/defs/rules.json)",
+  "$comment": "R0 B.1: world constants only; everything else lives in 02's files. Canonical: gravity 6.0, ceilings 1500/2000, tick_hz 30, lift_model speed_scaled, path_expansions_per_tick 2000, sim_budget_profile [1, 2], friendly_fire/debug_commands/profile_enabled false.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "gravity": {
+      "type": "number",
+      "minimum": 5.0,
+      "maximum": 8.0,
+      "$comment": "01 s3.1.1 anchor 5.0-8.0; canonical 6.0"
+    },
+    "ceiling_soft_m": {
+      "const": 1500,
+      "$comment": "01 hard constraint (Sphere.CEILING_SOFT)"
+    },
+    "ceiling_hard_m": {
+      "const": 2000,
+      "$comment": "01 hard constraint (Sphere.CEILING_HARD)"
+    },
+    "tick_hz": {
+      "const": 30,
+      "$comment": "01 ADR-07 hard constraint"
+    },
+    "lift_model": {
+      "enum": [
+        "speed_scaled",
+        "damping_only"
+      ]
+    },
+    "path_expansions_per_tick": {
+      "type": "integer",
+      "minimum": 250,
+      "maximum": 10000,
+      "$comment": "01 s7 anchor 2,000 (ADR-05); sanity bounds"
+    },
+    "sim_budget_profile": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 7,
+        "$comment": "03 s4.3 cut ladder rungs 1-7"
+      },
+      "uniqueItems": true,
+      "$comment": "default [1, 2]"
+    },
+    "friendly_fire": {
+      "type": "boolean"
+    },
+    "debug_commands": {
+      "type": "boolean"
+    },
+    "profile_enabled": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ceiling_hard_m",
+    "ceiling_soft_m",
+    "debug_commands",
+    "friendly_fire",
+    "gravity",
+    "lift_model",
+    "path_expansions_per_tick",
+    "profile_enabled",
+    "sim_budget_profile",
+    "tick_hz"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

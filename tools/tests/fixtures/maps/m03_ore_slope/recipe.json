@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "id": "tiny_test",
+  "seed": 20260,
+  "radius_m": 6000,
+  "face_resolution": 128,
+  "relief": {
+    "min_m": -500,
+    "max_m": 700
+  },
+  "symmetry": {
+    "rotational": 8,
+    "wedge_start_deg": 22.5
+  },
+  "base_noise": {
+    "octaves": 2,
+    "freq_per_circumference": 4,
+    "amp_m": 0,
+    "lacunarity": 2.0,
+    "gain": 0.5,
+    "warp_m": 0
+  },
+  "slots": {
+    "count": 2,
+    "lon0_deg": 22.5,
+    "spacing_deg": 45,
+    "flatten_radius_m": 300,
+    "flatten_edge_m": 150,
+    "flatten_slope_deg": 5,
+    "facing_deg": 0
+  },
+  "poles": {
+    "noon_plateau_radius_m": 600,
+    "noon_plateau_height_m": 0,
+    "midnight_ice_ring": true
+  },
+  "biome_rules": "default",
+  "resources": {
+    "slot_features": [
+      {
+        "id": "field_a",
+        "kind": "ore_field",
+        "bearing_deg": 90,
+        "distance_m": 1200,
+        "capacity": 4000,
+        "regen_per_s": 1.0,
+        "radius_m": 250,
+        "max_miners": 2
+      },
+      {
+        "id": "home_trap",
+        "kind": "cold_trap",
+        "bearing_deg": 180,
+        "distance_m": 1700,
+        "capacity": 4000,
+        "rate_per_s": 1.0,
+        "radius_m": 250
+      }
+    ],
+    "ring_features": [],
+    "pole_features": [],
+    "unused_slot_yield": 0.5
+  },
+  "notes": "ART-37 fixture: fails M3 only (docs/07 s9.5); consumed by tools/tests/test_moonbake.py",
+  "craters": {
+    "explicit": [
+      {
+        "lat": 6.970024703617037e-16,
+        "lon": 33.95915590261646,
+        "diam_m": 120,
+        "depth_m": 60,
+        "rim_m": 40
+      }
+    ]
+  }
+}

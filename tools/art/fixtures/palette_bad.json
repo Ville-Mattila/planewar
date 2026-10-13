@@ -1,0 +1,261 @@
+{
+  "version": 1,
+  "doc": "Single source of truth for PLANEWAR colour (docs/07 s2, s4.3). Edit here, run tools/art/cvd_check.py, then tools/blender/build_palette.py.",
+  "atlas": {
+    "size": 256,
+    "cell": 16,
+    "cols": 16,
+    "swatch_rows": 14,
+    "emblem_rows_y": 224,
+    "emblem_size": 32,
+    "emblem_bg": "#151821"
+  },
+  "alpha_classes": {
+    "plain": {
+      "code": 0,
+      "alpha": 0
+    },
+    "team_paint": {
+      "code": 1,
+      "alpha": 85
+    },
+    "emissive": {
+      "code": 2,
+      "alpha": 170
+    },
+    "team_glow": {
+      "code": 3,
+      "alpha": 255
+    }
+  },
+  "biomes": [
+    {
+      "id": 0,
+      "name": "mare",
+      "low": "#30343F",
+      "mid": "#404552",
+      "high": "#51576A"
+    },
+    {
+      "id": 1,
+      "name": "highland",
+      "low": "#7A7770",
+      "mid": "#959189",
+      "high": "#B1ACA1"
+    },
+    {
+      "id": 2,
+      "name": "crater_floor",
+      "low": "#2A2C34",
+      "mid": "#353840",
+      "high": "#43474F"
+    },
+    {
+      "id": 3,
+      "name": "rim_ejecta",
+      "low": "#A8A396",
+      "mid": "#C0BBAE",
+      "high": "#D6D1C4"
+    },
+    {
+      "id": 4,
+      "name": "cold_trap",
+      "low": "#34485E",
+      "mid": "#5B7C9E",
+      "high": "#B5D8EC"
+    },
+    {
+      "id": 5,
+      "name": "ore_field",
+      "low": "#6B5B3F",
+      "mid": "#8D7648",
+      "high": "#AA9158"
+    },
+    {
+      "id": 6,
+      "name": "solar_plateau",
+      "low": "#B9B5AA",
+      "mid": "#D0CCC0",
+      "high": "#E3DFD2"
+    },
+    {
+      "id": 7,
+      "name": "rille_floor",
+      "low": "#22242B",
+      "mid": "#2C2F37",
+      "high": "#373B44"
+    }
+  ],
+  "world": {
+    "space": "#05070C",
+    "sun": "#FFF1DC",
+    "earthshine": "#9DB6E8"
+  },
+  "team": [
+    {
+      "slot": 0,
+      "name": "Amber",
+      "hex": "#E1A633",
+      "shape": "circle"
+    },
+    {
+      "slot": 1,
+      "name": "Cobalt",
+      "hex": "#4C64ED",
+      "shape": "triangle"
+    },
+    {
+      "slot": 2,
+      "name": "Mint",
+      "hex": "#3BF0B2",
+      "shape": "square"
+    },
+    {
+      "slot": 3,
+      "name": "Forest",
+      "hex": "#17840E",
+      "shape": "diamond"
+    },
+    {
+      "slot": 4,
+      "name": "Magenta",
+      "hex": "#B1369D",
+      "shape": "cross"
+    },
+    {
+      "slot": 5,
+      "name": "Orchid",
+      "hex": "#E9A1F0",
+      "shape": "star5"
+    },
+    {
+      "slot": 6,
+      "name": "Lime",
+      "hex": "#E1F72C",
+      "shape": "chevron"
+    },
+    {
+      "slot": 7,
+      "name": "Coral",
+      "hex": "#E4A93A",
+      "shape": "ring"
+    }
+  ],
+  "relation": {
+    "ally": "#2A8FCF",
+    "enemy": "#C86A10",
+    "self": "#E8B84A"
+  },
+  "ui": {
+    "ui_bg_0": "#080B10",
+    "ui_bg_1": "#0F141C",
+    "ui_bg_2": "#18202C",
+    "ui_line": "#2B3748",
+    "ui_text": "#E6EBF2",
+    "ui_text_dim": "#98A4B6",
+    "ui_accent": "#5CC8FF",
+    "ui_focus": "#FFFFFF",
+    "ui_ok": "#6FD08C",
+    "ui_warn": "#FFC247",
+    "ui_danger": "#FF5A5A",
+    "res_ore": "#C8A25E",
+    "res_ice": "#8FD3F2",
+    "res_power": "#FFF0A0"
+  },
+  "swatches": {
+    "hull_100": {
+      "hex": "#E4E7EC",
+      "class": "plain"
+    },
+    "hull_200": {
+      "hex": "#C5CAD3",
+      "class": "plain"
+    },
+    "hull_300": {
+      "hex": "#9AA2B1",
+      "class": "plain"
+    },
+    "hull_400": {
+      "hex": "#6E7686",
+      "class": "plain"
+    },
+    "hull_500": {
+      "hex": "#4B5262",
+      "class": "plain"
+    },
+    "hull_600": {
+      "hex": "#333846",
+      "class": "plain"
+    },
+    "hull_700": {
+      "hex": "#232733",
+      "class": "plain"
+    },
+    "hull_800": {
+      "hex": "#151821",
+      "class": "plain"
+    },
+    "metal_gun": {
+      "hex": "#5A5F6B",
+      "class": "plain"
+    },
+    "glass": {
+      "hex": "#1C3442",
+      "class": "plain"
+    },
+    "glass_emit": {
+      "hex": "#7FD6FF",
+      "class": "emissive"
+    },
+    "engine_emit": {
+      "hex": "#CFEBFF",
+      "class": "emissive"
+    },
+    "tyre": {
+      "hex": "#1B1D24",
+      "class": "plain"
+    },
+    "solar_cell": {
+      "hex": "#1B2A4E",
+      "class": "plain"
+    },
+    "solar_frame": {
+      "hex": "#8A93A6",
+      "class": "plain"
+    },
+    "ore_rock": {
+      "hex": "#A68646",
+      "class": "plain"
+    },
+    "ice_rock": {
+      "hex": "#9CCDE3",
+      "class": "plain"
+    },
+    "power_emit": {
+      "hex": "#FFF2B0",
+      "class": "emissive"
+    },
+    "team_paint_hi": {
+      "hex": "#F0F0F0",
+      "class": "team_paint"
+    },
+    "team_paint_mid": {
+      "hex": "#A8A8A8",
+      "class": "team_paint"
+    },
+    "team_paint_lo": {
+      "hex": "#606060",
+      "class": "team_paint"
+    },
+    "team_glow": {
+      "hex": "#FFFFFF",
+      "class": "team_glow"
+    },
+    "team_glow_dim": {
+      "hex": "#A0A0A0",
+      "class": "team_glow"
+    }
+  },
+  "swatch_note": "Cells are assigned row-major in file order: these entries first, then biome_<name>_<low|mid|high> generated from 'biomes' (cell index = position). Do not reorder; append only, or UV data in .glb assets goes stale.",
+  "_fixture": "NEGATIVE FIXTURE: cvd_check.py must exit 1 on this file. Do not use as palette."
+}

@@ -1,0 +1,14 @@
+{
+  "hud.heading.pole": "POLE",
+  "hud.heading.north": "N",
+  "hud.speed": "SPD",
+  "hud.alt": "ALT",
+  "hud.agl": "AGL",
+  "hud.vs": "VS",
+  "hud.band.deck": "DECK",
+  "hud.band.low": "LOW",
+  "hud.band.high": "HIGH",
+  "hud.band.fade": "FADE",
+  "hud.uplink": "UPLINK",
+  "hud.uplink.lost": "Uplink lost above 2,000 m. Autopilot is descending."
+}

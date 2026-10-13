@@ -1,0 +1,10 @@
+{ "id": "foundry", "status": "core", "tags": ["doctrine"],
+  "modifiers": [
+    { "select": { "tags_any": ["structure", "tower", "ship", "ground"] }, "field": "cost_ore", "op": "mul", "value": 0.85 },
+    { "select": { "tags_any": ["structure", "tower", "ship", "ground"] }, "field": "cost_ice", "op": "mul", "value": 0.85 },
+    { "select": { "ids": ["harvester"] }, "field": "cargo_ore", "op": "mul", "value": 1.25 },
+    { "select": { "ids": ["hauler"] }, "field": "tow_slots", "op": "set", "value": 2 },
+    { "select": { "weapon_mount": "ship" }, "field": "damage_min", "op": "mul", "value": 0.85 },
+    { "select": { "weapon_mount": "ship" }, "field": "damage_max", "op": "mul", "value": 0.85 } ],
+  "rules": { "reactor_unlock_s": 600 },
+  "presentation": { "icon": "doctrine_foundry" } }

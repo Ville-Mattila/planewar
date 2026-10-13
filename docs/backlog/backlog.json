@@ -1,0 +1,6563 @@
+[
+  {
+    "id": "HUM-01",
+    "title": "Create GitHub org and repo, enable Actions and LFS quota, decide secret store",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 0.25,
+    "depends_on": [],
+    "milestone": "M0",
+    "acceptance": "Repo exists; Actions enabled; LFS quota covers ~2 GB; owner is the only admin",
+    "docs": [
+      "01 ADR-12",
+      " 01 s9.1"
+    ],
+    "status": "done",
+    "merged": "2026-10-10"
+  },
+  {
+    "id": "HUM-04",
+    "title": "Buy infrastructure: control VPS (4 vCPU), one dedicated-vCPU game host (8 vCPU/16 GB, doubles as the pinned perf runner before launch), S3 bucket (EU), domain",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 0.5,
+    "depends_on": [
+      "HUM-01"
+    ],
+    "milestone": "M0",
+    "acceptance": "SSH access to both hosts; domain delegated; bucket keys in the secret store",
+    "docs": [
+      "04 s12",
+      " R0 C1-08",
+      " 03 TA-42"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-06",
+    "title": "Buy reference devices: Android-mid (SD 695 class), a 3 GB-RAM Android, Steam Deck; PC-mid exists",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 0.25,
+    "depends_on": [],
+    "milestone": "M0",
+    "acceptance": "All devices on hand before S-WORLD-1 (week 5)",
+    "docs": [
+      "01 s8.2",
+      " R0 C1-20"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "REPO-01",
+    "title": "git init, Godot .gitignore, LFS .gitattributes by extension, directory skeleton of 01 s9.1, branch protection on main, CODEOWNERS by lane",
+    "lane": "repo",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "HUM-01"
+    ],
+    "milestone": "M0",
+    "acceptance": "Clean clone has the 01 s9.1 tree; a .glb commit lands as an LFS pointer; main requires a green PR",
+    "docs": [
+      "01 s9.1",
+      " 01 ADR-12",
+      " 07 s13 CI row"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "note": "branch protection needs GitHub Pro for a private repo; owner decision"
+  },
+  {
+    "id": "DOC-01",
+    "title": "Extend README.md (stub written with 00-master-plan.md): how to run headless tests and exports, lane map, links to docs 00-10",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "REPO-01"
+    ],
+    "milestone": "M0",
+    "acceptance": "A new agent follows README to a green local test run without other help",
+    "docs": [
+      "01 s9.1"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 2
+  },
+  {
+    "id": "REPO-02",
+    "title": "Refine CLAUDE.md (first version committed with 10): ADR-14 conventions, tier guidance, lane/MODULE.md pointers, task-id commit rule, forbidden actions (no Triplane source, no upstream issues, no addons), definition of done",
+    "lane": "repo",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "REPO-01"
+    ],
+    "milestone": "M0",
+    "acceptance": "Every rule of 01 ADR-14 and 03 s12.2 is stated once with a file:line pointer; reviewed by the owner",
+    "docs": [
+      "01 ADR-14",
+      " 03 s12.2",
+      " 03 s12.4"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 1
+  },
+  {
+    "id": "REPO-03",
+    "title": ".claude/agents: refine the 12 role subagents committed with 10 (per-lane allowed paths, MODULE.md to read first, model = tier) + .claude/settings.json permissions + PostToolUse hook running check_deps/validate_content on edited files",
+    "lane": "repo",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "REPO-02"
+    ],
+    "milestone": "M0",
+    "acceptance": "Each role agent file names the lanes, module paths and tests it covers (10 s5.2 lane map); hook rejects a D1 violation locally before CI",
+    "docs": [
+      "01 ADR-14",
+      " 03 s12.4"
+    ],
+    "status": "review",
+    "pr": 9
+  },
+  {
+    "id": "REPO-04",
+    "title": "Extract every JSON example in docs 02-08 into docs/examples/<doc>/<name>.json for CI validation (input of CONTRACT-0)",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "REPO-01"
+    ],
+    "milestone": "M0",
+    "acceptance": "Every fenced JSON block in 02-08 exists as a file with a comment naming its source section; none hand-edited",
+    "docs": [
+      "R0 C1-10",
+      " 03 s1.4"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 3
+  },
+  {
+    "id": "REPO-05",
+    "title": "docs/adr/ folder with the amendment template, docs/templates/REPORT.md for spikes, tools/backlog_report.py (reads backlog.json, prints status by milestone)",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "REPO-01"
+    ],
+    "milestone": "M0",
+    "acceptance": "Template fields match 01 ADR layout; report script prints per-milestone counts from this file",
+    "docs": [
+      "01 s7",
+      " 03 s14"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 6
+  },
+  {
+    "id": "TA-01",
+    "title": "godot/project.godot per 03 s1.1, .godot-version, export_presets.cfg with every 03 s1.3 preset, three autoload stubs, CLAUDE.md pointer list",
+    "lane": "app",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "REPO-01"
+    ],
+    "milestone": "M0",
+    "acceptance": "godot --headless --import succeeds; all 14 warning keys = 2 (D8); every preset exports an empty project (v1.1 presets build-only)",
+    "docs": [
+      "03 s1.1",
+      " 03 s1.3",
+      " 03 TA-01"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 5
+  },
+  {
+    "id": "TA-02",
+    "title": "tools/check_deps.py rules D1-D10 + tools/deps.json (R0 B.4) + D3 allowlist (app/offline_host.gd) + D6 warning mode with tools/d6_allow.txt",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-01"
+    ],
+    "milestone": "M0",
+    "acceptance": "tools/tests/ has a passing and failing fixture per rule incl. the D3 web-guard and D6 error-in-expression; runs < 10 s",
+    "docs": [
+      "03 s12.4",
+      " R0 B.4",
+      " 03 TA-02"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 7
+  },
+  {
+    "id": "TA-03",
+    "title": "S-CI-1: ci.yml and nightly.yml skeletons, gdUnit4 install, 10-min soak stub with p95 slope, same-job A/B perf step, Xvfb screenshot job, web size gate, weekly v1.1 export checks",
+    "lane": "ci",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "TA-01",
+      "TA-02"
+    ],
+    "milestone": "M0",
+    "acceptance": "Green on a clean checkout; soak slope of per-minute p95 < 2 %/min; PR pipeline <= 15 min; size gate prints the Brotli sum; base-vs-base A/B noise < 25 % (Opus signs off the soak result)",
+    "docs": [
+      "03 s14.5",
+      " 01 App. A S-CI-1",
+      " R0 C1-11"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 10
+  },
+  {
+    "id": "TEST-01",
+    "title": "tools/validate_scenes.gd: every .tscn under godot/scenes instantiates headless; wired into ci.yml",
+    "lane": "test",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-03"
+    ],
+    "milestone": "M0",
+    "acceptance": "A scene with a missing script fails the job with file name; runs in < 1 min",
+    "docs": [
+      "01 ADR-11",
+      " 03 s1.4"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 12
+  },
+  {
+    "id": "REPO-06",
+    "title": "PR template (task id, acceptance checklist, screenshot rule for presentation/ui) + CI lint that every commit message references an id present in backlog.json",
+    "lane": "repo",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-03"
+    ],
+    "milestone": "M0",
+    "acceptance": "A commit without a valid id fails the lint; template renders in GitHub",
+    "docs": [
+      "01 ADR-14"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 11
+  },
+  {
+    "id": "CONTRACT-0",
+    "title": "Commit tools/schemas/*.schema.json for the 15 def files and godot/src/sim/MODULE.md reflecting R0 Part B (enumerations block, signatures, SimView accessors); CI validates every docs/examples JSON",
+    "lane": "sim+tools",
+    "tier": "Opus",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-03",
+      "REPO-04"
+    ],
+    "milestone": "M0",
+    "acceptance": "All 15 schemas self-consistent with R0 B.1/B.2; sim/MODULE.md matches 03 s15.4 incl. enumerations; validate_content.py passes on every docs example; no lane opens before merge",
+    "docs": [
+      "R0 C1-10",
+      " R0 Part B",
+      " 03 s15.4",
+      " 03 CONTRACT-0"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 13,
+    "amendments": "PR #15 (R0-amendments-01, Q1-Q8)"
+  },
+  {
+    "id": "TA-05",
+    "title": "core/entity_id.gd, core/rng.gd (PCG32 + vectors + fork), core/log.gd, core/config.gd, core/result.gd, core/mathx.gd",
+    "lane": "core",
+    "tier": "Haiku",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-01"
+    ],
+    "milestone": "M0",
+    "acceptance": "Unit test per class; C6 reference sequence passes; fork(&\"ai\") deterministic and serialised; Log sink captured in tests",
+    "docs": [
+      "03 s2",
+      " 03 TA-05"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 8
+  },
+  {
+    "id": "TA-07",
+    "title": "Complete rules.schema.json and map_recipe.schema.json (bounds from 01 anchors, full R0 B.2 recipe schema, negative fixtures)",
+    "lane": "tools",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "CONTRACT-0"
+    ],
+    "milestone": "M0",
+    "acceptance": "validate_content.py accepts rules.json and the 03 s8.1 cradle example; rejects 10 negative fixtures (gravity 20, unknown key, radius_m != 6000, wedge_start_deg != 22.5, duplicate feature id)",
+    "docs": [
+      "03 TA-07",
+      " R0 B.2"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 18
+  },
+  {
+    "id": "TA-08",
+    "title": "tools/validate_content.py + content hash (03 s9.2 scope) + committed hash vector + docs-example validation",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-07"
+    ],
+    "milestone": "M0",
+    "acceptance": "Hash equals the GDScript hash on the vector; sfx.json, vfx_prewarm.json, presentation and _doc excluded; dangling def references detected; runs on every PR",
+    "docs": [
+      "03 s9.2",
+      " R0 C2-34",
+      " 03 TA-08"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 21
+  },
+  {
+    "id": "TA-10",
+    "title": "Seed rules.json (world constants) and a quality_tiers.json skeleton",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-07"
+    ],
+    "milestone": "M0",
+    "acceptance": "Schema valid; every value carries _doc citing 01/R0",
+    "docs": [
+      "R0 B.1 rules.json",
+      " 03 TA-10"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 20
+  },
+  {
+    "id": "GD-01",
+    "title": "Complete the CONTRACT-0 schemas for ships, ground_units, weapons, projectiles, structures, towers (ranges of 02 s2-5, a_thrust >= 2.0 * gravity) with negative fixtures",
+    "lane": "tools",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "CONTRACT-0"
+    ],
+    "milestone": "M0",
+    "acceptance": "validate_content.py rejects 10 negative fixtures (missing/unknown field, out-of-range, name_key present, a_thrust 11) and accepts the positives",
+    "docs": [
+      "02 GD-01",
+      " R0 B.1"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 17
+  },
+  {
+    "id": "ART-02",
+    "title": "palette.json (incl. the relation variant), build_palette.py, tools/art/cvd_check.py and CI hook",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "REPO-01"
+    ],
+    "milestone": "M0",
+    "acceptance": "Atlas built; team-vs-team CIEDE2000 >= 11.0 under each CVD and >= 20 normal; relation colours >= 20 under CVD; CI fails on a breaking palette change",
+    "docs": [
+      "07 s2.3",
+      " 07 ART-02",
+      " R0 C1-11"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 4
+  },
+  {
+    "id": "ART-32",
+    "title": "Licence ledger docs/credits/ASSET_LICENCES.csv and tools/check_licences.py CI gate",
+    "lane": "tools",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-03"
+    ],
+    "milestone": "M0",
+    "acceptance": "CI fails on an asset missing from the ledger or carrying a forbidden licence (CC-BY-NC/SA, GPL)",
+    "docs": [
+      "07 s8.4",
+      " 07 ART-32"
+    ],
+    "status": "done",
+    "merged": "2026-10-10",
+    "pr": 14
+  },
+  {
+    "id": "TA-04",
+    "title": "core/sphere.gd: frames, equal-angle cube mapping, cells at four resolutions, neighbour table, parallel transport, great circle, slot constants (lon 22.5 + 45 k)",
+    "lane": "core",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "TA-01"
+    ],
+    "milestone": "M1",
+    "acceptance": "All 03 s2.8 vectors incl. slots 0/1 pass; C1-C5 property tests on 10,000 random dirs; C9 slot-edge invariant; perf_core budgets met",
+    "docs": [
+      "03 s2",
+      " R0 C1-09",
+      " 03 TA-04"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 16
+  },
+  {
+    "id": "TA-12",
+    "title": "sim/kinematics.gd: step_ship with the speed-scaled lift law and lift_model switch, step_projectile (R0 B.5), k_up_effective, ShipState, purity test; fixture Dart/Bomber defs",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "TA-04",
+      "TA-05"
+    ],
+    "milestone": "M1",
+    "acceptance": "S8 purity (3,000 steps x2 bit-identical); free fall from 100 m lands in 5.8-6.2 s; PD-held level flight at 0.9 v_cruise holds +-1 m for 60 s with AoA <= 6 deg; Dart and Bomber hold a tail-down hover; test_slug_hits_coaltitude_target passes",
+    "docs": [
+      "03 s5",
+      " R0 B.5",
+      " R0 C1-03",
+      " R0 C1-04",
+      " 03 TA-12"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 27
+  },
+  {
+    "id": "GD-02",
+    "title": "Author ships.json (incl. flight_common) and ground_units.json from 02 s2-3 / R0 B.1",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "GD-01"
+    ],
+    "milestone": "M1",
+    "acceptance": "Validator passes; unit test checks 20 spot values (Bomber a_thrust 14, Dart rate_accel_dps2 720, k_up_flight)",
+    "docs": [
+      "02 s2.2",
+      " R0 B.1",
+      " 02 GD-02"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 29
+  },
+  {
+    "id": "GD-03",
+    "title": "Author weapons.json and projectiles.json from 02 s4.1-4.2",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "GD-01"
+    ],
+    "milestone": "M1",
+    "acceptance": "Validator passes; spot-value test; slugs, flak and rail have gravity false, transport false",
+    "docs": [
+      "02 s4",
+      " R0 B.1",
+      " 02 GD-03"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 24
+  },
+  {
+    "id": "GD-05",
+    "title": "Schemas and files for economy.json, match_rules.json, modes.json (7 modes, per-mode timers, slots_by_player_count), bot_promises.json, scoring.json",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "GD-01"
+    ],
+    "milestone": "M1",
+    "acceptance": "Validator passes; ContentDB loads all five; mode ids equal R0 B.6",
+    "docs": [
+      "R0 B.1",
+      " R0 B.6",
+      " 02 GD-05"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 25
+  },
+  {
+    "id": "TA-06",
+    "title": "core/MODULE.md and content/MODULE.md from 03 s15.2-15.3 plus the template file",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-04",
+      "TA-05",
+      "CONTRACT-0"
+    ],
+    "milestone": "M1",
+    "acceptance": "gen_module_api.py --check (TA-27) passes once implementations exist; D10 passes",
+    "docs": [
+      "03 s15",
+      " 03 TA-06"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 26
+  },
+  {
+    "id": "TA-30",
+    "title": "S-FLIGHT-1: icosphere, step_ship with lift A/B, Chase camera stub, 60 fps render interpolation, straight gun with 200-800 m targets, bombs with impact ring, stub pad with the tail-down rule and auto-dock, keyboard/mouse + gamepad + touch, live tuning panel, telemetry, tester protocol, REPORT.md and anchor patch to 02",
+    "lane": "spikes",
+    "tier": "Opus",
+    "size_days": 4,
+    "depends_on": [
+      "TA-04",
+      "TA-05",
+      "TA-12"
+    ],
+    "milestone": "M1",
+    "acceptance": "Three novices land within 10 min; < 20 % crashes in minutes 5-10; a Raw mouse tester lands within 15 attempts; all three input classes; co-altitude hits; AoA <= 6 deg; patch within anchors or filed to 02 (Sonnet does input layouts/HUD)",
+    "docs": [
+      "03 s14.6",
+      " 01 App. A S-FLIGHT-1",
+      " R0 C3-02",
+      " R0 C3-03",
+      " 03 TA-30"
+    ],
+    "status": "review",
+    "merged": "2026-10-13",
+    "pr": 37,
+    "note": "automated criteria pass; human tester criteria PENDING (TESTER_PROTOCOL.md); web build https://planewar-play.vercel.app/"
+  },
+  {
+    "id": "HUM-07",
+    "title": "Recruit and schedule playtesters: 3 novices for S-FLIGHT-1 (week 4), 4 for S-UX-1 (week 9), 6-10 for the slice (week 17), 8+ for the online test (week 25), 20+ for the beta (week 36)",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 1,
+    "depends_on": [],
+    "milestone": "M1",
+    "acceptance": "Named testers and dates exist before each spike's harness is ready; consent for telemetry collected",
+    "docs": [
+      "03 s14.6",
+      " 06 s13",
+      " 02 s18.4"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-12",
+    "title": "Spike gate reviews: read each P0 REPORT.md (S-FLIGHT-1, S-SIM-1, S-WORLD-1, S-NAV-1, S-WEB-1, S-WEB-2, S-NET-1, S-BACKEND-1) and pick the pass or the named fallback branch within 2 working days",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 1.5,
+    "depends_on": [],
+    "milestone": "M1",
+    "acceptance": "Each report carries an owner decision line; fallback branches of 09 s6 applied through PM-01/PM-02",
+    "docs": [
+      "01 App. A",
+      " 03 s14",
+      " 09 s6"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-42",
+    "title": "Pinned self-hosted perf runner of the production SKU: registration, labels, routing of absolute perf jobs, runner id in perf/history.jsonl",
+    "lane": "ci+ops",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "TA-03",
+      "HUM-04"
+    ],
+    "milestone": "M2",
+    "acceptance": "Absolute tick-p95 and nightly regression jobs run only there; hosted jobs run correctness + A/B; alert on a missed nightly",
+    "docs": [
+      "R0 C1-11",
+      " 03 TA-42"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-27",
+    "title": "tools/gen_module_api.py --check (MODULE.md signature drift) + docs/templates/MODULE.md.template",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-06"
+    ],
+    "milestone": "M2",
+    "acceptance": "Detects a renamed public func in a fixture; CI wired; zero false positives on core/content/sim",
+    "docs": [
+      "03 s15.1",
+      " 03 TA-27"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 33
+  },
+  {
+    "id": "GD-04",
+    "title": "Author structures.json and towers.json incl. relay_station, Core integrated_shield, pad_radius_m; no storage_silo",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "GD-01"
+    ],
+    "milestone": "M2",
+    "acceptance": "Validator passes; spot-value test; Rail Lance footprint [4,5], status core",
+    "docs": [
+      "02 s5",
+      " R0 B.1",
+      " 02 GD-04"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 22
+  },
+  {
+    "id": "TA-09",
+    "title": "content/content_db.gd and every *Def class incl. ProjectileDef, FlightCommonDef, ResolvedDefs; def_index ranges; resolve_for_doctrine; caps(profile), mode(id); load_all_async; mod pack loader stub",
+    "lane": "content",
+    "tier": "Sonnet",
+    "size_days": 3.5,
+    "depends_on": [
+      "TA-05",
+      "TA-07",
+      "GD-01",
+      "GD-02",
+      "GD-03",
+      "GD-04",
+      "GD-05"
+    ],
+    "milestone": "M2",
+    "acceptance": "N1-N7 tested; loads the v1 defs in <= 150 ms PC; doctrine resolution matches 02 s7 examples; base defs unchanged after resolution",
+    "docs": [
+      "03 s9",
+      " R0 C2-01",
+      " 03 TA-09"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 36
+  },
+  {
+    "id": "GD-07",
+    "title": "doctrines.json and pure ContentDB.resolve_for_doctrine() with selectors, ops and rounding",
+    "lane": "content",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-09"
+    ],
+    "milestone": "M2",
+    "acceptance": "Scenario C-10 passes; base defs unchanged after resolution",
+    "docs": [
+      "02 s7",
+      " 02 GD-07"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 42
+  },
+  {
+    "id": "TA-11",
+    "title": "sim/entity_store.gd (150-byte SoA layout incl. order_kind, ai_tag, overlay; alloc/free/quarantine) and sim/projectile_store.gd (incl. projectile_def)",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "TA-05"
+    ],
+    "milestone": "M2",
+    "acceptance": "Alloc/free fuzz 100k ops: no reuse within 64 ticks, generation increments, memory flat; S2 invariant",
+    "docs": [
+      "03 s3.2",
+      " 03 s3.3",
+      " R0 C2-06",
+      " R0 C2-07",
+      " 03 TA-11"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 19
+  },
+  {
+    "id": "TA-15",
+    "title": "tools/moonbake/ baker: R0 B.2 recipe, outputs, seam pass, validate M1-M11, preview, moon_ramp.png hook (absorbs ART-31)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 3.5,
+    "depends_on": [
+      "TA-07"
+    ],
+    "milestone": "M2",
+    "acceptance": "Bakes the 03 s8.1 example in < 60 s; test_seams.py and test_sphere_parity.py pass; two runs byte-identical; validator rejects a day-side cold trap and a flatten disc on a cube edge",
+    "docs": [
+      "03 s8",
+      " R0 B.2",
+      " R0 C2-02",
+      " 03 TA-15"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 35
+  },
+  {
+    "id": "TA-16",
+    "title": "Test maps: tiny_test (6 x 128^2, flat, 2 slots) and the S-WORLD-1 radius variants (R = 4,000 / 6,000 / 8,000)",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "TA-15"
+    ],
+    "milestone": "M2",
+    "acceptance": "Validator passes; tiny_test loads in < 50 ms; bake-check green",
+    "docs": [
+      "03 TA-16",
+      " R0 B.2"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 39,
+    "note": "R=4,000/8,000 variants dropped: owner fixed R = 6,000 m (O-1, \"6 km moon is big enough\"); schema pins radius_m 6000. tiny_test load-time check waits for TA-13."
+  },
+  {
+    "id": "TA-17",
+    "title": "bake-check CI job and LFS materialisation check",
+    "lane": "ci",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-03",
+      "TA-15"
+    ],
+    "milestone": "M2",
+    "acceptance": "PR touching a recipe re-bakes and compares; a stale meta.json fails; an LFS pointer instead of a blob fails",
+    "docs": [
+      "03 s8.6",
+      " 03 R14",
+      " 03 TA-17"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 43
+  },
+  {
+    "id": "ART-37",
+    "title": "Map validation fixtures: one failing recipe per check M1-M11 plus a passing recipe, consumed by TA-15 tests",
+    "lane": "tools",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-15"
+    ],
+    "milestone": "M2",
+    "acceptance": "Each M-check fails on exactly its fixture and passes on the good recipe",
+    "docs": [
+      "07 ART-37",
+      " R0 B.2"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 44
+  },
+  {
+    "id": "TA-13",
+    "title": "sim/terrain.gd loader + height_at/normal_at/biome_at/slope_deg_at + SHA verification",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-04",
+      "TA-16"
+    ],
+    "milestone": "M2",
+    "acceptance": "Bilinear matches a Python reference on 10,000 samples to 1e-3 m; continuity across 12 edges and 8 corners; height_at <= 2 us",
+    "docs": [
+      "03 s6.3",
+      " 03 TA-13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-14",
+    "title": "sim/spatial.gd counting-sort hash + ids_near ring logic; sim/collision.gd incl. 8b projectile-vs-terrain with relief prefilter, Contact records",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "TA-11",
+      "TA-12",
+      "TA-13"
+    ],
+    "milestone": "M2",
+    "acceptance": "Swept slug hits a 6 m sphere at 700 m/s and rail at 1,500 m/s for 1,000 geometries; ring coverage proof; terrain classification from flight_common; prefilter skips every high projectile; no Dictionary in Spatial ; scrape damage once per contact episode (A-30); landing rule evaluated every tick in the pad volume (A-31)",
+    "docs": [
+      "03 s3.6",
+      " 03 s6.1",
+      " R0 C1-19",
+      " 03 TA-14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-18",
+    "title": "sim/sim_world.gd tick driver in R0 B.5 order: set_ai_hook, SimAiHook/CommandSinkBase + sim sink, assist substitution sub-step (stubbed until AI-10), per-row profiler, set_budget_profile, apply_command + CommandValidator (S10 token bucket), enumerations, SimEvent, MatchRules/MatchArc, LocalSimView with every 15.4 accessor",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 4,
+    "depends_on": [
+      "TA-11",
+      "TA-12",
+      "TA-14",
+      "CONTRACT-0"
+    ],
+    "milestone": "M2",
+    "acceptance": "S1, S3, S5, S10, S11, S12 invariant tests; a 100-tick scripted scenario yields the expected event sequence; drive on a possessed id returns false; profile array populated ; owns the step-6 projectile loop with a reused ProjectileState scratch (TA-43 follow-up); decide ProjectileMotion public or private",
+    "docs": [
+      "03 s4.1",
+      " R0 B.5",
+      " R0 B.3",
+      " 03 TA-18"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TEST-02",
+    "title": "Shared SimView contract test (gdUnit4) parameterised over LocalSimView now and NetSimView later: every R0 B.5 accessor on a scripted scene",
+    "lane": "test",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "TA-18"
+    ],
+    "milestone": "M2",
+    "acceptance": "Green on LocalSimView; NET-17 and NET-39 reuse it unchanged; one failing fixture per accessor",
+    "docs": [
+      "01 s9.4 contract notes",
+      " R0 C2-05"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-19",
+    "title": "sim/build.gd (can_place with 13 reasons, Outpost presence-and-spacing, cross-edge footprints), build_grid, slope cache; sim/economy.gd core (power ratio, refinery, extractors, salvage, Core shield and Exposure timers, caps profiles, early share lock); sim/production.gd queues (max 5, owner-only cancel)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "TA-18",
+      "TA-13"
+    ],
+    "milestone": "M2",
+    "acceptance": "Each Build.Reject produced by a fixture; a footprint across a face edge accepted; queue capped at 5; CAP_REACHED blocks production; REJECTED_LOCKED until 2:00",
+    "docs": [
+      "03 s3.5",
+      " 01 ADR-05",
+      " R0 C2-12",
+      " R0 C3-08",
+      " 03 TA-19"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-20",
+    "title": "S-NAV-1: sim/pathing.gd time-sliced A* (tickets, path_expansions_per_tick) + hierarchy + route cache + set_weight; comparison with AStar3D",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "TA-04",
+      "TA-13",
+      "TA-16"
+    ],
+    "milestone": "M2",
+    "acceptance": "Amortised <= 0.5 ms/tick with 120 ground units re-pathing every 10 s; worst query <= 30 ticks; cache hit >= 80 % on harvester loops; zero correctness failures; path_expansions_per_tick calibrated",
+    "docs": [
+      "03 s14.3",
+      " R0 C1-05",
+      " 03 TA-20"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-21",
+    "title": "sim/serialize.gd: serialize()/deserialize() of all arrays, side tables, RNG, tick, plus the AI hook's opaque bytes; S4 round-trip",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-18"
+    ],
+    "milestone": "M2",
+    "acceptance": "S4 holds for 1,000 random ticks with a stub hook; payload ~150 KB at 1,200 entities",
+    "docs": [
+      "01 ADR-10",
+      " R0 C2-07",
+      " 03 TA-21"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-37",
+    "title": "sim/vision.gd: visible_mask, per-team interest-cell lists, horizon occlusion, Sensor Mast reveal, 10 Hz stagger / 5 Hz under rung 2",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "TA-14",
+      "TA-18"
+    ],
+    "milestone": "M2",
+    "acceptance": "Horizon occlusion vectors pass; Sensor Mast reveals within 1,200 m regardless of occlusion; stagger verified per team; <= 1.1 ms p95 at S-SIM-1 scale ; two below-datum occlusion vectors (A-10)",
+    "docs": [
+      "03 s3.7",
+      " R0 C2-23",
+      " 03 TA-37"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-38",
+    "title": "sim/ground_motion.gd: input-driven ground motion, 02 slope speed formula, terrain snap, cube-edge crossing, BRAKE stop/reverse rule",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-13",
+      "TA-20"
+    ],
+    "milestone": "M2",
+    "acceptance": "02 slope formula exact; position on the surface +-1 cm; a path across a cube edge followed without a jump; reverse only after 0.5 s at <= 3 m/s",
+    "docs": [
+      "03 s5.3",
+      " R0 C2-09",
+      " 03 TA-38"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-33",
+    "title": "Sim scenario test harness: test/sim/scenarios/*.json runner + seed scenarios (possess/release handoff, build radius and Outpost presence, victory, Core shield and Exposure, cap reached, tail-down landing grade)",
+    "lane": "test",
+    "tier": "Sonnet",
+    "size_days": 2.5,
+    "depends_on": [
+      "TA-18",
+      "TA-19"
+    ],
+    "milestone": "M2",
+    "acceptance": "Runner executes all scenarios headless in < 60 s; each scenario fails when its rule is broken (Haiku writes the scenario files)",
+    "docs": [
+      "01 ADR-11",
+      " 03 TA-33"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-08",
+    "title": "Damage rules of 02 s4.3: gun roll, structure/ground multipliers, bomb kill radius and blast, Hangar immunity, ramming, no friendly fire",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-18",
+      "TA-14",
+      "TA-09"
+    ],
+    "milestone": "M2",
+    "acceptance": "One unit test per rule; C-09 passes; identical results for a fixed seed (Opus review; doc tier Opus)",
+    "docs": [
+      "02 s4.3",
+      " 02 GD-08"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-36",
+    "title": "Weapon-fire pipeline in combat.gd: rate of fire, bursts, ammo/supply draw, projectile spawn, lock acquisition",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "GD-08",
+      "TA-14"
+    ],
+    "milestone": "M2",
+    "acceptance": "Dart fires 10 rps spending 1 round/shot; tower 5-round bursts every 1.2 s; unsupplied tower at 50 %; rocket launches only after lock_time_s",
+    "docs": [
+      "R0 C2-23",
+      " 02 GD-36"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-11",
+    "title": "Stockpiles, storage caps, Core trickle, try_spend / credit, storage-full alert",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "TA-09",
+      "TA-19"
+    ],
+    "milestone": "M2",
+    "acceptance": "Cap clamps at 3,000 + 1,500 per Refinery; overflow alert; trickle = 60 Ore/min",
+    "docs": [
+      "02 s8.6",
+      " R0 O-4",
+      " 02 GD-11"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-13",
+    "title": "Power: supply/demand ratio, solar factor (fixed and moving sun, Plateau), effects on production, towers, shields",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "GD-11"
+    ],
+    "milestone": "M2",
+    "acceptance": "C-12 passes; solar factor tests at latitudes -1, 0, +0.25, +1 degrees and on the Plateau",
+    "docs": [
+      "02 s8.4",
+      " 02 GD-13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-16",
+    "title": "Build rules: alive prerequisites, caps, placement incl. Outpost presence and spacing, construction slots, queued sites, pay-at-start, owner-only cancel and refunds, early share lock, self-repair",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-09",
+      "TA-19"
+    ],
+    "milestone": "M2",
+    "acceptance": "C-11 passes; one test per Build.Reject incl. SPEND_LOCKED; teammate cancel rejected unless owner disconnected/eliminated/bot (Opus review)",
+    "docs": [
+      "02 s6",
+      " R0 C3-08",
+      " 02 AR-1",
+      " 02 GD-16"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-17",
+    "title": "Production: 5-item team-shared queues, owner-only cancel, pay at start, early share lock, power speed, auto-replenish, caps, rally, 3 s launch",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "GD-13",
+      "GD-16"
+    ],
+    "milestone": "M2",
+    "acceptance": "Dart airborne 23 s after its start at full power; cap blocks production; a 4-player team member cannot spend past 800 Ore + own income before 2:00",
+    "docs": [
+      "02 s6.3",
+      " 02 GD-17"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-01",
+    "title": "net/protocol.gd: constants, message ids (incl. 0x0D, 0x92, 0x93), channel map, PROTOCOL_VERSION, enums citing R0 B.3, catalogue size table; net/MODULE.md v0.1",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "CONTRACT-0"
+    ],
+    "milestone": "M2",
+    "acceptance": "Unit test: every 04 s2.3 id defined once, channel sets match, enums match sim/MODULE.md ordinals; check_deps passes",
+    "docs": [
+      "04 s2",
+      " 04 NET-01"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 30
+  },
+  {
+    "id": "NET-02",
+    "title": "Position codec: per-cell ENU quantisation, smallest-three full and coarse, velocity/hp/flags/ai_tag encoders",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "TA-04"
+    ],
+    "milestone": "M2",
+    "acceptance": "codec_roundtrip_test at 10,000 random points incl. cell corners; max error <= 1.6 cm / 3.1 cm / 0.4 deg / 6 deg",
+    "docs": [
+      "04 s3",
+      " 04 NET-02"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 31
+  },
+  {
+    "id": "NET-05",
+    "title": "Roster model, ENTITY_META, ROSTER_REMOVE with reasons, held-record logic with 1 s timeout",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-01"
+    ],
+    "milestone": "M2",
+    "acceptance": "interest_test roster cases; held snapshot applied after meta; timeout triggers one REQUEST_KEYFRAME; every removal carries a reason (doc tier Opus)",
+    "docs": [
+      "04 s3.3",
+      " R0 C2-35",
+      " 04 NET-05"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 40
+  },
+  {
+    "id": "NET-06",
+    "title": "SnapshotCodec: prepare_tick shared quantisation cache, encode/decode with sections, FULL/A-DELTA/B-DELTA/C-BLIP, gravity-aware dead reckoning, baseline store, 15-byte pilot block, 1,200 B splitting",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "NET-02",
+      "NET-05"
+    ],
+    "milestone": "M2",
+    "acceptance": "codec_delta_test 3,000 ticks identical baselines; a falling bomb produces no POS records after FULL except drift; no packet > 1,200 B; 04 s3.5 53 B example reproduced; one prepare_tick per tick",
+    "docs": [
+      "04 s3.4-3.6",
+      " R0 C1-02",
+      " R0 C1-18",
+      " 04 NET-06"
+    ],
+    "status": "review",
+    "pr": 53,
+    "note": "local 364 tests pass; CI blocked by GitHub billing; CQ-4..CQ-7 for architect; encode cost ~10.8 ms for 8 clients vs 4.0 ms budget"
+  },
+  {
+    "id": "NET-10",
+    "title": "EventRouter: payload for every SimEvent.Kind 0-33 (HIT damage u16), interest/team/all filtering; PROJECTILE_BATCH for slugs, flak and rail with dedupe",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "NET-05",
+      "TA-18"
+    ],
+    "milestone": "M2",
+    "acceptance": "Every kind round-trips; an enemy entity outside vision never appears in any event; duplicate batch never spawns twice; a flak item bursts at its fuse tick",
+    "docs": [
+      "04 s3.6",
+      " R0 C2-03",
+      " R0 C2-35",
+      " 04 NET-10"
+    ],
+    "status": "todo",
+    "note": "depends on A-27 deps.json edit (SimEvent, CommandResult named for net; owner default approve)"
+  },
+  {
+    "id": "NET-08",
+    "title": "Interest.assign: tiers A/B/C over the shared cache, caps, hysteresis, ghost retention, spectator mode",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "NET-05",
+      "NET-06",
+      "TA-18"
+    ],
+    "milestone": "M2",
+    "acceptance": "interest_test; tiering + encode for 8 clients fits the 4.0 ms p95 row on the pinned perf runner",
+    "docs": [
+      "04 s4",
+      " R0 C1-02",
+      " 04 NET-08"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-25",
+    "title": "ReplayWriter/ReplayReader (.pwr from the shared cache), index, redaction-in-place, ReplayTransport, tools/replay_inspect.py",
+    "lane": "net+tools",
+    "tier": "Sonnet",
+    "size_days": 2.5,
+    "depends_on": [
+      "NET-06",
+      "NET-10"
+    ],
+    "milestone": "M2",
+    "acceptance": "replay_test: 2-minute match decodes to live state within quantisation; Python decoder agrees with GDScript on the fixture (Opus review; doc tier Opus)",
+    "docs": [
+      "04 s13.1",
+      " 01 ADR-10",
+      " 04 NET-25"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-11",
+    "title": "Transport interface, LocalTransport with FaultModel and presets (LAN, GOOD, TARGET, BAD, MOBILE_SWITCH, TAB_STALL)",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-01"
+    ],
+    "milestone": "M2",
+    "acceptance": "FaultModel reproduces identical delivery order for a fixed seed; presets table implemented",
+    "docs": [
+      "04 s15.1",
+      " 04 NET-11"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 34
+  },
+  {
+    "id": "TA-22",
+    "title": "S-SIM-1 harness and run: scenario JSON, AI hook stub sized to 05 s10, real Pathing, Vision, projectile-terrain test, real codec/interest/replay; dev box + 6 concurrent instances on the production SKU; REPORT.md; sim_budget_profile recommendation",
+    "lane": "spikes",
+    "tier": "Opus",
+    "size_days": 4,
+    "depends_on": [
+      "TA-18",
+      "TA-19",
+      "TA-20",
+      "TA-37",
+      "TA-42",
+      "NET-06",
+      "NET-08",
+      "NET-25"
+    ],
+    "milestone": "M2",
+    "acceptance": "03 s14.1 measurements for both hosts; pass = each instance p95 <= 25 ms and p99 <= 33 ms; perf_tick.gd promoted to test/perf with history append",
+    "docs": [
+      "03 s14.1",
+      " R0 C1-02",
+      " R0 C1-08",
+      " 03 TA-22"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-23",
+    "title": "Planet renderer core: quadtree, split metric, scheduler with the starvation rule, pool, texel-index mesher (variant A) with per-depth direction table, shared index pattern and skirts, horizon/frustum cull",
+    "lane": "presentation/planet",
+    "tier": "Opus",
+    "size_days": 4,
+    "depends_on": [
+      "TA-13",
+      "TA-04"
+    ],
+    "milestone": "M2",
+    "acceptance": "Renders the test map at all three tiers within chunk caps; no holes during split/merge; mesher heights bit-identical to height_at at vertices; build ms logged per chunk",
+    "docs": [
+      "03 s7.1-7.5",
+      " R0 C1-06",
+      " 03 TA-23"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-01",
+    "title": "Look-dev spike S-ART-1: shared unit_lit + moon_light.gdshaderinc (wrap, radial ambient, earthshine, sun_dir), instance uniforms, test sphere, 12 sample meshes, Earth/sun sky",
+    "lane": "presentation",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "TA-23"
+    ],
+    "milestone": "M2",
+    "acceptance": "Goldens on PC, Android-mid, Web-mobile; instance uniforms work on WebGL2 and Adreno or fallback chosen; night mare luminance within 20 % of 07 s1.5 (dependency edited: TA-23 only, breaks the ART-01/TA-24/ART-03 cycle)",
+    "docs": [
+      "07 s1.5",
+      " 07 s3.1",
+      " 07 ART-01"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-03",
+    "title": "Shader library: unit_lit, prop_lit, vfx_additive, shield_dome, hologram_ghost, include file",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "ART-01"
+    ],
+    "milestone": "M2",
+    "acceptance": "Each compiles on Compatibility desktop + web; team zones render exact hex at rgb.r = 1; emblem offset for 8 teams; animating sun_dir moves the terminator cleanly",
+    "docs": [
+      "07 s3",
+      " 07 ART-03"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-24",
+    "title": "moon_terrain.gdshader per 07 s3.1 using moon_light.gdshaderinc, sky_moon hookup, near-plane hook (ViewState.near), flatten sites API",
+    "lane": "presentation/planet",
+    "tier": "Sonnet",
+    "size_days": 2.5,
+    "depends_on": [
+      "TA-23",
+      "ART-03"
+    ],
+    "milestone": "M2",
+    "acceptance": "Z1-Z5 and Z8 harness scenes run under Xvfb; ramp sampled by 07 biome id; Earth at -Z; displacement <= 0.6 m inside footprints",
+    "docs": [
+      "03 s7.6",
+      " 03 s7.8",
+      " R0 C2-31",
+      " 03 TA-24"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-25",
+    "title": "S-WORLD-1: GPU displacement variant B, three radii, three devices, camera paths incl. the boost path, Z1-Z8, REPORT.md with tier values and mesher choice per tier",
+    "lane": "spikes",
+    "tier": "Opus",
+    "size_days": 4,
+    "depends_on": [
+      "TA-23",
+      "TA-24",
+      "TA-16",
+      "HUM-06"
+    ],
+    "milestone": "M2",
+    "acceptance": "03 s14.2 pass criteria per device and variant (60/30/30 fps; no z-fighting; boost path: no hole > 1 s within 400 m, <= 1 frame > 50 ms per 10 s); recommendation on K/MAX_DEPTH/variant per tier",
+    "docs": [
+      "03 s14.2",
+      " R0 C1-06",
+      " R0 O-1",
+      " 03 TA-25"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-26",
+    "title": "EntityViewPool with tier caps and far-pool path, render_state override per frame, VfxRouter, MultiMesh pools (projectiles per face, icons, trails, decals, far pools), pre-warm loader against a LocalSimView",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "TA-18",
+      "TA-09"
+    ],
+    "milestone": "M2",
+    "acceptance": "800 views sync in <= 2.4 ms PC-mid; beyond-cap entities in <= 8 draws; per-frame displacement variance < 10 % at 60 fps for a Dart at 110 m/s from a 30 Hz prediction stub; pre-warm spawns each effect",
+    "docs": [
+      "03 s10",
+      " R0 C1-07",
+      " R0 C1-17",
+      " 03 TA-26"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-14",
+    "title": "Biome ramps biome_ramps.json and moon_ramp.png (16 x 64) builder; terrain art tuning with 03",
+    "lane": "tools+presentation",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "ART-01",
+      "TA-24"
+    ],
+    "milestone": "M2",
+    "acceptance": "Rendered biome colours match 07 s2.1 within dE00 <= 6 on a flat scene, day and night",
+    "docs": [
+      "07 s2.1",
+      " 07 s3.1",
+      " 07 ART-14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-15",
+    "title": "Sky shader (stars, sun at sun_dir, Earth 6 degrees at -Z above the Midnight Pole)",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "ART-01",
+      "TA-24"
+    ],
+    "milestone": "M2",
+    "acceptance": "Earth disc 6 degrees at -Z; no banding; < 0.3 ms on Android-mid",
+    "docs": [
+      "07 s1.5",
+      " R0 C2-31",
+      " 07 ART-15"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-28",
+    "title": "Map cradle recipe and bake (terrain blocks; 02 resources block merged via GD-22)",
+    "lane": "content/maps",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-15",
+      "CONTRACT-0"
+    ],
+    "milestone": "M2",
+    "acceptance": "M1-M11 pass for 2-, 4- and 8-player layouts; previews reviewed by the owner",
+    "docs": [
+      "R0 B.2",
+      " 07 s9",
+      " 07 ART-28"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-28",
+    "title": "S-WEB-1: web export of TA-23 + 200 ships + pools, Brotli pipeline tools/web_compress.py, web/shell.html with pack streaming and fast start, INITIAL_MEMORY 256 MB, measurements, REPORT.md",
+    "lane": "web+spikes",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "TA-25",
+      "TA-26",
+      "HUM-06"
+    ],
+    "milestone": "M2",
+    "acceptance": "03 s14.4 measurements incl. wasm compile time and 3 GB-device boot; size gate numbers; Mission 1 first beat <= 10 s; map pack mount demonstrated (Opus reviews)",
+    "docs": [
+      "03 s14.4",
+      " 03 s11",
+      " R0 C1-20",
+      " R0 C1-21",
+      " 03 TA-28"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-10",
+    "title": "camera/MODULE.md, OrbitMath, CamMath, crit_damp",
+    "lane": "camera",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-04"
+    ],
+    "milestone": "M2",
+    "acceptance": "Closed-form D test vs iterative solve (< 1 mm); 1 deg pole sweep with no NaN, orthonormal bases, heading step < 2 deg",
+    "docs": [
+      "06 s5",
+      " 06 UX-10"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 41
+  },
+  {
+    "id": "UX-12",
+    "title": "UiScale, COMPACT/REGULAR profiles, safe-area HUD root, theme and palette tokens",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "ART-02"
+    ],
+    "milestone": "M2",
+    "acceptance": "1 du = 1 pt on Android test devices; profiles switch at 500 du; safe insets applied",
+    "docs": [
+      "06 s4",
+      " 06 UX-12"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 38
+  },
+  {
+    "id": "UX-29",
+    "title": "Localisation tools (build_po.py, check_locale.py, po_to_csv.py), Fmt, locale selection, pseudolocale CI",
+    "lane": "tools+ui",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-03"
+    ],
+    "milestone": "M2",
+    "acceptance": "CI fails on missing id, placeholder mismatch or max_len; Fmt tests for en/fi",
+    "docs": [
+      "06 s11",
+      " 06 UX-29"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-04",
+    "title": "Blender helper library pw.py (incl. landing_struts) and MCP bootstrap",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "REPO-01"
+    ],
+    "milestone": "M2",
+    "acceptance": "Recipes in a fresh file build a test box asset; finalize() report matches validate_glb.py",
+    "docs": [
+      "07 s4.4",
+      " 07 ART-04"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-05",
+    "title": "Import pipeline: validate_glb.py, asset_budgets.json, write_import.py, post_import_asset.gd, CI job",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "ART-04"
+    ],
+    "milestone": "M2",
+    "acceptance": "Sample glb passes V01-V15; a bad glb fails each check; V11 requires HP_Gear_0..2 on ships; HP_* become Marker3D",
+    "docs": [
+      "07 s4.2-4.6",
+      " 07 ART-05"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-22",
+    "title": "Audio synth sfxgen.py, recipe schema, analyze.py (peak, LUFS, centroid, loop seam)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "REPO-01"
+    ],
+    "milestone": "M2",
+    "acceptance": "A test recipe renders deterministically; analyzer flags clipping and a bad loop seam",
+    "docs": [
+      "07 s8.4",
+      " 07 ART-22"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-01",
+    "title": "OrderSpec (R0 B.3 kinds incl. reserved 9-11, HaulMode, EscortMode, SL-2 fields), orders side table + order_kind head cache, order_rules.json + schema",
+    "lane": "sim/orders",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "CONTRACT-0",
+      "TA-06",
+      "TA-11"
+    ],
+    "milestone": "M2",
+    "acceptance": "Validity tests per class/kind (towers: ATTACK, HOLD, GUARD only; reserved kinds rejected); queues max 8 each; serialize round-trip",
+    "docs": [
+      "05 s3",
+      " R0 C2-06",
+      " 05 AI-01"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 49,
+    "note": "04 s2.5: a 32-id ORDER fits 15 points, not 14 (8+128+120=256); net to fix the doc (NET-47 or NET-04). gen_module_api now checks nested MODULE.md files."
+  },
+  {
+    "id": "AI-02",
+    "title": "ControlMachine: transitions C1-C18, CommandResult codes, ReleaseReason, events",
+    "lane": "sim/control",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "AI-01",
+      "TA-18"
+    ],
+    "milestone": "M2",
+    "acceptance": "One gdUnit4 test per row C1-C18 and per C6r code; RELEASED reasons exactly R0 B.3",
+    "docs": [
+      "05 s2",
+      " R0 C2-08",
+      " 05 AI-02"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-03",
+    "title": "SimAiHook, CommandSinkBase, CommandSink (submit, drive refusing POSSESSED, set_ai_tag)",
+    "lane": "sim+sim_ai",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "AI-02",
+      "TA-06",
+      "TA-18"
+    ],
+    "milestone": "M2",
+    "acceptance": "drive on a possessed id returns false and leaves the slot untouched; hook called once per tick at R0 B.5 step 3",
+    "docs": [
+      "05 s1.3",
+      " R0 C2-04",
+      " 05 AI-03"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-04",
+    "title": "AiState SoA + serialize; AiDriver scheduling (stagger by think_period_ticks, event wake, class batches, set_offline_profile)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "AI-03"
+    ],
+    "milestone": "M2",
+    "acceptance": "Each AI entity thinks 30/P times per 30 ticks for P = 10 and 15; wake rate-limited to 1 per 5 ticks; save/load round-trip",
+    "docs": [
+      "05 s4.3",
+      " R0 C1-01",
+      " 05 AI-04"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-05",
+    "title": "FlightController (track_velocity, track_thrust_vector) in sim/steer/",
+    "lane": "sim/steer",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "TA-12",
+      "TA-30"
+    ],
+    "milestone": "M2",
+    "acceptance": "Step response within 5 deg in <= 2.0 s, overshoot < 15 % at v_cruise, under both lift_model values",
+    "docs": [
+      "05 s5.2",
+      " R0 C2-04",
+      " 05 AI-05"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-06",
+    "title": "Gain-tuning harness: headless sweep of flight and landing gains, CSV report",
+    "lane": "test+tools",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "AI-05"
+    ],
+    "milestone": "M2",
+    "acceptance": "200 seeds in < 2 min headless; best gains and metrics file written",
+    "docs": [
+      "05 s5",
+      " 05 AI-06"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-07",
+    "title": "TerrainProbe (TTI, min clearance, lift)",
+    "lane": "sim/steer",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-13"
+    ],
+    "milestone": "M2",
+    "acceptance": "Synthetic ridge/plane tests: TTI error < 0.1 s; SC-09, SC-10 pass",
+    "docs": [
+      "05 s5.4",
+      " 05 AI-07"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-08",
+    "title": "Overlays: SAFETY, RECOVER_CEILING, LINK_BRIDGE; Assist.link_bridge",
+    "lane": "sim_ai+sim/steer",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "AI-02",
+      "AI-05",
+      "AI-07"
+    ],
+    "milestone": "M2",
+    "acceptance": "SC-11, SC-12, SC-22, SC-23, SC-25 pass",
+    "docs": [
+      "05 s2.4",
+      " R0 C2-08",
+      " 05 AI-08"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-09",
+    "title": "LandingController L1-L6 (tail-down, O-2), aborts, go-around, bearing choice, pad selection",
+    "lane": "sim/steer+sim_ai",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "AI-05",
+      "AI-07"
+    ],
+    "milestone": "M2",
+    "acceptance": "SC-02..SC-08 pass; SC-04 >= 99/100; every touchdown meets R0 B.5 with thrust axis within 10 deg of the pad normal",
+    "docs": [
+      "05 s5.5",
+      " R0 O-2",
+      " R0 B.5",
+      " 05 AI-09"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-10",
+    "title": "Auto-dock assist Assist.auto_dock() in sim/steer/assist.gd (server-side substitution; prediction parity verified in NET-18)",
+    "lane": "sim/steer",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "AI-09"
+    ],
+    "milestone": "M2",
+    "acceptance": "SC-16 passes; assist runs L4-L6 while DOCK held within auto_dock_radius_m of a free friendly pad; a landing with an assist tick in the last 150 m grades AUTO (dependency on NET-18 moved to NET-18) ; transition_max_tilt_deg and horizontal auto-dock radius (A-33, A-34)",
+    "docs": [
+      "05 s5.5",
+      " R0 B.5",
+      " 05 AI-10"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-11",
+    "title": "Separation, formation slots, escort behaviour (class slots; SL-2 fields)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "AI-05"
+    ],
+    "milestone": "M2",
+    "acceptance": "SC-39 passes; zero friendly collisions in a 50-seed swarm test",
+    "docs": [
+      "05 s5.6",
+      " 05 AI-11"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-12",
+    "title": "Targeting choice points + hysteresis; straight-line aim and flak lead; Ballistics.predict_impact for bombs and siege shells",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "AI-04",
+      "TA-12"
+    ],
+    "milestone": "M2",
+    "acceptance": "Scoring-table unit tests; co-altitude slug test at 200/400/650/800 m hits; bomb prediction within 3 m for drops from 50-800 m",
+    "docs": [
+      "05 s6.2",
+      " R0 C1-03",
+      " 05 AI-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-01",
+    "title": "Spike S-UX-1: touch flight + command prototype on Android-mid in the S-FLIGHT-1 build (s4.3 layout, sticky thrust, BOOST/BRAKE, FLIP flick, possess/release, one placement); the 25-minute Low-tier match runs later as QA-07",
+    "lane": "input+ui",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "TA-30",
+      "HUM-06"
+    ],
+    "milestone": "M2",
+    "acceptance": "3 of 4 novices fly 3 rings and land within 10 min; boost-and-steer ring pair within 20 s by 3 of 4; mis-taps < 5 %; possess/release/place each < 30 s; written up",
+    "docs": [
+      "06 s13",
+      " R0 C3-06",
+      " 06 UX-01"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "PM-01",
+    "title": "Replan after the P0 spike wave: read S-FLIGHT-1, S-SIM-1, S-WORLD-1, S-NAV-1, S-WEB-1 reports; apply fallback branches (cut ladder, mesher variant, caps), re-baseline 03 s4.2 and 01 anchors, file ADR amendments, update 09 and backlog.json sizes/tiers",
+    "lane": "pm",
+    "tier": "Fable",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-22",
+      "TA-25",
+      "TA-20",
+      "TA-30",
+      "TA-28",
+      "HUM-12"
+    ],
+    "milestone": "M2",
+    "acceptance": "Every spike's fail path is either closed or converted into tasks with ids; 09 s6 gate table updated; owner approves (Fable: cross-module ADR-level trade-offs; the one point where the plan itself changes)",
+    "docs": [
+      "01 App. A",
+      " 03 s14",
+      " 09 s6"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-29",
+    "title": "Conditional (only if TA-28 fails the 20 MB gate): custom trimmed web export template build in CI",
+    "lane": "ci+web",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "TA-28"
+    ],
+    "milestone": "M3",
+    "acceptance": "Engine wasm Brotli size reduced >= 2 MB; all web tests still pass; skipped and closed if the gate passed",
+    "docs": [
+      "03 s11.2",
+      " 03 TA-29"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-31",
+    "title": "Quality tier system LOW/MEDIUM/HIGH: quality_tiers.json, 2 s benchmark inside 06's pre-warm window with the p90 rule, runtime downshift, settings hook",
+    "lane": "presentation+app",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-10",
+      "TA-23",
+      "TA-26",
+      "TA-47"
+    ],
+    "milestone": "M3",
+    "acceptance": "Tier selected on PC/Android/web in < 2 s; downshift under synthetic load; every 03 s13 setting applied",
+    "docs": [
+      "03 s13",
+      " R0 C2-29",
+      " 03 TA-31"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-32",
+    "title": "Perf overlay (F3), Performance monitors to console.log on web, perf/history.jsonl reporter tools/perf_report.py with runner-keyed 7-day median rule",
+    "lane": "presentation+tools",
+    "tier": "Haiku",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-22"
+    ],
+    "milestone": "M3",
+    "acceptance": "Overlay shows frame/sim/draw/tri/mem; report fails on an injected +25 % regression fixture; ignores non-pinned runners for absolute gates",
+    "docs": [
+      "03 s12.1",
+      " 03 TA-32"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-34",
+    "title": "Nightly soak harness scene: 30 sim-minutes, no NaN, no stall, p95 recorded, Standard/Reduced/Lite profiles (GD-24 owns BalanceProbe)",
+    "lane": "test/soak",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "TA-22",
+      "TA-33"
+    ],
+    "milestone": "M3",
+    "acceptance": "Nightly green; three caps profiles run; results appended for GD-24",
+    "docs": [
+      "01 ADR-11",
+      " 03 TA-34"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-35",
+    "title": "Golden lane, world scenes: 12 fixed scenes (Z-plan incl. Z8, three tiers) under Xvfb + llvmpipe, perceptual compare keyed by adapter string",
+    "lane": "test/golden",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-24",
+      "TA-26"
+    ],
+    "milestone": "M3",
+    "acceptance": "Nightly job produces 12 PNGs in golden/world/ and a diff report; a deliberate colour change fails",
+    "docs": [
+      "01 ADR-11",
+      " R0 C2-30",
+      " 03 TA-35"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-36",
+    "title": "Web safety layer: Saves.try_* wrappers, JavaScriptBridge confinement, platform/portal_sdk.gd stub (break_allowed() false), D9 lint, hashing chunked over frames",
+    "lane": "platform+core",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-02",
+      "TA-09"
+    ],
+    "milestone": "M3",
+    "acceptance": "D9 passes; web build boots with IndexedDB disabled to the menu; hash verification shows progress without a > 33 ms frame",
+    "docs": [
+      "03 s11.4",
+      " 06 A2",
+      " 03 TA-36"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-09",
+    "title": "Tower envelopes, straight-line turret aim, missile lock and AGL floor, flip lock-break window, target priority",
+    "lane": "sim+sim_ai",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "GD-08",
+      "GD-36"
+    ],
+    "milestone": "M3",
+    "acceptance": "C-01, C-02, C-03, C-04, C-06 pass (Opus review)",
+    "docs": [
+      "02 s4.4",
+      " 02 AR-2",
+      " 02 GD-09"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-10",
+    "title": "Shield Projector and Core integrated shield: absorption, collapse, Ice-costed recharge, power and Exposure effects, Core shield expiry at 480 s",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "GD-08",
+      "GD-13"
+    ],
+    "milestone": "M3",
+    "acceptance": "C-07 and C-13 pass; Exposure halves Projector charge/recharge and removes the Core shield",
+    "docs": [
+      "02 s4.3",
+      " R0 C3-05",
+      " 02 GD-10"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-12",
+    "title": "Harvest cycle: field capacity, regen, max_miners, depletion re-targeting, Exposure stop, Refinery docks",
+    "lane": "sim+sim_ai",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "GD-11",
+      "TA-20"
+    ],
+    "milestone": "M3",
+    "acceptance": "Trip time within 5 % of the 02 s8.2 formula at d = 450 and 600 m on the flat test map; regen stops at Exposure (doc tier Opus)",
+    "docs": [
+      "02 s8.2",
+      " 02 GD-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-14",
+    "title": "Ice: Extractor buffers, pipe radius, Hauler transfer, Relay pad service",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "GD-11"
+    ],
+    "milestone": "M3",
+    "acceptance": "Piped Extractor credits 0.8 Ice/s; Hauler transfers 40 Ice/s",
+    "docs": [
+      "02 s8.3",
+      " 02 GD-14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-15",
+    "title": "Resupply service and landing grade: parallel timers, per-ship costs, waiting-for-Ice pause, LandingGrade q and grades, manual/hot/dead-stick flags, x0.9 repair for manual FAIR+, LANDING event",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 2.5,
+    "depends_on": [
+      "GD-08",
+      "GD-11",
+      "TA-18"
+    ],
+    "milestone": "M3",
+    "acceptance": "Service time and cost per ship reproduce 02 s2.3; 20+ grade cases incl. the 8 m/s, 15 m/s, 25 deg and pad_radius_m boundaries; assist tick in the last 150 m grades AUTO (Opus review; doc tier Opus)",
+    "docs": [
+      "02 s2.3",
+      " 02 s17.1",
+      " R0 C3-13",
+      " 02 GD-15"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-18",
+    "title": "Supply network: Pylon graph, supplied flag, ammo-pool refill, unsupplied 50 % rate",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "GD-16"
+    ],
+    "milestone": "M3",
+    "acceptance": "Destroying a mid-chain Pylon unsupplies downstream towers next tick",
+    "docs": [
+      "02 s6.5",
+      " 02 GD-18"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-19",
+    "title": "Wrecks and salvage pods: values, 90 s lifetime, ceil(value/120) pods, tow slots, delivery credit",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "GD-11"
+    ],
+    "milestone": "M3",
+    "acceptance": "A destroyed Shipyard yields 2 pods of 80; pods expire at 90 s; Foundry Hauler tows 2",
+    "docs": [
+      "02 s13",
+      " 02 GD-19"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-37",
+    "title": "Tow tether link (C3-17): kinematic attach 25 m behind / 8 m below HP_Tether, critically damped follow, no collision while towed, tow_turn_rate_mult, Foundry 2 tows",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "GD-19"
+    ],
+    "milestone": "M3",
+    "acceptance": "Towed wreck within 10 m of the attach point in a 1 g turn; towing Hauler turn rates x0.6",
+    "docs": [
+      "R0 C3-17",
+      " 02 GD-37"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-20",
+    "title": "Match rules: elimination, self-destruct, surrender vote, Core shield timer, per-mode Core Exposure (x1.25 bombs on Cores) and hard end, structure value",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "GD-10",
+      "GD-12"
+    ],
+    "milestone": "M3",
+    "acceptance": "One sim test per transition of 02 s12.1, run with pvp_1v1 and pvp_team timers",
+    "docs": [
+      "02 s12.1",
+      " R0 C3-19",
+      " 02 GD-20"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-23",
+    "title": "Relay Station capture and hold; Solar Plateau multiplier",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "GD-14"
+    ],
+    "milestone": "M3",
+    "acceptance": "Capture completes at 20 s uncontested, pauses with an enemy within 300 m, resets when the Hauler leaves; same-rule recapture",
+    "docs": [
+      "02 s9",
+      " R0 C2-20",
+      " 02 GD-23"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-21",
+    "title": "tools/econ_model.py: reproduce 02 s8.7-8.9 from the defs and a bot-book JSON with the C3-01 start kit",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "GD-02",
+      "GD-03",
+      "GD-04",
+      "GD-05"
+    ],
+    "milestone": "M3",
+    "acceptance": "Checkpoints within +-5 s and 2-minute aggregates within +-5 % of the doc tables; a miss updates the tables in a 02 revision",
+    "docs": [
+      "02 s8.7-8.9",
+      " R0 C3-01",
+      " 02 GD-21"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-22",
+    "title": "resources block for cradle (02 s9.3 totals); anvil and rimewater blocks are authored inside ART-29/ART-30 against the same 02 s9 template",
+    "lane": "content/maps",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "TA-15",
+      "ART-28"
+    ],
+    "milestone": "M3",
+    "acceptance": "Validator passes; cradle totals equal 02 s9.3 (dependency edited: ART-29/30 dropped, they carry their own blocks)",
+    "docs": [
+      "02 s9",
+      " 02 GD-22"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-26",
+    "title": "Scenario tests C-01..C-13",
+    "lane": "test/sim",
+    "tier": "Haiku",
+    "size_days": 1.5,
+    "depends_on": [
+      "GD-09",
+      "GD-10",
+      "GD-16"
+    ],
+    "milestone": "M3",
+    "acceptance": "All thirteen run on every PR in < 2 min total (Sonnet for C-06, C-08)",
+    "docs": [
+      "02 s18.3",
+      " 02 GD-26"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-27",
+    "title": "Score events, landing points, Pilot/Commander split and the match result fields of 02 s17.1",
+    "lane": "sim+server",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "GD-15"
+    ],
+    "milestone": "M3",
+    "acceptance": "One unit test per event; MATCH_END carries every 17.1 field (binds in NET-22)",
+    "docs": [
+      "02 s17.1",
+      " R0 C2-17",
+      " 02 GD-27"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-33",
+    "title": "Moving-sun rule: sun_dir(t), terminator crossing, cold_trap_sunlit_mult (absorbs 08 FEAT-33)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "GD-13"
+    ],
+    "milestone": "M3",
+    "acceptance": "Crossing time within +-2 s of the configured phase",
+    "docs": [
+      "02 s16.2 M5",
+      " R0 O-4",
+      " 02 GD-33"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-13",
+    "title": "Dart brain incl. AttackRun sub-machine",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 2.5,
+    "depends_on": [
+      "AI-08",
+      "AI-09",
+      "AI-11",
+      "AI-12"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-01, SC-28, SC-29 pass",
+    "docs": [
+      "05 s6.2",
+      " 05 AI-13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-14",
+    "title": "Lancer, Bomber, Scout brains (Lancer lock per lock_time_s)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "AI-13"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-19, SC-20, SC-21, SC-38 pass",
+    "docs": [
+      "05 s6.3-6.6",
+      " 05 AI-14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-15",
+    "title": "Hauler brain (ferry, tow under the tow_turn_rate_mult cap, capture)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "AI-09",
+      "GD-37"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-35, SC-36, SC-37 pass",
+    "docs": [
+      "05 s6.5",
+      " R0 C3-17",
+      " 05 AI-15"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-16",
+    "title": "Ground follower (Pathing tickets, BRAKE/reverse rule) + Harvester brain (cycle, flee, repath, stuck)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-20",
+      "TA-38",
+      "AI-04"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-32, SC-33, SC-34, SC-48, SC-51 pass",
+    "docs": [
+      "05 s6.7",
+      " R0 C1-05",
+      " 05 AI-16"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-17",
+    "title": "Tower brain (towers.json envelopes and priorities, lock_time_s, straight-line lead, flak fuse)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "AI-12",
+      "GD-04"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-30, SC-31 pass; no envelope literal in sim_ai/ (grep check)",
+    "docs": [
+      "05 s6.8",
+      " R0 C2-15",
+      " 05 AI-17"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-18",
+    "title": "Siege Crawler brain (v1, status core)",
+    "lane": "sim_ai",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "AI-16"
+    ],
+    "milestone": "M3",
+    "acceptance": "Attacks from 1,000-1,150 m on tiny_test; relocates after a near bomb; NO_AMMO after 20 shells",
+    "docs": [
+      "05 s6.9",
+      " R0 O-4",
+      " 05 AI-18"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-19",
+    "title": "autopilots.json full content (ap_* ids) + JSON Schema",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "CONTRACT-0",
+      "AI-05",
+      "AI-17"
+    ],
+    "milestone": "M3",
+    "acceptance": "validate_content.py passes; every autopilot id referenced by a def exists with every required key",
+    "docs": [
+      "05 s4.4",
+      " 05 AI-19"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-20",
+    "title": "Possession edge-case scenarios SC-13..SC-27",
+    "lane": "test",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "AI-08",
+      "AI-09",
+      "AI-13"
+    ],
+    "milestone": "M3",
+    "acceptance": "All listed scenarios green in < 90 s total",
+    "docs": [
+      "05 s11.2",
+      " 05 AI-20"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-21",
+    "title": "Recorded-situation capture (ai_capture) + FakeSimView",
+    "lane": "test+sim_ai",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "AI-04"
+    ],
+    "milestone": "M3",
+    "acceptance": "Capture -> JSON -> replay test reproduces the same mode/target",
+    "docs": [
+      "05 s11.1",
+      " 05 AI-21"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-22",
+    "title": "Perception (vision, ghosts, memory, reaction delay) + ThreatMap",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "AI-04",
+      "TA-37"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-43 passes; threat update <= 0.3 ms per team at 1,200 entities",
+    "docs": [
+      "05 s7.1",
+      " 05 AI-22"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-23",
+    "title": "OpeningBook interpreter + condition grammar (presence, or-operator) + order steps + BuildPlanner.resolve_site (radius, Outpost presence and spacing)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "AI-22",
+      "GD-02",
+      "GD-04",
+      "GD-16"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-40, SC-41 pass",
+    "docs": [
+      "05 s7.3",
+      " R0 C2-14",
+      " 05 AI-23"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-24",
+    "title": "build_orders.json books on the R0 B.6 start kit (3 doctrines x 2 variants)",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "AI-23",
+      "GD-05"
+    ],
+    "milestone": "M3",
+    "acceptance": "Schema-valid; no storage_silo; every build outpost preceded by an order move with when: presence; each book passes SC-41",
+    "docs": [
+      "05 s7.3",
+      " R0 C2-14",
+      " 05 AI-24"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-25",
+    "title": "Economy manager + BuildPlanner reactive rules + TowerPlacer",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 2.5,
+    "depends_on": [
+      "AI-23"
+    ],
+    "milestone": "M3",
+    "acceptance": "10-min solo bot keeps power01 in [1.0, 1.6] >= 90 % of time; SC-44 passes",
+    "docs": [
+      "05 s7.4-7.5",
+      " 05 AI-25"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-26",
+    "title": "Production manager + rosters in bot_profiles.json",
+    "lane": "sim_ai+content",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "AI-25"
+    ],
+    "milestone": "M3",
+    "acceptance": "Roster deficits close within 2 min when affordable; caps respected",
+    "docs": [
+      "05 s7.6",
+      " 05 AI-26"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-27",
+    "title": "Military manager: squads, raid planner, siege planner",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "AI-13",
+      "AI-14",
+      "AI-22"
+    ],
+    "milestone": "M3",
+    "acceptance": "4-bot 20-min soak: >= 3 raids and >= 1 siege per bot; abort rule triggers in a scripted ambush",
+    "docs": [
+      "05 s7.7",
+      " 05 AI-27"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-28",
+    "title": "CommandGovernor + difficulty profiles (bot_profiles.json tier rows validated against bot_promises.json)",
+    "lane": "sim_ai+content",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "AI-26",
+      "GD-05"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-42 and SC-27 pass; validator rejects a profile whose cadence/rate differs from its promise",
+    "docs": [
+      "05 s7.8",
+      " R0 C2-13",
+      " 05 AI-28"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-29",
+    "title": "Adjutant profiles (assist, caretaker, economy) + caretaker + SET_ADJUTANT validation + feed alerts + campaign assist mode",
+    "lane": "sim_ai+server",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "AI-28",
+      "CONTRACT-0"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-45, SC-46, SC-49 pass",
+    "docs": [
+      "05 s8",
+      " R0 O-6",
+      " R0 C3-07",
+      " 05 AI-29"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-30",
+    "title": "AI governor and perf benchmark test/perf/ai_tick (Standard and Lite)",
+    "lane": "sim_ai+test",
+    "tier": "Opus",
+    "size_days": 1.5,
+    "depends_on": [
+      "AI-13",
+      "AI-14",
+      "AI-15",
+      "AI-16",
+      "AI-17",
+      "TA-22"
+    ],
+    "milestone": "M3",
+    "acceptance": "AI p95 <= 6 ms at 1,200 entities on the pinned runner; <= 3.5 ms at Lite with the offline profile; governor degrades and restores under forced overload",
+    "docs": [
+      "05 s10",
+      " 05 AI-30"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-32",
+    "title": "AI debug overlay data (debug_state, mode tags) and sim_ai/MODULE.md",
+    "lane": "sim_ai",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-04",
+      "AI-22"
+    ],
+    "milestone": "M3",
+    "acceptance": "MODULE.md lists the public API of 05 s1.3/s4.3/s7.2; tags documented",
+    "docs": [
+      "05 s1.3",
+      " 05 AI-32"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-33",
+    "title": "Save/load of AI state (SC-47)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "AI-04",
+      "AI-22",
+      "TA-21"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-47 passes",
+    "docs": [
+      "05 s11.2",
+      " 05 AI-33"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-36",
+    "title": "Offline Lite profile: set_offline_profile, think 15, 3.5 ms budget wiring, Lite soak variant",
+    "lane": "sim_ai+test",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "AI-30"
+    ],
+    "milestone": "M3",
+    "acceptance": "1v1 and 2v2 Normal bots at Lite complete 25-minute offline matches; AI p95 <= 3.5 ms; numbers handed to the S-WEB-2 report",
+    "docs": [
+      "05 s10",
+      " R0 C1-01",
+      " 05 AI-36"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-03",
+    "title": "PilotInput.to_wire/from_wire (bytes 5-6 reserved), INPUT packet with 3-tick redundancy, server jitter buffer, axis-decay reuse for 10 ticks, LINK_BRIDGE flag hand-off",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-01"
+    ],
+    "milestone": "M3",
+    "acceptance": "Bit-exact round trip; a dropped middle packet loses no inputs; inputs outside [tick-2, tick+8] rejected and counted; 11 missing ticks raise the bridge flag once",
+    "docs": [
+      "04 s2.4",
+      " R0 C2-08",
+      " R0 C2-09",
+      " 04 NET-03"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-04",
+    "title": "Command payload codecs for all 16 kinds incl. the ORDER layout (<= 256 B) and SET_ADJUTANT",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-01"
+    ],
+    "milestone": "M3",
+    "acceptance": "Encode/decode test per kind; a 32-id, 14-point ORDER round-trips and a 15-point one is refused; malformed payload returns null",
+    "docs": [
+      "04 s2.5",
+      " R0 C2-06",
+      " 05 AR-1",
+      " 04 NET-04"
+    ],
+    "status": "todo",
+    "note": "depends on A-27 deps.json edit (SimEvent, CommandResult named for net; owner default approve)"
+  },
+  {
+    "id": "NET-07",
+    "title": "KEYFRAME encode/decode (scopes ALL, ROSTER_REPAIR), stale-ack reset, rolling tier-C refresh (ceil(C_count/300) FULL records per tick)",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-06"
+    ],
+    "milestone": "M3",
+    "acceptance": "Keyframe after a 33-tick ack gap exactly once; no periodic keyframe; every C entity refreshed within 300 ticks; refresh bytes at 700 C entities <= 1.8 KB/s",
+    "docs": [
+      "04 s4.3",
+      " R0 C1-15",
+      " 04 NET-07"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-14",
+    "title": "ClientLink: handshake (HELLO/WELCOME/REFUSE/LOADED), state machine, per-link queues, token-bucket rate limits, strikes",
+    "lane": "server",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-01",
+      "NET-04"
+    ],
+    "milestone": "M3",
+    "acceptance": "validator_test rate rows; HELLO timeout 5 s; LOADED timeout 60 s",
+    "docs": [
+      "04 s7",
+      " 04 s11",
+      " 04 NET-14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-15",
+    "title": "ServerSession.tick() per 04 s7 with TickBudget, set_ai_hook wiring and add_bot forwarding; server/main.gd flags",
+    "lane": "server",
+    "tier": "Opus",
+    "size_days": 2.5,
+    "depends_on": [
+      "NET-06",
+      "NET-08",
+      "NET-10",
+      "NET-11",
+      "NET-14",
+      "TA-18",
+      "AI-04"
+    ],
+    "milestone": "M3",
+    "acceptance": "Runs the canonical scene with 8 LocalTransport clients; AI never called outside step(); phase timings exported; snapshot_budget_test passes (dependency edited: ENet/WS transports plug in via NET-24)",
+    "docs": [
+      "04 s7",
+      " R0 C2-04",
+      " 04 NET-15"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-17",
+    "title": "ClientSession: state machine, clock/drift estimator, time dilation, NetSimView.sample(render_tick) with interpolation / gravity-aware extrapolation / stale flag, SimView contract test",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 2.5,
+    "depends_on": [
+      "NET-06",
+      "NET-07",
+      "TA-18",
+      "TEST-02"
+    ],
+    "milestone": "M3",
+    "acceptance": "Contract test green on NetSimView; extrapolation stops at 3 ticks; clock converges within 2 s under TARGET; ClientSession.tick <= 1.0 ms PC",
+    "docs": [
+      "04 s5",
+      " R0 C1-23",
+      " R0 C2-12",
+      " 04 NET-17"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-24",
+    "title": "ScreenFlow state machine, back stack, focus rules",
+    "lane": "app",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-12"
+    ],
+    "milestone": "M3",
+    "acceptance": "Flow per 06 s8 mermaid; B/Esc/Android back pop; every screen has initial focus",
+    "docs": [
+      "06 s8",
+      " 06 UX-24"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-39",
+    "title": "app/match_controller.gd + offline session bootstrap incl. pause / save / load (fills AssistContext, hands Prediction.render_state to the camera, LocalSimView)",
+    "lane": "app",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "NET-17",
+      "TA-21",
+      "UX-24",
+      "NET-15"
+    ],
+    "milestone": "M3",
+    "acceptance": "Offline match starts, pauses, saves, loads and resumes on the same tick; AssistContext filled each tick",
+    "docs": [
+      "R0 C1-01",
+      " R0 C2-23",
+      " 06 UX-39"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "APP-01",
+    "title": "App boot sequence: app.gd autoload, boot.tscn, ContentDB load_all_async with progress, pre-warm window hosting the TA-31 benchmark, locale and age-prompt entry, main menu handoff",
+    "lane": "app",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-09",
+      "TA-31",
+      "UX-24"
+    ],
+    "milestone": "M3",
+    "acceptance": "Cold boot to the main menu <= 10 s PC-mid; pre-warm spawns every vfx_prewarm.json entry; first run routes to Mission 1 when present",
+    "docs": [
+      "01 s8.2",
+      " 03 s13",
+      " 06 s8"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-03",
+    "title": "input/MODULE.md, InputRouter, InputClass, DeviceMonitor, Intents",
+    "lane": "input",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-03",
+      "TA-30"
+    ],
+    "milestone": "M3",
+    "acceptance": "06 s2.4 class detection table covered by unit tests; emulated mouse ignored; pilot_input emitted once per tick only in flight modes",
+    "docs": [
+      "06 s2",
+      " 06 UX-03"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-04",
+    "title": "GestureRecognizer (incl. FLICK_UP for FLIP and the FIRE long-press radial)",
+    "lane": "input",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-03"
+    ],
+    "milestone": "M3",
+    "acceptance": "Synthetic-event tests for tap, double tap, long press 0.35 s, drag, pinch, twist, two-finger drag, flick; no false pinch on two-finger drag",
+    "docs": [
+      "06 s2.3",
+      " R0 C2-22",
+      " 06 UX-04"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-05",
+    "title": "Gamepad and KBM flight mappers (DIRECT, throttle modes)",
+    "lane": "input",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "UX-03"
+    ],
+    "milestone": "M3",
+    "acceptance": "Dead zone and curve tests; power-key ramp 4/s; LT > 0.5 sets BRAKE",
+    "docs": [
+      "06 s3",
+      " 06 UX-05"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-06",
+    "title": "Touch flight controls: stick wrapper, sticky thrust slider, BOOST/BRAKE/BOMB/FIRE/DOCK/RELEASE buttons, FLIP flick, multi-touch TouchControls",
+    "lane": "ui/hud",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-03",
+      "UX-04",
+      "UX-12",
+      "UX-01"
+    ],
+    "milestone": "M3",
+    "acceptance": "Three simultaneous touches register; layout matches 06 s4.3 within 1 du; lint <= 7 touch controls on the right half passes",
+    "docs": [
+      "06 s4.3",
+      " R0 C3-06",
+      " R0 C3-21",
+      " 06 UX-06"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-07",
+    "title": "Assist stack: ArcadeSteer, MouseAim, AutoLevel, AimAssist, AutoThrottle/Cruise, BombRelease, ranked tier rule",
+    "lane": "input",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-05",
+      "TA-30"
+    ],
+    "milestone": "M3",
+    "acceptance": "Pure-function tests; auto-level from 60 deg bank within 3 s; ranked min() test; bomb release fires on the first tick the predicted impact is within 15 m of an enemy footprint or ground unit and never otherwise (Opus review; doc tier Opus)",
+    "docs": [
+      "06 s3.6",
+      " R0 C3-23",
+      " 06 UX-07"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-08",
+    "title": "defs/assists.json (incl. bomb_release_assist) + content/ui/*.json schemas and defaults (alerts, pings, glyphs, camera)",
+    "lane": "content+tools",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "UX-07"
+    ],
+    "milestone": "M3",
+    "acceptance": "validate_content.py passes; content/ui excluded from the content hash, assists.json included",
+    "docs": [
+      "R0 C2-34",
+      " R0 B.3 QuickPing",
+      " 06 UX-08"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-09",
+    "title": "Remapping UI, BindingStore, glyph sets and glyphs.json",
+    "lane": "input+ui",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-03"
+    ],
+    "milestone": "M3",
+    "acceptance": "Remaps persist; conflicts flagged; glyphs swap within one frame of device change",
+    "docs": [
+      "06 s2.5",
+      " 06 s9.4",
+      " 06 UX-09"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-02",
+    "title": "Spike S-UX-2: chase and orbit cameras on the sphere (loops, inverted flight, pole crossing, all transitions)",
+    "lane": "camera",
+    "tier": "Opus",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-25",
+      "UX-10"
+    ],
+    "milestone": "M3",
+    "acceptance": "No flips or NaN in a 1 deg pole sweep; no tester rates discomfort above 1 (0-3) after 15 min; constants recorded in camera.json",
+    "docs": [
+      "06 s13",
+      " 06 UX-02"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-11",
+    "title": "ChaseController: look, head-up roll, spring offset, clearance, FOV, free look, turret and ground cams, follow of Prediction.render_state",
+    "lane": "camera",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "UX-10",
+      "UX-02"
+    ],
+    "milestone": "M3",
+    "acceptance": "Camera never below 2.5 m AGL in a terrain-hugging replay; no flip through a loop; reduced-motion variant; 60 fps displacement variance < 10 %",
+    "docs": [
+      "06 s5.2",
+      " R0 C1-07",
+      " 06 UX-11"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-13",
+    "title": "OrbitController: grab pan, fling, zoom to anchor, tilt curve, heading modes, follow",
+    "lane": "camera",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-10"
+    ],
+    "milestone": "M3",
+    "acceptance": "Grab keeps the touched ground point under the finger within 2 du; NORTH_UP never spins at a pole crossing",
+    "docs": [
+      "06 s5.3",
+      " 06 UX-13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-14",
+    "title": "TransitionPlayer, NearFarPolicy (03 formula default), death cam, reduced-motion fades",
+    "lane": "camera",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "UX-11",
+      "UX-13"
+    ],
+    "milestone": "M3",
+    "acceptance": "Durations per 06 s5.4 within 1 frame; near plane continuous; rejected possess plays reverse",
+    "docs": [
+      "06 s5.4-5.5",
+      " R0 C2-28",
+      " 06 UX-14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-15",
+    "title": "PiP (3D SubViewport + 2D schematic)",
+    "lane": "camera+ui",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-13"
+    ],
+    "milestone": "M3",
+    "acceptance": "Draw-call budget per tier met in the profiler; automatic 2D fallback",
+    "docs": [
+      "06 s5.6",
+      " 06 UX-15"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-16",
+    "title": "Flight instruments and HudMath (ladder, limb dip, band, heading, uplink)",
+    "lane": "ui/hud",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-12"
+    ],
+    "milestone": "M3",
+    "acceptance": "Unit tests for pitch, bank, heading, dip; band thresholds per 06 s6.2",
+    "docs": [
+      "06 s6",
+      " 06 UX-16"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-17",
+    "title": "Bomb sight and straight-line lead solver (no gravity term)",
+    "lane": "ui/hud",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "TA-12",
+      "UX-16"
+    ],
+    "milestone": "M3",
+    "acceptance": "Bomb impact error < 2 m vs 1/30 s reference; lead pip matches the sim in a coaltitude test at 200/400/650/800 m",
+    "docs": [
+      "06 s6.3",
+      " R0 C1-03",
+      " 06 UX-17"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-18",
+    "title": "Landing guide (nose from vertical, hover descent), service panel, grade stamp, Core shield timer, consumables, cooldown rings",
+    "lane": "ui/hud",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-16",
+      "TA-18",
+      "GD-15"
+    ],
+    "milestone": "M3",
+    "acceptance": "Gauge colours switch at 8/15 and 15/25 m/s and 25/45 deg; grade stamp shows every LandingGrade.Grade from a LANDING event",
+    "docs": [
+      "06 s6.4",
+      " R0 O-2",
+      " R0 C3-13",
+      " 06 UX-18"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-19",
+    "title": "Threat ring, tower hints, piloted-by badges, pending order, hand-over toast, canister beacon marker",
+    "lane": "ui/hud",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-16",
+      "NET-10"
+    ],
+    "milestone": "M3",
+    "acceptance": "Scenario tests show each widget from recorded SimView states",
+    "docs": [
+      "06 s6.5",
+      " 06 UX-19"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-20",
+    "title": "Selection, picking, OrderResolver, control groups, rally points",
+    "lane": "ui/rts",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-04",
+      "AI-01"
+    ],
+    "milestone": "M3",
+    "acceptance": "06 s7.2 resolver table fully covered incl. Relay Station haul/CAPTURE vs guard; pick radii per class",
+    "docs": [
+      "06 s7.2",
+      " R0 C2-06",
+      " 06 UX-20"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-21",
+    "title": "Build placement controller and validity feedback",
+    "lane": "ui/rts",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-20",
+      "TA-19"
+    ],
+    "milestone": "M3",
+    "acceptance": "State machine per 06 s7.3; all 13 Build.Reject reasons mapped with priority; Outpost presence and spacing rings; pending outline until CommandResult",
+    "docs": [
+      "06 s7.3",
+      " R0 C2-12",
+      " 06 UX-21"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-22",
+    "title": "Production drawer (tabs, 16 structure + 7 unit tiles, states, queues, replenish, early-share lock display, owner-only cancel)",
+    "lane": "ui/rts",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-12",
+      "GD-17"
+    ],
+    "milestone": "M3",
+    "acceptance": "Tiles fit without scrolling at 800x360 and 1280x720; tile states from a mocked SimView; lock shows the greyed amount with reason",
+    "docs": [
+      "06 s7.5",
+      " R0 C3-08",
+      " 06 UX-22"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-23",
+    "title": "Single priority feed (alerts.json for every AlertKind, filter, lanes), ghost tracker, Quick Fly, re-embodiment chooser",
+    "lane": "ui/rts",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-14",
+      "NET-10",
+      "UX-08"
+    ],
+    "milestone": "M3",
+    "acceptance": "Coalescing within 15 s per cell; 3/6 rows; ghosts fade over 30 s; chooser default after 10 s; validator: every AlertKind mapped",
+    "docs": [
+      "06 s7.4",
+      " R0 C3-21",
+      " 06 UX-23"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-25",
+    "title": "Static screens: main menu, mode setup (Lite caps notice), campaign map (assist toggles), briefing, replays, about/credits",
+    "lane": "ui/screens",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "UX-24"
+    ],
+    "milestone": "M3",
+    "acceptance": "Screens instantiate headless; states of 06 s8 present; UI lint clean (dependency edited: NET-42 wires the online replay list later)",
+    "docs": [
+      "06 s8",
+      " 06 UX-25"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-27",
+    "title": "Match overlays: loading, pause, reconnecting, eliminated, results with rematch vote",
+    "lane": "ui/screens",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-24"
+    ],
+    "milestone": "M3",
+    "acceptance": "Reconnecting auto-retries until 120 s then offers Rejoin; results bind to every MATCH_END field of 06 s8",
+    "docs": [
+      "06 s8",
+      " R0 C2-17",
+      " 06 UX-27"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-28",
+    "title": "Settings screens, SettingsModel (app/settings_model.gd), local file as source of truth + settings.client sync, touch layout editor",
+    "lane": "ui+app",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-24",
+      "UX-09"
+    ],
+    "milestone": "M3",
+    "acceptance": "All 06 s8 tabs persist; guests never sync; signed-in sync is last-write-wins; ranked locks shown disabled with a reason",
+    "docs": [
+      "06 s8",
+      " R0 C2-36",
+      " 06 UX-28"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-36",
+    "title": "Cruise assist (I-16): input/assists/cruise_assist.gd, AssistContext AGL/altitude, assists.json row, default on for touch",
+    "lane": "input",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "UX-07",
+      "UX-08"
+    ],
+    "milestone": "M3",
+    "acceptance": "Holds heading, speed and altitude within tolerance in a scripted flight; counted as an assist in the ranked tier rule; touch default on",
+    "docs": [
+      "08 I-16",
+      " R0 C3-12",
+      " 08 FEAT-36"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-01",
+    "title": "Def files and JSON Schemas for the landing_grade block, wing.json, callsigns.json, barks.json, commander_verbs.json (status candidate)",
+    "lane": "content+tools",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "CONTRACT-0",
+      "GD-01"
+    ],
+    "milestone": "M3",
+    "acceptance": "validate_content.py passes; values equal SL-1..SL-5; grade weights sum to 1.0; commander_verbs status candidate (allowed before the scope gate)",
+    "docs": [
+      "08 s3",
+      " 08 FEAT-01"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 51,
+    "note": "callsign words for slot 0 only; barks variant 1 only (EN + draft FI); sfx_id omitted until sfx.json"
+  },
+  {
+    "id": "FEAT-02",
+    "title": "Callsign word lists (8 slots x 4 classes x 12 words) and bark strings as CSV domain barks, EN and FI",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "UX-29"
+    ],
+    "milestone": "M3",
+    "acceptance": "check_locale.py passes: every key has 3 variants in both languages; ids follow the domain scheme",
+    "docs": [
+      "08 SL-3",
+      " R0 C2-33",
+      " 08 FEAT-02"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-09",
+    "title": "Art sign-off: review three Dart renders (Chase, Tactical, landing pose nose-up on a Pad) and two Core renders before the remaining 23 models start",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 0.25,
+    "depends_on": [],
+    "milestone": "M3",
+    "acceptance": "Written approval or change list on ART-06 within 2 days of the renders",
+    "docs": [
+      "07 Q-ART4",
+      " 07 ART-06"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-06",
+    "title": "Style frames: ship_dart (with tail landing struts) and str_core recipes and glb",
+    "lane": "assets",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "ART-03",
+      "ART-05",
+      "HUM-09"
+    ],
+    "milestone": "M3",
+    "acceptance": "Validator passes; silhouette test; Dart landing-pose render (nose up, three feet, hover flame down); owner sign-off",
+    "docs": [
+      "07 s1.3",
+      " 07 s4.5",
+      " 07 ART-06"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-07",
+    "title": "Ships: Lancer, Scout, Bomber, Hauler (each with tail landing struts)",
+    "lane": "assets",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "ART-06",
+      "TA-30"
+    ],
+    "milestone": "M3",
+    "acceptance": "Validator green; silhouette test >= 90 %, no mutual confusion; landing-pose acceptance of 07 s1.3; team area 6-35 %",
+    "docs": [
+      "07 s4.5",
+      " 07 ART-07"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-08",
+    "title": "Ground units: Harvester, Siege Crawler",
+    "lane": "assets",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "ART-06"
+    ],
+    "milestone": "M3",
+    "acceptance": "As ART-07 minus struts",
+    "docs": [
+      "07 s4.5",
+      " 07 ART-08"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-09",
+    "title": "Base core set: Outpost, Pad, Hangar, Shipyard, Vehicle Bay, Refinery",
+    "lane": "assets",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "ART-06"
+    ],
+    "milestone": "M3",
+    "acceptance": "Validator green; foundations present (depth >= 0.6 m); Pad has HP_Dock, painted landing circle (pad_radius_m) and 12 HP_Light_*",
+    "docs": [
+      "07 s4.5",
+      " R0 C2-31",
+      " 07 ART-09"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-10",
+    "title": "Simple structures: Pylon, Solar, Reactor, Extractor",
+    "lane": "assets",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "ART-06"
+    ],
+    "milestone": "M3",
+    "acceptance": "Validator green; recipe cards followed (dimension check V08)",
+    "docs": [
+      "07 s4.5",
+      " R0 O-4",
+      " 07 ART-10"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-11",
+    "title": "Towers and support: Sensor Mast, Autocannon, Flak, Missile Tower, Shield Projector, Rail Lance (4 x 5 cells), Relay Station",
+    "lane": "assets",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "ART-06"
+    ],
+    "milestone": "M3",
+    "acceptance": "Validator green; Turret/Barrel parts present and pivot at their mounts",
+    "docs": [
+      "07 s4.5",
+      " R0 C2-31",
+      " 07 ART-11"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-12",
+    "title": "Wrecks, projectile meshes, 14 props",
+    "lane": "assets",
+    "tier": "Haiku",
+    "size_days": 1.5,
+    "depends_on": [
+      "ART-05"
+    ],
+    "milestone": "M3",
+    "acceptance": "Validator green; props <= 80 tris",
+    "docs": [
+      "07 s5.1",
+      " 07 ART-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-13",
+    "title": "_Far meshes and LOD gate for all models; far-pool MultiMesh in the view layer (ART-A1)",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "ART-07",
+      "ART-08",
+      "ART-09",
+      "ART-11",
+      "TA-26"
+    ],
+    "milestone": "M3",
+    "acceptance": "Silhouette overlap >= 90 % at switch distances; 200 ships + 120 structures render under 400 draws on Android-mid (doc tier Opus)",
+    "docs": [
+      "07 s5.3",
+      " R0 C1-17",
+      " 07 ART-13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-16",
+    "title": "VFX set A: muzzle, tracer, hit, rocket, flak, rail, bomb impact, scorch quads, debris MultiMesh",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "ART-03",
+      "TA-26"
+    ],
+    "milestone": "M3",
+    "acceptance": "Particle caps respected by a 2,000-quad stress test; frame time delta < 2 ms on PC-mid",
+    "docs": [
+      "07 s6",
+      " 07 ART-16"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-17",
+    "title": "VFX set B: explosions, smoke puff pool (0.75/0.5/0.25), shield dome and hit (incl. Core shield), dock beam, build scaffold, possession pulse, alert ring, plumes, landing dust, tether sway",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 2.5,
+    "depends_on": [
+      "ART-16"
+    ],
+    "milestone": "M3",
+    "acceptance": "Shield dome inside/outside switch works; reduced-motion variants; hovering ships below 15 m raise vfx_dust_plume",
+    "docs": [
+      "07 s6",
+      " R0 C3-17",
+      " 07 ART-17"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-18",
+    "title": "vfx_prewarm.json, loading-screen pre-warm, unit test of id coverage",
+    "lane": "presentation",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "ART-17",
+      "TA-26"
+    ],
+    "milestone": "M3",
+    "acceptance": "No hitch > 50 ms when each effect first fires (headless log + Android test)",
+    "docs": [
+      "07 s6",
+      " 07 ART-18"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-19",
+    "title": "Quality-tier knobs (LOD threshold, particle caps, lights, shadows, 200-node cap) wired to the 03 tiers",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "ART-16",
+      "TA-31"
+    ],
+    "milestone": "M3",
+    "acceptance": "Three tiers produce the stated caps; mobile triangle sum <= 305 k in the 07 s5.3 scene",
+    "docs": [
+      "07 s6",
+      " 03 s13",
+      " 07 ART-19"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-20",
+    "title": "UI icon set (class glyphs, shapes, resources, HUD, alerts) and atlas builder",
+    "lane": "ui assets",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "ART-02"
+    ],
+    "milestone": "M3",
+    "acceptance": "100 icons in one atlas; shape set legible at 16 px; icons referenced by id from 06",
+    "docs": [
+      "07 s7",
+      " 07 ART-20"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-21",
+    "title": "Fonts subset and generated theme_pw.tres",
+    "lane": "ui assets",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "ART-02",
+      "UX-12"
+    ],
+    "milestone": "M3",
+    "acceptance": "Finnish text renders; web font payload <= 150 KB; all theme colours from palette.json",
+    "docs": [
+      "07 s7",
+      " 07 ART-21"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-23",
+    "title": "SFX recipes batch 1: guns, heavy weapons, destruction, shield",
+    "lane": "audio",
+    "tier": "Haiku",
+    "size_days": 1.5,
+    "depends_on": [
+      "ART-22"
+    ],
+    "milestone": "M3",
+    "acceptance": "27 ids meet numeric targets; human listening pass signed",
+    "docs": [
+      "07 s8.1",
+      " 07 ART-23"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-24",
+    "title": "SFX recipes batch 2: flight, docking, ground/structures, possession, UI, alerts (16), ambience",
+    "lane": "audio",
+    "tier": "Haiku",
+    "size_days": 2,
+    "depends_on": [
+      "ART-22"
+    ],
+    "milestone": "M3",
+    "acceptance": "51 ids meet targets; alerts mutually distinguishable (onset rhythm test); every AlertKind 0..31 resolves to a sound id; human pass signed",
+    "docs": [
+      "07 s8.1",
+      " R0 C2-03",
+      " 07 ART-24"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-25",
+    "title": "Audio runtime: AudioEmitter pool, default_bus_layout.tres, code ducking, voice stealing, sfx def loader, LANDING-grade touchdown selection",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "ART-22",
+      "TA-26"
+    ],
+    "milestone": "M3",
+    "acceptance": "Bus layout matches 07 s8.2; 32-voice cap enforced; priority stealing tested headless",
+    "docs": [
+      "07 s8.2",
+      " 07 ART-25"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-34",
+    "title": "Wreck, damage and build-progress shader states through EntityViewPool",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "ART-03",
+      "TA-26"
+    ],
+    "milestone": "M3",
+    "acceptance": "wreck, damage01, build_progress change per instance without extra draws",
+    "docs": [
+      "07 s4",
+      " 07 ART-34"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-36",
+    "title": "Mesh LOD gate tool (renders LOD1/2 at switch distance, silhouette IoU)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "ART-05"
+    ],
+    "milestone": "M3",
+    "acceptance": "Tool lists assets under 90 % overlap",
+    "docs": [
+      "07 s4.6",
+      " 07 ART-36"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-24",
+    "title": "BalanceProbe, soak configs SOAK-A..F incl. commander_only, results.jsonl",
+    "lane": "test/soak",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-03",
+      "TA-34",
+      "AI-27"
+    ],
+    "milestone": "M3",
+    "acceptance": "Nightly job writes one JSON line per match containing every BAL field (BAL-01..34)",
+    "docs": [
+      "02 s18",
+      " R0 C3-20",
+      " 02 GD-24"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-25",
+    "title": "tools/balance_report.py and balance_bands.json",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "GD-24"
+    ],
+    "milestone": "M3",
+    "acceptance": "Flags a synthetic out-of-band result; weekly job fails on a miss; per-mode bands for BAL-01/08",
+    "docs": [
+      "02 s18.2",
+      " 02 GD-25"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-41",
+    "title": "S-WEB-2: app/offline_host.gd (worker Thread on native, main thread on web) + in-process skirmish on web-desktop, web-mobile and Android-mid at Lite/Reduced; REPORT.md setting final Lite values",
+    "lane": "app+spikes",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "TA-22",
+      "TA-28",
+      "UX-39",
+      "AI-28",
+      "NET-11",
+      "ART-28"
+    ],
+    "milestone": "M3",
+    "acceptance": "web-desktop 1v1 Normal at Reduced p5 >= 45 fps; web-mobile 1v1 at Lite p5 >= 25 fps; Android-mid native 1v1 25 min at 30 fps without downshift; D3 allowlist exercised; Lite/Reduced decision written into match_rules.json/modes.json",
+    "docs": [
+      "03 s14.7",
+      " R0 C1-01",
+      " 03 TA-41"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-34",
+    "title": "Balance pass 1 after S-FLIGHT-1 and the first weekly soak: retune anchors, revise 02",
+    "lane": "content+docs",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "GD-24",
+      "GD-25",
+      "TA-30",
+      "TA-41"
+    ],
+    "milestone": "M3",
+    "acceptance": ">= 90 % of BAL bands pass; changes recorded in a 02 revision",
+    "docs": [
+      "02 s18",
+      " 02 GD-34"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "QA-02",
+    "title": "Playtest round 1 on the vertical slice (offline 1v1 vs Normal, PC + Android): GD-35 protocol draft, 6-10 testers, pad-time and possession-uplift telemetry read by hand",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 2,
+    "depends_on": [
+      "GD-34",
+      "UX-23",
+      "UX-22",
+      "TA-41",
+      "HUM-07"
+    ],
+    "milestone": "M3",
+    "acceptance": "Report with the 02 s18.4 metrics, top 10 issues filed as tasks; slice judged 'fun to fly, understandable to command' by the owner",
+    "docs": [
+      "02 s18.4",
+      " R0 C3-24"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "PM-02",
+    "title": "Vertical-slice architecture review and scope-gate decision: confirm the 08 shortlist gate (S-SIM-1, S-WEB-2, S-FLIGHT-1 green + 1v1 slice complete), SL-5 go/no-go (OQ-R0-6), final Lite caps, lane ownership for M4-M5, backlog re-size",
+    "lane": "pm",
+    "tier": "Fable",
+    "size_days": 1,
+    "depends_on": [
+      "QA-02",
+      "TA-41",
+      "PM-01"
+    ],
+    "milestone": "M3",
+    "acceptance": "Gate decision recorded in 08 s3 and 09; FEAT seeds released or deferred by id; M4/M5 plan confirmed (Fable: the decision spans 02/03/05/06/08 and may amend ADRs)",
+    "docs": [
+      "08 s3",
+      " R0 C1-13",
+      " R0 OQ-R0-6"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "OPS-02",
+    "title": "Secrets and storage: GitHub Actions secrets (Android keystore, server tokens), deploy secret store on ctl1, S3 bucket lifecycle rules per prefix (replays 14 d, crashes/logs/backups 30 d)",
+    "lane": "server-ops",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "HUM-04"
+    ],
+    "milestone": "M4",
+    "acceptance": "No secret in git; lifecycle rules verified by listing; a rotated token is picked up without redeploying code",
+    "docs": [
+      "04 s12.1",
+      " 01 ADR-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "OPS-03",
+    "title": "Domain and DNS: api./fleet./grafana./gh1.eu. records, Caddyfile with automatic Let's Encrypt, firewall rules (04 s12.2 ports)",
+    "lane": "server-ops",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "HUM-04"
+    ],
+    "milestone": "M4",
+    "acceptance": "wss://gh1.eu.<domain>/health answers with a valid certificate; only the 04 s12.2 ports are public",
+    "docs": [
+      "04 s12.2"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "CONTENT-01",
+    "title": "content/defs/chat_filter.json word list EN + FI (masks only), hash-excluded; owner approves",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "CONTRACT-0"
+    ],
+    "milestone": "M4",
+    "acceptance": "Gate test masks each listed word and nothing else; owner sign-off recorded",
+    "docs": [
+      "04 s10.7",
+      " R0 B.1"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-39",
+    "title": "release.yml: signed AAB, server Docker image build and push, Steam depot upload; macOS notarisation and iOS signing wired but gated as v1.1",
+    "lane": "ci",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-03",
+      "OPS-02"
+    ],
+    "milestone": "M4",
+    "acceptance": "A tagged build produces a signed AAB, a pushed server image and a Steam depot build id; gated v1.1 jobs present and skipped by default",
+    "docs": [
+      "01 ADR-12",
+      " R0 C2-24",
+      " 03 TA-39"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "REL-05",
+    "title": "Version stamping (MAJOR.MINOR.PATCH+build), content hash + git SHA in the main menu footer, CHANGELOG generation from task ids",
+    "lane": "ci+ui",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-39"
+    ],
+    "milestone": "M4",
+    "acceptance": "Footer shows version, hash and SHA on every platform; CHANGELOG lists merged task ids per tag",
+    "docs": [
+      "01 ADR-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-09",
+    "title": "Rate governor and TransportStats accounting",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "NET-06",
+      "NET-11"
+    ],
+    "milestone": "M4",
+    "acceptance": "Scripted overload drops B to 10 Hz within 2 s and recovers after 5 s under budget",
+    "docs": [
+      "04 s4.4",
+      " 04 NET-09"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-12",
+    "title": "ENetTransport (server + client), 4 channels, conn-id mapping, timeouts",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-11"
+    ],
+    "milestone": "M4",
+    "acceptance": "Loopback test: 2 clients connect, channels map to the right ENet modes, disconnect reasons correct",
+    "docs": [
+      "04 s6",
+      " 04 NET-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-13",
+    "title": "WebSocketTransport (server loopback bind, client wss), channel-byte framing, keep-alive, 60 s/15 s policy, congestion flag",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-11"
+    ],
+    "milestone": "M4",
+    "acceptance": "Loopback test with ws://; a stalled receiver flips the congestion flag; web export smoke connects through Caddy in S-BACKEND-1",
+    "docs": [
+      "04 s6",
+      " 04 NET-13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-16",
+    "title": "ProtocolValidator (server/protocol_validator.gd) with the 04 s11.3 table: owner-only cancel, V-ORD from order_rules.json, V-BLD deferring to Build.can_place, queue max 5, V-REQ 10 s, V-ADJ, V-INP reserved bytes",
+    "lane": "server",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-04",
+      "TA-18",
+      "AI-01"
+    ],
+    "milestone": "M4",
+    "acceptance": "Positive and negative test per rule; strikes and kick threshold; a placement rejection carries the Build.Reject detail",
+    "docs": [
+      "04 s11.3",
+      " R0 C2-12",
+      " R0 C3-08",
+      " 04 NET-16"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-18",
+    "title": "Prediction: state machine of 04 s5.2, reconcile/replay with the R0 B.5 step_ship form and Assist.auto_dock() substitution, render_state(alpha), smoothing, hard snap, epoch handling, docked hold",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "NET-03",
+      "NET-17",
+      "TA-12",
+      "AI-10"
+    ],
+    "milestone": "M4",
+    "acceptance": "prediction_test p95 < 1 m (TARGET), no hard snap; stale-epoch inputs dropped; 60 fps displacement variance < 10 %; predicted auto-dock matches the server with no extra reconciliation error (AI-10 parity check lives here)",
+    "docs": [
+      "04 s5.2",
+      " R0 C1-07",
+      " R0 C2-04",
+      " 04 NET-18"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-19",
+    "title": "Handoff flows server-side: POSSESS_ACK, RELEASED with ReleaseReason, death, hand-over with LINK_BRIDGE, ceiling, silent-pilot C13 path, disconnect C12",
+    "lane": "server",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "NET-15",
+      "NET-18",
+      "AI-02",
+      "AI-08"
+    ],
+    "milestone": "M4",
+    "acceptance": "handoff_test message sequences exactly as 04 s5.4; LINK_BRIDGE <= one RTT with no terrain contact; silent pilot stays POSSESSED",
+    "docs": [
+      "04 s5.4",
+      " R0 C2-08",
+      " 04 NET-19"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-20",
+    "title": "Reconnect: session ids, secrets, grace timers, PLAYER_STATUS (incl. flags), bot takeover hook, client retry loop with transport fallback, TEAM_DETAIL(FULL) after the keyframe",
+    "lane": "net+server",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "NET-14",
+      "NET-17",
+      "NET-39"
+    ],
+    "milestone": "M4",
+    "acceptance": "reconnect_test on MOBILE_SWITCH and TAB_STALL; secret single-use; a reconnect before the old link times out resumes possession",
+    "docs": [
+      "04 s5.5",
+      " 01 ADR-07",
+      " 04 NET-20"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-21",
+    "title": "Chat and quick-ping path: CHAT/CHAT_RELAY/QUICK_PING (QuickPing.Kind from pings.json), gates, filter from chat_filter.json, replay CHAT frames, report hook",
+    "lane": "server",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-14",
+      "NET-25",
+      "CONTENT-01",
+      "UX-08"
+    ],
+    "milestone": "M4",
+    "acceptance": "Gate tests (age band, mute, rate, length); relay respects blocks; msg ids unique per match; ping kinds match pings.json",
+    "docs": [
+      "04 s10.7",
+      " R0 C2-39",
+      " 04 NET-21"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-22",
+    "title": "Match lifecycle with SessionPhase, MatchConfig (+ schema), bot slot filling, MATCH_END with every R0 C2-17 field + result_hash, abandon rule",
+    "lane": "server",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "NET-15",
+      "GD-27",
+      "GD-20"
+    ],
+    "milestone": "M4",
+    "acceptance": "Scripted lifecycle test incl. nobody-joins abort and all-humans-gone abandon; per-mode hard end from MatchConfig; MATCH_END carries every field",
+    "docs": [
+      "04 s8",
+      " 04 s9.3",
+      " R0 C2-17",
+      " 04 NET-22"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-23",
+    "title": "Fuzz harness fuzz_test.gd and parser hardening pass over all decoders",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-04",
+      "NET-06",
+      "NET-14"
+    ],
+    "milestone": "M4",
+    "acceptance": "100,000 mutations per id, zero exceptions, sim untouched",
+    "docs": [
+      "04 s15.2",
+      " 04 NET-23"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-24",
+    "title": "Net test presets, fixtures (canonical scene builder), dual_listener_test with tools/netem.sh (nightly)",
+    "lane": "test",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-12",
+      "NET-13",
+      "NET-15"
+    ],
+    "milestone": "M4",
+    "acceptance": "Nightly green; bytes/s per client <= 30 KB logged to perf/history.jsonl; p95 asserted only on the pinned runner",
+    "docs": [
+      "04 s15.2",
+      " R0 C1-11",
+      " 04 NET-24"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-26",
+    "title": "Spectator role: token role and delayed flag, all-seeing roster, follow/free camera hints, 300-tick delay buffer, cap 4",
+    "lane": "net+server",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "NET-08",
+      "NET-14"
+    ],
+    "milestone": "M4",
+    "acceptance": "Spectator never receives POSSESS_ACK; delay measured 10 s +-1 tick; buffer <= 240 KB",
+    "docs": [
+      "04 s13.3",
+      " 04 NET-26"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-27",
+    "title": "JoinToken sign/verify in GDScript (HMACContext) and TypeScript, key rotation env handling, test vectors",
+    "lane": "server+server-ops",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "NET-14"
+    ],
+    "milestone": "M4",
+    "acceptance": "Cross-language vectors verify both ways; expired/foreign-match/replayed tokens refused with correct reasons",
+    "docs": [
+      "04 s11",
+      " 04 NET-27"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-28",
+    "title": "FleetManager service: schema, SQLite state, allocate (6-active cap) / heartbeat / result / abort / report / health / metrics, retries and dead-letter, Nakama forwarder",
+    "lane": "server-ops",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "NET-27",
+      "NET-22"
+    ],
+    "milestone": "M4",
+    "acceptance": "fleet_contract_test.ts; allocation picks the least-loaded host and refuses a host at PLAYING + ALLOCATED = 6; 503 when none; result idempotent",
+    "docs": [
+      "04 s9",
+      " R0 C1-22",
+      " 04 NET-28"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-29",
+    "title": "FleetAgent (systemd): process pool supervisor with 6 match slots + spare, env secrets, crash bundle upload from journald, register loop, drain",
+    "lane": "server-ops",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "NET-28",
+      "NET-15"
+    ],
+    "milestone": "M4",
+    "acceptance": "Kill a process: respawn within 1 s; never 7 active matches; drain stops warm processes, keeps playing ones; crash bundle in storage",
+    "docs": [
+      "04 s9.2",
+      " R0 C1-12",
+      " 04 NET-29"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-30",
+    "title": "Match process <-> FleetManager client (server/fleet_agent_client.gd): allocate ACK, heartbeat, result POST with spool fallback, replay upload",
+    "lane": "server",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "NET-22",
+      "NET-28"
+    ],
+    "milestone": "M4",
+    "acceptance": "With FleetManager down 10 min, the result is spooled and later delivered exactly once",
+    "docs": [
+      "04 s9.3-9.4",
+      " 04 NET-30"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "OPS-04",
+    "title": "server-ops/deploy.sh rolling deploy (drain -> wait playing == 0 -> unpack image -> restart agent -> undrain), ADMIN_NOTICE maintenance banner, staging compose profile",
+    "lane": "server-ops",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "NET-28",
+      "NET-29",
+      "TA-39"
+    ],
+    "milestone": "M4",
+    "acceptance": "A tagged release deploys to the game host with zero dropped matches in a scripted test; staging and production share one compose file with profiles",
+    "docs": [
+      "04 s12.3"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-31",
+    "title": "Nakama deployment and S-BACKEND-1 execution: compose (Nakama, Postgres, FleetManager, Caddy, Prometheus, Grafana), config, journald upload timer, backups; TypeScript RPC skeleton (profile_init, settings_put, matchmaking_ticket with fill_after_s re-issue, matchmaker_matched -> allocate with B.6 slots, match_result, match_aborted) with storage schemas",
+    "lane": "server-ops",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "NET-28",
+      "NET-29",
+      "OPS-02",
+      "OPS-03",
+      "NET-13",
+      "NET-12"
+    ],
+    "milestone": "M4",
+    "acceptance": "S-BACKEND-1 scenario passes (04 s15.3): browser and native client in one match with WSS and ENet; result row with verified hash; a lone 1v1 ticket gets a vs-bot match after 120 s (Opus review)",
+    "docs": [
+      "04 s10",
+      " 04 s15.3",
+      " R0 C1-12",
+      " 04 NET-31"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-32",
+    "title": "Nakama RPCs: report_submit, block_user, sanction_apply, moderation queue, account_delete_request cascade with deletion_log and cron retry, account_export, receipt_validate (Play Billing; Apple v1.1)",
+    "lane": "server-ops",
+    "tier": "Sonnet",
+    "size_days": 2.5,
+    "depends_on": [
+      "NET-31",
+      "NET-28"
+    ],
+    "milestone": "M4",
+    "acceptance": "Deletion integration test: all collections empty, FleetManager results anonymised, replay header rewritten, log complete; a failing step retries; a Play test receipt writes entitlements",
+    "docs": [
+      "04 s10.5-10.6",
+      " 01 ADR-13",
+      " 04 NET-32"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-35",
+    "title": "Observability: JSON logging to journald, TickBudget metrics push, FleetAgent scrape endpoint, Grafana dashboard JSON, alert rules, end-of-match summary line",
+    "lane": "server+server-ops",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-15",
+      "NET-29"
+    ],
+    "milestone": "M4",
+    "acceptance": "Dashboard shows all 04 s14 metrics from a local soak; alerts fire in a staged failure (Haiku writes dashboards and rules)",
+    "docs": [
+      "04 s14",
+      " 04 NET-35"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-36",
+    "title": "platform/matchmaking.gd, accounts.gd (device, email, Steam; Google/Apple v1.1), social.gd wrappers over nakama-godot with the 04 s10.4 ticket properties and match_found handoff to app",
+    "lane": "platform",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "NET-31"
+    ],
+    "milestone": "M4",
+    "acceptance": "Queue -> notification -> ClientSession start on native and web; party leader input-class rule with notice; no rating property on tickets",
+    "docs": [
+      "04 s10.4",
+      " R0 C3-15",
+      " 04 NET-36"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-37",
+    "title": "Hosting cost and capacity model docs/ops/capacity.json updated from S-BACKEND-1 measurements",
+    "lane": "server-ops",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "NET-31"
+    ],
+    "milestone": "M4",
+    "acceptance": "04 s12.4 numbers reproduced from the model; per-process RAM and allocation latency filled in from measurement",
+    "docs": [
+      "04 s12.4",
+      " 04 NET-37"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-39",
+    "title": "TEAM_DETAIL (0x92) encoder/decoder with change tracking, TEAM_STATE caps/power/unit_count, pilot block additions, ai_tag in A/B flags, NetSimView accessors of 04 s3.7 with the unknown bit",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-17"
+    ],
+    "milestone": "M4",
+    "acceptance": "team_detail_test: contract test green for every accessor; deltas reconstruct the full state after 600 ticks; average <= 300 B/s on the canonical scene",
+    "docs": [
+      "R0 C2-05",
+      " 04 NET-39"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-40",
+    "title": "Analytics event schema tools/schemas/analytics_event.schema.json + Nakama telemetry RPC writing to an EU store + age-band gate",
+    "lane": "server-ops+platform",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-31"
+    ],
+    "milestone": "M4",
+    "acceptance": "Events failing the schema are refused; u13 and opted-out accounts store nothing; the deletion cascade purges the pseudonymous id",
+    "docs": [
+      "R0 C2-24",
+      " 01 ADR-13",
+      " 04 NET-40"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-41",
+    "title": "FleetManager POST /v1/crash (build id, platform, log tail, no PII, per-IP rate limit) + app crash hook",
+    "lane": "server-ops+app",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "NET-28"
+    ],
+    "milestone": "M4",
+    "acceptance": "A forced client crash produces one stored report with no account or device id; the 11th report from one IP within an hour is refused",
+    "docs": [
+      "R0 C2-24",
+      " 04 NET-41"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-42",
+    "title": "Replay access: Nakama replay_url(match_id) (15-minute signed GET), offline .pwr to user://replays/ with a 20-file cap, local listing API wired into the UX-25 Replays screen",
+    "lane": "server-ops+net",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "NET-25",
+      "NET-31",
+      "UX-25"
+    ],
+    "milestone": "M4",
+    "acceptance": "A foreign match id is refused; URL expires after 15 min; the 21st offline replay evicts the oldest; web writes go through Saves.try_*; Replays screen lists both sources",
+    "docs": [
+      "R0 C2-25",
+      " 04 NET-42"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-43",
+    "title": "Moderation admin page /admin/moderation on FleetManager (admin token + IP allowlist) + Nakama RPCs moderation_list, moderation_view; TypeScript reader for .pwr CHAT frames",
+    "lane": "server-ops",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-28",
+      "NET-32",
+      "NET-25"
+    ],
+    "milestone": "M4",
+    "acceptance": "A test report is listed, its chat excerpt shown from the replay, and a sanction applied end to end; a non-allowlisted IP gets 403",
+    "docs": [
+      "R0 C1-12",
+      " 04 s10.7",
+      " 04 NET-43"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-44",
+    "title": "Ops deliverables: server-ops/RUNBOOK.md (deploy, drain, restore, key rotation, incidents), monthly pg_dump restore drill script to a scratch VM, journald daily upload timer",
+    "lane": "server-ops",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-31"
+    ],
+    "milestone": "M4",
+    "acceptance": "Drill restores the latest dump and a smoke RPC succeeds within the 2 h RTO; runbook executed once by a second agent without questions (Haiku writes the prose)",
+    "docs": [
+      "R0 C1-12",
+      " 04 s9.4",
+      " 04 NET-44"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-45",
+    "title": "S-NET-1 execution: real Chrome desktop and Android Chrome clients over WebSocketTransport, netem TARGET/BAD and 150 ms, REPORT.md with bandwidth columns, browser stalls, ClientSession.tick times and the s_transport decision",
+    "lane": "net+spikes",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "NET-24",
+      "NET-18",
+      "NET-07",
+      "NET-09"
+    ],
+    "milestone": "M4",
+    "acceptance": "S-NET-1 pass criteria met (<= 30 KB/s per client; reconcile p95 < 1 m at 150 ms RTT; no packet > 1,200 B; stalls counted) or the report names the failing criterion and fix; 04 s4.6 estimates updated",
+    "docs": [
+      "04 s15.3",
+      " R0 C1-26",
+      " 01 App. A S-NET-1",
+      " 04 NET-45"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-46",
+    "title": "LOBBY phase protocol: DOCTRINE_PICK / LOBBY_STATE (blind 20 s, early close, random fallback, reveal), Adjutant preference and AUTO_ECONOMY flags, parallel map loading",
+    "lane": "server+net",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-22",
+      "NET-14"
+    ],
+    "milestone": "M4",
+    "acceptance": "lobby_test; a client that never picks gets a random doctrine; opponents see lock flags only until reveal",
+    "docs": [
+      "R0 C2-16",
+      " R0 O-6",
+      " 04 NET-46"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-38",
+    "title": "net/MODULE.md and server/MODULE.md final contracts (public API, invariants, test entry points, tier guidance)",
+    "lane": "net+server",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-15",
+      "NET-17",
+      "NET-18",
+      "NET-19",
+      "NET-20",
+      "NET-22",
+      "NET-26",
+      "NET-39",
+      "NET-46"
+    ],
+    "milestone": "M4",
+    "acceptance": "check_deps passes; every public signature in 04 appears in a MODULE.md; Opus review",
+    "docs": [
+      "04 s19",
+      " 04 NET-38"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-26",
+    "title": "Online, queue and lobby screens (doctrine pick via DOCTRINE_PICK/LOBBY_STATE, input-pool notices, bot fill, Auto economy tag)",
+    "lane": "ui/screens",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-24",
+      "NET-36",
+      "NET-46"
+    ],
+    "milestone": "M4",
+    "acceptance": "Party notice shows the leader's class; 20 s blind doctrine window; countdown 5 s; Auto economy tag visible to opponents",
+    "docs": [
+      "06 s8",
+      " R0 C2-16",
+      " 06 UX-26"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-31",
+    "title": "Web shell, start gate, storage probe, stall detection, orientation overlay, Mission 1 fast start (deferred pre-warm and music)",
+    "lane": "web+platform",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-28",
+      "TA-36"
+    ],
+    "milestone": "M4",
+    "acceptance": "Gate skipped with prior activation; private window shows the storage banner; Mission 1 first beat interactive within 10 s at 20 Mbit/s",
+    "docs": [
+      "06 s9.1",
+      " R0 C1-21",
+      " 06 UX-31"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-35",
+    "title": "Compliance UX: age prompt, account and deletion screens, report/block/mute, chat panel, ping wheel (QuickPing list)",
+    "lane": "ui+platform",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "NET-36",
+      "NET-32",
+      "NET-21"
+    ],
+    "milestone": "M4",
+    "acceptance": "Deletion reachable in 3 taps; under-13 band locks chat; report carries message ids",
+    "docs": [
+      "06 s9.5",
+      " 01 ADR-13",
+      " 06 UX-35"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-42",
+    "title": "Spectator overlay (follow target, free camera, player list, no consumables HUD) and pause-menu Save/Load (3 manual slots + autosave) for offline modes",
+    "lane": "ui+app",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-27",
+      "UX-39",
+      "NET-26"
+    ],
+    "milestone": "M4",
+    "acceptance": "Spectating works live and in the replay viewer; manual slots and autosave round-trip",
+    "docs": [
+      "R0 C2-25",
+      " 06 UX-42"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-29",
+    "title": "Mission schema and MissionRuntime objective and fail kinds (incl. CAMERA_TIER, LAND mode any, assist tags)",
+    "lane": "campaign",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-09",
+      "TA-18"
+    ],
+    "milestone": "M4",
+    "acceptance": "Each objective and fail kind has a unit test driven by a scripted SimView",
+    "docs": [
+      "02 s16.3",
+      " R0 C2-04",
+      " R0 C2-19",
+      " 02 GD-29"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-34",
+    "title": "ScriptedDirector (05 s7.10): script entries in build_orders.json, wave/tag/ping steps, AiDriver.set_script",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "AI-23",
+      "GD-29"
+    ],
+    "milestone": "M4",
+    "acceptance": "SC-50 passes; every script id referenced by an 02 mission resolves (validator)",
+    "docs": [
+      "05 s7.10",
+      " R0 C2-14",
+      " 05 AI-34"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-06",
+    "title": "Grade stamp and Sortie Card with a client stats accumulator (V/H from LANDING, tilt/centre from the predicted pose)",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "GD-15",
+      "UX-18",
+      "NET-10",
+      "PM-02"
+    ],
+    "milestone": "M4",
+    "acceptance": "Screenshots of all six grades; card matches a scripted sortie's totals; stamp shapes distinguishable without colour",
+    "docs": [
+      "08 SL-1",
+      " R0 C3-13",
+      " 08 FEAT-06"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-07",
+    "title": "Autopilot landing-quality metric in the nightly soak",
+    "lane": "test",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-15",
+      "AI-09",
+      "GD-24"
+    ],
+    "milestone": "M4",
+    "acceptance": "Report includes mean q; fails if q < 0.70 or crashes >= 1 %",
+    "docs": [
+      "08 SL-1",
+      " 05 s11.3",
+      " 08 FEAT-07"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-05",
+    "title": "Store accounts: Steam partner account + Steam Direct fee ($100), Google Play developer account ($25, identity verification; company D-U-N-S if applicable), itch.io account; start the Play closed-test clock early (12 testers for 14 days for new personal accounts)",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 1,
+    "depends_on": [],
+    "milestone": "M4",
+    "acceptance": "Steamworks app id, Play app id and itch project exist by week 25; Play closed-test requirements understood and scheduled",
+    "docs": [
+      "R3 s2",
+      " R3 s3",
+      " R3 s4"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-03",
+    "title": "Confirm the business model (Q2 default: premium EUR 15-20 on Steam; mobile free with a one-time full-unlock IAP; web free funnel) and the IAP catalogue",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 0.25,
+    "depends_on": [],
+    "milestone": "M4",
+    "acceptance": "Written decision; SKU list for UX-40 and the store listings",
+    "docs": [
+      "01 Q2",
+      " R3 s6.5"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "QA-03",
+    "title": "Playtest round 2 online (8 players incl. 2 browsers on the deployed stack), reconnect and lobby flows, chat/report path",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-45",
+      "NET-31",
+      "UX-26",
+      "UX-35",
+      "HUM-07"
+    ],
+    "milestone": "M4",
+    "acceptance": "Report with RTT/loss/reconcile telemetry (NET-40 rows), top 10 issues filed; no desync or lost match in the session",
+    "docs": [
+      "04 s15.3",
+      " 02 s18.4"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-02",
+    "title": "Title decision and trademark clearance (EUIPO, USPTO, PRH) on the final title; set the shipped bundle id fi.<company>.<title>",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 0.5,
+    "depends_on": [],
+    "milestone": "M5",
+    "acceptance": "Clearance search filed; title and bundle id frozen before store listings (REL-01/02) start",
+    "docs": [
+      "01 s0.2",
+      " R3 s6.7"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-08",
+    "title": "Music: buy licensed pack(s) (EUR 300-800) or commission; no AI-generated audio; licence proofs into the ledger",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 0.5,
+    "depends_on": [],
+    "milestone": "M5",
+    "acceptance": "Tracks for 9 loops + 3 stingers licensed for closed-source use on all platforms incl. web; ledger rows complete",
+    "docs": [
+      "07 Q-ART1",
+      " 07 s8.4"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-17",
+    "title": "Approve campaign fiction and names (Cinder, Lantern Cooperative, Marrow Consolidated, Okafor/Lind/Voss) after a light trademark search",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 0.25,
+    "depends_on": [],
+    "milestone": "M5",
+    "acceptance": "Approval recorded in 02 OQ-9; renames propagated via the 07 cross-reference table if any",
+    "docs": [
+      "02 s16.1",
+      " 02 OQ-9"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-28",
+    "title": "medals.json, progression.json, cosmetic unlock table",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "GD-27"
+    ],
+    "milestone": "M5",
+    "acceptance": "Validator passes; 10 medals, 50 levels, XP curve per 02 s17.3",
+    "docs": [
+      "02 s17.2-17.3",
+      " 02 GD-28"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-30",
+    "title": "Missions M1-M3 (tutorial chapter) JSON and scripts",
+    "lane": "campaign",
+    "tier": "Sonnet",
+    "size_days": 2.5,
+    "depends_on": [
+      "GD-29",
+      "UX-36",
+      "AI-34"
+    ],
+    "milestone": "M5",
+    "acceptance": "The 02 s16.2 tutorial acceptance table (shared with UX-36) passes; fail conditions trigger in negative runs",
+    "docs": [
+      "02 s16.2",
+      " R0 C2-19",
+      " 02 GD-30"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-31",
+    "title": "Missions M4a, M4b, M5, M6, M8 JSON, assist options and Marrow bot scripts",
+    "lane": "campaign",
+    "tier": "Haiku",
+    "size_days": 3,
+    "depends_on": [
+      "GD-29",
+      "AI-23",
+      "AI-34",
+      "GD-33",
+      "GD-23",
+      "HUM-17"
+    ],
+    "milestone": "M5",
+    "acceptance": "Each completable by the scripted test player with and without the assist option; assist caps the medal at silver; M5 base crosses into night at 9:00 +-5 s (Sonnet review)",
+    "docs": [
+      "02 s16.2",
+      " R0 C3-10",
+      " 02 GD-31"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-32",
+    "title": "Campaign briefing and dialogue strings (English)",
+    "lane": "content/locale",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "GD-31"
+    ],
+    "milestone": "M5",
+    "acceptance": "Every campaign_<mission>.* key referenced by missions exists; lint rejects a Triplane-name list",
+    "docs": [
+      "02 s16.3",
+      " R0 C2-33",
+      " 02 GD-32"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-35",
+    "title": "Possession-value, commander-only and pad-time playtest protocol and telemetry events for 02 s18.4",
+    "lane": "test+platform",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "UX-19",
+      "NET-40"
+    ],
+    "milestone": "M5",
+    "acceptance": "Playtest build records every 18.4 metric; protocol reviewed by the owner",
+    "docs": [
+      "02 s18.4",
+      " R0 C3-24",
+      " 02 GD-35"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-36",
+    "title": "Onboarding prompt system, M1/M2/M3 UX beats JSON, funnel events (shares the acceptance table with GD-30)",
+    "lane": "ui/tutorial+campaign",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-16",
+      "UX-20",
+      "GD-29"
+    ],
+    "milestone": "M5",
+    "acceptance": "Prompt escalation 20/45/90 s; per-class prompt variants; funnel events emitted; M1 gate count 3, dock (auto or manual) required",
+    "docs": [
+      "06 s12",
+      " R0 C2-19",
+      " 06 UX-36"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-30",
+    "title": "English string tables and Finnish draft",
+    "lane": "content/locale",
+    "tier": "Haiku",
+    "size_days": 2,
+    "depends_on": [
+      "UX-29",
+      "GD-32"
+    ],
+    "milestone": "M5",
+    "acceptance": "100 % en, >= 95 % fi coverage; owner review sign-off (HUM-11)",
+    "docs": [
+      "06 s11",
+      " 06 UX-30"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-33",
+    "title": "Mobile (Android v1.0): tier auto-select, battery saver, thermal step-down, pause/resume, session resume, haptics",
+    "lane": "app+platform",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-24",
+      "TA-31"
+    ],
+    "milestone": "M5",
+    "acceptance": "Resume ticket rejoins within 120 s on Android; tier drop after 20 s overload",
+    "docs": [
+      "06 s9.3",
+      " 06 UX-33"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-34",
+    "title": "Steam/Deck (Windows v1.0): detection, OSK widget, Auto-Cloud path config, Deck checklist run",
+    "lane": "platform+ui",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-09",
+      "UX-28"
+    ],
+    "milestone": "M5",
+    "acceptance": "Every text field usable with the OSK; Deck checklist (06 s9.4) all pass",
+    "docs": [
+      "06 s9.4",
+      " R3 s3",
+      " 06 UX-34"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-37",
+    "title": "tools/ui_lint.gd (incl. <= 7 touch controls on the right half of Chase), UI goldens (golden/ui/), night readability check on golden/art/",
+    "lane": "test+tools",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-12",
+      "TA-35",
+      "UX-06"
+    ],
+    "milestone": "M5",
+    "acceptance": "Lint covers A11Y-03/04/05; night contrast >= 3:1 computed",
+    "docs": [
+      "06 s13",
+      " R0 C2-30",
+      " 06 UX-37"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-38",
+    "title": "Accessibility pass: colour presets, subtitles and captions, flash limiter, reduced-motion audit",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-37",
+      "UX-28"
+    ],
+    "milestone": "M5",
+    "acceptance": "A11Y-01 to A11Y-16 green",
+    "docs": [
+      "06 s10",
+      " 06 UX-38"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-40",
+    "title": "platform/entitlements.gd (Play Billing v1.0; StoreKit and Steam check v1.1) + unlock UI",
+    "lane": "platform+ui",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-32",
+      "HUM-03"
+    ],
+    "milestone": "M5",
+    "acceptance": "Receipt-validated unlock shown in the profile; guest sees the locked state",
+    "docs": [
+      "R0 C2-24",
+      " 06 UX-40"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-41",
+    "title": "docs/compliance/: privacy manifest and Play data-safety answers generated from the analytics schema (App Privacy answers v1.1)",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "NET-40"
+    ],
+    "milestone": "M5",
+    "acceptance": "Answers regenerate from the schema; Opus sign-off",
+    "docs": [
+      "R0 C2-24",
+      " 01 ADR-13",
+      " 06 UX-41"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "DOC-02",
+    "title": "Privacy policy and Terms of Service drafts (EN/FI) from the analytics schema, retention exceptions and deletion flow; credits page content from the licence ledger",
+    "lane": "docs",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "NET-40",
+      "NET-32",
+      "ART-32"
+    ],
+    "milestone": "M5",
+    "acceptance": "Every data type in the schema and every 04 s10.6 retention exception appears; handed to HUM-10 for legal review",
+    "docs": [
+      "04 s10.6",
+      " R3 s6.1",
+      " 07 s8.4"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "WEB-01",
+    "title": "web/account/delete deletion page (Nakama web auth -> account_delete_request), privacy and ToS static pages, WCAG 2.1 AA",
+    "lane": "web",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-32",
+      "DOC-02"
+    ],
+    "milestone": "M5",
+    "acceptance": "Deletion works without the app installed; axe audit clean; page names the developer as listed on Play",
+    "docs": [
+      "04 s10.6",
+      " R3 s2",
+      " 01 ADR-13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-27",
+    "title": "Music: integrate the licensed tracks with AudioStreamInteractive (phases from match_arc()) and stems, music.pck",
+    "lane": "audio",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "ART-25",
+      "HUM-08"
+    ],
+    "milestone": "M5",
+    "acceptance": "Phase transitions on bar boundaries; music.pck <= 4 MB; ledger entries complete",
+    "docs": [
+      "07 s8.5",
+      " R0 C1-16",
+      " 07 ART-27"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-26",
+    "title": "Spike S-AUDIO-1: web Sample-mode positional audio, Stream-mode music, Ogg/QOA in Sample mode",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "ART-25",
+      "TA-28"
+    ],
+    "milestone": "M5",
+    "acceptance": "Written result for Chrome, Firefox, Safari, Android Chrome; fallbacks decided; no crackle over a 10-minute web run; web decoded audio <= 15 MB (doc tier Opus)",
+    "docs": [
+      "07 s8.3",
+      " 07 ART-26"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-29",
+    "title": "Map anvil recipe and bake incl. its 02 s9 resources block",
+    "lane": "content/maps",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "ART-28",
+      "GD-22"
+    ],
+    "milestone": "M5",
+    "acceptance": "M1-M11 pass; deck-cover score higher than cradle by the preview metric; resources block validates",
+    "docs": [
+      "07 s9.4",
+      " 07 ART-29"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-30",
+    "title": "Map rimewater recipe and bake incl. its 02 s9 resources block (mid traps lat -35, 8,000/1.8; Midnight nodes 6,000/0.9)",
+    "lane": "content/maps",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "ART-28",
+      "GD-22"
+    ],
+    "milestone": "M5",
+    "acceptance": "M1-M11 pass; highland share 65 % +-5; mid traps at lat -35",
+    "docs": [
+      "R0 B.2",
+      " 07 ART-30"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-33",
+    "title": "Golden scenes golden/art/ (up to 8): 8 team colours day/night, three tiers, CVD renders, tail-down landing pose",
+    "lane": "test",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "ART-06",
+      "ART-14",
+      "TA-35"
+    ],
+    "milestone": "M5",
+    "acceptance": "Up to 8 art goldens committed; CVD renders reviewed; contrast thresholds asserted on screenshots",
+    "docs": [
+      "R0 C2-30",
+      " 07 ART-33"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-35",
+    "title": "Asset QA sweep: silhouette tests, budget report, perf per tier",
+    "lane": "test",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "ART-13",
+      "ART-19"
+    ],
+    "milestone": "M5",
+    "acceptance": "Report in perf/; all assets within budgets; failures filed as tasks (doc tier Opus)",
+    "docs": [
+      "07 s5",
+      " 07 ART-35"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ART-38",
+    "title": "Hangar stow presentation: docked ship tips horizontal and lowers through the open Roof after touchdown, reverse before LAUNCHED",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "ART-09",
+      "TA-26"
+    ],
+    "milestone": "M5",
+    "acceptance": "Bomber fits the hall during the stow; no sim read of the stow transform; reduced-motion shows the final pose",
+    "docs": [
+      "07 s4.5",
+      " 07 ART-38"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-08",
+    "title": "WingCommands (recruit, form, focus, break, release) with fake-SimView tests",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "FEAT-01",
+      "AI-01",
+      "TA-18",
+      "PM-02"
+    ],
+    "milestone": "M5",
+    "acceptance": "10 selection tests pass: class/speed, fuel/hp, radius, exclusion of ordered units",
+    "docs": [
+      "08 SL-2",
+      " 08 FEAT-08"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-09",
+    "title": "Escort autopilot: slots, leashed focus, break, leave on RTB",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "FEAT-01",
+      "AI-11",
+      "PM-02"
+    ],
+    "milestone": "M5",
+    "acceptance": "2 Darts hold within 30 m for 60 s of leader manoeuvres; back in slot within 15 s after the focus kill",
+    "docs": [
+      "08 SL-2",
+      " 08 FEAT-09"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-10",
+    "title": "WingState transfer on re-embodiment; restore orders on release",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-08"
+    ],
+    "milestone": "M5",
+    "acceptance": "Leader dies, new Dart possessed within 5 s: ESCORT re-issued within 1 tick of the possess ack",
+    "docs": [
+      "08 SL-2",
+      " 08 FEAT-10"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-11",
+    "title": "Wing entries in the ping wheel (WING_FORM/ATTACK/RELEASE), FIRE long-press radial (Form, Attack, Break, Release) and HUD chevrons",
+    "lane": "input+ui",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "FEAT-08",
+      "UX-35",
+      "UX-06"
+    ],
+    "milestone": "M5",
+    "acceptance": "Works on touch, gamepad and pointer; no new button; touch right-half control count <= 7; chevrons show callsign and state",
+    "docs": [
+      "08 SL-2",
+      " R0 C2-22",
+      " 08 FEAT-11"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-12",
+    "title": "Deterministic callsign generator",
+    "lane": "ui",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "FEAT-02"
+    ],
+    "milestone": "M5",
+    "acceptance": "Same id gives the same callsign on 2 clients; under 5 % collisions among 12 live ships per class",
+    "docs": [
+      "08 SL-3",
+      " 08 FEAT-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-13",
+    "title": "ChatterDirector: event mapping (incl. LANDING, ALERT), threshold crossings, priority queue, scope, filters, cooldowns",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "FEAT-12",
+      "TA-18",
+      "NET-10",
+      "PM-02"
+    ],
+    "milestone": "M5",
+    "acceptance": "On a 10 min recorded stream: at most 1 line per 1.5 s; no key repeated per entity within 20 s",
+    "docs": [
+      "08 SL-3",
+      " 08 FEAT-13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-14",
+    "title": "Chatter lane adapter in the shared feed, filter button state, blip SFX hook, tap-to-jump",
+    "lane": "ui",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "FEAT-13",
+      "UX-23",
+      "UX-28"
+    ],
+    "milestone": "M5",
+    "acceptance": "Lines appear in the chatter lane (3 rows COMPACT, 6 REGULAR); filter persists; 9 px minimum at 1280x800",
+    "docs": [
+      "08 SL-3",
+      " R0 C3-21",
+      " 08 FEAT-14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-32",
+    "title": "Earth Clock: phase and earthshine ramp from the match clock and the mode's core_exposure_s",
+    "lane": "presentation",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "ART-15",
+      "GD-20"
+    ],
+    "milestone": "M5",
+    "acceptance": "Goldens at 0, 1/3, 2/3 and 100 % of core_exposure_s; full at Exposure",
+    "docs": [
+      "08 I-24",
+      " 08 FEAT-32"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-37",
+    "title": "Campaign Pilot-assist: SL-2 wingmen may score kill objectives on M3 and M6; medal cap at silver",
+    "lane": "sim+campaign",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-09",
+      "GD-29",
+      "GD-31"
+    ],
+    "milestone": "M5",
+    "acceptance": "A scripted M3 run with wingmen completes the kill objective; medal capped at silver",
+    "docs": [
+      "R0 C3-10",
+      " 08 FEAT-37"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-31",
+    "title": "AI soak metrics added to GD-24 BalanceProbe output + tier ladder / auto-economy report",
+    "lane": "test/soak",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "AI-27",
+      "AI-28",
+      "AI-29",
+      "GD-24"
+    ],
+    "milestone": "M5",
+    "acceptance": "Nightly job emits every 05 s11.3 metric (incl. landing q and the auto-economy row) into results.jsonl; thresholds enforced",
+    "docs": [
+      "05 s11.3",
+      " R0 C3-07",
+      " 05 AI-31"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-20",
+    "title": "[v1 stretch, SL-5] SUPPLY_DROP validation: pad pick, range, cooldown, team cap, cost",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-01",
+      "AI-01",
+      "TA-18",
+      "PM-02"
+    ],
+    "milestone": "M5",
+    "acceptance": "One test per Reject code; cost debited exactly once; skipped to v1.1 without a new decision if PM-02 reports the gate late (OQ-R0-6)",
+    "docs": [
+      "08 SL-5",
+      " R0 O-7",
+      " 08 FEAT-20"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-21",
+    "title": "[v1 stretch, SL-5] Canister behaviour: boost, rendezvous guidance, deploy, loiter, pickup, HP / deny, expiry, events 32/33",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "FEAT-20",
+      "TA-11",
+      "TA-22"
+    ],
+    "milestone": "M5",
+    "acceptance": "Collected in >= 95 % of 40 seeds against a Dart flying straight at 110 m/s; +40 % fuel and +50 % ammo, no bombs; under 0.05 ms per canister tick (Opus review; doc tier Opus)",
+    "docs": [
+      "08 SL-5",
+      " R0 O-7",
+      " 08 FEAT-21"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-22",
+    "title": "[v1 stretch, SL-5] Autopilot divert-to-collect, opportunist pickup, tower priority below scouts",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-21",
+      "AI-13",
+      "AI-17"
+    ],
+    "milestone": "M5",
+    "acceptance": "An AUTO Dart within 1,500 m with no enemies collects in > 90 % of runs",
+    "docs": [
+      "08 SL-5",
+      " 08 FEAT-22"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-35",
+    "title": "[v1 stretch, SL-5] Supply Canister divert and opportunist pickup scenario SC-52 (05 s6.10) on top of FEAT-22",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-13",
+      "FEAT-21",
+      "FEAT-22"
+    ],
+    "milestone": "M5",
+    "acceptance": "SC-52 passes; >= 95 % pickups in 40 seeds against a straight-flying AUTO Dart",
+    "docs": [
+      "05 s6.10",
+      " 05 AI-35"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-23",
+    "title": "[v1 stretch, SL-5] Supply-drop button with reasons, Need supply ping, beacon marker with closure cue",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-20",
+      "UX-35",
+      "UX-20"
+    ],
+    "milestone": "M5",
+    "acceptance": "Button state matches validate in 6 cases; cue turns green within the 18 m path",
+    "docs": [
+      "08 SL-5",
+      " 08 FEAT-23"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-24",
+    "title": "[v1 stretch, SL-5] Canister mesh, beacon VFX, SFX, pre-warm entry",
+    "lane": "presentation",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "ART-12",
+      "ART-18",
+      "FEAT-20"
+    ],
+    "milestone": "M5",
+    "acceptance": "Passes the asset validator; in the pre-warm list; golden screenshot",
+    "docs": [
+      "08 SL-5",
+      " 08 FEAT-24"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-38",
+    "title": "[v1 stretch, SL-5] Telemetry guard: landings per flight-hour and median pad time with canisters on vs off",
+    "lane": "test",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-21",
+      "GD-35",
+      "GD-24"
+    ],
+    "milestone": "M5",
+    "acceptance": "Landings per flight-hour >= 80 % of the canister-off baseline; pad time <= 30 s touch / 40 s pointer",
+    "docs": [
+      "R0 C3-24",
+      " 08 FEAT-38"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-10",
+    "title": "Legal: lawyer review of privacy policy / ToS, GDPR records (controller, DPIA for chat moderation), company and VAT registration for the stores",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 1,
+    "depends_on": [
+      "DOC-02"
+    ],
+    "milestone": "M6",
+    "acceptance": "Signed-off policy texts in docs/compliance/; registrations complete before REL-01/REL-02 submission",
+    "docs": [
+      "R3 s6",
+      " 01 ADR-13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-11",
+    "title": "Finnish localisation review (native speaker) and string freeze 4 weeks before launch",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 1,
+    "depends_on": [
+      "UX-30",
+      "GD-32"
+    ],
+    "milestone": "M6",
+    "acceptance": "fi coverage 100 % on the release branch; freeze date recorded in 09",
+    "docs": [
+      "06 s11"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-13",
+    "title": "Age-rating questionnaires: IARC via Play Console, Steam content survey; store compliance forms (data safety, deletion URL)",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 0.5,
+    "depends_on": [
+      "UX-41",
+      "WEB-01",
+      "HUM-05"
+    ],
+    "milestone": "M6",
+    "acceptance": "Ratings issued; data-safety form matches UX-41 answers",
+    "docs": [
+      "R3 s2",
+      " R3 s8"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "REL-01",
+    "title": "Steamworks configuration: app, depots, launch options, Deck settings, Auto-Cloud file config, store page draft, build upload via release.yml",
+    "lane": "release",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "HUM-05",
+      "TA-39",
+      "UX-34",
+      "HUM-02"
+    ],
+    "milestone": "M6",
+    "acceptance": "A release.yml tag appears as a Steam build; Deck checklist items that Steamworks asks for are answered; store page in review-ready state",
+    "docs": [
+      "R3 s3",
+      " 06 s9.4",
+      " 01 ADR-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "REL-02",
+    "title": "Google Play Console: app listing, data-safety answers from UX-41, deletion URL, Play App Signing, closed-testing track with the 14-day/12-tester run, production rollout plan",
+    "lane": "release",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "HUM-05",
+      "UX-41",
+      "TA-39",
+      "WEB-01",
+      "HUM-02"
+    ],
+    "milestone": "M6",
+    "acceptance": "Signed AAB accepted on the closed track; pre-launch report has no crashes; data-safety form submitted",
+    "docs": [
+      "R3 s2",
+      " 01 ADR-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "REL-03",
+    "title": "itch.io page and own-site web hosting (object storage + Caddy, Brotli .br, Cache-Control immutable with hashed names, 200 MB per-file rule)",
+    "lane": "release+web",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "UX-31",
+      "OPS-03",
+      "HUM-05"
+    ],
+    "milestone": "M6",
+    "acceptance": "Web build plays from both URLs; itch ZIP within the per-file and file-count limits; own site passes the 20 s to gameplay check",
+    "docs": [
+      "R3 s4",
+      " 03 s11.2",
+      " 04 s12.1"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "REL-04",
+    "title": "Store assets: screenshots per platform, capsule/feature graphics from in-engine renders, trailer edit from replay captures (owner records voice-free footage)",
+    "lane": "release",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "HUM-02",
+      "ART-35",
+      "NET-25"
+    ],
+    "milestone": "M6",
+    "acceptance": "Every required image size for Steam, Play and itch delivered; trailer <= 90 s; no Triplane echo in any text or art",
+    "docs": [
+      "07 s10",
+      " R3 s6.7"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "DOC-04",
+    "title": "Store text EN + FI (short/long descriptions, feature bullets, system requirements), from the frozen title",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "HUM-02",
+      "UX-30"
+    ],
+    "milestone": "M6",
+    "acceptance": "Texts within each store's length limits; Finnish reviewed by HUM-11",
+    "docs": [
+      "06 s11",
+      " 01 s0.1"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "QA-01",
+    "title": "Device and browser test matrix (PC-mid, Deck, Android-mid, 3 GB Android, Chrome desktop/Android, Firefox, Edge) and the manual QA checklist per platform",
+    "lane": "test",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "HUM-06"
+    ],
+    "milestone": "M6",
+    "acceptance": "Checklist covers every 06 s9 row and the Deck Verified list; one sheet per device",
+    "docs": [
+      "06 s9",
+      " 01 s8.2"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "QA-05",
+    "title": "Manual QA pass per platform: Deck Verified checklist, Play pre-launch report, web browser matrix, reconnect and deletion flows; defects filed with repro",
+    "lane": "test",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "QA-01",
+      "REL-01",
+      "REL-02",
+      "REL-03",
+      "UX-38"
+    ],
+    "milestone": "M6",
+    "acceptance": "Zero P0/P1 open after the pass; every checklist row has a dated result",
+    "docs": [
+      "06 s9.4",
+      " R3 s3",
+      " 06 s10"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "QA-04",
+    "title": "Closed beta: Play closed track (14 days, >= 12 testers) + Steam playtest build + itch private page; 20+ testers; GD-35 telemetry and NET-40 funnel read weekly",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 2,
+    "depends_on": [
+      "QA-05",
+      "HUM-07",
+      "GD-35"
+    ],
+    "milestone": "M6",
+    "acceptance": "Beta report: BAL and 02 s18.4 metrics vs bands, crash rate per build, top 20 issues triaged",
+    "docs": [
+      "02 s18.4",
+      " R3 s2"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "QA-06",
+    "title": "Beta bug-fix reserve (engineering): fixes for P0/P1 defects from QA-04/QA-05 across lanes, each as a sub-task with a regression test",
+    "lane": "all",
+    "tier": "Sonnet",
+    "size_days": 10,
+    "depends_on": [
+      "QA-05"
+    ],
+    "milestone": "M6",
+    "acceptance": "Every P0/P1 closed with a test; reserve consumption reported weekly in 09",
+    "docs": [
+      "01 ADR-11"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "QA-07",
+    "title": "Beta bug-fix reserve (content, data, docs, simple tests) + the 25-minute Low-tier Android match confirmation (S-UX-1 second half, R0 C1-25)",
+    "lane": "all",
+    "tier": "Haiku",
+    "size_days": 4,
+    "depends_on": [
+      "QA-05",
+      "UX-33"
+    ],
+    "milestone": "M6",
+    "acceptance": "Low-tier match: no downshift below Low, median >= 28 fps, thermal notes logged; data defects closed with validator fixtures",
+    "docs": [
+      "R0 C1-25",
+      " 03 s13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "QA-08",
+    "title": "Performance hardening to budgets: server tick on the pinned runner, client frame on the five reference devices, web size and heap, replay size; apply cut-ladder rungs only as data",
+    "lane": "perf",
+    "tier": "Opus",
+    "size_days": 4,
+    "depends_on": [
+      "TA-22",
+      "TA-25",
+      "NET-45",
+      "TA-41",
+      "QA-05"
+    ],
+    "milestone": "M6",
+    "acceptance": "All 01 s8 budgets green on the nightly perf job for 7 consecutive days; any remaining rung recorded in rules.json",
+    "docs": [
+      "01 s8",
+      " 03 s4.3",
+      " 03 s12.1"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "QA-09",
+    "title": "Balance pass 2 from beta telemetry and the weekly soak: retune defs and bot books; 02 revision",
+    "lane": "content+docs",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "GD-34",
+      "QA-04",
+      "AI-31"
+    ],
+    "milestone": "M6",
+    "acceptance": ">= 95 % of BAL bands pass; human-facing bot promises (02 s15) met in beta telemetry; changes in a 02 revision",
+    "docs": [
+      "02 s18",
+      " 02 s15"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "OPS-06",
+    "title": "Backend security review: join-token flows, rate limits, admin allowlist, deletion cascade, secrets handling, dependency audit of FleetManager/Nakama modules",
+    "lane": "server-ops",
+    "tier": "Opus",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-31",
+      "NET-32",
+      "NET-43",
+      "NET-23"
+    ],
+    "milestone": "M6",
+    "acceptance": "Findings fixed or accepted in writing; a fuzzed/forged token never allocates or joins; npm audit clean",
+    "docs": [
+      "04 s11",
+      " 01 ADR-13"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "ANA-01",
+    "title": "Analytics reports: tools/analytics_report.py (funnel, onboarding steps, pad time, possession uplift) and a Grafana funnel board over the EU store",
+    "lane": "tools+server-ops",
+    "tier": "Haiku",
+    "size_days": 1,
+    "depends_on": [
+      "NET-40",
+      "GD-35",
+      "UX-36"
+    ],
+    "milestone": "M6",
+    "acceptance": "Weekly report reproduces the 02 s18.4 and 06 s12 funnel numbers from the beta data",
+    "docs": [
+      "02 s18.4",
+      " 06 s12",
+      " 04 s14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "REL-06",
+    "title": "Release-candidate checklist and go/no-go record (deploy-checklist): CI green, perf 7-day, compliance artefacts, store approvals, restore drill < 35 days, rollback plan",
+    "lane": "release",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "QA-08",
+      "QA-09",
+      "QA-06",
+      "HUM-13"
+    ],
+    "milestone": "M7",
+    "acceptance": "Every row dated and signed by the owner; rollback steps rehearsed in REL-07",
+    "docs": [
+      "01 ADR-12",
+      " 04 s14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "REL-07",
+    "title": "Hotfix rehearsal: branch -> release.yml -> rolling deploy -> client update on all three stores, timed",
+    "lane": "release",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "OPS-04",
+      "REL-01",
+      "REL-02",
+      "REL-03"
+    ],
+    "milestone": "M7",
+    "acceptance": "A no-op hotfix reaches production servers and all store channels in one working day; timings in the runbook",
+    "docs": [
+      "04 s12.3",
+      " 04 NET-44"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "OPS-05",
+    "title": "Launch operations plan: alert routing (email/SMS), on-call hours, status banner text, moderation rota, capacity trigger for gh2 (04 s12.4), daily metrics digest",
+    "lane": "server-ops",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "NET-35",
+      "NET-44"
+    ],
+    "milestone": "M7",
+    "acceptance": "Plan in server-ops/RUNBOOK.md; alerts routed to the owner's phone; gh2 ordering trigger defined",
+    "docs": [
+      "04 s12",
+      " 04 s14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "OPS-07",
+    "title": "Launch-week engineering support: triage dashboards daily, hotfix P0s, capacity check, first week-one patch",
+    "lane": "all",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "REL-07",
+      "OPS-05"
+    ],
+    "milestone": "M7",
+    "acceptance": "Week-one patch shipped; crash rate < 1 % sessions; no unresolved P0 after day 7",
+    "docs": [
+      "04 s14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-16",
+    "title": "Moderation duty and 72 h report-response SLA from launch; respond to store reviews; week-one community notes",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 2,
+    "depends_on": [
+      "NET-43"
+    ],
+    "milestone": "M7",
+    "acceptance": "Every report actioned within 72 h in the first month; SLA metric on the Grafana board",
+    "docs": [
+      "04 s10.7",
+      " R3 s6.3"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-18",
+    "title": "Launch day: Steam release, Play production rollout (staged 20 % -> 100 %), itch and own-site publish, announcement",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 0.5,
+    "depends_on": [
+      "REL-06"
+    ],
+    "milestone": "M7",
+    "acceptance": "All three storefronts live on the same day; staged rollout completes within 72 h",
+    "docs": [
+      "01 ADR-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "PM-03",
+    "title": "v1.1 planning: platforms (iOS, macOS, Linux native), portals and ad SDK (06 A2), WebRTC after S-NET-2, native twins per Q6 and S-SIM-1 result, ranked season design, SL-6 then SL-4 order; update 09 and backlog.json",
+    "lane": "pm",
+    "tier": "Fable",
+    "size_days": 1,
+    "depends_on": [
+      "HUM-18",
+      "HUM-14"
+    ],
+    "milestone": "M8",
+    "acceptance": "v1.1 scope recorded with ids and sizes; ADR amendments filed (Fable: platform, monetisation and ADR trade-offs decided together)",
+    "docs": [
+      "01 ADR-12",
+      " 06 A2",
+      " 01 Q6",
+      " 08 s3"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "HUM-14",
+    "title": "v1.1 decisions and purchases: 06 A2 portal ad SDKs ruling, Apple developer account ($99/yr), Mac mini for iOS profiling, Linux/macOS store presence",
+    "lane": "owner",
+    "tier": "Owner",
+    "size_days": 1,
+    "depends_on": [
+      "HUM-18"
+    ],
+    "milestone": "M8",
+    "acceptance": "Decisions recorded in 01 Q15/Q10; Mac on the desk before TA-40 starts",
+    "docs": [
+      "06 A2",
+      " 01 Q10",
+      " R0 C1-14"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-40",
+    "title": "S-IOS-1 (v1.1): Xcode >= 26 runner image check, Xcode project export from Linux CI, signing, TestFlight upload, PrivacyInfo.xcprivacy, 10-minute device frame-time log",
+    "lane": "ci+ios",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-39",
+      "HUM-14"
+    ],
+    "milestone": "M8",
+    "acceptance": "Build uploaded to TestFlight; PrivacyInfo.xcprivacy present; 10-minute iPhone 11 frame-time log collected",
+    "docs": [
+      "01 App. A S-IOS-1",
+      " R0 C1-14",
+      " 03 TA-40"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "V11-01",
+    "title": "Sign in with Apple and Google sign-in via Nakama; account linking from guest",
+    "lane": "platform+server-ops",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "NET-36",
+      "HUM-14"
+    ],
+    "milestone": "M8",
+    "acceptance": "Guest -> Apple/Google link keeps storage; deletion cascade covers the new identities",
+    "docs": [
+      "01 ADR-08",
+      " R0 C3-15"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "V11-02",
+    "title": "StoreKit receipt validation (Apple) and Steam entitlement check; iOS unlock UI",
+    "lane": "platform",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "UX-40",
+      "TA-40"
+    ],
+    "milestone": "M8",
+    "acceptance": "Apple test receipt writes entitlements; Steam build hides the IAP path",
+    "docs": [
+      "R0 C2-24",
+      " 06 UX-40"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "V11-03",
+    "title": "iOS store and compliance: App Privacy answers, safe-area checks on notch devices, TestFlight beta, App Review submission",
+    "lane": "release+ui",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "TA-40",
+      "UX-41",
+      "V11-02"
+    ],
+    "milestone": "M8",
+    "acceptance": "App approved; iPhone 11 MEDIUM tier 30 fps in a 25-minute match",
+    "docs": [
+      "06 s9.3",
+      " R3 s1"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "V11-04",
+    "title": "macOS notarisation and Linux native release: un-gate the release.yml jobs, Steam depots for both, Deck native build comparison",
+    "lane": "release",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-39",
+      "HUM-14"
+    ],
+    "milestone": "M8",
+    "acceptance": "Notarised macOS build and Linux build on Steam; Deck runs the native build at >= 30 fps",
+    "docs": [
+      "01 ADR-12",
+      " 06 s9.4"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "UX-32",
+    "title": "PortalSdk Poki/CrazyGames adapters (GDScript + JS); portal-specific web builds by feature tag; Poki offline build if WSS is not approved",
+    "lane": "platform+web",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-31",
+      "HUM-14"
+    ],
+    "milestone": "M8",
+    "acceptance": "Event calls per 06 s9.2 in a mock portal page; no ad call outside between-match breaks; portal size and 20 s rules met",
+    "docs": [
+      "06 s9.2",
+      " 06 A2",
+      " 06 UX-32"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-34",
+    "title": "WebRtcTransport prototype per S-NET-2 (webrtc-native 1.2.x, signalling over WS, browser client, unreliable channel)",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "NET-11",
+      "NET-13",
+      "HUM-14"
+    ],
+    "milestone": "M8",
+    "acceptance": "Works end to end in Chrome, Firefox, Safari on a home NAT; TURN decision data",
+    "docs": [
+      "04 s15.3 S-NET-2",
+      " 01 ADR-07",
+      " 04 NET-34"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "V11-05",
+    "title": "WebRTC transport to production (if S-NET-2 passes): server listener, fallback to WS, s_transport key only if required by S-NET-1 data",
+    "lane": "net+server",
+    "tier": "Opus",
+    "size_days": 3,
+    "depends_on": [
+      "NET-34",
+      "NET-45"
+    ],
+    "milestone": "M8",
+    "acceptance": "Browser clients prefer WebRTC and fall back to WSS within 2 s; reconcile p95 within 1.5x ENet",
+    "docs": [
+      "01 ADR-07",
+      " R0 C1-26"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-33",
+    "title": "ENet DTLS evaluation and certificate distribution design (v1.x)",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 1,
+    "depends_on": [
+      "NET-12",
+      "NET-31"
+    ],
+    "milestone": "M8",
+    "acceptance": "Written decision with measured CPU cost; no production change without a follow-up task",
+    "docs": [
+      "04 NQ1",
+      " 04 NET-33"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "V11-06",
+    "title": "Native twins for Kinematics and Spatial (GDExtension, godot-cpp 10.x) behind the same interfaces, selected by feature tag; web keeps the GDScript twin (conditional on S-SIM-1 / QA-08 showing the need, 01 Q6)",
+    "lane": "sim+native",
+    "tier": "Opus",
+    "size_days": 4,
+    "depends_on": [
+      "QA-08",
+      "PM-03"
+    ],
+    "milestone": "M8",
+    "acceptance": "Bit-identical results vs GDScript on the purity test; tick p95 saving >= 3 ms on the pinned runner; web build unaffected",
+    "docs": [
+      "01 ADR-01",
+      " 01 Q6",
+      " 03 s4.3 rung 7"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "V11-07",
+    "title": "Ranked ladder: rating bands in matchmaking, visible ranks, seasons, leaderboards, groups (Nakama), assist tiers locked to class defaults, Auto economy off",
+    "lane": "server-ops+ui",
+    "tier": "Sonnet",
+    "size_days": 3,
+    "depends_on": [
+      "NET-36",
+      "UX-26",
+      "PM-03"
+    ],
+    "milestone": "M8",
+    "acceptance": "Season 1 ladder live with bands and widening; auto-economy rejected in ranked lobbies (V-ADJ)",
+    "docs": [
+      "01 Q13",
+      " R0 C3-15",
+      " 01 s3.4"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "V11-08",
+    "title": "GodotSteam (desktop only): Steam Input glyphs, Steam Cloud mirror of offline saves split by change frequency; Loki/Promtail log stack",
+    "lane": "platform+server-ops",
+    "tier": "Sonnet",
+    "size_days": 2,
+    "depends_on": [
+      "UX-34",
+      "NET-44",
+      "HUM-14"
+    ],
+    "milestone": "M8",
+    "acceptance": "Glyphs follow Steam Input configs; saves round-trip through Steam Cloud; logs searchable in Grafana",
+    "docs": [
+      "01 ADR-01",
+      " 06 s9.4",
+      " R0 C1-12"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-15",
+    "title": "[v1.x SL-4] core/route.gd with a waypoint codec on 04's ORDER points[]",
+    "lane": "core",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "TA-04",
+      "NET-04",
+      "PM-03"
+    ],
+    "milestone": "M8",
+    "acceptance": "Round trip within 1 m and 0.1 m altitude; 16 waypoints fit 256 B; malformed input returns null",
+    "docs": [
+      "08 SL-4",
+      " 08 FEAT-15"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-16",
+    "title": "[v1.x SL-4] RouteRecorder sampling rules with synthetic-track tests",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-15",
+      "TA-13"
+    ],
+    "milestone": "M8",
+    "acceptance": "Rille track gives the expected waypoint count +-1; AGL/DATUM and BOMB_POINT flags correct",
+    "docs": [
+      "08 SL-4",
+      " 08 FEAT-16"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-17",
+    "title": "[v1.x SL-4] Autopilot PATROL_ROUTE and ATTACK_VIA: AGL hold, lookahead climb, capture, engage-and-rejoin",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 2,
+    "depends_on": [
+      "FEAT-15",
+      "AI-05",
+      "AI-07"
+    ],
+    "milestone": "M8",
+    "acceptance": "50 seeded deck routes over rilles: 0 terrain impacts; mean waypoint miss under 60 m",
+    "docs": [
+      "08 SL-4",
+      " 08 FEAT-17"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-18",
+    "title": "[v1.x SL-4] Route UI: record toggle (Mark per 06 s3.1), review, library, assign / pending order, ribbons, fuel warning",
+    "lane": "ui+presentation",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "FEAT-16",
+      "UX-20"
+    ],
+    "milestone": "M8",
+    "acceptance": "Scripted UI test passes; warning above 0.75 of the tank; screenshot attached",
+    "docs": [
+      "08 SL-4",
+      " R0 C2-22",
+      " 08 FEAT-18"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-19",
+    "title": "[v1.x SL-4] Server validation of route payloads with reject reasons",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-15",
+      "NET-16"
+    ],
+    "milestone": "M8",
+    "acceptance": "10,000 fuzzed payloads cause no crash; invalid ones return REJECTED(reason)",
+    "docs": [
+      "08 SL-4",
+      " 08 FEAT-19"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-25",
+    "title": "[v1.x SL-6] Recipe meteor_sets plus validator equidistance check, for the 3 v1 maps",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "ART-28",
+      "TA-15",
+      "PM-03"
+    ],
+    "milestone": "M8",
+    "acceptance": "Fails a deliberately asymmetric set; all maps pass at 2, 4 and 8 players",
+    "docs": [
+      "08 SL-6",
+      " 08 FEAT-25"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-26",
+    "title": "[v1.x SL-6] MoonAlmanac: seeded schedule (per-mode core_exposure_s), set rotation, anchor resolution, mirrored offsets, encode, saves",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1.5,
+    "depends_on": [
+      "FEAT-01",
+      "FEAT-25",
+      "TA-18"
+    ],
+    "milestone": "M8",
+    "acceptance": "Same seed gives the same schedule; 2 falls in 1v1, 4 in team modes; per-team distance spread < 2 %",
+    "docs": [
+      "08 SL-6",
+      " 08 FEAT-26"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-27",
+    "title": "[v1.x SL-6] Fragment projectile, impact effects, neutral wreck spawn, cap eviction",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-26",
+      "GD-19",
+      "TA-11"
+    ],
+    "milestone": "M8",
+    "acceptance": "5 fragments per site; wrecks towable by any team's Hauler; caps profile respected",
+    "docs": [
+      "08 SL-6",
+      " 08 FEAT-27"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-28",
+    "title": "[v1.x SL-6] Almanac in the match-start state and replay header; ALERT METEOR_WARN at T-60 and T-10",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-26",
+      "NET-10",
+      "NET-25"
+    ],
+    "milestone": "M8",
+    "acceptance": "Client shows the schedule within 1 s of match start; replay reproduces the strip",
+    "docs": [
+      "08 SL-6",
+      " 08 FEAT-28"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-29",
+    "title": "[v1.x SL-6] Almanac strip, toasts, site ellipses",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-28",
+      "UX-23"
+    ],
+    "milestone": "M8",
+    "acceptance": "Screenshot test passes; toasts at 60 and 10 s; tap-to-jump to a site works",
+    "docs": [
+      "08 SL-6",
+      " 08 FEAT-29"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-30",
+    "title": "[v1.x SL-6] Commander bot and Adjutant meteor response",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 1.5,
+    "depends_on": [
+      "FEAT-27",
+      "AI-27",
+      "AI-29"
+    ],
+    "milestone": "M8",
+    "acceptance": "Soak: bots collect >= 40 % of fragments; meteor Ore is 5-15 % of Ore income",
+    "docs": [
+      "08 SL-6",
+      " 08 FEAT-30"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-31",
+    "title": "[v1.x SL-6] Meteor streak, flash and decal quad, pre-warmed",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "FEAT-27",
+      "ART-16"
+    ],
+    "milestone": "M8",
+    "acceptance": "Golden screenshot; <= 200 particle quads per impact on mobile",
+    "docs": [
+      "08 SL-6",
+      " 08 FEAT-31"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-34",
+    "title": "[v1.x] Spike: client ring-buffer kill-cam",
+    "lane": "net+ui",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "NET-17",
+      "PM-03"
+    ],
+    "milestone": "M8",
+    "acceptance": "Buffer <= 512 KB; 4 s playback for >= 95 % of deaths in a bot match; re-embodiment never delayed",
+    "docs": [
+      "08 I-11",
+      " 08 FEAT-34"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "FEAT-35",
+    "title": "[v1.x] Spike: terrain LOS from baked rim occluders",
+    "lane": "sim+tools",
+    "tier": "Opus",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-22",
+      "TA-15",
+      "PM-03"
+    ],
+    "milestone": "M8",
+    "acceptance": "p95 vision pass <= 1.5 ms at 1,200 entities; no false occlusion in 100 checked cases",
+    "docs": [
+      "08 I-05",
+      " 01 ADR-05",
+      " 08 FEAT-35"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-43",
+    "title": "sim: step_projectile(out: ProjectileState) + ProjectileMotion scratch",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-12"
+    ],
+    "milestone": "M2",
+    "acceptance": "No allocation per call; perf delta cited in the PR; sim/MODULE.md signature updated",
+    "docs": [
+      "R0-amendments-02 A-12"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 48
+  },
+  {
+    "id": "TA-44",
+    "title": "sim: read flight_common.brake_fade_mps; delete _BRAKE_FADE_MPS; fixture field",
+    "lane": "sim",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "GD-02"
+    ],
+    "milestone": "M2",
+    "acceptance": "Kinematics reads the def field; test_kinematics brake test uses it",
+    "docs": [
+      "R0-amendments-02 A-13"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 48
+  },
+  {
+    "id": "TA-45",
+    "title": "sim: swap *DefFixture for content *Def; delete sim/fixture/",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-09",
+      "TA-12"
+    ],
+    "milestone": "M2",
+    "acceptance": "No sim/fixture/ left; all sim tests load real defs or canonical fixtures",
+    "docs": [
+      "R0-amendments-02 A-14"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 48
+  },
+  {
+    "id": "TA-46",
+    "title": "core: EntityId.PROJECTILE_SLOT_END; ProjectileStore.SLOT_COUNT derived",
+    "lane": "core",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "TA-11"
+    ],
+    "milestone": "M2",
+    "acceptance": "No 2048 literal in src; test_entity_id covers the constant",
+    "docs": [
+      "R0-amendments-02 A-20"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 48,
+    "note": "EntityId.is_projectile has no upper bound at PROJECTILE_SLOT_END; architect to decide"
+  },
+  {
+    "id": "TA-47",
+    "title": "content+tools: quality_tiers.json + schema from 03 s13",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 0.5,
+    "depends_on": [
+      "CONTRACT-0"
+    ],
+    "milestone": "M2",
+    "acceptance": "validate_content covers quality_tiers; ContentDB loads it",
+    "docs": [
+      "R0-amendments-02 A-22",
+      " 03 s13"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 46
+  },
+  {
+    "id": "TA-48",
+    "title": "sim: flip velocity redirect (A-29) and fuel burn (A-32); read A-29..A-35 flight_common fields",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 1,
+    "depends_on": [
+      "TA-12",
+      "TA-44"
+    ],
+    "milestone": "M2",
+    "acceptance": "Flip reverses heading with flip_speed_retain; boost/brake/idle burn per 02; tests per field",
+    "docs": [
+      "R0-amendments-02 A-29",
+      " A-32"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 52,
+    "note": "zero fuel also disables the brake; idle burn assumes docked ships are not stepped (architect to confirm)"
+  },
+  {
+    "id": "NET-47",
+    "title": "net: POS_EN_HALF 1280 + envelope test + 2.0 cm bound; tier-B flag mapping constants; 04 CHAT_RELAY cell + erratum removal",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "NET-02"
+    ],
+    "milestone": "M2",
+    "acceptance": "test_codec_roundtrip covers the envelope to ceiling_hard_m within 2.0 cm; DOC_MAX_ERRATA removed",
+    "docs": [
+      "R0-amendments-02 A-23",
+      " A-24",
+      " A-26",
+      " A-28"
+    ],
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": 45
+  }
+]

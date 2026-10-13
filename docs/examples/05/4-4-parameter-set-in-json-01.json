@@ -1,0 +1,23 @@
+{
+  "ap_dart": {
+    "think_period_ticks": 10,
+    "cruise_alt_agl_m": 300, "deck_alt_agl_m": 60, "max_alt_m": 1450,
+    "min_clearance_m": 25, "clearance_per_mps": 0.25,
+    "probe_times_s": [0.5, 1.0, 1.5, 2.0, 3.0, 4.0],
+    "safety_pull_up_tti_s": 2.0, "safety_clear_tti_s": 4.0, "safety_min_hold_s": 0.5, "safety_max_hold_s": 3.0,
+    "safety_force_rtb_fuel01": 0.20,
+    "rtb": { "fuel01": 0.25, "ammo": 0, "hp01": 0.40, "fuel_reserve_s": 30, "fuel_margin": 1.2 },
+    "patrol_radius_m": 1200, "intercept_radius_m": 2000,
+    "target_weights": { "harvester": 1.0, "bomber": 1.0, "hauler": 0.8, "lancer": 0.6, "dart": 0.5, "scout": 0.4, "siege_crawler": 0.7 },
+    "target_dist_falloff_m": 1500, "target_under_tower_penalty": 0.5, "switch_margin": 1.2,
+    "gun": { "fire_range_m": 650, "fire_cone_k": 1.5, "burst_s": 0.6, "pause_s": 0.3, "aim_error_deg": 1.2, "lead_iterations": 2 },
+    "bomb": { "dive_angle_deg": 30, "release_tolerance_m": 15, "pullout_g_margin_s": 1.5 },
+    "evade": { "hp_drop_trigger": 0.15, "duration_s": 2.5 },
+    "separation": { "radius_m": 60, "gain": 1.0 },
+    "flight": { "kp_path": 2.5, "ki_path": 0.6, "kp_roll": 3.0, "kp_yaw": 1.5, "bank_threshold_deg": 10,
+                "kp_speed": 0.05, "ki_speed": 0.02, "brake_overspeed_mps": 20, "k_guidance": 0.8 },
+    "landing": { "gate_dist_m": 1200, "pitch_over_agl_m": 20, "launch_climb_agl_m": 80, "glide_deg": 8, "transition_dist_m": 250, "transition_agl_m": 60,
+                 "hover_agl_m": 25, "flare_agl_m": 8, "touch_vz_mps": 2.0, "max_tilt_deg": 30,
+                 "kp_pos": 0.35, "kd_pos": 1.1, "kp_vz": 1.2, "abort_horiz_err_m": 12, "abort_vz_mps": 6, "max_attempts": 3 }
+  }
+}

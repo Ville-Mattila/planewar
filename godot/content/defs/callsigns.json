@@ -1,0 +1,19 @@
+{
+  "_doc": "08 SL-3 Radio Chatter and callsigns (I-20, v1): CallsignDef. Singleton file; rule 1 of 08 SL-3 gives the callsign format <Word>-<n>, n = 1 + (hash(entity_id) mod 9). Word lists are only the examples 08 SL-3 names: slot 0 ships (Kestrel, Wren, Swift), Harvester (Crawler), Hauler (Tug). Lists for team slots 1..7 and the other classes are not in the docs and are not invented here; they await owner or content-owner approval (HUM-17 for fiction names).",
+  "number_count": 9,
+  "callsigns": {
+    "0": {
+      "ship": [
+        "Kestrel",
+        "Wren",
+        "Swift"
+      ],
+      "harvester": [
+        "Crawler"
+      ],
+      "hauler": [
+        "Tug"
+      ]
+    }
+  }
+}

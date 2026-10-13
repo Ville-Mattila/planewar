@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "match_rules.schema.json",
+  "title": "MatchRulesDef (godot/content/defs/match_rules.json)",
+  "$comment": "R0 B.1 match_rules.json; 02 s12.1; caps profiles R0 B.7. Per-mode core_exposure_s / hard_end_s live in modes.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "victory": {
+      "enum": [
+        "all_enemy_cores"
+      ]
+    },
+    "eliminate_on_core_loss": {
+      "type": "boolean"
+    },
+    "eliminated_selfdestruct_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 600
+    },
+    "core_value": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000
+    },
+    "core_shield_until_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 3600
+    },
+    "core_bomb_mult_exposure": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "surrender_min_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 3600
+    },
+    "surrender_min_s_1v1": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 3600
+    },
+    "reconnect_grace_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 600
+    },
+    "spectator_delay_ticks": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3600
+    },
+    "spectators_max": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 16
+    },
+    "join_window_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 600
+    },
+    "load_timeout_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 600
+    },
+    "countdown_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 60
+    },
+    "caps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "standard",
+        "reduced",
+        "lite"
+      ],
+      "properties": {
+        "standard": {
+          "$ref": "#/$defs/caps"
+        },
+        "reduced": {
+          "$ref": "#/$defs/caps"
+        },
+        "lite": {
+          "$ref": "#/$defs/caps"
+        }
+      }
+    }
+  },
+  "required": [
+    "caps",
+    "core_bomb_mult_exposure",
+    "core_shield_until_s",
+    "core_value",
+    "countdown_s",
+    "eliminate_on_core_loss",
+    "eliminated_selfdestruct_s",
+    "join_window_s",
+    "load_timeout_s",
+    "reconnect_grace_s",
+    "spectator_delay_ticks",
+    "spectators_max",
+    "surrender_min_s",
+    "surrender_min_s_1v1",
+    "victory"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "caps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "units",
+        "structures",
+        "projectiles",
+        "wrecks",
+        "slots"
+      ],
+      "properties": {
+        "units": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "structures": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "projectiles": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4000
+        },
+        "wrecks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "slots": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8
+        }
+      }
+    }
+  }
+}

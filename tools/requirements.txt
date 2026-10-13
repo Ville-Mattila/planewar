@@ -1,0 +1,2 @@
+# Python dependencies for tools/ (docs/03 s8: the moon baker is numpy only; pinned 2.3.x). Everything else is stdlib.
+numpy==2.3.*

@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://spikes/s_flight_1/harness/sf_harness.gd" id="1"]
+
+[node name="SfHarness" type="Node"]
+script = ExtResource("1")

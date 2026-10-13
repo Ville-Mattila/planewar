@@ -1,0 +1,241 @@
+{
+ "slots_by_player_count": {
+  "2": [
+   0,
+   2
+  ],
+  "4": [
+   0,
+   2,
+   4,
+   6
+  ],
+  "6": [
+   0,
+   1,
+   2,
+   4,
+   5,
+   6
+  ],
+  "8": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7
+  ]
+ },
+ "modes": [
+  {
+   "id": "pvp_1v1",
+   "status": "core",
+   "tags": [
+    "mode"
+   ],
+   "humans": [
+    2,
+    2
+   ],
+   "teams": "1v1",
+   "fill_after_s": 120,
+   "fill_rating_weight": 0.0,
+   "doctrine_pick": "lobby_blind",
+   "adjutant": [
+    "off",
+    "economy"
+   ],
+   "moving_sun": "off",
+   "pause_save": false,
+   "caps": "standard",
+   "rating": "hidden_mmr",
+   "core_exposure_s": 1200,
+   "hard_end_s": 1800,
+   "maps": "rotation",
+   "hosting": [
+    "dedicated"
+   ]
+  },
+  {
+   "id": "pvp_2v2",
+   "status": "core",
+   "tags": [
+    "mode"
+   ],
+   "humans": [
+    2,
+    4
+   ],
+   "teams": "2v2",
+   "fill_after_s": 60,
+   "fill_rating_weight": 0.5,
+   "doctrine_pick": "lobby_blind",
+   "adjutant": [
+    "off",
+    "economy"
+   ],
+   "moving_sun": "off",
+   "pause_save": false,
+   "caps": "standard",
+   "rating": "hidden_mmr",
+   "core_exposure_s": 1500,
+   "hard_end_s": 2100,
+   "maps": "rotation",
+   "hosting": [
+    "dedicated"
+   ]
+  },
+  {
+   "id": "pvp_team",
+   "status": "core",
+   "tags": [
+    "mode"
+   ],
+   "humans": [
+    4,
+    8
+   ],
+   "teams": "3v3|4v4",
+   "fill_after_s": 90,
+   "doctrine_pick": "lobby_blind",
+   "adjutant": [
+    "off",
+    "economy"
+   ],
+   "moving_sun": "off",
+   "pause_save": false,
+   "caps": "standard",
+   "rating": "hidden_mmr",
+   "core_exposure_s": 1800,
+   "hard_end_s": 2400,
+   "maps": "rotation",
+   "hosting": [
+    "dedicated"
+   ]
+  },
+  {
+   "id": "coop",
+   "status": "core",
+   "tags": [
+    "mode"
+   ],
+   "humans": [
+    2,
+    4
+   ],
+   "teams": "humans_vs_bots",
+   "fill_after_s": null,
+   "doctrine_pick": "each_human",
+   "adjutant": [
+    "off",
+    "economy",
+    "full"
+   ],
+   "moving_sun": "option",
+   "pause_save": true,
+   "pause_scope": "listen_host",
+   "caps": "standard",
+   "rating": "none",
+   "core_exposure_s": 1800,
+   "hard_end_s": 2400,
+   "maps": "any",
+   "hosting": [
+    "dedicated",
+    "listen"
+   ]
+  },
+  {
+   "id": "custom",
+   "status": "core",
+   "tags": [
+    "mode"
+   ],
+   "humans": [
+    1,
+    8
+   ],
+   "teams": "any",
+   "fill_after_s": null,
+   "doctrine_pick": "host_may_lock",
+   "adjutant": [
+    "off",
+    "economy",
+    "full"
+   ],
+   "moving_sun": "option",
+   "pause_save": false,
+   "caps": "host",
+   "rating": "none",
+   "core_exposure_s": 1800,
+   "hard_end_s": 2400,
+   "maps": "any",
+   "hosting": [
+    "dedicated",
+    "listen"
+   ]
+  },
+  {
+   "id": "skirmish",
+   "status": "core",
+   "tags": [
+    "mode"
+   ],
+   "humans": [
+    1,
+    1
+   ],
+   "teams": "any",
+   "fill_after_s": null,
+   "doctrine_pick": "per_slot",
+   "adjutant": [
+    "off",
+    "economy",
+    "full"
+   ],
+   "moving_sun": "option",
+   "pause_save": true,
+   "caps": "standard",
+   "caps_web_mobile": "lite",
+   "rating": "none",
+   "core_exposure_s": 1800,
+   "hard_end_s": 2400,
+   "maps": "any",
+   "hosting": [
+    "in_process"
+   ]
+  },
+  {
+   "id": "campaign",
+   "status": "core",
+   "tags": [
+    "mode"
+   ],
+   "humans": [
+    1,
+    1
+   ],
+   "teams": "mission",
+   "fill_after_s": null,
+   "doctrine_pick": "mission",
+   "adjutant": [
+    "off",
+    "economy",
+    "full"
+   ],
+   "moving_sun": "mission",
+   "pause_save": true,
+   "caps": "standard",
+   "caps_web_mobile": "lite",
+   "rating": "none",
+   "core_exposure_s": null,
+   "hard_end_s": null,
+   "maps": "mission",
+   "hosting": [
+    "in_process"
+   ]
+  }
+ ]
+}

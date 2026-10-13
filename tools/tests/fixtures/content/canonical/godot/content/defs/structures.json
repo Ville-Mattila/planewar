@@ -1,0 +1,358 @@
+{
+ "structures": [
+  {
+   "id": "core",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/core.glb"
+   },
+   "hp": 3000,
+   "cost_ore": 0,
+   "cost_ice": 0,
+   "build_time_s": 0,
+   "power": 20,
+   "requires": [],
+   "footprint": [
+    8,
+    8
+   ],
+   "sensor_radius": 2000,
+   "max_per_player": 1,
+   "build_radius": 600,
+   "storage_ore": 3000,
+   "storage_ice": 800,
+   "construction_slots": 2,
+   "pads": 1,
+   "pad_radius_m": 12,
+   "buildable": false,
+   "integrated_shield": {
+    "charge_max": 2400,
+    "recharge_per_s": 40,
+    "recharge_delay_s": 5
+   }
+  },
+  {
+   "id": "outpost",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/outpost.glb"
+   },
+   "hp": 1200,
+   "cost_ore": 450,
+   "cost_ice": 0,
+   "build_time_s": 45,
+   "power": 5,
+   "requires": [
+    "shipyard"
+   ],
+   "footprint": [
+    6,
+    6
+   ],
+   "sensor_radius": 1200,
+   "max_per_player": 6,
+   "build_radius": 400,
+   "storage_ore": 250,
+   "storage_ice": 100,
+   "construction_slots": 1,
+   "pads": 1,
+   "pad_radius_m": 10
+  },
+  {
+   "id": "relay_pylon",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/relay_pylon.glb"
+   },
+   "hp": 150,
+   "cost_ore": 75,
+   "cost_ice": 0,
+   "build_time_s": 10,
+   "power": 0,
+   "requires": [
+    "core"
+   ],
+   "footprint": [
+    2,
+    2
+   ],
+   "sensor_radius": 300,
+   "max_per_player": 30,
+   "build_radius": 250
+  },
+  {
+   "id": "solar_array",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/solar_array.glb"
+   },
+   "hp": 300,
+   "cost_ore": 100,
+   "cost_ice": 0,
+   "build_time_s": 15,
+   "power": 12,
+   "requires": [
+    "core"
+   ],
+   "footprint": [
+    4,
+    4
+   ],
+   "sensor_radius": 400,
+   "max_per_player": 20,
+   "solar": true
+  },
+  {
+   "id": "reactor",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/reactor.glb"
+   },
+   "hp": 600,
+   "cost_ore": 400,
+   "cost_ice": 150,
+   "build_time_s": 45,
+   "power": 40,
+   "requires": [
+    "shipyard"
+   ],
+   "footprint": [
+    5,
+    5
+   ],
+   "sensor_radius": 400,
+   "max_per_player": 4,
+   "explode": {
+    "radius_m": 100,
+    "damage": 200
+   }
+  },
+  {
+   "id": "refinery",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/refinery.glb"
+   },
+   "hp": 1000,
+   "cost_ore": 300,
+   "cost_ice": 0,
+   "build_time_s": 30,
+   "power": -4,
+   "requires": [
+    "core"
+   ],
+   "footprint": [
+    6,
+    6
+   ],
+   "sensor_radius": 600,
+   "max_per_player": 6,
+   "storage_ore": 1500,
+   "storage_ice": 500,
+   "pipe_radius_m": 500,
+   "docks": 2
+  },
+  {
+   "id": "ice_extractor",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/ice_extractor.glb"
+   },
+   "hp": 400,
+   "cost_ore": 200,
+   "cost_ice": 0,
+   "build_time_s": 25,
+   "power": -3,
+   "requires": [
+    "refinery"
+   ],
+   "footprint": [
+    4,
+    4
+   ],
+   "sensor_radius": 600,
+   "on_node": "cold_trap",
+   "buffer_ice": 400
+  },
+  {
+   "id": "pad",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/pad.glb"
+   },
+   "hp": 600,
+   "cost_ore": 150,
+   "cost_ice": 0,
+   "build_time_s": 20,
+   "power": -2,
+   "requires": [
+    "refinery"
+   ],
+   "footprint": [
+    4,
+    4
+   ],
+   "sensor_radius": 400,
+   "max_per_player": 12,
+   "pads": 1,
+   "pad_radius_m": 10
+  },
+  {
+   "id": "hangar",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/hangar.glb"
+   },
+   "hp": 900,
+   "cost_ore": 225,
+   "cost_ice": 0,
+   "build_time_s": 30,
+   "power": -3,
+   "requires": [
+    "pad",
+    "shipyard"
+   ],
+   "footprint": [
+    4,
+    4
+   ],
+   "sensor_radius": 400,
+   "max_per_player": 8,
+   "pads": 1,
+   "pad_radius_m": 10,
+   "pad_roofed": true,
+   "upgrade_from": "pad",
+   "upgrade_cost_ore": 75,
+   "upgrade_time_s": 15
+  },
+  {
+   "id": "shipyard",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/shipyard.glb"
+   },
+   "hp": 1500,
+   "cost_ore": 400,
+   "cost_ice": 0,
+   "build_time_s": 35,
+   "power": -10,
+   "requires": [
+    "refinery"
+   ],
+   "footprint": [
+    8,
+    6
+   ],
+   "sensor_radius": 800,
+   "launch_pad": true,
+   "max_per_player": 3,
+   "possessable": true
+  },
+  {
+   "id": "vehicle_bay",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/vehicle_bay.glb"
+   },
+   "hp": 1200,
+   "cost_ore": 300,
+   "cost_ice": 0,
+   "build_time_s": 30,
+   "power": -6,
+   "requires": [
+    "refinery"
+   ],
+   "footprint": [
+    6,
+    6
+   ],
+   "sensor_radius": 600,
+   "max_per_player": 2,
+   "possessable": true
+  },
+  {
+   "id": "sensor_mast",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/sensor_mast.glb"
+   },
+   "hp": 350,
+   "cost_ore": 250,
+   "cost_ice": 0,
+   "build_time_s": 20,
+   "power": -4,
+   "requires": [
+    "refinery"
+   ],
+   "footprint": [
+    2,
+    2
+   ],
+   "sensor_radius": 3500,
+   "max_per_player": 6,
+   "deck_reveal_radius": 1200
+  },
+  {
+   "id": "relay_station",
+   "status": "core",
+   "tags": [
+    "structure"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/relay_station.glb"
+   },
+   "hp": 1,
+   "cost_ore": 0,
+   "cost_ice": 0,
+   "build_time_s": 0,
+   "power": 0,
+   "requires": [],
+   "footprint": [
+    4,
+    4
+   ],
+   "sensor_radius": 3500,
+   "deck_reveal_radius": 1200,
+   "pads": 1,
+   "pad_radius_m": 12,
+   "buildable": false,
+   "invulnerable": true
+  }
+ ]
+}

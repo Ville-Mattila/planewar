@@ -1,0 +1,13 @@
+{
+  "_doc": "R0 B.1 rules.json, world constants (owner 03). gravity 6.0: 01 s3.1.1 anchor 5.0-8.0 (canonical 6.0 per R0 B.1). ceiling_soft_m 1500 and ceiling_hard_m 2000: 01 hard constraints (Sphere.CEILING_SOFT / CEILING_HARD). tick_hz 30: 01 ADR-07. lift_model speed_scaled (alt damping_only): R0 B.1 and 01 s3.1.1. path_expansions_per_tick 2000: 01 s7 and ADR-05. sim_budget_profile [1, 2] (default cut rungs): R0 B.1 and 03 s4.3. friendly_fire false, debug_commands false, profile_enabled false: R0 B.1. Caps profiles live in match_rules.json (R0 B.1, B.7). PLANET_RADIUS is not a def (core/sphere.gd, 01 s7 and D6).",
+  "gravity": 6.0,
+  "ceiling_soft_m": 1500,
+  "ceiling_hard_m": 2000,
+  "tick_hz": 30,
+  "lift_model": "speed_scaled",
+  "path_expansions_per_tick": 2000,
+  "sim_budget_profile": [1, 2],
+  "friendly_fire": false,
+  "debug_commands": false,
+  "profile_enabled": false
+}

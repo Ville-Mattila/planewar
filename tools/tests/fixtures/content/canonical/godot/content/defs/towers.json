@@ -1,0 +1,229 @@
+{
+ "towers": [
+  {
+   "id": "autocannon_turret",
+   "status": "core",
+   "tags": [
+    "tower"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/autocannon_turret.glb"
+   },
+   "hp": 500,
+   "cost_ore": 200,
+   "cost_ice": 0,
+   "build_time_s": 20,
+   "power": -4,
+   "requires": [
+    "refinery"
+   ],
+   "footprint": [
+    3,
+    3
+   ],
+   "sensor_radius": 1600,
+   "max_per_player": 16,
+   "possessable": true,
+   "tower": {
+    "weapon": "gun_turret",
+    "ammo_pool": 300,
+    "ammo_refill_per_s": 10,
+    "h_rel_min": -200,
+    "h_rel_max": 400,
+    "target_agl_min": 0,
+    "turret_turn_dps": 120,
+    "target_kinds": [
+     "ship",
+     "ground"
+    ],
+    "target_priority": [
+     "bomber",
+     "hauler_loaded",
+     "lancer",
+     "dart",
+     "siege_crawler",
+     "harvester",
+     "scout",
+     "hauler"
+    ]
+   }
+  },
+  {
+   "id": "flak_battery",
+   "status": "core",
+   "tags": [
+    "tower"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/flak_battery.glb"
+   },
+   "hp": 600,
+   "cost_ore": 300,
+   "cost_ice": 0,
+   "build_time_s": 25,
+   "power": -6,
+   "requires": [
+    "refinery"
+   ],
+   "footprint": [
+    3,
+    3
+   ],
+   "sensor_radius": 1600,
+   "max_per_player": 12,
+   "possessable": true,
+   "tower": {
+    "weapon": "flak_gun",
+    "ammo_pool": 40,
+    "ammo_refill_per_s": 1.0,
+    "h_rel_min": 150,
+    "h_rel_max": 1500,
+    "target_agl_min": 0,
+    "turret_turn_dps": 60,
+    "target_kinds": [
+     "ship"
+    ],
+    "target_priority": [
+     "bomber",
+     "hauler_loaded",
+     "lancer",
+     "dart",
+     "siege_crawler",
+     "harvester",
+     "scout",
+     "hauler"
+    ]
+   }
+  },
+  {
+   "id": "missile_tower",
+   "status": "core",
+   "tags": [
+    "tower"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/missile_tower.glb"
+   },
+   "hp": 500,
+   "cost_ore": 350,
+   "cost_ice": 0,
+   "build_time_s": 25,
+   "power": -6,
+   "requires": [
+    "shipyard"
+   ],
+   "footprint": [
+    3,
+    3
+   ],
+   "sensor_radius": 1600,
+   "max_per_player": 12,
+   "possessable": true,
+   "tower": {
+    "weapon": "rocket_tower",
+    "ammo_pool": 12,
+    "ammo_refill_per_s": 0.25,
+    "h_rel_min": -300,
+    "h_rel_max": 1500,
+    "target_agl_min": 40,
+    "turret_turn_dps": 90,
+    "target_kinds": [
+     "ship"
+    ],
+    "target_priority": [
+     "bomber",
+     "hauler_loaded",
+     "lancer",
+     "dart",
+     "siege_crawler",
+     "harvester",
+     "scout",
+     "hauler"
+    ]
+   }
+  },
+  {
+   "id": "rail_lance",
+   "status": "core",
+   "tags": [
+    "tower"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/rail_lance.glb"
+   },
+   "hp": 700,
+   "cost_ore": 900,
+   "cost_ice": 100,
+   "build_time_s": 50,
+   "power": -15,
+   "requires": [
+    "reactor",
+    "sensor_mast"
+   ],
+   "footprint": [
+    4,
+    5
+   ],
+   "sensor_radius": 1600,
+   "max_per_player": 2,
+   "possessable": true,
+   "tower": {
+    "weapon": "rail_gun",
+    "ammo_pool": 10,
+    "ammo_refill_per_s": 0.1,
+    "h_rel_min": -300,
+    "h_rel_max": 1500,
+    "target_agl_min": 0,
+    "turret_turn_dps": 30,
+    "target_kinds": [
+     "ship",
+     "ground"
+    ],
+    "target_priority": [
+     "bomber",
+     "hauler_loaded",
+     "lancer",
+     "dart",
+     "siege_crawler",
+     "harvester",
+     "scout",
+     "hauler"
+    ]
+   }
+  },
+  {
+   "id": "shield_projector",
+   "status": "core",
+   "tags": [
+    "tower"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/shield_projector.glb"
+   },
+   "hp": 800,
+   "cost_ore": 600,
+   "cost_ice": 100,
+   "build_time_s": 40,
+   "power": -15,
+   "requires": [
+    "reactor"
+   ],
+   "footprint": [
+    3,
+    3
+   ],
+   "sensor_radius": 600,
+   "max_per_player": 4,
+   "shield": {
+    "dome_radius": 250,
+    "charge_max": 1200,
+    "recharge_per_s": 20,
+    "recharge_delay_s": 5,
+    "recharge_ice_per_point": 0.05,
+    "collapse_s": 10,
+    "exposure_charge_mult": 0.5,
+    "exposure_recharge_mult": 0.5
+   }
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+id,en,fi,max_len,context,note
+barks.launch.1,{callsign} airborne.,{callsign} ilmassa.,28,Ship launched from a pad.,
+barks.rtb_fuel.1,"{callsign}, low fuel, heading home.","{callsign}, polttoaine vähissä, palaa tukikohtaan.",50,Autopilot returning on low fuel.,
+barks.rtb_ammo.1,"{callsign}, guns dry, rearming.","{callsign}, aseet tyhjinä, täydennys käynnissä.",47,Autopilot returning with no ammo.,
+barks.rtb_damage.1,"{callsign}, hit hard, breaking off.","{callsign}, osuma kovaa, irtaudun.",49,Autopilot returning when damaged.,
+barks.engage.1,{callsign} engaging.,{callsign} hyökkää.,28,First hit after 20 s without one.,
+barks.docked.1,{callsign} on the pad.,{callsign} laiturilla.,31,Ship docked on its pad.,
+barks.harvester_hit.1,"{callsign} taking fire, falling back to the towers.","{callsign} ammutaan, vetäytyy torneille.",72,Harvester attacked. Alert line.,
+barks.structure_lost.1,{structure} lost at {place}.,{structure} menetetty kohteessa {place}.,40,Structure destroyed. {place} is a base or pole name.,Finnish inflection to be checked by the owner.
+barks.low_power.1,Power at {percent} percent. Towers slowing.,Teho {percent} prosenttia. Tornit hidastuvat.,61,Power balance below 100 percent. {percent} is an integer.,
+barks.wing_join.1,"{wing_number}, on your wing.","{wing_number}, siivessäsi.",40,"{wing_number} is the spoken wing number (Two, Three).",
+barks.wing_leave.1,"{wing_number}, low fuel, going home.","{wing_number}, polttoaine vähissä, palaa kotiin.",51,{wing_number} is the spoken wing number. Wingman leaves the wing.,
+barks.landing_grade.1,Ace landing.,Ässälasku.,17,Local player landed at ACE grade (08 SL-1).,
+barks.supply_away.1,Canister away. Look for the beacon.,Kanisteri irti. Etsi majakka.,49,v1 stretch line (SL-5). Candidate until the scope gate.,
+barks.almanac_warn.1,"Meteor fall in sixty seconds, east seam.","Meteoriputous minuutin kuluttua, itäsauma.",56,v1.x line (SL-6). Candidate.,

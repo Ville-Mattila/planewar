@@ -1,0 +1,16 @@
+{
+ "_doc": "R0 B.1 canonical world constants (fixture)",
+ "gravity": 6.0,
+ "ceiling_soft_m": 1500,
+ "ceiling_hard_m": 2000,
+ "tick_hz": 30,
+ "lift_model": "speed_scaled",
+ "path_expansions_per_tick": 2000,
+ "sim_budget_profile": [
+  1,
+  2
+ ],
+ "friendly_fire": false,
+ "debug_commands": false,
+ "profile_enabled": false
+}

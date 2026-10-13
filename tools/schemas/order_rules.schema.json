@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "order_rules.schema.json",
+  "title": "OrderRulesDef (godot/content/defs/order_rules.json)",
+  "$comment": "R0 B.1 order_rules.json (OrderRulesDef, owner 05), C2-06; 05 s3.2-3.3. Singleton: no id, status or tags. Kind names are OrderSpec.Kind lower-cased; reserved kinds 10 patrol_route and 11 attack_via are deliberately not in the enum (v1.x, rejected). supply_drop (9) is listable but only enabled once the SL-5 scope gate opens.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "queue_max": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8,
+      "$comment": "R0 C2-06: standing and pending queues hold at most 8 orders each; 8 is the storage size, a lower value only tightens"
+    },
+    "patrol_points": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 16,
+          "$comment": "05 s3.1: PATROL waypoints 2..8"
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 16,
+          "$comment": "05 s3.1; the wire allows 0-16 for future route kinds (04 s2.5)"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "$comment": "05 s3.1 PATROL waypoint count"
+    },
+    "arrival_radius_ship_m": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 2000,
+      "$comment": "05 s3.2 MOVE: within 150 m (ships)"
+    },
+    "arrival_radius_ground_m": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 500,
+      "$comment": "05 s3.2 MOVE: 40 m (ground)"
+    },
+    "default_move_agl_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5000,
+      "$comment": "05 s3.2 MOVE: ordered altitude band or 300 m AGL default"
+    },
+    "ghost_timeout_s": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 300,
+      "$comment": "05 s3.2 ATTACK: not visible to the team for 30 s; 04 V-ORD ghost age"
+    },
+    "attack_gun_duration_s": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 300,
+      "$comment": "05 s3.2 ATTACK: 20 s of fire (guns)"
+    },
+    "patrol_engage_radius_m": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 10000,
+      "$comment": "05 s3.2 PATROL: engage within 1,200 m of the route"
+    },
+    "escort_engage_radius_m": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 10000,
+      "$comment": "05 s3.2 ESCORT FORM: threats within 1,000 m of the escortee"
+    },
+    "hold_orbit_radius_m": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5000,
+      "$comment": "05 s3.2 HOLD: orbit 250 m"
+    },
+    "guard_orbit_radius_m": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5000,
+      "$comment": "05 s3.2 GUARD: orbit 600 m"
+    },
+    "guard_engage_radius_m": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 10000,
+      "$comment": "05 s3.2 GUARD: engage within 1,500 m"
+    },
+    "haul_defended_fail_s": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 300,
+      "$comment": "05 s3.2 HAUL CAPTURE: threat > limit for 20 s"
+    },
+    "no_pad_loiter_altitude_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5000,
+      "$comment": "05 s3.2 RETURN NO_PAD: loiter over Core at 400 m"
+    },
+    "no_pad_retry_s": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 60,
+      "$comment": "05 s3.2 RETURN NO_PAD: re-try every 5 s"
+    },
+    "escort_slot_max": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255,
+      "$comment": "05 s3.1 / 08 SL-2: highest valid escort_slot index (class slots 0-3 plus wing.json slots); -1 = class default"
+    },
+    "enabled_kinds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "move",
+          "patrol",
+          "attack",
+          "escort",
+          "harvest_here",
+          "haul",
+          "return",
+          "hold",
+          "guard",
+          "supply_drop"
+        ]
+      },
+      "minItems": 1,
+      "$comment": "05 s3.3: kinds the sim accepts; supply_drop only after the C1-13 gate"
+    },
+    "allowed_kinds": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "enum": [
+            "move",
+            "patrol",
+            "attack",
+            "escort",
+            "harvest_here",
+            "haul",
+            "return",
+            "hold",
+            "guard",
+            "supply_drop"
+          ]
+        }
+      },
+      "$comment": "05 s3.2 'Valid for', 04 V-ORD: key = ship, ground-unit or structure def id, or 'tower' for every def with a tower block; an absent key accepts no orders (non-tower structures)"
+    }
+  },
+  "required": [
+    "queue_max",
+    "patrol_points",
+    "arrival_radius_ship_m",
+    "arrival_radius_ground_m",
+    "default_move_agl_m",
+    "ghost_timeout_s",
+    "attack_gun_duration_s",
+    "patrol_engage_radius_m",
+    "escort_engage_radius_m",
+    "hold_orbit_radius_m",
+    "guard_orbit_radius_m",
+    "guard_engage_radius_m",
+    "haul_defended_fail_s",
+    "no_pad_loiter_altitude_m",
+    "no_pad_retry_s",
+    "escort_slot_max",
+    "enabled_kinds",
+    "allowed_kinds"
+  ],
+  "$defs": {
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case"
+    }
+  }
+}

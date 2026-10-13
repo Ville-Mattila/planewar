@@ -1,0 +1,109 @@
+{
+  "_doc": "03 s13 quality tiers table (LOW / MEDIUM / HIGH, R0 C2-29, R0 B.9 A-22, TA-47). Knobs that 03 s13 defers to 07 (particle quads, explosion lights, puff cap) cite 07 s6 tier scaling; the LOD threshold cites 07 s4.6 as 03 s13 does. Selection and downshift are app/presentation behaviour (TA-31), not data.",
+  "quality_tiers": [
+    {
+      "id": "low",
+      "tier": "LOW",
+      "status": "core",
+      "tags": [
+        "quality_tier"
+      ],
+      "_doc": "03 s13 LOW column (Android-mid at 30 fps, web-mobile): scaling 0.75, MSAA off, sun shadows off, LOD threshold 3.0 (mobile/web), K 1.8 / MAX_DEPTH 5, mesher A until S-WORLD-1 (03 open question 9), chunk builds 2 / 2.0 ms, displacement 300 m, visible chunks 90, entity views 200, projectile pool 1,024, particles 500 (07 s6), trails off, local lights 4, icon band 1,800 m, target 30 fps / cap 30, physics 30; explosion lights 0 and puff cap 100 (07 s6 LOW)",
+      "scaling_3d_scale": 0.75,
+      "msaa_samples": 0,
+      "sun_shadows": {
+        "enabled": false
+      },
+      "lod_threshold_pixels": 3.0,
+      "planet_split_k": 1.8,
+      "planet_max_depth": 5,
+      "planet_mesher_variant": "A",
+      "chunk_builds_per_frame": 2,
+      "chunk_build_ms_cap": 2.0,
+      "detail_displacement_m": 300,
+      "visible_chunks_cap": 90,
+      "entity_views_cap": 200,
+      "projectile_pool": 1024,
+      "particle_quads_cap": 500,
+      "trails_enabled": false,
+      "trail_segments": 0,
+      "local_lights": 4,
+      "explosion_lights": 0,
+      "puff_cap": 100,
+      "icon_band_start_m": 1800,
+      "target_fps": 30,
+      "max_fps": 30,
+      "physics_tick_hz": 30
+    },
+    {
+      "id": "medium",
+      "tier": "MEDIUM",
+      "status": "core",
+      "tags": [
+        "quality_tier"
+      ],
+      "_doc": "03 s13 MEDIUM column (Steam Deck, web-desktop; iPhone 11 in v1.1): scaling 0.85, MSAA 2x, sun shadows off, LOD threshold 3.0 (web) with 1.0 on Deck (lod_threshold_pixels_deck), K 2.2 / MAX_DEPTH 6, mesher A until S-WORLD-1, chunk builds 4 / 3.0 ms, displacement 500 m, visible chunks 120, entity views 400, projectile pool 2,048, particles 1,000 (07 s6 MEDIUM), trails on 512 segments, local lights 8, explosion lights 2 (07 s6 MEDIUM), icon band 2,500 m, target 60 fps / cap 60, physics 30",
+      "scaling_3d_scale": 0.85,
+      "msaa_samples": 2,
+      "sun_shadows": {
+        "enabled": false
+      },
+      "lod_threshold_pixels": 3.0,
+      "lod_threshold_pixels_deck": 1.0,
+      "planet_split_k": 2.2,
+      "planet_max_depth": 6,
+      "planet_mesher_variant": "A",
+      "chunk_builds_per_frame": 4,
+      "chunk_build_ms_cap": 3.0,
+      "detail_displacement_m": 500,
+      "visible_chunks_cap": 120,
+      "entity_views_cap": 400,
+      "projectile_pool": 2048,
+      "particle_quads_cap": 1000,
+      "trails_enabled": true,
+      "trail_segments": 512,
+      "local_lights": 8,
+      "explosion_lights": 2,
+      "icon_band_start_m": 2500,
+      "target_fps": 60,
+      "max_fps": 60,
+      "physics_tick_hz": 30
+    },
+    {
+      "id": "high",
+      "tier": "HIGH",
+      "status": "core",
+      "tags": [
+        "quality_tier"
+      ],
+      "_doc": "03 s13 HIGH column (PC-mid and up): scaling 1.0, MSAA 4x, sun shadows 2,048 map / 2 splits / 800 m (PC only, 07 s1.5 and 07 s6), LOD threshold 1.0, K 2.5 / MAX_DEPTH 6, mesher A until S-WORLD-1, chunk builds 6 / 4.0 ms, displacement 600 m, visible chunks 150, entity views 800, projectile pool 2,048, particles 2,000 (07 s6 HIGH), trails on 1,024 segments, local lights 16 (8 per mesh), explosion lights 4 (07 s6 HIGH), icon band 2,500 m, target 60 fps / cap 0 (uncapped, vsync), physics 30",
+      "scaling_3d_scale": 1.0,
+      "msaa_samples": 4,
+      "sun_shadows": {
+        "enabled": true,
+        "map_size": 2048,
+        "splits": 2,
+        "max_distance_m": 800
+      },
+      "lod_threshold_pixels": 1.0,
+      "planet_split_k": 2.5,
+      "planet_max_depth": 6,
+      "planet_mesher_variant": "A",
+      "chunk_builds_per_frame": 6,
+      "chunk_build_ms_cap": 4.0,
+      "detail_displacement_m": 600,
+      "visible_chunks_cap": 150,
+      "entity_views_cap": 800,
+      "projectile_pool": 2048,
+      "particle_quads_cap": 2000,
+      "trails_enabled": true,
+      "trail_segments": 1024,
+      "local_lights": 16,
+      "explosion_lights": 4,
+      "icon_band_start_m": 2500,
+      "target_fps": 60,
+      "max_fps": 0,
+      "physics_tick_hz": 30
+    }
+  ]
+}

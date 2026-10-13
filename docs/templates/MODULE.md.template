@@ -1,0 +1,64 @@
+# <module> - MODULE.md
+
+Template for every `godot/src/<module>/MODULE.md` (03 s15.1, ADR-14, TA-06). Copy it, keep every heading in
+this order, delete no heading (write "None." under it if empty). Max 300 lines. Replace the `<...>` placeholders
+and the hint lines in italics. Signatures are copied from the code; `tools/gen_module_api.py --check` (TA-27)
+fails CI when they disagree.
+
+| Field | Value |
+|---|---|
+| Responsibility | one paragraph: what this module owns and what it explicitly does not |
+| Lane owner tier | Fable / Opus / Sonnet / Haiku for typical tasks (ADR-14) |
+| May depend on | list from 01 s9.2 (mirrored in `tools/deps.json`) |
+| Must never touch | list |
+| Autoloads used | none / Log / ContentDB / App |
+| Status | stub / API frozen (date) / implemented / native twin planned |
+
+## Public API
+
+GDScript signatures only, grouped by class. Every public symbol here is covered by a test listed below.
+Anything not listed is private even if GDScript cannot enforce it (prefix `_`).
+
+```gdscript
+class_name <Name> extends <Base>     # one line of purpose; autoloads have no class_name (CLAUDE.md)
+static func <name>(<arg>: <Type>) -> <Type>
+```
+
+`gen_module_api.py --check` compares every top-level `class_name` (+ `extends`), `func`/`static func`, `signal`, `const`, `var`
+and `enum` here with the code (`_private` names skipped). Consts, vars and enums may be grouped or listed as ranges, but a listed
+one must exist; every public `func`/`signal` in the code must be listed. Several statements per line with `;` are fine.
+Planned-but-unwritten API is marked so the check passes until the code lands: `# [planned]`, `# [planned: TA-12]` or
+`# [owner-task: TA-12]` in the comment of a line marks that line; on a `class_name` line it marks the class (it may be absent
+and its missing members are tolerated); or put one `# planned: ClassA, ClassB` comment line first in the block. Delete the
+marker when the task lands (symbols that exist are compared regardless). Autoloads: a bare `Log` line or
+`# autoload: godot/src/<module>/<file>.gd` before their members.
+
+## Invariants
+
+Numbered, testable statements ("I3: `height_at` returns identical values for identical inputs on server and client").
+A change to this section or to Public API is a contract change: the contract tests change first, in the same PR (ADR-11).
+
+## Data owned
+
+Packed arrays, side tables, files on disk, JSON defs read. *Hint: name the owner of each piece of state.*
+
+## Events emitted / consumed
+
+`SimEvent` kinds, signals (presentation only), commands accepted. *Hint: write None. for pure modules.*
+
+## Performance budget
+
+Per tick or per frame, from 03 s4.2 / s10.2, with the perf scenario that measures it.
+
+## Test entry points
+
+Existing paths under `godot/test/` or `tools/tests/` go in backticks: check_deps D10 verifies that every backticked
+path here exists. Planned tests go in plain text (no backticks) until the file is on disk.
+
+## How to add X (recipes for the cheapest tier)
+
+Step lists for the common extension tasks (a new def, a new SimEvent, a new order kind...).
+
+## Open items
+
+Linked task IDs.

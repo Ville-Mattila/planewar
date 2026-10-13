@@ -1,0 +1,40 @@
+{
+  "_doc": "02 s12.1 rules table (match_rules.json); R0 B.1 match_rules.json field list; R0 B.7 caps profiles (standard / reduced / lite); R0 B.6 and OQ-R0-8 keep per-mode core_exposure_s / hard_end_s in modes.json. Singleton file: one file-level _doc citing the sections, per-value citations are the rows of 02 s12.1 named here (victory, elimination, shield, surrender, session timing, caps).",
+  "victory": "all_enemy_cores",
+  "eliminate_on_core_loss": true,
+  "eliminated_selfdestruct_s": 60,
+  "core_value": 2000,
+  "core_shield_until_s": 480,
+  "core_bomb_mult_exposure": 1.25,
+  "surrender_min_s": 600,
+  "surrender_min_s_1v1": 180,
+  "reconnect_grace_s": 120,
+  "spectator_delay_ticks": 300,
+  "spectators_max": 4,
+  "join_window_s": 60,
+  "load_timeout_s": 60,
+  "countdown_s": 5,
+  "caps": {
+    "standard": {
+      "units": 80,
+      "structures": 60,
+      "projectiles": 2000,
+      "wrecks": 200,
+      "slots": 8
+    },
+    "reduced": {
+      "units": 40,
+      "structures": 40,
+      "projectiles": 1000,
+      "wrecks": 100,
+      "slots": 8
+    },
+    "lite": {
+      "units": 30,
+      "structures": 30,
+      "projectiles": 600,
+      "wrecks": 60,
+      "slots": 4
+    }
+  }
+}

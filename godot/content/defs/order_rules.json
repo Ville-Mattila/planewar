@@ -1,0 +1,105 @@
+{
+  "_doc": "05 s3.2-3.3 order rules (R0 B.1 order_rules.json, C2-06): arrival radii, timeouts, engage and orbit radii, queue cap, per-class allowed order kinds. 04 V-ORD reads allowed_kinds (towers: attack, hold, guard only; other structures none). Kinds 10-11 are reserved v1.x and can never be enabled; supply_drop (9) stays off until the SL-5 scope gate (C1-13) opens.",
+  "queue_max": 8,
+  "patrol_points": {
+    "min": 2,
+    "max": 8
+  },
+  "arrival_radius_ship_m": 150,
+  "arrival_radius_ground_m": 40,
+  "default_move_agl_m": 300,
+  "ghost_timeout_s": 30,
+  "attack_gun_duration_s": 20,
+  "patrol_engage_radius_m": 1200,
+  "escort_engage_radius_m": 1000,
+  "hold_orbit_radius_m": 250,
+  "guard_orbit_radius_m": 600,
+  "guard_engage_radius_m": 1500,
+  "haul_defended_fail_s": 20,
+  "no_pad_loiter_altitude_m": 400,
+  "no_pad_retry_s": 5,
+  "escort_slot_max": 7,
+  "enabled_kinds": [
+    "move",
+    "patrol",
+    "attack",
+    "escort",
+    "harvest_here",
+    "haul",
+    "return",
+    "hold",
+    "guard"
+  ],
+  "allowed_kinds": {
+    "dart": [
+      "move",
+      "patrol",
+      "attack",
+      "escort",
+      "return",
+      "hold",
+      "guard"
+    ],
+    "lancer": [
+      "move",
+      "patrol",
+      "attack",
+      "escort",
+      "return",
+      "hold",
+      "guard"
+    ],
+    "bomber": [
+      "move",
+      "patrol",
+      "attack",
+      "return",
+      "hold",
+      "guard"
+    ],
+    "scout": [
+      "move",
+      "patrol",
+      "return",
+      "hold",
+      "guard"
+    ],
+    "hauler": [
+      "move",
+      "patrol",
+      "haul",
+      "return",
+      "hold",
+      "guard"
+    ],
+    "harvester": [
+      "move",
+      "harvest_here",
+      "hold"
+    ],
+    "siege_crawler": [
+      "move",
+      "patrol",
+      "attack",
+      "hold",
+      "guard"
+    ],
+    "tower": [
+      "attack",
+      "hold",
+      "guard"
+    ],
+    "core": [
+      "supply_drop"
+    ],
+    "pad": [
+      "supply_drop"
+    ],
+    "hangar": [
+      "supply_drop"
+    ],
+    "relay_station": [
+      "supply_drop"
+    ]
+  }
+}

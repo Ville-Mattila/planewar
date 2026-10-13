@@ -1,0 +1,354 @@
+# PLANEWAR CI (TA-03, S-CI-1; docs/03 s1.4 and s14.5, R0 C1-11).
+# GitHub-hosted jobs assert correctness and the same-job A/B only. Absolute perf gates live on the pinned
+# self-hosted runner (TA-42) in nightly.yml. Commit-subject lint is REPO-06 (tools job, tools/lint_commits.py).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.7.2-stable
+
+jobs:
+  tools:
+    name: tools (python checks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: commit subjects reference backlog ids (REPO-06)
+        if: github.event_name == 'pull_request'
+        run: python tools/lint_commits.py "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+      - name: check_deps (D1-D10)
+        run: python tools/check_deps.py
+      - name: licence ledger (ART-32; docs/07 s8.4)
+        run: python tools/check_licences.py
+      - name: install tool dependencies (numpy, tools/requirements.txt)
+        run: python -m pip install -r tools/requirements.txt
+      - name: tools unit tests
+        run: python -m unittest discover -s tools/tests
+      - name: moonbake validate every map recipe (M1-M11 and schema; every PR, TA-15 / TA-17)
+        run: |
+          for r in godot/content/maps/*/recipe.json; do
+            python -I tools/moonbake validate "$r" --quiet
+          done
+      - name: LFS materialisation (TA-17, R14; a pointer instead of a blob fails)
+        run: python tools/check_lfs.py
+      - name: moonbake 03 s8.1 example bakes in < 60 s at 1024^2 x 6
+        run: |
+          time timeout 60 python -I tools/moonbake bake docs/examples/03/8-1-recipe-json-schema-tools-schemas-map-recipe-schema-json-01.json --out "$RUNNER_TEMP/bake_example" --no-preview --quiet
+      - name: doc examples are fresh
+        run: python tools/extract_doc_examples.py --check
+      - name: validate_content (schemas, defs, map recipes, every docs/examples JSON)
+        run: python tools/validate_content.py
+      - name: gen_module_api --check (MODULE.md vs code)
+        run: python tools/gen_module_api.py --check
+      - name: colour pipeline (cvd_check, negative fixture, atlas freshness)
+        run: |
+          python tools/art/cvd_check.py --selftest
+          python tools/art/cvd_check.py tools/blender/palette.json
+          if python tools/art/cvd_check.py tools/art/fixtures/palette_bad.json; then
+            echo "::error::cvd_check accepted the deliberately bad palette"; exit 1
+          fi
+          # build_palette.py --check compares PNG bytes, which differ per zlib build (Windows 3.14 zlib-ng vs Linux): compare pixels.
+          python .github/scripts/atlas_check.py
+      - name: CI helper scripts parse
+        run: python -m py_compile .github/scripts/*.py
+
+  bake-check:
+    name: bake-check (re-bake every map recipe; TA-17, 03 s8.6)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+      - name: Did recipes, the baker or the radius constant change?
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$base" HEAD | grep -Eq '^(tools/moonbake/|tools/bake_check\.py|tools/requirements\.txt|tools/schemas/map_recipe\.schema\.json|godot/content/maps/|godot/src/core/sphere\.gd|\.github/workflows/ci\.yml)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.changed.outputs.run == 'true'
+        with:
+          python-version: "3.13"
+      - name: install tool dependencies (numpy, pinned 2.3.x)
+        if: steps.changed.outputs.run == 'true'
+        run: python -m pip install -r tools/requirements.txt
+      - name: bake-check (every committed output and meta.json equals a fresh bake, byte for byte)
+        if: steps.changed.outputs.run == 'true'
+        run: python -I tools/bake_check.py
+      - name: bake-check self-test (stale meta.json and edited binaries must fail)
+        if: steps.changed.outputs.run == 'true'
+        run: python -m unittest discover -s tools/tests -p "test_bake_check.py"
+
+  godot-tests:
+    name: godot import, scenes, gdUnit4
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-godot
+      - name: Install gdUnit4 (allowed addon, 6.2.x)
+        run: .github/scripts/install_gdunit4.sh
+      - name: Import
+        run: godot --headless --path godot --import
+      - name: validate_scenes (TEST-01; every .tscn under res://scenes loads and instantiates)
+        run: godot --headless --path godot -s res://tools/validate_scenes.gd
+      - name: gdUnit4 unit/sim/net
+        run: |
+          # runtest.sh starts a windowed Godot unless GODOT_BIN adds --headless.
+          {
+            echo '#!/usr/bin/env bash'
+            echo "exec $GODOT_BIN --headless \"\$@\""
+          } > "$RUNNER_TEMP/godot-headless"
+          chmod +x "$RUNNER_TEMP/godot-headless"
+          export GODOT_BIN="$RUNNER_TEMP/godot-headless"
+          cd godot
+          for layer in unit sim net; do
+            if find test/$layer -name 'test_*.gd' | grep -q .; then
+              echo "::group::gdUnit4 $layer"
+              ./addons/gdUnit4/runtest.sh -a res://test/$layer -c --ignoreHeadlessMode -rd reports/$layer
+              echo "::endgroup::"
+            fi
+          done
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdunit-reports
+          path: |
+            reports
+            godot/reports
+          if-no-files-found: ignore
+
+  export:
+    name: export ${{ matrix.preset }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # web_spike_flight (TA-30): the S-FLIGHT-1 spike as the web main scene (custom feature spike_flight).
+        preset: [linux_server, windows_x64, web, linux_x64, web_spike_flight]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-godot
+        with:
+          templates: "true"
+      - name: Import
+        run: godot --headless --path godot --import
+      - name: Export ${{ matrix.preset }}
+        run: .github/scripts/export_preset.sh ${{ matrix.preset }} release
+      - name: Web size gate (Brotli sum)
+        if: matrix.preset == 'web' || matrix.preset == 'web_spike_flight'
+        run: |
+          sudo apt-get install -y --no-install-recommends brotli >/dev/null
+          python .github/scripts/size_gate.py build/${{ matrix.preset }} --budget-mb 20
+      - name: Upload build
+        if: matrix.preset != 'web_spike_flight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.preset }}
+          path: build/${{ matrix.preset }}
+          retention-days: 3
+      - name: Upload web-spike-flight (TA-30; the orchestrator publishes it to web/site/play/)
+        if: matrix.preset == 'web_spike_flight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-spike-flight
+          path: build/web_spike_flight
+          retention-days: 14
+
+  android:
+    name: export android_aab (debug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: ./.github/actions/setup-godot
+        with:
+          templates: "true"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: gradle-${{ hashFiles('godot/export_presets.cfg') }}-v1
+      - name: Android SDK, keystore, build template
+        run: .github/scripts/setup_android.sh
+      - name: Import
+        run: godot --headless --path godot --import
+      - name: Export android_aab (debug)
+        run: .github/scripts/export_preset.sh android_aab debug
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-android_aab
+          path: build/android
+          retention-days: 3
+
+  screenshot:
+    name: xvfb + llvmpipe screenshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-godot
+        with:
+          templates: "true"
+      - name: Xvfb and software GL
+        run: sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libglx-mesa0 libxcursor1 libxinerama1 libxi6 libxrandr2 >/dev/null
+      - name: Import
+        run: godot --headless --path godot --import
+      - name: Export linux_x64
+        run: .github/scripts/export_preset.sh linux_x64 release
+      - name: Smoke-run the windowed Linux build under Xvfb
+        run: |
+          xvfb-run -a -s "-screen 0 1280x720x24" build/linux_x64/planewar.x86_64 --rendering-driver opengl3 --quit-after 60
+      - name: Write one --write-movie PNG (screenshot scene; export excludes test/**)
+        run: |
+          mkdir -p shots
+          xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl3 \
+            --write-movie "$PWD/shots/shot.png" --fixed-fps 30 --quit-after 10 res://test/golden/shot_main.tscn
+          ls -l shots
+          python .github/scripts/png_check.py "$(ls shots/shot*.png | tail -1)" --min-ratio 0.01
+      - name: Upload screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot
+          path: shots
+          if-no-files-found: warn
+
+  soak:
+    name: soak 10 sim-minutes (real time)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-godot
+      - name: Import
+        run: godot --headless --path godot --import
+      - name: Soak (18,000 ticks at --fixed-fps 30, paced to wall clock)
+        run: |
+          set -o pipefail
+          godot --headless --path godot --fixed-fps 30 res://test/soak/soak_pr.tscn -- --minutes=10 --pace=realtime | tee soak.log
+      - name: Slope of per-minute p95 (< 2 %/min)
+        run: |
+          python .github/scripts/soak_slope.py soak.log --limit 2.0 | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Upload soak log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-log
+          path: |
+            soak.log
+            soak.log.md
+
+  ab-perf:
+    name: same-job A/B perf (base vs head)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          path: head
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+      - uses: ./head/.github/actions/setup-godot
+      - name: Give base the head benchmark harness (the bench is measured code-neutral, src differs)
+        run: |
+          mkdir -p base/godot/test/perf base/godot/test/soak
+          cp head/godot/test/perf/perf_tick.gd head/godot/test/perf/perf_tick.tscn base/godot/test/perf/
+          cp head/godot/test/soak/soak_world_stub.gd base/godot/test/soak/
+      - name: Import both trees
+        run: |
+          godot --headless --path head/godot --import
+          godot --headless --path base/godot --import
+      - name: A/B (fails above +25 % p95)
+        run: python head/.github/scripts/ab_perf.py --base base/godot --head head/godot --rounds 7 --ticks 3600 --threshold 25
+      - name: A/B noise, base vs base x 10 (report only)
+        run: python head/.github/scripts/ab_perf.py --base head/godot --head head/godot --noise 10 --rounds 7 --ticks 3600 --threshold 25
+
+  v11-presets:
+    name: v1.1 presets (ios_xcode, macos) when presets or workflows change
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+      - name: Did presets or workflows change?
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base" 2>/dev/null; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$base" HEAD | grep -Eq '^(godot/export_presets.cfg|\.github/)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: ./.github/actions/setup-godot
+        if: steps.changed.outputs.run == 'true'
+        with:
+          templates: "true"
+      - name: Import
+        if: steps.changed.outputs.run == 'true'
+        run: godot --headless --path godot --import
+      - name: Export ios_xcode (build check)
+        if: steps.changed.outputs.run == 'true'
+        run: .github/scripts/export_preset.sh ios_xcode release
+      - name: Export macos (build check)
+        if: steps.changed.outputs.run == 'true'
+        run: .github/scripts/export_preset.sh macos release

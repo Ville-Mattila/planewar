@@ -1,0 +1,2 @@
+"meteor_sets": [ {"set": 0, "anchor": "seam", "lat_deg": 30}, {"set": 1, "anchor": "seam", "lat_deg": -35},
+                 {"set": 2, "anchor": "midnight_pole"} ]

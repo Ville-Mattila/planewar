@@ -1,0 +1,815 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "map_recipe.schema.json",
+  "title": "Map recipe (godot/content/maps/<map_id>/recipe.json)",
+  "$comment": "03 s8.1 / R0 B.2; resources block is 02 s9.1 verbatim. base_noise lacunarity/gain/warp_m, crater ejecta_m and scatter seed_offset are optional because 07 s9.1's example omits them (baker defaults; TA-07 may tighten). Unique feature ids are a validate_content.py check.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "$ref": "#/$defs/id"
+    },
+    "display_key": {
+      "type": "string"
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4294967295,
+      "$comment": "uint32"
+    },
+    "radius_m": {
+      "const": 6000,
+      "$comment": "must equal Sphere.PLANET_RADIUS (owner-confirmed 2026-10-10, 01 s5.1)"
+    },
+    "face_resolution": {
+      "enum": [
+        1024,
+        128
+      ],
+      "$comment": "1024 in v1; tiny_test 128"
+    },
+    "relief": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_m": {
+          "const": -500
+        },
+        "max_m": {
+          "const": 700
+        }
+      },
+      "required": [
+        "min_m",
+        "max_m"
+      ]
+    },
+    "symmetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rotational": {
+          "const": 8
+        },
+        "wedge_start_deg": {
+          "const": 22.5
+        }
+      },
+      "required": [
+        "rotational",
+        "wedge_start_deg"
+      ]
+    },
+    "base_noise": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "octaves": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        },
+        "freq_per_circumference": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "amp_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1200
+        },
+        "lacunarity": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "gain": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "warp_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000
+        }
+      },
+      "required": [
+        "octaves",
+        "freq_per_circumference",
+        "amp_m"
+      ]
+    },
+    "highlands": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "amplitude_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1200
+        },
+        "mask_frequency": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100
+        },
+        "threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "softness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "amplitude_m",
+        "mask_frequency",
+        "threshold",
+        "softness"
+      ]
+    },
+    "regions": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/region_mare"
+          },
+          {
+            "$ref": "#/$defs/region_highland"
+          }
+        ],
+        "$comment": "exactly one of the two kind-specific shapes (B.2)"
+      }
+    },
+    "craters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "explicit": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lon": {
+                "type": "number",
+                "minimum": -360,
+                "maximum": 360
+              },
+              "diam_m": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 20000
+              },
+              "depth_m": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1200
+              },
+              "rim_m": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1200
+              },
+              "ejecta_m": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 40000
+              }
+            },
+            "required": [
+              "lat",
+              "lon",
+              "diam_m",
+              "depth_m",
+              "rim_m"
+            ]
+          }
+        },
+        "scatter": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "per_wedge": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 2000
+            },
+            "diam_m": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 20000
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "power": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "seed_offset": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            }
+          },
+          "required": [
+            "per_wedge",
+            "diam_m",
+            "power"
+          ]
+        }
+      }
+    },
+    "rilles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          "width_m": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 2000
+          },
+          "depth_m": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1200
+          }
+        },
+        "required": [
+          "path",
+          "width_m",
+          "depth_m"
+        ]
+      }
+    },
+    "slots": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8,
+          "$comment": "8 on v1 maps; tiny_test 2"
+        },
+        "lon0_deg": {
+          "const": 22.5
+        },
+        "spacing_deg": {
+          "const": 45
+        },
+        "flatten_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "flatten_edge_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "flatten_slope_deg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "facing_deg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        }
+      },
+      "required": [
+        "count",
+        "lon0_deg",
+        "spacing_deg",
+        "flatten_radius_m",
+        "flatten_edge_m",
+        "flatten_slope_deg",
+        "facing_deg"
+      ]
+    },
+    "poles": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "noon_plateau_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "noon_plateau_height_m": {
+          "type": "number",
+          "minimum": -500,
+          "maximum": 700
+        },
+        "midnight_ice_ring": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "noon_plateau_radius_m",
+        "noon_plateau_height_m",
+        "midnight_ice_ring"
+      ]
+    },
+    "boulder_fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "lon": {
+            "type": "number",
+            "minimum": -360,
+            "maximum": 360
+          },
+          "radius_m": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 20000
+          },
+          "density": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "lat",
+          "lon",
+          "radius_m",
+          "density"
+        ]
+      }
+    },
+    "biome_rules": {
+      "oneOf": [
+        {
+          "const": "default"
+        },
+        {
+          "type": "object"
+        }
+      ],
+      "$comment": "07 s9.3 first-match rules"
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "slot_features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "ore_field",
+                  "cold_trap",
+                  "start_refinery",
+                  "relay_station",
+                  "solar_plateau"
+                ]
+              },
+              "capacity": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "regen_per_s": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "rate_per_s": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "radius_m": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 5000
+              },
+              "max_miners": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              },
+              "bearing_deg": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 360
+              },
+              "distance_m": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 20000
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "bearing_deg",
+              "distance_m"
+            ]
+          }
+        },
+        "ring_features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "ore_field",
+                  "cold_trap",
+                  "start_refinery",
+                  "relay_station",
+                  "solar_plateau"
+                ]
+              },
+              "capacity": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "regen_per_s": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "rate_per_s": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "radius_m": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 5000
+              },
+              "max_miners": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              },
+              "lat_deg": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lon_offset_deg": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 45
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "lat_deg",
+              "lon_offset_deg"
+            ]
+          }
+        },
+        "pole_features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "enum": [
+                  "ore_field",
+                  "cold_trap",
+                  "start_refinery",
+                  "relay_station",
+                  "solar_plateau"
+                ]
+              },
+              "capacity": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000000
+              },
+              "regen_per_s": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "rate_per_s": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "radius_m": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 5000
+              },
+              "max_miners": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16
+              },
+              "pole": {
+                "enum": [
+                  "noon",
+                  "midnight"
+                ]
+              },
+              "bearing_deg": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 360
+              },
+              "distance_m": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 20000
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "pole",
+              "bearing_deg",
+              "distance_m"
+            ]
+          }
+        },
+        "unused_slot_yield": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "slot_features",
+        "ring_features",
+        "pole_features",
+        "unused_slot_yield"
+      ]
+    },
+    "neutral_structures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "def": {
+            "$ref": "#/$defs/id"
+          },
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "lon": {
+            "type": "number",
+            "minimum": -360,
+            "maximum": 360
+          },
+          "facing_deg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360
+          }
+        },
+        "required": [
+          "def",
+          "lat",
+          "lon",
+          "facing_deg"
+        ]
+      }
+    },
+    "rules_overrides": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sun_period_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 86400
+        },
+        "sun_axis": {
+          "enum": [
+            "x",
+            "y",
+            "z"
+          ]
+        },
+        "sun_phase_deg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "cold_trap_sunlit_mult": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "meteor_sets": {
+      "type": "array",
+      "$comment": "reserved for v1.x (08 SL-6); the v1 baker ignores it with a warning",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "set": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 64
+          },
+          "anchor": {
+            "enum": [
+              "seam",
+              "midnight_pole",
+              "noon_pole"
+            ]
+          },
+          "lat_deg": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "lon_deg": {
+            "type": "number",
+            "minimum": -360,
+            "maximum": 360
+          }
+        },
+        "required": [
+          "set",
+          "anchor"
+        ]
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "seed",
+    "radius_m",
+    "face_resolution",
+    "relief",
+    "symmetry",
+    "base_noise",
+    "slots",
+    "poles",
+    "biome_rules",
+    "resources"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "region_mare": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "mare"
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -360,
+          "maximum": 360
+        },
+        "radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "edge_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "floor_m": {
+          "type": "number",
+          "minimum": -500,
+          "maximum": 700,
+          "$comment": "relief range -500..700 m (01 s5.1 hard constraint, R0 B.2 relief)"
+        }
+      },
+      "required": [
+        "kind",
+        "lat",
+        "lon",
+        "radius_m",
+        "floor_m",
+        "edge_m"
+      ],
+      "$comment": "B.2 regions[] for kind mare: floor_m is the mare floor; no height_m"
+    },
+    "region_highland": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "highland"
+        },
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -360,
+          "maximum": 360
+        },
+        "radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "edge_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "height_m": {
+          "type": "number",
+          "minimum": -500,
+          "maximum": 700,
+          "$comment": "relief range -500..700 m (01 s5.1 hard constraint, R0 B.2 relief)"
+        }
+      },
+      "required": [
+        "kind",
+        "lat",
+        "lon",
+        "radius_m",
+        "height_m",
+        "edge_m"
+      ],
+      "$comment": "B.2 regions[] for kind highland: height_m is the ridge height; no floor_m"
+    }
+  }
+}

@@ -1,0 +1,201 @@
+{
+ "weapons": [
+  {
+   "id": "gun_dart",
+   "status": "core",
+   "tags": [
+    "weapon"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/gun_dart.glb"
+   },
+   "kind": "gun",
+   "weapon_mount": "ship",
+   "projectile": "slug_light",
+   "damage_min": 6,
+   "damage_max": 14,
+   "ammo_per_shot": 1,
+   "structure_mult": 0.15,
+   "ground_mult": 1.0,
+   "rof": 10,
+   "range_m": 800,
+   "spread_deg": 0.6
+  },
+  {
+   "id": "gun_lancer",
+   "status": "core",
+   "tags": [
+    "weapon"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/gun_lancer.glb"
+   },
+   "kind": "gun",
+   "weapon_mount": "ship",
+   "projectile": "slug_heavy",
+   "damage_min": 8,
+   "damage_max": 16,
+   "ammo_per_shot": 1,
+   "structure_mult": 0.35,
+   "ground_mult": 1.0,
+   "rof": 8,
+   "range_m": 800,
+   "spread_deg": 0.8
+  },
+  {
+   "id": "gun_turret",
+   "status": "core",
+   "tags": [
+    "weapon"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/gun_turret.glb"
+   },
+   "kind": "gun",
+   "weapon_mount": "tower",
+   "projectile": "slug_light",
+   "damage_min": 6,
+   "damage_max": 14,
+   "ammo_per_shot": 1,
+   "structure_mult": 0.15,
+   "ground_mult": 1.0,
+   "rof": 12,
+   "burst": 5,
+   "burst_interval_s": 1.2,
+   "range_m": 700,
+   "spread_deg": 1.0
+  },
+  {
+   "id": "bomb",
+   "status": "core",
+   "tags": [
+    "weapon"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/bomb.glb"
+   },
+   "kind": "bomb",
+   "weapon_mount": "ship",
+   "projectile": "bomb",
+   "damage_min": 400,
+   "damage_max": 400,
+   "ammo_per_shot": 1,
+   "structure_mult": 1.0,
+   "ground_mult": 1.0,
+   "rof": 2.5,
+   "rearm_ice": 10
+  },
+  {
+   "id": "rocket_lancer",
+   "status": "core",
+   "tags": [
+    "weapon"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/rocket_lancer.glb"
+   },
+   "kind": "rocket",
+   "weapon_mount": "ship",
+   "projectile": "rocket",
+   "damage_min": 40,
+   "damage_max": 40,
+   "ammo_per_shot": 1,
+   "structure_mult": 1.0,
+   "ground_mult": 1.0,
+   "rof": 1.67,
+   "salvo": 1,
+   "range_m": 1500,
+   "lock_cone_deg": 20,
+   "lock_time_s": 0.8,
+   "turn_rate_dps": 90,
+   "rearm_ice": 4
+  },
+  {
+   "id": "rocket_tower",
+   "status": "core",
+   "tags": [
+    "weapon"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/rocket_tower.glb"
+   },
+   "kind": "rocket",
+   "weapon_mount": "tower",
+   "projectile": "rocket",
+   "damage_min": 40,
+   "damage_max": 40,
+   "ammo_per_shot": 1,
+   "salvo": 2,
+   "reload_s": 6.0,
+   "range_m": 1500,
+   "lock_cone_deg": 360,
+   "lock_time_s": 1.0,
+   "turn_rate_dps": 75
+  },
+  {
+   "id": "flak_gun",
+   "status": "core",
+   "tags": [
+    "weapon"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/flak_gun.glb"
+   },
+   "kind": "flak",
+   "weapon_mount": "tower",
+   "projectile": "flak_shell",
+   "damage_min": 30,
+   "damage_max": 30,
+   "ammo_per_shot": 1,
+   "salvo": 2,
+   "reload_s": 2.0,
+   "range_m": 1500,
+   "spread_deg": 0.5
+  },
+  {
+   "id": "rail_gun",
+   "status": "core",
+   "tags": [
+    "weapon"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/rail_gun.glb"
+   },
+   "kind": "rail",
+   "weapon_mount": "tower",
+   "projectile": "rail_slug",
+   "damage_min": 250,
+   "damage_max": 250,
+   "ammo_per_shot": 1,
+   "structure_mult": 1.0,
+   "ground_mult": 1.0,
+   "salvo": 1,
+   "reload_s": 8.0,
+   "range_m": 2500,
+   "spread_deg": 0.1
+  },
+  {
+   "id": "siege_gun",
+   "status": "core",
+   "tags": [
+    "weapon"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/siege_gun.glb"
+   },
+   "kind": "artillery",
+   "weapon_mount": "ground",
+   "projectile": "siege_shell",
+   "damage_min": 120,
+   "damage_max": 120,
+   "ammo_per_shot": 1,
+   "structure_mult": 1.0,
+   "ground_mult": 1.0,
+   "salvo": 1,
+   "reload_s": 4.0,
+   "range_m": 1200,
+   "range_min_m": 300,
+   "spread_deg": 1.5
+  }
+ ]
+}

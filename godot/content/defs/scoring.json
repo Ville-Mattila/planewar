@@ -1,0 +1,72 @@
+{
+  "_doc": "02 s17.1 score events table and landing-grade formula (scoring.json); R0 B.1 scoring.json (ScoringDef, 02 with the 08 SL-1 landing block); R0 C3-13 landing grades. Points are integers; ratios are per unit as the 02 event column states. Singleton file: one file-level _doc, the per-value citations are the 02 s17.1 event rows named by each key.",
+  "kill_points": {
+    "scout": 50,
+    "dart": 100,
+    "hauler": 100,
+    "lancer": 150,
+    "bomber": 250,
+    "harvester": 120,
+    "siege_crawler": 150
+  },
+  "kill_hauler_loaded_bonus": 50,
+  "structure_destroyed_ratio": 0.2,
+  "core_destroyed": 1000,
+  "structure_damage_points_per_hp": 0.1,
+  "assist": {
+    "window_s": 10,
+    "min_share": 0.25,
+    "kill_share": 0.5
+  },
+  "landing": {
+    "points": {
+      "hard": 5,
+      "fair": 15,
+      "clean": 30,
+      "ace": 50
+    },
+    "q_thresholds": {
+      "fair": 0.4,
+      "clean": 0.65,
+      "ace": 0.85
+    },
+    "q_weights": {
+      "v_vert": 0.35,
+      "v_horiz": 0.25,
+      "tilt": 0.2,
+      "offset": 0.2
+    },
+    "q_norms": {
+      "v_vert_mps": 8,
+      "v_horiz_mps": 15,
+      "tilt_deg": 25
+    },
+    "hot_mult": 1.5,
+    "hot_enemy_range_m": 1500,
+    "hot_hit_window_s": 5,
+    "dead_stick_bonus": 20,
+    "dead_stick_fuel01": 0.03,
+    "repair_time_mult": 0.9
+  },
+  "landing_grade": {
+    "_doc": "08 SL-1 Data block scoring.json landing_grade (I-10, v1): q weights, grade thresholds, points, hot and dead-stick modifiers, manual window. Mirrors the 02 s17.1 landing block above; validate_content.py enforces equality and weights summing to 1.0.",
+    "weights": {"v_vert": 0.35, "v_horiz": 0.25, "tilt": 0.20, "offset": 0.20},
+    "thresholds": {"ace": 0.85, "clean": 0.65, "fair": 0.40},
+    "points": {"ace": 50, "clean": 30, "fair": 15, "hard": 5},
+    "hot_multiplier": 1.5,
+    "hot_radius_m": 1500,
+    "hot_window_s": 5,
+    "dead_stick_fuel01": 0.03,
+    "dead_stick_points": 20,
+    "manual_window_m": 150
+  },
+  "salvage_points_per_ore": 0.25,
+  "ice_possessed_points_per_ice": 0.1,
+  "relay": {
+    "capture": 300,
+    "hold_per_min": 10
+  },
+  "commander_points_per_ore_spent": 0.04,
+  "commander_auto_kill_share": 0.5,
+  "match_win": 500
+}

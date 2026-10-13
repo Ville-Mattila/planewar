@@ -1,0 +1,11 @@
+{ "id": "dart", "status": "core", "tags": ["ship", "fighter"],
+  "hp": 100, "cost_ore": 150, "cost_ice": 0, "build_time_s": 20, "produced_at": "shipyard", "requires": ["shipyard"],
+  "sensor_radius": 1400, "bounding_radius": 6, "score_value": 100,
+  "v_cruise": 110, "v_boost": 160, "boost_duration_s": 6, "boost_cooldown_s": 20, "v_dive_max": 190, "a_thrust": 24,
+  "pitch_rate_dps": 120, "yaw_rate_dps": 60, "roll_rate_dps": 180, "rate_accel_dps2": 720,
+  "flip_cooldown_s": 2.0, "flip_duration_s": 0.5,
+  "k_side": 0.5, "k_up": 0.1, "k_up_flight": 1.0,
+  "primary": { "weapon": "gun_dart", "ammo": 400 }, "secondary": { "weapon": "bomb", "count": 2 },
+  "fuel_s": 240, "refuel_ice": 20, "refuel_time_s": 10, "rearm_time_s": 6, "repair_time_s": 15,
+  "cargo_ice": 0, "tow_slots": 0, "possessable": true, "autopilot": "ap_dart",
+  "presentation": { "mesh": "res://assets/ships/dart.glb", "smoke_hp01": [0.75, 0.5, 0.25] } }

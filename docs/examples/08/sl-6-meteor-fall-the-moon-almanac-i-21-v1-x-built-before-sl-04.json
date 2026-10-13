@@ -1,0 +1,6 @@
+{ "meteor_fall": {
+    "first_at_s": 480, "interval_s": 420, "jitter_s": 60, "max_per_match": 4,
+    "warn_s": [60, 10], "site_radius_m": 400, "fragments_per_site": 5,
+    "spawn_alt_m": 1900, "spawn_back_m": 300, "flight_s": 8,
+    "kill_radius_m": 25, "damage": 150, "damage_radius_m": 40,
+    "pole_ring_frac": 0.6, "wreck_def": "wreck_meteor" } }

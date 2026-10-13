@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "economy.schema.json",
+  "title": "EconomyDef (godot/content/defs/economy.json)",
+  "$comment": "R0 B.1 economy.json; 02 s8.1.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "start_ore": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000,
+      "$comment": "01 anchor 800"
+    },
+    "start_ice": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5000,
+      "$comment": "01 anchor 300"
+    },
+    "start_kit": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "uniqueItems": true
+    },
+    "core_trickle_ore_per_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 20,
+      "$comment": "01 anchor 1.0"
+    },
+    "repair_ore_per_hp": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "wreck_fraction": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "wreck_lifetime_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 600
+    },
+    "salvage_pod_max_ore": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5000
+    },
+    "solar_band_deg": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "solar_plateau_mult": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "solar_plateau_radius_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5000
+    },
+    "tower_offline_ratio": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "production_min_speed": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "pipe_radius_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5000
+    },
+    "refinery_docks": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "hauler_transfer_per_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "queue_max": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20
+    },
+    "construction_slots_base": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "construction_slots_max": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "cancel_refund_queued": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "cancel_refund_assembly": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "self_repair_delay_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 300
+    },
+    "early_share_lock_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1200
+    },
+    "early_share_ore": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "unused_slot_yield": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  },
+  "required": [
+    "cancel_refund_assembly",
+    "cancel_refund_queued",
+    "construction_slots_base",
+    "construction_slots_max",
+    "core_trickle_ore_per_s",
+    "early_share_lock_s",
+    "early_share_ore",
+    "hauler_transfer_per_s",
+    "pipe_radius_m",
+    "production_min_speed",
+    "queue_max",
+    "refinery_docks",
+    "repair_ore_per_hp",
+    "salvage_pod_max_ore",
+    "self_repair_delay_s",
+    "solar_band_deg",
+    "solar_plateau_mult",
+    "solar_plateau_radius_m",
+    "start_ice",
+    "start_kit",
+    "start_ore",
+    "tower_offline_ratio",
+    "unused_slot_yield",
+    "wreck_fraction",
+    "wreck_lifetime_s"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{ "schema_version": 1, "id": "cradle", "seed": 91027,
+  "radius_m": 6000, "face_resolution": 1024, "relief": { "min_m": -500, "max_m": 700 },
+  "symmetry": { "rotational": 8, "wedge_start_deg": 22.5 },
+  "base_noise": { "octaves": 5, "freq_per_circumference": 6, "amp_m": 90 },
+  "regions": [ { "kind": "mare", "lat": 8, "lon": 45, "radius_m": 3200, "floor_m": -320, "edge_m": 600 } ],
+  "craters": { "explicit": [ { "lat": 30, "lon": 45, "diam_m": 2400, "depth_m": 280, "rim_m": 220 } ],
+               "scatter": { "per_wedge": 60, "diam_m": [60, 600], "power": 2.2 } },
+  "rilles": [ { "path": [[10, 30], [22, 45], [28, 60]], "width_m": 160, "depth_m": 70 } ],
+  "slots": { "count": 8, "lon0_deg": 22.5, "spacing_deg": 45, "flatten_radius_m": 300, "flatten_edge_m": 150, "flatten_slope_deg": 5, "facing_deg": 0 },
+  "poles": { "noon_plateau_radius_m": 1000, "noon_plateau_height_m": 150, "midnight_ice_ring": true },
+  "boulder_fields": [ { "lat": -5, "lon": 40, "radius_m": 800, "density": 0.4 } ],
+  "biome_rules": "default",
+  "resources": { "slot_features": [], "ring_features": [], "pole_features": [], "unused_slot_yield": 0.5 } }

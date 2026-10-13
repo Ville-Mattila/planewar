@@ -1,0 +1,448 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "towers.schema.json",
+  "title": "StructureDef[] with tower block (godot/content/defs/towers.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "towers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/structure"
+      }
+    }
+  },
+  "required": [
+    "towers"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "structure": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "hp": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000
+        },
+        "cost_ore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "cost_ice": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "build_time_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 300,
+          "$comment": "01 s3.2 anchor 20-90 s for buildables; 0 for core / relay_station; Pylon 10"
+        },
+        "power": {
+          "type": "number",
+          "minimum": -100,
+          "maximum": 100,
+          "$comment": "signed: + produces, - draws"
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "footprint": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "$comment": "[w, h] build cells"
+        },
+        "build_radius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "sensor_radius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "deck_reveal_radius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "storage_ore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "storage_ice": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20000
+        },
+        "construction_slots": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "pads": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "pad_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "pad_roofed": {
+          "type": "boolean"
+        },
+        "max_per_player": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "buildable": {
+          "type": "boolean"
+        },
+        "invulnerable": {
+          "type": "boolean"
+        },
+        "upgrade_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "upgrade_cost_ore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "upgrade_time_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 300
+        },
+        "possessable": {
+          "type": "boolean"
+        },
+        "on_node": {
+          "enum": [
+            "cold_trap",
+            "ore_field",
+            null
+          ]
+        },
+        "buffer_ice": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "pipe_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "docks": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "solar": {
+          "type": "boolean"
+        },
+        "explode": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "radius_m",
+            "damage"
+          ],
+          "properties": {
+            "radius_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "damage": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 5000
+            }
+          }
+        },
+        "integrated_shield": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "charge_max",
+            "recharge_per_s",
+            "recharge_delay_s"
+          ],
+          "properties": {
+            "charge_max": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 20000
+            },
+            "recharge_per_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "recharge_delay_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            }
+          }
+        },
+        "shield": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "dome_radius": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2000
+            },
+            "charge_max": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 20000
+            },
+            "recharge_per_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "recharge_delay_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "recharge_ice_per_point": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "collapse_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "exposure_charge_mult": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "exposure_recharge_mult": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "charge_max",
+            "collapse_s",
+            "dome_radius",
+            "exposure_charge_mult",
+            "exposure_recharge_mult",
+            "recharge_delay_s",
+            "recharge_ice_per_point",
+            "recharge_per_s"
+          ]
+        },
+        "tower": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "weapon": {
+              "$ref": "#/$defs/id"
+            },
+            "ammo_pool": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "ammo_refill_per_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "h_rel_min": {
+              "type": "number",
+              "minimum": -2000,
+              "maximum": 2000
+            },
+            "h_rel_max": {
+              "type": "number",
+              "minimum": -2000,
+              "maximum": 2000
+            },
+            "target_agl_min": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2000
+            },
+            "turret_turn_dps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 720
+            },
+            "target_kinds": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "ship",
+                  "ground"
+                ]
+              },
+              "uniqueItems": true
+            },
+            "target_priority": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "weapon",
+            "ammo_pool",
+            "ammo_refill_per_s",
+            "h_rel_min",
+            "h_rel_max",
+            "turret_turn_dps",
+            "target_kinds",
+            "target_priority"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "presentation",
+        "hp",
+        "cost_ore",
+        "cost_ice",
+        "build_time_s",
+        "power",
+        "sensor_radius"
+      ],
+      "$comment": "R0 B.1 StructureDef (shared by structures.json and towers.json; towers carry a tower block); 02 s5. Fields shown as '-' in 02 are omitted (default 0 / null)."
+    }
+  }
+}

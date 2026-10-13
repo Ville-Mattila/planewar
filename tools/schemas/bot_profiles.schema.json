@@ -1,0 +1,302 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bot_profiles.schema.json",
+  "title": "BotProfileDef[] (godot/content/defs/bot_profiles.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "bot_profiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/bot_profile"
+      }
+    }
+  },
+  "required": [
+    "bot_profiles"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "bot_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "enum": [
+            "easy",
+            "normal",
+            "hard",
+            "brutal",
+            "adjutant_assist",
+            "adjutant_caretaker",
+            "adjutant_economy"
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "promise": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "enum": [
+                "easy",
+                "normal",
+                "hard",
+                "brutal"
+              ]
+            }
+          ]
+        },
+        "think_period_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 900
+        },
+        "reaction_delay_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "max_commands_per_min": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "max_commands_per_think": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "concurrent_squads": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16
+        },
+        "vision": {
+          "enum": [
+            "own",
+            "team"
+          ]
+        },
+        "ghost_memory_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600
+        },
+        "rescout_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1800,
+          "$comment": "0 = never re-scouts"
+        },
+        "raid_period_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600
+        },
+        "siege_period_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1800
+        },
+        "human_order_lock_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600
+        },
+        "ore_reserve": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "ice_reserve": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "rosters": {
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "open",
+              "expand",
+              "siege",
+              "overtime"
+            ]
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 200
+            }
+          },
+          "$comment": "rosters {phase: {class: n}} (R0 B.1); phase = MatchArc lowercased"
+        },
+        "books": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "adjutant": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "economy": {
+              "type": "boolean"
+            },
+            "replenish": {
+              "type": "boolean"
+            },
+            "defence": {
+              "type": "boolean"
+            },
+            "expand": {
+              "type": "boolean"
+            },
+            "towers_allowed": {
+              "type": "boolean"
+            },
+            "outposts_allowed": {
+              "type": "boolean"
+            },
+            "military": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "defence",
+            "economy",
+            "expand",
+            "military",
+            "outposts_allowed",
+            "replenish",
+            "towers_allowed"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "adjutant",
+        "books",
+        "concurrent_squads",
+        "ghost_memory_s",
+        "human_order_lock_s",
+        "ice_reserve",
+        "max_commands_per_min",
+        "max_commands_per_think",
+        "ore_reserve",
+        "promise",
+        "raid_period_s",
+        "reaction_delay_s",
+        "rescout_s",
+        "rosters",
+        "siege_period_s",
+        "think_period_ticks",
+        "vision"
+      ],
+      "$comment": "R0 B.1 / 05 s7.8, s8. Cadence and rate fields must equal the referenced promise (validate_content.py cross-check, R0 C2-13)."
+    }
+  }
+}

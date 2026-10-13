@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ground_units.schema.json",
+  "title": "GroundUnitDef[] (godot/content/defs/ground_units.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "ground_units": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ground_unit"
+      }
+    }
+  },
+  "required": [
+    "ground_units"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "ground_unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "hp": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "cost_ore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "cost_ice": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "build_time_s": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 300
+        },
+        "produced_at": {
+          "$ref": "#/$defs/id"
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "ground_speed": {
+          "type": "number",
+          "minimum": 6.8,
+          "maximum": 13.799999999999999,
+          "$comment": "anchor +-15 % around [8, 12]"
+        },
+        "ground_speed_loaded": {
+          "type": "number",
+          "minimum": 8.5,
+          "maximum": 11.5,
+          "$comment": "anchor +-15 % around [10]"
+        },
+        "max_slope_deg": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 45
+        },
+        "cargo_ore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "mine_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "unload_time_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 120
+        },
+        "weapon": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "ammo": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "sensor_radius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "bounding_radius": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 50
+        },
+        "score_value": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "possessable": {
+          "type": "boolean"
+        },
+        "autopilot": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "presentation",
+        "hp",
+        "cost_ore",
+        "cost_ice",
+        "build_time_s",
+        "produced_at",
+        "requires",
+        "ground_speed",
+        "max_slope_deg",
+        "weapon",
+        "sensor_radius",
+        "bounding_radius",
+        "score_value",
+        "possessable",
+        "autopilot"
+      ],
+      "$comment": "R0 B.1; 02 s3. Fields shown as '-' in 02 are omitted (default 0 / null)."
+    }
+  }
+}

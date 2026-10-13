@@ -1,0 +1,28 @@
+MEAS sources res://content/defs/rules.json,res://spikes/s_flight_1/defs/ships.json,res://spikes/s_flight_1/defs/weapons.json,res://spikes/s_flight_1/defs/weapons.json,res://spikes/s_flight_1/defs/projectiles.json,res://content/defs/structures.json
+MEAS aoa_deg speed_scaled dart v=0.70xcruise mean=8.08 alt_err_max=0.29 thrust=0.035
+MEAS aoa_deg speed_scaled dart v=0.90xcruise mean=4.16 alt_err_max=0.11 thrust=0.037
+MEAS aoa_deg speed_scaled dart v=1.00xcruise mean=3.17 alt_err_max=0.11 thrust=0.442
+MEAS aoa_deg speed_scaled bomber v=0.70xcruise mean=10.25 alt_err_max=0.52 thrust=0.076
+MEAS aoa_deg speed_scaled bomber v=0.90xcruise mean=5.40 alt_err_max=0.11 thrust=0.081
+MEAS aoa_deg speed_scaled bomber v=1.00xcruise mean=4.21 alt_err_max=0.08 thrust=0.521
+MEAS aoa_deg damping_only dart v=0.70xcruise mean=32.92 alt_err_max=93.29 thrust=0.139
+MEAS aoa_deg damping_only dart v=0.90xcruise mean=28.19 alt_err_max=11.69 thrust=0.230
+MEAS aoa_deg damping_only dart v=1.00xcruise mean=26.53 alt_err_max=9.60 thrust=1.000
+MEAS aoa_deg damping_only bomber v=0.70xcruise mean=33.98 alt_err_max=59.08 thrust=0.245
+MEAS aoa_deg damping_only bomber v=0.90xcruise mean=29.23 alt_err_max=13.13 thrust=0.387
+MEAS aoa_deg damping_only bomber v=1.00xcruise mean=27.78 alt_err_max=11.10 thrust=1.000
+MEAS gun_coalt dist=200 shots=11 hits=11 rate=1.00
+MEAS gun_coalt dist=400 shots=11 hits=11 rate=1.00
+MEAS gun_coalt dist=650 shots=11 hits=11 rate=1.00
+MEAS gun_coalt dist=800 shots=11 hits=9 rate=0.82
+MEAS flip end speed=105.9 loss=4% dh=-8.0 vel_dot_east=1.00 nose_dot_east=-1.00
+MEAS flip +1s speed=94.4 loss=14% dh=-17.7 vel_dot_east=0.99 nose_dot_east=-1.00
+MEAS flip +3s speed=72.7 loss=34% dh=-51.0 vel_dot_east=0.94 nose_dot_east=-1.00
+MEAS hover dart a_thrust/g=4.00 hover_throttle=0.250 max_tilt_at_1g=75.5
+MEAS hover bomber a_thrust/g=2.33 hover_throttle=0.429 max_tilt_at_1g=64.6
+MEAS interp60 mean_disp_m=1.825 std_m=0.0003 cv=0.02%
+MEAS interp60_off mean_disp_m=1.833 std_m=1.8333 cv=100.00%
+MEAS autoland_runs runs=200 landed=200 hard=0 crash=0 timeout=0 success=100.0% mean_q=0.912 mean_time_s=58.3
+MEAS dock_runs runs=200 landed=200 hard=0 crash=0 timeout=0 success=100.0% mean_q=0.909 mean_time_s=25.4
+MEAS dock_fast_runs runs=200 landed=200 hard=0 crash=0 timeout=0 success=100.0% mean_q=0.907 mean_time_s=30.3
+MEAS world_tick_us mean=136.8 (gun firing, 15 targets)

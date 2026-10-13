@@ -1,0 +1,43 @@
+{
+  "_doc": "Module dependency table = docs/reviews/R0-resolution-register.md Part B.4 (01 s9.2 as amended), encoded verbatim for tools/check_deps.py (docs/03 s12.4). Adding an allowed edge, a named type or a d3_allowlist entry is an ADR amendment (ADR-14).",
+  "modules": {
+    "core":         {"may_depend_on": []},
+    "content":      {"may_depend_on": ["core"]},
+    "sim":          {"may_depend_on": ["core", "content"]},
+    "sim_ai":       {"may_depend_on": ["core", "content", "sim"]},
+    "net":          {"may_depend_on": ["core", "content"],
+                     "named_types": {"sim": ["SimWorld", "Command", "PilotInput", "Kinematics", "SimView", "Assist", "Terrain"]}},
+    "server":       {"may_depend_on": ["core", "content", "sim", "sim_ai", "net", "platform"]},
+    "presentation": {"may_depend_on": ["core", "content"],
+                     "named_types": {"sim": ["SimView", "SimEvent", "Terrain"], "net": ["NetSimView"]}},
+    "camera":       {"may_depend_on": ["core", "presentation"]},
+    "input":        {"may_depend_on": ["core"],
+                     "named_types": {"sim": ["PilotInput"]}},
+    "ui":           {"may_depend_on": ["core", "content", "input", "camera", "presentation", "net"],
+                     "named_types": {"sim": ["SimView", "SimEvent", "Command", "CommandResult", "PilotInput", "AlertKind", "OrderSpec", "LandingGrade", "Terrain"]}},
+    "platform":     {"may_depend_on": ["core"]},
+    "campaign":     {"may_depend_on": ["core", "content", "ui"],
+                     "named_types": {"sim": ["Command", "CommandResult", "SimEvent", "SimView", "CommandSinkBase"]}},
+    "app":          {"may_depend_on": "*"}
+  },
+  "no_nodes_modules": ["sim", "sim_ai", "core"],
+  "d3_allowlist": {"src/app/offline_host.gd": ["Thread"]},
+  "autoloads": ["Log", "ContentDB", "App"],
+  "addons": ["gdUnit4", "nakama"],
+  "addon_ref_allowed": ["godot/test/", "godot/src/platform/"],
+  "warning_keys": [
+    "untyped_declaration", "inferred_declaration", "unsafe_property_access", "unsafe_method_access",
+    "unsafe_call_argument", "unsafe_cast", "unsafe_void_return", "return_value_discarded",
+    "missing_await", "unused_variable", "unused_parameter", "shadowed_variable",
+    "integer_division", "narrowing_conversion"
+  ],
+  "max_file_lines": 400,
+  "d6": {
+    "literals": ["6000", "8192"],
+    "exempt_files": ["src/core/sphere.gd"],
+    "error_scopes": ["src/sim/", "src/presentation/planet/"],
+    "float_scope": "src/sim/",
+    "allowed_floats": [0.0, 0.5, 1.0, 2.0]
+  },
+  "d9_exempt_prefix": "src/platform/"
+}

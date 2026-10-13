@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quality_tiers.schema.json",
+  "title": "QualityTierDef[] (godot/content/defs/quality_tiers.json)",
+  "$comment": "03 s13 quality tiers table (TA-47, R0 B.9 A-22). TA-31 consumes it. Each knob cites its 03 s13 row in its $comment; knobs 03 s13 defers to 07 cite 07 s6.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "quality_tiers": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/quality_tier"
+      },
+      "$comment": "exactly LOW, MEDIUM, HIGH (R0 C2-29); cross-file rule in validate_content.py"
+    }
+  },
+  "required": [
+    "quality_tiers"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "quality_tier": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "tier": {
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+          ],
+          "$comment": "tier name (R0 C2-29)"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "scaling_3d_scale": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1.0,
+          "$comment": "03 s13 scaling_3d/scale: 0.75 / 0.85 / 1.0"
+        },
+        "msaa_samples": {
+          "enum": [
+            0,
+            2,
+            4
+          ],
+          "$comment": "03 s13 MSAA: off (0) / 2x / 4x"
+        },
+        "sun_shadows": {
+          "$ref": "#/$defs/sun_shadows"
+        },
+        "lod_threshold_pixels": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 10,
+          "$comment": "03 s13 mesh LOD threshold_pixels (07 s4.6): 3.0 LOW, 3.0 MEDIUM web, 1.0 HIGH"
+        },
+        "lod_threshold_pixels_deck": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 10,
+          "$comment": "03 s13 MEDIUM on Steam Deck: 1.0 (platform value within the tier)"
+        },
+        "planet_split_k": {
+          "type": "number",
+          "minimum": 1.0,
+          "maximum": 4.0,
+          "$comment": "03 s13 planet K split factor: 1.8 / 2.2 / 2.5"
+        },
+        "planet_max_depth": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8,
+          "$comment": "03 s13 planet MAX_DEPTH: 5 / 6 / 6"
+        },
+        "planet_mesher_variant": {
+          "enum": [
+            "A",
+            "B"
+          ],
+          "$comment": "03 s13 mesher variant: A until S-WORLD-1 (TA-25) writes the winner (03 open question 9)"
+        },
+        "chunk_builds_per_frame": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32,
+          "$comment": "03 s13 chunk builds per frame: 2 / 4 / 6"
+        },
+        "chunk_build_ms_cap": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 33,
+          "$comment": "03 s13 chunk build ms cap: 2.0 / 3.0 / 4.0"
+        },
+        "detail_displacement_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000,
+          "$comment": "03 s13 detail displacement range: 300 / 500 / 600 m"
+        },
+        "visible_chunks_cap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "$comment": "03 s13 visible chunks cap: 90 / 120 / 150"
+        },
+        "entity_views_cap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4000,
+          "$comment": "03 s13 entity views cap: 200 / 400 / 800 (07 s6 LOW 200 nodes, ART-A1)"
+        },
+        "projectile_pool": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "$comment": "03 s13 projectile pool: 1,024 / 2,048 / 2,048"
+        },
+        "particle_quads_cap": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20000,
+          "$comment": "07 s6 tier scaling (03 s13 defers particles to 07 caps): 500 / 1,000 / 2,000"
+        },
+        "trails_enabled": {
+          "type": "boolean",
+          "$comment": "03 s13 trails: off / on / on"
+        },
+        "trail_segments": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096,
+          "$comment": "03 s13 trail segments: 0 (off) / 512 / 1,024"
+        },
+        "local_lights": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64,
+          "$comment": "03 s13 local lights: 4 / 8 / 16 (8 per mesh still)"
+        },
+        "explosion_lights": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16,
+          "$comment": "07 s6 explosion light pool: 0 / 2 / 4 (a subset of local_lights)"
+        },
+        "puff_cap": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "07 s6 LOW puff cap 100; MEDIUM and HIGH not stated by 07 and omitted"
+        },
+        "icon_band_start_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000,
+          "$comment": "03 s13 icon band starts: 1,800 / 2,500 / 2,500 m"
+        },
+        "target_fps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 240,
+          "$comment": "03 s13 target fps: 30 / 60 / 60"
+        },
+        "max_fps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 240,
+          "$comment": "03 s13 Engine.max_fps: 30 / 60 / 0 (uncapped, vsync)"
+        },
+        "physics_tick_hz": {
+          "const": 30,
+          "$comment": "03 s13 physics tick 30 on every tier (the sim tick is a protocol constant)"
+        }
+      },
+      "required": [
+        "id",
+        "tier",
+        "status",
+        "tags",
+        "_doc",
+        "scaling_3d_scale",
+        "msaa_samples",
+        "sun_shadows",
+        "lod_threshold_pixels",
+        "planet_split_k",
+        "planet_max_depth",
+        "planet_mesher_variant",
+        "chunk_builds_per_frame",
+        "chunk_build_ms_cap",
+        "detail_displacement_m",
+        "visible_chunks_cap",
+        "entity_views_cap",
+        "projectile_pool",
+        "particle_quads_cap",
+        "trails_enabled",
+        "trail_segments",
+        "local_lights",
+        "explosion_lights",
+        "icon_band_start_m",
+        "target_fps",
+        "max_fps",
+        "physics_tick_hz"
+      ]
+    },
+    "sun_shadows": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "$comment": "03 s13 sun shadows: off / off / on (PC only, 07 s1.5)"
+        },
+        "map_size": {
+          "type": "integer",
+          "minimum": 256,
+          "maximum": 8192,
+          "$comment": "03 s13 HIGH 2,048 map"
+        },
+        "splits": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "$comment": "03 s13 HIGH 2 splits"
+        },
+        "max_distance_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000,
+          "$comment": "03 s13 HIGH 800 m (C2-29)"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    }
+  }
+}

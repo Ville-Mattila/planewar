@@ -1,0 +1,11 @@
+{
+  "_doc": "docs/06 s4.1: UI scale and profiles. du = design unit; 1 du = 1 pt/dp on touch devices.",
+  "base_width": 1280,
+  "base_height": 720,
+  "compact_below_height_du": 500,
+  "touch_factor_min": 0.75,
+  "touch_factor_max": 3.0,
+  "user_scale_min": 0.8,
+  "user_scale_max": 1.5,
+  "safe_margin_du": 8
+}

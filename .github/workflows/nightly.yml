@@ -1,0 +1,148 @@
+# PLANEWAR nightly + weekly checks (TA-03, S-CI-1; docs/03 s1.4).
+# Nightly: 30-minute soak, golden screenshots under Xvfb + llvmpipe, perf history on the pinned runner (TA-42).
+# Weekly (Monday): v1.1 export checks (linux_x64, macos, ios_xcode) and the Xcode >= 26 runner-image check (ADR-12).
+name: nightly
+
+on:
+  schedule:
+    - cron: "17 2 * * *"   # nightly
+    - cron: "43 3 * * 1"   # weekly, Monday
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  soak-30:
+    name: soak 30 sim-minutes (real time)
+    if: github.event_name != 'schedule' || github.event.schedule == '17 2 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-godot
+      - run: godot --headless --path godot --import
+      - name: Soak
+        run: |
+          set -o pipefail
+          godot --headless --path godot --fixed-fps 30 res://test/soak/soak_pr.tscn -- --minutes=30 --pace=realtime | tee soak.log
+      - name: Slope of per-minute p95 (< 2 %/min)
+        run: python .github/scripts/soak_slope.py soak.log --limit 2.0 --min-minutes 20 | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soak30-log
+          path: |
+            soak.log
+            soak.log.md
+
+  golden-screenshots:
+    name: golden screenshots (Xvfb + llvmpipe)
+    if: github.event_name != 'schedule' || github.event.schedule == '17 2 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-godot
+      - run: sudo apt-get install -y --no-install-recommends xvfb libgl1-mesa-dri libglx-mesa0 libxcursor1 libxinerama1 libxi6 libxrandr2 >/dev/null
+      - run: godot --headless --path godot --import
+      - name: Screenshot scene
+        run: |
+          mkdir -p shots
+          xvfb-run -a -s "-screen 0 1280x720x24" godot --path godot --rendering-driver opengl3 \
+            --write-movie "$PWD/shots/shot.png" --fixed-fps 30 --quit-after 10 res://test/golden/shot_main.tscn
+          python .github/scripts/png_check.py "$(ls shots/shot*.png | tail -1)" --min-ratio 0.01
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: golden-shots
+          path: shots
+
+  perf-pinned:
+    name: perf on the pinned runner (TA-42)
+    # Skipped until TA-42 registers a runner with the labels below and sets repository variable PERF_RUNNER=true.
+    if: vars.PERF_RUNNER == 'true' && (github.event_name != 'schedule' || github.event.schedule == '17 2 * * *')
+    runs-on: [self-hosted, planewar-perf]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-godot
+      - run: godot --headless --path godot --import
+      - name: perf_tick, append perf/history.jsonl (absolute gates arrive with TA-22/TA-42)
+        run: |
+          mkdir -p perf
+          out="$(godot --headless --path godot res://test/perf/perf_tick.tscn -- --ticks=1800)"
+          echo "$out"
+          echo "{\"sha\":\"${GITHUB_SHA}\",\"runner\":\"${RUNNER_NAME}\",\"line\":\"$(echo "$out" | grep PERF_TICK)\"}" >> perf/history.jsonl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: perf-history
+          path: perf/history.jsonl
+
+  ab-noise:
+    name: A/B noise, base vs base x 10
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-godot
+      - run: godot --headless --path godot --import
+      - run: python .github/scripts/ab_perf.py --base godot --head godot --noise 10 --rounds 5 --ticks 3600
+
+  v11-exports:
+    name: weekly v1.1 export checks (${{ matrix.preset }})
+    if: github.event_name != 'schedule' || github.event.schedule == '43 3 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: [linux_x64, macos, ios_xcode]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-godot
+        with:
+          templates: "true"
+      - run: godot --headless --path godot --import
+      - run: .github/scripts/export_preset.sh ${{ matrix.preset }} release
+      - uses: actions/upload-artifact@v4
+        if: matrix.preset == 'ios_xcode'
+        with:
+          name: build-ios_xcode
+          path: build/ios
+          retention-days: 3
+
+  macos-runner-xcode:
+    name: macOS runner image has Xcode >= 26 (ADR-12)
+    if: github.event_name != 'schedule' || github.event.schedule == '43 3 * * 1'
+    needs: v11-exports
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - name: Xcode version
+        run: |
+          xcodebuild -version
+          ls /Applications | grep -i xcode || true
+          v="$(xcodebuild -version | head -1 | awk '{print $2}' | cut -d. -f1)"
+          if [ "$v" -lt 26 ]; then echo "::warning::macos-15 default Xcode is $v; select an Xcode >= 26 or use macos-26"; fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-ios_xcode
+          path: ios
+      - name: List the exported Xcode project
+        continue-on-error: true
+        run: |
+          find ios -maxdepth 2 -name '*.xcodeproj' -print
+          p="$(find ios -maxdepth 2 -name '*.xcodeproj' | head -1)"
+          if [ -n "$p" ]; then xcodebuild -project "$p" -list; fi

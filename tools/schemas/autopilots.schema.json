@@ -1,0 +1,522 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "autopilots.schema.json",
+  "title": "AutopilotDef[] (godot/content/defs/autopilots.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "autopilots": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/autopilot"
+      }
+    }
+  },
+  "required": [
+    "autopilots"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "autopilot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "think_period_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 90,
+          "$comment": "default 10; offline web 15 (R0 B.1)"
+        },
+        "cruise_alt_agl_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "deck_alt_agl_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "max_alt_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "min_clearance_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 500
+        },
+        "clearance_per_mps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "probe_times_s": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 3600,
+            "$comment": "times > 0"
+          },
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "safety_pull_up_tti_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600,
+          "$comment": "times > 0"
+        },
+        "safety_clear_tti_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600,
+          "$comment": "times > 0"
+        },
+        "safety_min_hold_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600,
+          "$comment": "times > 0"
+        },
+        "safety_max_hold_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600,
+          "$comment": "times > 0"
+        },
+        "safety_force_rtb_fuel01": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rtb": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fuel01": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "ammo": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "hp01": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "fuel_reserve_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3600
+            },
+            "fuel_margin": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 5
+            }
+          }
+        },
+        "patrol_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "intercept_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "target_weights": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10
+          }
+        },
+        "target_dist_falloff_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "target_under_tower_penalty": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "switch_margin": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "gun": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fire_range_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "fire_cone_k": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "burst_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3600,
+              "$comment": "times > 0"
+            },
+            "pause_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 60
+            },
+            "aim_error_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "lead_iterations": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10
+            }
+          }
+        },
+        "bomb": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "dive_angle_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90
+            },
+            "release_tolerance_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "pullout_g_margin_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            }
+          }
+        },
+        "evade": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hp_drop_trigger": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "duration_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3600,
+              "$comment": "times > 0"
+            }
+          }
+        },
+        "separation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "radius_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "gain": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            }
+          }
+        },
+        "flight": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kp_path": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "$comment": "05 s4.4: kp_* in (0, 10]"
+            },
+            "ki_path": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "kp_roll": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "$comment": "05 s4.4: kp_* in (0, 10]"
+            },
+            "kp_yaw": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "$comment": "05 s4.4: kp_* in (0, 10]"
+            },
+            "bank_threshold_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90
+            },
+            "kp_speed": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "$comment": "05 s4.4: kp_* in (0, 10]"
+            },
+            "ki_speed": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "brake_overspeed_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 200
+            },
+            "k_guidance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            }
+          }
+        },
+        "landing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "gate_dist_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "pitch_over_agl_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "launch_climb_agl_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "glide_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90
+            },
+            "transition_dist_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "transition_agl_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "hover_agl_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "flare_agl_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "touch_vz_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "max_tilt_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90
+            },
+            "kp_pos": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "$comment": "05 s4.4: kp_* in (0, 10]"
+            },
+            "kd_pos": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "kp_vz": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "$comment": "05 s4.4: kp_* in (0, 10]"
+            },
+            "abort_horiz_err_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "abort_vz_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 50
+            },
+            "max_attempts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          }
+        },
+        "flee_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "tow_scan_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "tow_enemy_clear_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "quiet_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "think_period_ticks"
+      ],
+      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional."
+    }
+  }
+}

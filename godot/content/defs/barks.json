@@ -1,0 +1,151 @@
+{
+  "_doc": "08 SL-3 v1 bark table (I-20): BarkDef[], one entry per key. Singleton-style file: the table rows of 08 SL-3 rule 3 (Derived from, Scope, Prio, Release) map to source, scope, priority and status; cooldown_s is the 08 SL-3 rule 4 per-entity 20 s key cooldown. Strings are not stored here: they live in the locale CSV domain `barks` as barks.<key>.<variant> (R0 C2-33, 06 s11). Rate limits are the 08 SL-3 rule 4 values.",
+  "rate_limits": {
+    "min_gap_s": 1.5,
+    "queue_max": 4,
+    "line_life_s": 4,
+    "entity_key_cooldown_s": 20
+  },
+  "barks": [
+    {
+      "id": "launch",
+      "status": "core",
+      "tags": ["bark", "wing"],
+      "_doc": "08 SL-3 rule 3 row launch: source LAUNCHED, scope WING/NEAR, prio 3, v1",
+      "source": "LAUNCHED",
+      "scope": ["WING", "NEAR"],
+      "priority": 3,
+      "cooldown_s": 20
+    },
+    {
+      "id": "rtb_fuel",
+      "status": "core",
+      "tags": ["bark", "wing"],
+      "_doc": "08 SL-3 rule 3 row rtb_fuel: AUTO/ORDERED fuel01 below autopilot rtb.fuel01, scope WING/NEAR, prio 4, v1",
+      "source": "RTB_FUEL",
+      "scope": ["WING", "NEAR"],
+      "priority": 4,
+      "cooldown_s": 20
+    },
+    {
+      "id": "rtb_ammo",
+      "status": "core",
+      "tags": ["bark", "wing"],
+      "_doc": "08 SL-3 rule 3 row rtb_ammo: ammo reaches 0, scope WING/NEAR, prio 4, v1",
+      "source": "RTB_AMMO",
+      "scope": ["WING", "NEAR"],
+      "priority": 4,
+      "cooldown_s": 20
+    },
+    {
+      "id": "rtb_damage",
+      "status": "core",
+      "tags": ["bark", "wing"],
+      "_doc": "08 SL-3 rule 3 row rtb_damage: hp01 below autopilot rtb.hp01, scope WING/NEAR, prio 4, v1",
+      "source": "RTB_DAMAGE",
+      "scope": ["WING", "NEAR"],
+      "priority": 4,
+      "cooldown_s": 20
+    },
+    {
+      "id": "engage",
+      "status": "core",
+      "tags": ["bark", "wing"],
+      "_doc": "08 SL-3 rule 3 row engage: first HIT after 20 s without one, scope WING, prio 3, v1",
+      "source": "HIT_AFTER_IDLE",
+      "scope": ["WING"],
+      "priority": 3,
+      "cooldown_s": 20
+    },
+    {
+      "id": "docked",
+      "status": "core",
+      "tags": ["bark", "wing"],
+      "_doc": "08 SL-3 rule 3 row docked: DOCKED (autopilot), scope WING, prio 2, v1",
+      "source": "DOCKED",
+      "scope": ["WING"],
+      "priority": 2,
+      "cooldown_s": 20
+    },
+    {
+      "id": "harvester_hit",
+      "status": "core",
+      "tags": ["bark", "alert"],
+      "_doc": "08 SL-3 rule 3 row harvester_hit: ALERT HARVESTER_ATTACKED, scope ALERT, prio 6, v1",
+      "source": "ALERT_HARVESTER_ATTACKED",
+      "scope": ["ALERT"],
+      "priority": 6,
+      "cooldown_s": 20
+    },
+    {
+      "id": "structure_lost",
+      "status": "core",
+      "tags": ["bark", "alert"],
+      "_doc": "08 SL-3 rule 3 row structure_lost: STRUCTURE_LOST / ALERT STRUCTURE_LOST, scope ALERT, prio 7, v1",
+      "source": "ALERT_STRUCTURE_LOST",
+      "scope": ["ALERT"],
+      "priority": 7,
+      "cooldown_s": 20
+    },
+    {
+      "id": "low_power",
+      "status": "core",
+      "tags": ["bark", "alert"],
+      "_doc": "08 SL-3 rule 3 row low_power: LOW_POWER / ALERT LOW_POWER, scope ALERT, prio 6, v1",
+      "source": "ALERT_LOW_POWER",
+      "scope": ["ALERT"],
+      "priority": 6,
+      "cooldown_s": 20
+    },
+    {
+      "id": "wing_join",
+      "status": "core",
+      "tags": ["bark", "wing"],
+      "_doc": "08 SL-3 rule 3 row wing_join / wing_leave: ALERT WING_STATE (SL-2), scope WING, prio 5, v1",
+      "source": "ALERT_WING_STATE",
+      "scope": ["WING"],
+      "priority": 5,
+      "cooldown_s": 20
+    },
+    {
+      "id": "wing_leave",
+      "status": "core",
+      "tags": ["bark", "wing"],
+      "_doc": "08 SL-3 rule 3 row wing_join / wing_leave: ALERT WING_STATE (SL-2), scope WING, prio 5, v1",
+      "source": "ALERT_WING_STATE",
+      "scope": ["WING"],
+      "priority": 5,
+      "cooldown_s": 20
+    },
+    {
+      "id": "landing_grade",
+      "status": "core",
+      "tags": ["bark", "self"],
+      "_doc": "08 SL-3 rule 3 row landing_grade: LANDING with a grade for the local player, scope SELF, prio 5, v1",
+      "source": "LANDING",
+      "scope": ["SELF"],
+      "priority": 5,
+      "cooldown_s": 20
+    },
+    {
+      "id": "supply_away",
+      "status": "candidate",
+      "tags": ["bark", "self"],
+      "_doc": "08 SL-3 rule 3 row supply_away: ALERT SUPPLY_AWAY (SL-5), scope SELF, prio 5, v1 stretch (candidate until the C1-13 scope gate)",
+      "source": "ALERT_SUPPLY_AWAY",
+      "scope": ["SELF"],
+      "priority": 5,
+      "cooldown_s": 20
+    },
+    {
+      "id": "almanac_warn",
+      "status": "candidate",
+      "tags": ["bark", "alert"],
+      "_doc": "08 SL-3 rule 3 row almanac_warn: ALERT METEOR_WARN (SL-6), scope ALERT, prio 7, v1.x (candidate)",
+      "source": "ALERT_METEOR_WARN",
+      "scope": ["ALERT"],
+      "priority": 7,
+      "cooldown_s": 20
+    }
+  ]
+}

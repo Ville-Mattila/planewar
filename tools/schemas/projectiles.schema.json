@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "projectiles.schema.json",
+  "title": "ProjectileDef[] (godot/content/defs/projectiles.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "projectiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/projectile"
+      }
+    }
+  },
+  "required": [
+    "projectiles"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "projectile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "behaviour": {
+          "enum": [
+            "straight",
+            "ballistic",
+            "guided",
+            "rendezvous"
+          ]
+        },
+        "speed_mps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3000,
+          "$comment": "0 = carrier velocity"
+        },
+        "eject_down_mps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "lifetime_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 120
+        },
+        "gravity": {
+          "type": "boolean"
+        },
+        "transport": {
+          "type": "boolean"
+        },
+        "radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "blast_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "blast_radius_structure_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "fuse": {
+          "enum": [
+            "contact",
+            "proximity",
+            "timed"
+          ]
+        },
+        "fuse_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "arm_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        },
+        "shield_absorbed": {
+          "type": "boolean"
+        },
+        "hp": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "$comment": "0 = indestructible"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "presentation",
+        "behaviour",
+        "transport",
+        "shield_absorbed",
+        "hp"
+      ],
+      "$comment": "R0 B.1 / B.5; 02 s4.2. Fields shown as '-' in 02 are omitted (default 0 / null); supply_canister (candidate) takes its numbers from 08 SL-5."
+    }
+  }
+}

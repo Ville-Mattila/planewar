@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "doctrines.schema.json",
+  "title": "DoctrineDef[] (godot/content/defs/doctrines.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "doctrines": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/doctrine"
+      }
+    }
+  },
+  "required": [
+    "doctrines"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "doctrine": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "modifiers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/modifier"
+          }
+        },
+        "rules": {
+          "$ref": "#/$defs/doctrine_rules"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "modifiers",
+        "rules"
+      ],
+      "$comment": "02 s7 selector schema (R0 B.1)."
+    },
+    "modifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "select",
+        "field",
+        "op",
+        "value"
+      ],
+      "properties": {
+        "select": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "maxProperties": 1,
+          "properties": {
+            "ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "uniqueItems": true
+            },
+            "tags_any": {
+              "$ref": "#/$defs/tags"
+            },
+            "weapon_mount": {
+              "enum": [
+                "ship",
+                "tower",
+                "ground"
+              ],
+              "$comment": "mirrors weapons.schema.json weapon_mount (R0 B.8 A-3); Foundry's x0.85 selects ship only"
+            }
+          }
+        },
+        "field": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$"
+        },
+        "op": {
+          "enum": [
+            "mul",
+            "add",
+            "set"
+          ]
+        },
+        "value": {
+          "type": [
+            "number",
+            "boolean"
+          ]
+        }
+      }
+    },
+    "doctrine_rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "flip_cooldown_s_override": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "hangar_blocks_rockets": {
+          "type": "boolean"
+        },
+        "reactor_unlock_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        }
+      }
+    }
+  }
+}

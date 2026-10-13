@@ -1,0 +1,266 @@
+{
+  "_doc": "02 s7 doctrines (R0 B.1); Foundry x0.85 selects weapon_mount ship only (R0 B.8 A-3).",
+  "doctrines": [
+    {
+      "id": "vanguard",
+      "status": "core",
+      "tags": [
+        "doctrine"
+      ],
+      "_doc": "02 s7: faster, fragile ships; flip cooldown 1.0 s on all ships",
+      "modifiers": [
+        {
+          "select": {
+            "tags_any": [
+              "ship"
+            ]
+          },
+          "field": "v_cruise",
+          "op": "mul",
+          "value": 1.15
+        },
+        {
+          "select": {
+            "tags_any": [
+              "ship"
+            ]
+          },
+          "field": "v_boost",
+          "op": "mul",
+          "value": 1.15
+        },
+        {
+          "select": {
+            "tags_any": [
+              "ship"
+            ]
+          },
+          "field": "a_thrust",
+          "op": "mul",
+          "value": 1.15
+        },
+        {
+          "select": {
+            "tags_any": [
+              "ship"
+            ]
+          },
+          "field": "v_dive_max",
+          "op": "mul",
+          "value": 1.1
+        },
+        {
+          "select": {
+            "tags_any": [
+              "ship"
+            ]
+          },
+          "field": "pitch_rate_dps",
+          "op": "mul",
+          "value": 1.15
+        },
+        {
+          "select": {
+            "tags_any": [
+              "ship"
+            ]
+          },
+          "field": "yaw_rate_dps",
+          "op": "mul",
+          "value": 1.15
+        },
+        {
+          "select": {
+            "tags_any": [
+              "ship"
+            ]
+          },
+          "field": "roll_rate_dps",
+          "op": "mul",
+          "value": 1.15
+        },
+        {
+          "select": {
+            "tags_any": [
+              "ship"
+            ]
+          },
+          "field": "hp",
+          "op": "mul",
+          "value": 0.8
+        },
+        {
+          "select": {
+            "ids": [
+              "dart"
+            ]
+          },
+          "field": "secondary.count",
+          "op": "set",
+          "value": 1
+        }
+      ],
+      "rules": {
+        "flip_cooldown_s_override": 1.0
+      },
+      "presentation": {
+        "icon": "doctrine_vanguard"
+      }
+    },
+    {
+      "id": "bulwark",
+      "status": "core",
+      "tags": [
+        "doctrine"
+      ],
+      "_doc": "02 s7: tougher, dearer structures; slower ships",
+      "modifiers": [
+        {
+          "select": {
+            "tags_any": [
+              "structure",
+              "tower"
+            ]
+          },
+          "field": "hp",
+          "op": "mul",
+          "value": 1.25
+        },
+        {
+          "select": {
+            "weapon_mount": "tower"
+          },
+          "field": "range_m",
+          "op": "mul",
+          "value": 1.1
+        },
+        {
+          "select": {
+            "tags_any": [
+              "ship"
+            ]
+          },
+          "field": "v_cruise",
+          "op": "mul",
+          "value": 0.9
+        },
+        {
+          "select": {
+            "tags_any": [
+              "ship"
+            ]
+          },
+          "field": "v_boost",
+          "op": "mul",
+          "value": 0.9
+        },
+        {
+          "select": {
+            "tags_any": [
+              "structure",
+              "tower"
+            ]
+          },
+          "field": "cost_ore",
+          "op": "mul",
+          "value": 1.15
+        },
+        {
+          "select": {
+            "tags_any": [
+              "structure",
+              "tower"
+            ]
+          },
+          "field": "cost_ice",
+          "op": "mul",
+          "value": 1.15
+        }
+      ],
+      "rules": {
+        "hangar_blocks_rockets": true
+      },
+      "presentation": {
+        "icon": "doctrine_bulwark"
+      }
+    },
+    {
+      "id": "foundry",
+      "status": "core",
+      "tags": [
+        "doctrine"
+      ],
+      "_doc": "02 s7: cheaper everything; ship weapons x0.85 (A-3: not ground)",
+      "modifiers": [
+        {
+          "select": {
+            "tags_any": [
+              "structure",
+              "tower",
+              "ship",
+              "ground"
+            ]
+          },
+          "field": "cost_ore",
+          "op": "mul",
+          "value": 0.85
+        },
+        {
+          "select": {
+            "tags_any": [
+              "structure",
+              "tower",
+              "ship",
+              "ground"
+            ]
+          },
+          "field": "cost_ice",
+          "op": "mul",
+          "value": 0.85
+        },
+        {
+          "select": {
+            "ids": [
+              "harvester"
+            ]
+          },
+          "field": "cargo_ore",
+          "op": "mul",
+          "value": 1.25
+        },
+        {
+          "select": {
+            "ids": [
+              "hauler"
+            ]
+          },
+          "field": "tow_slots",
+          "op": "set",
+          "value": 2
+        },
+        {
+          "select": {
+            "weapon_mount": "ship"
+          },
+          "field": "damage_min",
+          "op": "mul",
+          "value": 0.85
+        },
+        {
+          "select": {
+            "weapon_mount": "ship"
+          },
+          "field": "damage_max",
+          "op": "mul",
+          "value": 0.85
+        }
+      ],
+      "rules": {
+        "reactor_unlock_s": 600
+      },
+      "presentation": {
+        "icon": "doctrine_foundry"
+      }
+    }
+  ]
+}

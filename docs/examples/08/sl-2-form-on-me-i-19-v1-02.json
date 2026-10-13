@@ -1,0 +1,6 @@
+{ "max_wingmen": 2, "recruit_radius_m": 1500, "min_fuel01": 0.4, "min_hp01": 0.5,
+  "min_speed_ratio": 0.9, "recruit_states": ["AUTO", "PATROL"],
+  "armed_classes": ["dart", "lancer"],
+  "slots_brf_m": [[-50, -60, 10], [-50, 60, 10], [-100, 0, 20]], "slot_tolerance_m": 30,
+  "focus_timeout_s": 20, "focus_leash_m": 2000, "break_radius_m": 1200, "break_s": 20,
+  "transfer_window_s": 5, "transfer_radius_m": 2500 }

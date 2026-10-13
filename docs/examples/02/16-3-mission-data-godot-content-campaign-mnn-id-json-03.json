@@ -1,0 +1,17 @@
+{ "id": "m05_long_night", "map": "rimewater", "player_slot": 2,
+  "teams": [[2], [6]],
+  "rules": { "sun_period_s": 2160, "sun_axis": "x", "sun_phase_deg": 74, "cold_trap_sunlit_mult": 0.5,
+             "core_exposure_s": 0, "hard_end_s": 0, "adjutant": "allowed", "start_ore": 800, "start_ice": 300,
+             "start_kit": null, "allowed_defs": null },
+  "assist_options": ["economy"],
+  "bots": [ { "slot": 6, "difficulty": "normal", "doctrine": "bulwark", "script": "m05_marrow_dusk" } ],
+  "objectives": [
+    { "id": "o1", "kind": "BUILD", "params": { "def": "outpost", "near_feature": "mid_trap_2", "radius_m": 600 }, "assist": "economy" },
+    { "id": "o2", "kind": "BUILD", "params": { "def": "reactor", "before_s": 540 }, "assist": "economy" },
+    { "id": "o3", "kind": "POWER_RATIO", "params": { "min": 1.0, "from_s": 600, "to_s": 720 }, "assist": "economy" },
+    { "id": "o4", "kind": "STOCKPILE", "params": { "resource": "ice", "amount": 1500, "before_s": 1200 }, "assist": "economy" },
+    { "id": "o5", "kind": "SURVIVE_UNTIL", "params": { "s": 1080 } },
+    { "id": "opt1", "kind": "NO_EVENT", "params": { "alert": "TOWER_OFFLINE" }, "optional": true } ],
+  "fail": [ { "kind": "CORE_LOST" }, { "kind": "POWER_BELOW", "params": { "ratio": 0.5, "seconds": 90, "after_s": 540 } } ],
+  "triggers": [ { "at_s": 540, "do": "DIALOGUE", "key": "campaign_m05.nightfall" } ],
+  "medals": { "par_s": 1500 } }

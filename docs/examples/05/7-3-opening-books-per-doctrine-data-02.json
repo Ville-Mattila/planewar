@@ -1,0 +1,66 @@
+{
+  "vanguard_standard": {
+    "doctrine": "vanguard",
+    "steps": [
+      { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1" },
+      { "do": "produce", "def": "dart", "n": 1 },
+      { "do": "produce", "def": "harvester", "n": 1 },
+      { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
+      { "do": "produce", "def": "dart", "n": 1 },
+      { "do": "produce", "def": "harvester", "n": 1 },
+      { "do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=150" },
+      { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
+      { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2" },
+      { "do": "produce", "def": "hauler", "n": 1 },
+      { "do": "build", "def": "refinery", "near": "ore_field:home_2", "skip_if_have": "refinery>=2" },
+      { "do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1" },
+      { "do": "build", "def": "pad", "near": "core" },
+      { "do": "produce", "def": "scout", "n": 1, "then_order": "scout_auto" },
+      { "do": "set_replenish", "def": "dart", "n": 3 },
+      { "do": "raid", "target": "harvester_line", "with": "dart:3", "when": "t>=300&have:dart>=3" },
+      { "do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field", "when": "t>=420|ore>=900" },
+      { "do": "build", "def": "outpost", "near": "contested_field", "when": "presence" }
+    ]
+  },
+  "bulwark_standard": {
+    "doctrine": "bulwark",
+    "steps": [
+      { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1" },
+      { "do": "produce", "def": "harvester", "n": 1 },
+      { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
+      { "do": "produce", "def": "dart", "n": 1 },
+      { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2" },
+      { "do": "build", "def": "relay_pylon", "near": "toward:cold_trap:home", "n": 2 },
+      { "do": "build", "def": "ice_extractor", "near": "cold_trap:home" },
+      { "do": "produce", "def": "hauler", "n": 1 },
+      { "do": "build", "def": "flak_battery", "near": "core" },
+      { "do": "build", "def": "pad", "near": "core" },
+      { "do": "build", "def": "hangar", "near": "core" },
+      { "do": "produce", "def": "lancer", "n": 1 },
+      { "do": "set_replenish", "def": "dart", "n": 2 },
+      { "do": "build", "def": "sensor_mast", "near": "approach:nearest_enemy" },
+      { "do": "order", "kind": "move", "unit": "dart|lancer", "to": "contested_field", "when": "t>=330" },
+      { "do": "build", "def": "outpost", "near": "contested_field", "when": "presence" }
+    ]
+  },
+  "foundry_standard": {
+    "doctrine": "foundry",
+    "steps": [
+      { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1" },
+      { "do": "produce", "def": "harvester", "n": 1 },
+      { "do": "produce", "def": "dart", "n": 1 },
+      { "do": "build", "def": "refinery", "near": "ore_field:home_2", "skip_if_have": "refinery>=2" },
+      { "do": "produce", "def": "harvester", "n": 1 },
+      { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2" },
+      { "do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=120" },
+      { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
+      { "do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1" },
+      { "do": "produce", "def": "hauler", "n": 1 },
+      { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
+      { "do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field", "when": "t>=270" },
+      { "do": "build", "def": "outpost", "near": "contested_field", "when": "presence" },
+      { "do": "set_replenish", "def": "harvester", "n": 6 },
+      { "do": "build", "def": "reactor", "near": "outpost", "when": "t>=600" }
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>PLANEWAR test builds</title>
+<style>
+  :root { --bg:#0f1215; --panel:#161a1e; --ink:#e4e8ec; --muted:#97a0aa; --line:#2b3239; --accent:#f08546; --ok:#5cc28a; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 system-ui, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 48px 16px 64px; }
+  .eyebrow { font: 12px ui-monospace, Consolas, monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  h1 { font-size: clamp(30px, 6vw, 44px); margin: 6px 0 12px; letter-spacing:.01em; }
+  p { color: var(--muted); margin: 0 0 14px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:18px 20px; margin-top:24px; }
+  .card h2 { font-size:18px; margin:0 0 8px; color:var(--ink); }
+  .status { display:inline-block; font: 12px ui-monospace, Consolas, monospace; padding:2px 8px; border:1px solid var(--accent); color:var(--accent); border-radius:4px; }
+  ul { margin: 8px 0 0; padding-left: 1.2em; color: var(--muted); }
+  code { font-family: ui-monospace, Consolas, monospace; color: var(--ink); }
+  canvas { display:block; width:120px; height:120px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <canvas id="moon" width="240" height="240" aria-hidden="true"></canvas>
+  <div class="eyebrow">Internal test site · not for distribution</div>
+  <h1>PLANEWAR test builds</h1>
+  <p>Web builds of the game land here for testing in the browser. Planning is complete; development starts with milestone M0.</p>
+
+  <div class="card">
+    <h2>Current web build <span class="status" style="border-color:var(--ok);color:var(--ok)">S-FLIGHT-1</span></h2>
+    <p><a href="https://planewar-play.vercel.app/" style="color:var(--accent)">Play the flight spike</a> (2026-10-13). A Dart on a flat-shaded 6 km moon: launch from the pad, fly, shoot targets, drop bombs, land tail-down.</p>
+    <ul>
+      <li>Click the canvas to capture the mouse. W thrust, S brake, mouse aim, A/D roll, Q/E yaw, Shift boost, Space flip.</li>
+      <li>Left mouse or Ctrl: gun. Right mouse or V: bomb. Hold F: auto-dock. F1: tuning panel and help. Backspace: respawn.</li>
+      <li>Gamepad and touch work too. Tester protocol: <code>docs/spikes/TA-30/TESTER_PROTOCOL.md</code>.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>What will be tested here</h2>
+    <ul>
+      <li>S-FLIGHT-1 flight prototype (keyboard, gamepad, touch)</li>
+      <li>S-WEB-1 size and load time: 20 MB Brotli, gameplay within 20 s</li>
+      <li>S-WEB-2 offline skirmish vs bots in the browser</li>
+      <li>Online play against the test server (milestone M4)</li>
+    </ul>
+  </div>
+</main>
+<script>
+  const c = document.getElementById('moon'), x = c.getContext('2d');
+  const R = 110, cx = 120, cy = 120;
+  x.save(); x.beginPath(); x.arc(cx, cy, R, 0, Math.PI*2); x.clip();
+  x.fillStyle = '#b7bcc2'; x.fillRect(0,0,240,240);
+  [[86,82,22],[150,70,12],[164,148,26],[100,168,15],[60,130,10]].forEach(([a,b,r]) => {
+    x.beginPath(); x.arc(a,b,r,0,Math.PI*2); x.fillStyle='#8d939a'; x.fill(); });
+  x.beginPath(); x.ellipse(cx+45, cy, R*0.62, R+2, 0, -Math.PI/2, Math.PI/2);
+  x.lineTo(cx+R+2, cy+R+2); x.lineTo(cx+R+2, cy-R-2); x.closePath();
+  x.fillStyle = 'rgba(15,18,21,0.82)'; x.fill(); x.restore();
+</script>
+</body>
+</html>

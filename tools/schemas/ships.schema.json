@@ -1,0 +1,564 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ships.schema.json",
+  "title": "ShipDef[] + FlightCommonDef (godot/content/defs/ships.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "ships": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ship"
+      }
+    },
+    "flight_common": {
+      "$ref": "#/$defs/flight_common"
+    }
+  },
+  "required": [
+    "ships",
+    "flight_common"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "ship": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "hp": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "cost_ore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "cost_ice": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "build_time_s": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 300
+        },
+        "produced_at": {
+          "$ref": "#/$defs/id"
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "sensor_radius": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "bounding_radius": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 50
+        },
+        "score_value": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "v_cruise": {
+          "type": "number",
+          "minimum": 38.25,
+          "maximum": 161.0,
+          "$comment": "anchor +-15 % around R0 B.1 [45, 70, 80, 110, 140]"
+        },
+        "v_cruise_loaded": {
+          "type": "number",
+          "minimum": 29.75,
+          "maximum": 40.25,
+          "$comment": "anchor +-15 % around R0 B.1 [35]"
+        },
+        "v_boost": {
+          "type": "number",
+          "minimum": 51.0,
+          "maximum": 218.5,
+          "$comment": "anchor +-15 % around R0 B.1 [60, 95, 115, 160, 190]"
+        },
+        "boost_duration_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "boost_cooldown_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 300
+        },
+        "v_dive_max": {
+          "type": "number",
+          "minimum": 102.0,
+          "maximum": 253.0,
+          "$comment": "anchor +-15 % around R0 B.1 [120, 140, 150, 190, 220]"
+        },
+        "a_thrust": {
+          "type": "number",
+          "minimum": 10.0,
+          "maximum": 34.5,
+          "$comment": "Schema range only: 2.0 * the lowest gravity anchor (5.0, 01 s3.1.1). The O-2 hover floor 2.0 * rules.gravity (12.0 at g 6.0) is enforced once, by validate_content.py check_cross, which reads rules.json. max = 30 * 1.15"
+        },
+        "pitch_rate_dps": {
+          "type": "number",
+          "minimum": 42.5,
+          "maximum": 161.0,
+          "$comment": "anchor +-15 % around R0 B.1 [50, 60, 80, 120, 140]"
+        },
+        "yaw_rate_dps": {
+          "type": "number",
+          "minimum": 25.5,
+          "maximum": 92.0,
+          "$comment": "anchor +-15 % around R0 B.1 [30, 40, 45, 60, 80]"
+        },
+        "roll_rate_dps": {
+          "type": "number",
+          "minimum": 59.5,
+          "maximum": 253.0,
+          "$comment": "anchor +-15 % around R0 B.1 [70, 90, 120, 180, 220]"
+        },
+        "rate_accel_dps2": {
+          "type": "number",
+          "minimum": 408.0,
+          "maximum": 1035.0,
+          "$comment": "anchor +-15 % around R0 B.1 [480, 540, 600, 720, 900]"
+        },
+        "flip_cooldown_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "flip_duration_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 5
+        },
+        "k_side": {
+          "type": "number",
+          "minimum": 0.425,
+          "maximum": 0.92,
+          "$comment": "anchor +-15 % around R0 B.1 [0.5, 0.6, 0.7, 0.8]"
+        },
+        "k_up": {
+          "type": "number",
+          "minimum": 0.085,
+          "maximum": 0.23,
+          "$comment": "anchor +-15 % around R0 B.1 [0.1, 0.12, 0.15, 0.2]"
+        },
+        "k_up_flight": {
+          "type": "number",
+          "minimum": 0.6,
+          "maximum": 1.5,
+          "$comment": "01 s3.1.1 anchor 0.6-1.5"
+        },
+        "primary": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "weapon": {
+                  "$ref": "#/$defs/id"
+                },
+                "ammo": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              },
+              "required": [
+                "weapon",
+                "ammo"
+              ]
+            }
+          ]
+        },
+        "secondary": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "weapon": {
+                  "$ref": "#/$defs/id"
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              },
+              "required": [
+                "weapon",
+                "count"
+              ]
+            }
+          ]
+        },
+        "fuel_s": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3600
+        },
+        "refuel_ice": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "refuel_time_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 300
+        },
+        "rearm_time_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 300
+        },
+        "repair_time_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 300
+        },
+        "cargo_ice": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "tow_slots": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "possessable": {
+          "type": "boolean"
+        },
+        "autopilot": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "presentation",
+        "hp",
+        "cost_ore",
+        "cost_ice",
+        "build_time_s",
+        "produced_at",
+        "requires",
+        "sensor_radius",
+        "bounding_radius",
+        "score_value",
+        "v_cruise",
+        "v_boost",
+        "boost_duration_s",
+        "boost_cooldown_s",
+        "v_dive_max",
+        "a_thrust",
+        "pitch_rate_dps",
+        "yaw_rate_dps",
+        "roll_rate_dps",
+        "rate_accel_dps2",
+        "flip_cooldown_s",
+        "flip_duration_s",
+        "k_side",
+        "k_up",
+        "k_up_flight",
+        "primary",
+        "secondary",
+        "fuel_s",
+        "refuel_ice",
+        "refuel_time_s",
+        "rearm_time_s",
+        "repair_time_s",
+        "cargo_ice",
+        "tow_slots",
+        "possessable",
+        "autopilot"
+      ],
+      "$comment": "R0 B.1 ships.json entry; 02 s2. Speeds and rates anchor +-15 % (01 s5.2)."
+    },
+    "flight_common": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eff_fade_start": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1.0
+        },
+        "brake_factor": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 2.0
+        },
+        "brake_fade_mps": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 30,
+          "$comment": "R0 B.9 A-13: brake ramp clamp(v_fwd / brake_fade_mps, 0, 1) (03 s5.3); canonical 10"
+        },
+        "boost_thrust_mult": {
+          "type": "number",
+          "minimum": 1.0,
+          "maximum": 3.0
+        },
+        "overspeed_dps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "terrain_kill_speed": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "terrain_damage_speed": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "landing_safe_v_vert": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "landing_safe_v_hor": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "landing_safe_pitch_deg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 90
+        },
+        "landing_damage_v_vert": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "landing_damage_v_hor": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "launch_speed_mps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "tether_len_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "tether_drop_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "tether_tau_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10
+        },
+        "tow_turn_rate_mult": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1.0
+        },
+        "auto_dock_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "flip_speed_retain": {
+          "type": "number",
+          "minimum": 0.5,
+          "maximum": 1.0,
+          "$comment": "R0 B.9 A-29: the flip rotates v with the body and scales it by this (03 s5.3 ~25 % loss)"
+        },
+        "scrape_clear_s": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 3.0,
+          "$comment": "R0 B.9 A-30: a terrain contact episode ends after this long clear of the ground; scrape damage once per episode"
+        },
+        "fuel_burn_boost_per_s": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 10.0,
+          "$comment": "R0 B.9 A-32 (02 s2.3): extra fuel per second while boosting"
+        },
+        "fuel_burn_brake_per_s": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 10.0,
+          "$comment": "R0 B.9 A-32 (02 s2.3): extra fuel per second while braking"
+        },
+        "fuel_burn_idle_per_s": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "$comment": "R0 B.9 A-32 (02 s2.3): attitude-jet idle burn per second"
+        },
+        "landing_damage_tilt_deg": {
+          "type": "number",
+          "minimum": 30,
+          "maximum": 90,
+          "$comment": "R0 B.9 A-35 (B.5 landing rule): tilt beyond landing_safe_pitch_deg up to this lands with damage; beyond destroys"
+        },
+        "auto_dock_latch_mult": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10,
+          "$comment": "R0 B.9 A-34 (S-FLIGHT-1 fallback): once engaged the auto-dock assist holds while DOCK is held out to auto_dock_radius_m * this"
+        }
+      },
+      "required": [
+        "auto_dock_latch_mult",
+        "auto_dock_radius_m",
+        "boost_thrust_mult",
+        "brake_factor",
+        "brake_fade_mps",
+        "eff_fade_start",
+        "flip_speed_retain",
+        "fuel_burn_boost_per_s",
+        "fuel_burn_brake_per_s",
+        "fuel_burn_idle_per_s",
+        "landing_damage_tilt_deg",
+        "landing_damage_v_hor",
+        "landing_damage_v_vert",
+        "landing_safe_pitch_deg",
+        "landing_safe_v_hor",
+        "landing_safe_v_vert",
+        "launch_speed_mps",
+        "overspeed_dps",
+        "scrape_clear_s",
+        "terrain_damage_speed",
+        "terrain_kill_speed",
+        "tether_drop_m",
+        "tether_len_m",
+        "tether_tau_s",
+        "tow_turn_rate_mult"
+      ],
+      "$comment": "R0 B.1 flight_common; canonical 0.8, 0.6, 1.5, 10, 25, 8, 8, 15, 25, 15, 25, 5, 25, 8, 0.4, 0.6, 150; brake_fade_mps 10 (R0 B.9 A-13); A-29..A-35 appends: flip_speed_retain 0.75, scrape_clear_s 0.5, fuel_burn_boost_per_s 2.0, fuel_burn_brake_per_s 0.6, fuel_burn_idle_per_s 0.05, landing_damage_tilt_deg 45, auto_dock_latch_mult 5"
+    }
+  }
+}

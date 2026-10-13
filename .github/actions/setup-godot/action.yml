@@ -1,0 +1,67 @@
+name: setup-godot
+description: Install Godot 4.7.2-stable (Linux x86_64) and, optionally, the matching export templates. Pinned by version, SHA-512 verified, cached.
+inputs:
+  templates:
+    description: "Install export templates ('true' or 'false')"
+    default: "false"
+  version:
+    description: Godot release tag
+    default: "4.7.2-stable"
+runs:
+  using: composite
+  steps:
+    - name: Cache Godot editor
+      id: cache-bin
+      uses: actions/cache@v4
+      with:
+        path: ~/godot-bin
+        key: godot-bin-${{ inputs.version }}-linux-v1
+    - name: Download Godot editor
+      if: steps.cache-bin.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        V: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        base="https://github.com/godotengine/godot-builds/releases/download/${V}"
+        mkdir -p ~/godot-bin && cd ~/godot-bin
+        f="Godot_v${V}_linux.x86_64.zip"
+        curl -fsSL --retry 5 --retry-delay 5 -o "$f" "$base/$f"
+        curl -fsSL --retry 5 --retry-delay 5 -o SHA512-SUMS.txt "$base/SHA512-SUMS.txt"
+        grep " ${f}\$" SHA512-SUMS.txt | sha512sum -c -
+        unzip -q "$f"
+        rm -f "$f" SHA512-SUMS.txt
+        ln -sf "Godot_v${V}_linux.x86_64" godot
+        chmod +x "Godot_v${V}_linux.x86_64"
+    - name: Cache export templates
+      id: cache-tpl
+      if: inputs.templates == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/.local/share/godot/export_templates
+        key: godot-templates-${{ inputs.version }}-v1
+    - name: Download export templates
+      if: inputs.templates == 'true' && steps.cache-tpl.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        V: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        base="https://github.com/godotengine/godot-builds/releases/download/${V}"
+        tmp="$(mktemp -d)"
+        f="Godot_v${V}_export_templates.tpz"
+        curl -fsSL --retry 5 --retry-delay 5 -o "$tmp/$f" "$base/$f"
+        curl -fsSL --retry 5 --retry-delay 5 -o "$tmp/SHA512-SUMS.txt" "$base/SHA512-SUMS.txt"
+        (cd "$tmp" && grep " ${f}\$" SHA512-SUMS.txt | sha512sum -c -)
+        unzip -q "$tmp/$f" -d "$tmp/x"
+        dest="$HOME/.local/share/godot/export_templates/${V/-/.}"
+        mkdir -p "$dest"
+        mv "$tmp"/x/templates/* "$dest"/
+        rm -rf "$tmp"
+    - name: Put godot on PATH
+      shell: bash
+      run: |
+        echo "$HOME/godot-bin" >> "$GITHUB_PATH"
+        echo "GODOT_BIN=$HOME/godot-bin/godot" >> "$GITHUB_ENV"
+        "$HOME/godot-bin/godot" --version
+        if [ "${{ inputs.templates }}" = "true" ]; then ls "$HOME/.local/share/godot/export_templates/"; fi

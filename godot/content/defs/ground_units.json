@@ -1,0 +1,56 @@
+{
+  "_doc": "R0 B.1 ground_units.json: GroundUnitDef[] (owner 02). Values from 02 s3 table and R0 B.1 ground_units row. Slope speed rule (02 s3): speed * (1 - 0.6 * slope_deg / max_slope_deg). Fields shown as '-' in 02 s3 are omitted (default 0 / null). Mesh paths per 07 s10 (gnd_<id>).",
+  "ground_units": [
+    {
+      "id": "harvester",
+      "status": "core",
+      "tags": ["ground"],
+      "_doc": "02 s3 harvester row; R0 B.1 canonical: hp 150, cost 250/0, build 20 s at vehicle_bay, speed 12 / loaded 10, max slope 25, cargo 300, mine rate 15 Ore/s, unload 6 s, sensor 600, bounding 4.5, score 120, ap_harvester",
+      "presentation": {
+        "mesh": "res://assets/models/ground/gnd_harvester.glb"
+      },
+      "hp": 150,
+      "cost_ore": 250,
+      "cost_ice": 0,
+      "build_time_s": 20,
+      "produced_at": "vehicle_bay",
+      "requires": ["vehicle_bay"],
+      "ground_speed": 12,
+      "ground_speed_loaded": 10,
+      "max_slope_deg": 25,
+      "cargo_ore": 300,
+      "mine_rate": 15,
+      "unload_time_s": 6,
+      "weapon": null,
+      "sensor_radius": 600,
+      "bounding_radius": 4.5,
+      "score_value": 120,
+      "possessable": true,
+      "autopilot": "ap_harvester"
+    },
+    {
+      "id": "siege_crawler",
+      "status": "core",
+      "tags": ["ground"],
+      "_doc": "02 s3 siege_crawler row (core, owner O-4); R0 B.1 canonical: hp 400, cost 450/0, build 40 s at vehicle_bay, requires vehicle_bay and outpost, speed 8, max slope 20, siege_gun with 20 shells, sensor 1000, bounding 7, score 150, ap_crawler; R0 B.8 A-3 weapon_mount ground applies to siege_gun",
+      "presentation": {
+        "mesh": "res://assets/models/ground/gnd_siege_crawler.glb"
+      },
+      "hp": 400,
+      "cost_ore": 450,
+      "cost_ice": 0,
+      "build_time_s": 40,
+      "produced_at": "vehicle_bay",
+      "requires": ["vehicle_bay", "outpost"],
+      "ground_speed": 8,
+      "max_slope_deg": 20,
+      "weapon": "siege_gun",
+      "ammo": 20,
+      "sensor_radius": 1000,
+      "bounding_radius": 7,
+      "score_value": 150,
+      "possessable": true,
+      "autopilot": "ap_crawler"
+    }
+  ]
+}

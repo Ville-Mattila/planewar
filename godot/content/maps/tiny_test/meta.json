@@ -1,0 +1,40 @@
+{
+ "baker_version": "1",
+ "face_resolution": 128,
+ "id": "tiny_test",
+ "map_hash": "f6b4c9c4a2610142ff9973e6b8d31e96c2df31a360c8750c0f3540436b581a0d",
+ "outputs": {
+  "face0.biome.u8": "91d39b17ff752ae0577d619534caeb2dd7b4367c11bcffaf1f37cb71db84588a",
+  "face0.height.u16": "7a320beaad086b5b9f64196b1b2afd29d63e700cc4962a202876995dcbdb6667",
+  "face0.path.u8": "296a6c09c1dcb5cb5175af5c06553c77ac4bc1d9d56e556faac9849852daf9a3",
+  "face0.slope.u8": "d7aa498b1f5d7e251433c333d31e89112f681581b2ea3f54c4d2fb1dbc245a09",
+  "face1.biome.u8": "4fe7b59af6de3b665b67788cc2f99892ab827efae3a467342b3bb4e3bc8e5bfe",
+  "face1.height.u16": "ff4852b8e2cddb8d9e5d9ae8d163662f329b635d1f24ec33100911cf82fc2cfd",
+  "face1.path.u8": "916b144867c340614f515c7b0e5415c74832d899c05264ded2a277a6e81d81ff",
+  "face1.slope.u8": "4fe7b59af6de3b665b67788cc2f99892ab827efae3a467342b3bb4e3bc8e5bfe",
+  "face2.biome.u8": "53f905aaf6f1904cb952b5eaa5bb2648fbba381443329ebd4fa84f4ad36de8a6",
+  "face2.height.u16": "313cd3e0595be25a19057a9e440954c65c78c5a8bab001065762239f64efb351",
+  "face2.path.u8": "ac84a996c63e10ac0e7bfae6524d63ceddc8378c06430ce2009c15783afb8075",
+  "face2.slope.u8": "3f5f784f095affbe6a89dd912d44911f24e72473cddc426c228a985ffb561e1b",
+  "face3.biome.u8": "4fe7b59af6de3b665b67788cc2f99892ab827efae3a467342b3bb4e3bc8e5bfe",
+  "face3.height.u16": "ff4852b8e2cddb8d9e5d9ae8d163662f329b635d1f24ec33100911cf82fc2cfd",
+  "face3.path.u8": "916b144867c340614f515c7b0e5415c74832d899c05264ded2a277a6e81d81ff",
+  "face3.slope.u8": "4fe7b59af6de3b665b67788cc2f99892ab827efae3a467342b3bb4e3bc8e5bfe",
+  "face4.biome.u8": "58a1b9362bfd873efbfdd4a9e2fcb4f788605fba12f1050a6e5448bf7f736e4b",
+  "face4.height.u16": "ff4852b8e2cddb8d9e5d9ae8d163662f329b635d1f24ec33100911cf82fc2cfd",
+  "face4.path.u8": "916b144867c340614f515c7b0e5415c74832d899c05264ded2a277a6e81d81ff",
+  "face4.slope.u8": "4fe7b59af6de3b665b67788cc2f99892ab827efae3a467342b3bb4e3bc8e5bfe",
+  "face5.biome.u8": "4fe7b59af6de3b665b67788cc2f99892ab827efae3a467342b3bb4e3bc8e5bfe",
+  "face5.height.u16": "ff4852b8e2cddb8d9e5d9ae8d163662f329b635d1f24ec33100911cf82fc2cfd",
+  "face5.path.u8": "916b144867c340614f515c7b0e5415c74832d899c05264ded2a277a6e81d81ff",
+  "face5.slope.u8": "4fe7b59af6de3b665b67788cc2f99892ab827efae3a467342b3bb4e3bc8e5bfe",
+  "features.json": "8e767c84ff27d6356b4dc79bc8cfbb5e9ead138e0526680fc31dd01b40fee906"
+ },
+ "radius_m": 6000.0,
+ "recipe_sha256": "b54ecdb1d15756690f3a9e053253e6e1ea113eea993158a2d5010eed6e2b8d36",
+ "relief": {
+  "max_m": 700,
+  "min_m": -500
+ },
+ "schema_version": 1
+}

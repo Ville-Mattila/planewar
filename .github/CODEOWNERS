@@ -1,0 +1,17 @@
+# Lane ownership (docs/09 s3.3, docs/10 s4.3). Single-owner repo: every path
+# routes to the owner; the comments name the reviewing tier the PR needs.
+*                                   @Ville-Mattila
+# Opus review required
+/godot/src/sim/                     @Ville-Mattila
+/godot/src/net/                     @Ville-Mattila
+/godot/src/sim_ai/                  @Ville-Mattila
+/godot/src/presentation/planet/     @Ville-Mattila
+/godot/src/core/sphere.gd           @Ville-Mattila
+# Contract files: Opus review, then owner
+/tools/schemas/                     @Ville-Mattila
+/tools/deps.json                    @Ville-Mattila
+/godot/project.godot                @Ville-Mattila
+/godot/export_presets.cfg           @Ville-Mattila
+/.github/workflows/                 @Ville-Mattila
+/CLAUDE.md                          @Ville-Mattila
+/.claude/                           @Ville-Mattila

@@ -1,0 +1,117 @@
+{
+ "boulder_props": [],
+ "grid": 128,
+ "named_features": [
+  {
+   "dir": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "id": "midnight_ice_ring",
+   "radius_m": 800.0,
+   "type": "ice_ring"
+  },
+  {
+   "dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "id": "noon_plateau",
+   "radius_m": 600,
+   "type": "plateau"
+  }
+ ],
+ "neutral_structures": [],
+ "nodes": [
+  {
+   "capacity": 4000,
+   "cell": 8304,
+   "dir": [
+    0.82943599,
+    0.55860177,
+    0.0
+   ],
+   "id": "field_a_s0",
+   "kind": "ore_field",
+   "max_miners": 2,
+   "radius_m": 250.0,
+   "regen_per_s": 1.0,
+   "slot": 0
+  },
+  {
+   "capacity": 4000,
+   "cell": 5088,
+   "dir": [
+    0.887043453,
+    0.367425429,
+    -0.279557625
+   ],
+   "id": "home_trap_s0",
+   "kind": "cold_trap",
+   "radius_m": 250.0,
+   "rate_per_s": 1.0,
+   "slot": 0
+  },
+  {
+   "capacity": 4000,
+   "cell": 42944,
+   "dir": [
+    0.191508713,
+    0.981490913,
+    0.0
+   ],
+   "id": "field_a_s1",
+   "kind": "ore_field",
+   "max_miners": 2,
+   "radius_m": 250.0,
+   "regen_per_s": 1.0,
+   "slot": 1
+  },
+  {
+   "capacity": 4000,
+   "cell": 45095,
+   "dir": [
+    0.367425429,
+    0.887043453,
+    -0.279557625
+   ],
+   "id": "home_trap_s1",
+   "kind": "cold_trap",
+   "radius_m": 250.0,
+   "rate_per_s": 1.0,
+   "slot": 1
+  }
+ ],
+ "rules_overrides": {},
+ "start_slots": [
+  {
+   "dir": [
+    0.923879533,
+    0.382683432,
+    0.0
+   ],
+   "facing_dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "slot": 0
+  },
+  {
+   "dir": [
+    0.382683432,
+    0.923879533,
+    0.0
+   ],
+   "facing_dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "slot": 1
+  }
+ ],
+ "unused_slot_yield": 0.5
+}

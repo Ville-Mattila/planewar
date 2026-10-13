@@ -1,0 +1,7 @@
+{ "supply_canister": {
+    "cost_ore": 15, "cost_ice": 40, "launch_range_m": 3500, "pad_cooldown_s": 45,
+    "team_max_in_flight": 2, "boost_mps": 120, "boost_s": 2, "max_speed_mps": 160,
+    "max_accel_mps2": 25, "lead_m": 250, "slow_target_mps": 5, "hover_above_m": 60,
+    "min_agl_m": 80, "max_alt_m": 1400, "deploy_radius_m": 30, "max_flight_s": 40,
+    "loiter_s": 25, "pickup_radius_m": 18, "hp": 30, "fuel_frac": 0.4, "ammo_frac": 0.5,
+    "divert_radius_m": 1500, "divert_safe_radius_m": 800, "opportunist_radius_m": 400 } }

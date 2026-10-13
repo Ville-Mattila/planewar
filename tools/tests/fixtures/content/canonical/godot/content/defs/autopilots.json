@@ -1,0 +1,60 @@
+{
+ "autopilots": [
+  {
+   "id": "ap_dart",
+   "status": "core",
+   "tags": [
+    "autopilot"
+   ],
+   "think_period_ticks": 10
+  },
+  {
+   "id": "ap_lancer",
+   "status": "core",
+   "tags": [
+    "autopilot"
+   ],
+   "think_period_ticks": 10
+  },
+  {
+   "id": "ap_bomber",
+   "status": "core",
+   "tags": [
+    "autopilot"
+   ],
+   "think_period_ticks": 10
+  },
+  {
+   "id": "ap_scout",
+   "status": "core",
+   "tags": [
+    "autopilot"
+   ],
+   "think_period_ticks": 10
+  },
+  {
+   "id": "ap_hauler",
+   "status": "core",
+   "tags": [
+    "autopilot"
+   ],
+   "think_period_ticks": 10
+  },
+  {
+   "id": "ap_harvester",
+   "status": "core",
+   "tags": [
+    "autopilot"
+   ],
+   "think_period_ticks": 10
+  },
+  {
+   "id": "ap_crawler",
+   "status": "core",
+   "tags": [
+    "autopilot"
+   ],
+   "think_period_ticks": 10
+  }
+ ]
+}

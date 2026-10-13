@@ -1,0 +1,169 @@
+{
+ "projectiles": [
+  {
+   "id": "slug_light",
+   "status": "core",
+   "tags": [
+    "projectile"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/slug_light.glb"
+   },
+   "behaviour": "straight",
+   "speed_mps": 700,
+   "lifetime_s": 1.15,
+   "gravity": false,
+   "transport": false,
+   "radius_m": 0.5,
+   "shield_absorbed": false,
+   "hp": 0,
+   "fuse": "contact"
+  },
+  {
+   "id": "slug_heavy",
+   "status": "core",
+   "tags": [
+    "projectile"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/slug_heavy.glb"
+   },
+   "behaviour": "straight",
+   "speed_mps": 700,
+   "lifetime_s": 1.15,
+   "gravity": false,
+   "transport": false,
+   "radius_m": 0.6,
+   "shield_absorbed": false,
+   "hp": 0,
+   "fuse": "contact"
+  },
+  {
+   "id": "bomb",
+   "status": "core",
+   "tags": [
+    "projectile"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/bomb.glb"
+   },
+   "behaviour": "ballistic",
+   "speed_mps": 0,
+   "lifetime_s": 30,
+   "gravity": true,
+   "transport": true,
+   "radius_m": 1.0,
+   "shield_absorbed": true,
+   "hp": 0,
+   "eject_down_mps": 40,
+   "blast_radius_m": 15,
+   "blast_radius_structure_m": 20,
+   "fuse": "contact",
+   "arm_s": 0.5
+  },
+  {
+   "id": "rocket",
+   "status": "core",
+   "tags": [
+    "projectile"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/rocket.glb"
+   },
+   "behaviour": "guided",
+   "speed_mps": 250,
+   "lifetime_s": 6.0,
+   "gravity": false,
+   "transport": true,
+   "radius_m": 0.8,
+   "shield_absorbed": true,
+   "hp": 0,
+   "blast_radius_m": 4,
+   "blast_radius_structure_m": 4,
+   "fuse": "proximity",
+   "fuse_radius_m": 4,
+   "arm_s": 0.2
+  },
+  {
+   "id": "flak_shell",
+   "status": "core",
+   "tags": [
+    "projectile"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/flak_shell.glb"
+   },
+   "behaviour": "straight",
+   "speed_mps": 300,
+   "lifetime_s": 5.0,
+   "gravity": false,
+   "transport": false,
+   "radius_m": 0.5,
+   "shield_absorbed": false,
+   "hp": 0,
+   "blast_radius_m": 25,
+   "fuse": "timed",
+   "fuse_radius_m": 12,
+   "arm_s": 0.5
+  },
+  {
+   "id": "rail_slug",
+   "status": "core",
+   "tags": [
+    "projectile"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/rail_slug.glb"
+   },
+   "behaviour": "straight",
+   "speed_mps": 1500,
+   "lifetime_s": 1.7,
+   "gravity": false,
+   "transport": false,
+   "radius_m": 0.5,
+   "shield_absorbed": false,
+   "hp": 0,
+   "fuse": "contact"
+  },
+  {
+   "id": "siege_shell",
+   "status": "core",
+   "tags": [
+    "projectile"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/siege_shell.glb"
+   },
+   "behaviour": "ballistic",
+   "speed_mps": 110,
+   "lifetime_s": 12,
+   "gravity": true,
+   "transport": true,
+   "radius_m": 1.0,
+   "shield_absorbed": true,
+   "hp": 0,
+   "blast_radius_m": 12,
+   "blast_radius_structure_m": 12,
+   "fuse": "contact",
+   "arm_s": 1.0
+  },
+  {
+   "id": "supply_canister",
+   "status": "candidate",
+   "tags": [
+    "projectile"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/supply_canister.glb"
+   },
+   "behaviour": "rendezvous",
+   "speed_mps": 0,
+   "lifetime_s": 0,
+   "gravity": false,
+   "transport": true,
+   "radius_m": 0,
+   "shield_absorbed": false,
+   "hp": 30
+  }
+ ]
+}

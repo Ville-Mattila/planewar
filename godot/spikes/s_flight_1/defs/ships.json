@@ -1,0 +1,275 @@
+{
+ "_doc": "R0 B.1 canonical ships (fixture)",
+ "flight_common": {
+  "eff_fade_start": 0.8,
+  "brake_factor": 0.6,
+  "boost_thrust_mult": 1.5,
+  "overspeed_dps": 10,
+  "terrain_kill_speed": 25,
+  "terrain_damage_speed": 8,
+  "landing_safe_v_vert": 8,
+  "landing_safe_v_hor": 15,
+  "landing_safe_pitch_deg": 25,
+  "landing_damage_v_vert": 15,
+  "landing_damage_v_hor": 25,
+  "launch_speed_mps": 5,
+  "tether_len_m": 25,
+  "tether_drop_m": 8,
+  "tether_tau_s": 0.4,
+  "tow_turn_rate_mult": 0.6,
+  "auto_dock_radius_m": 150
+ },
+ "ships": [
+  {
+   "id": "dart",
+   "status": "core",
+   "tags": [
+    "ship"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/dart.glb"
+   },
+   "hp": 100,
+   "cost_ore": 150,
+   "cost_ice": 0,
+   "build_time_s": 20,
+   "requires": [
+    "shipyard"
+   ],
+   "sensor_radius": 1400,
+   "bounding_radius": 6,
+   "score_value": 100,
+   "v_cruise": 110,
+   "v_boost": 160,
+   "boost_duration_s": 6,
+   "boost_cooldown_s": 20,
+   "v_dive_max": 190,
+   "a_thrust": 24,
+   "pitch_rate_dps": 120,
+   "yaw_rate_dps": 60,
+   "roll_rate_dps": 180,
+   "rate_accel_dps2": 720,
+   "flip_cooldown_s": 2.0,
+   "flip_duration_s": 0.5,
+   "k_side": 0.5,
+   "k_up": 0.1,
+   "k_up_flight": 1.0,
+   "primary": {
+    "weapon": "gun_dart",
+    "ammo": 400
+   },
+   "secondary": {
+    "weapon": "bomb",
+    "count": 2
+   },
+   "fuel_s": 240,
+   "refuel_ice": 20,
+   "refuel_time_s": 10,
+   "rearm_time_s": 6,
+   "repair_time_s": 15,
+   "cargo_ice": 0,
+   "tow_slots": 0,
+   "produced_at": "shipyard",
+   "possessable": true,
+   "autopilot": "ap_dart"
+  },
+  {
+   "id": "lancer",
+   "status": "core",
+   "tags": [
+    "ship"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/lancer.glb"
+   },
+   "hp": 220,
+   "cost_ore": 300,
+   "cost_ice": 0,
+   "build_time_s": 30,
+   "requires": [
+    "shipyard"
+   ],
+   "sensor_radius": 1400,
+   "bounding_radius": 8,
+   "score_value": 150,
+   "v_cruise": 80,
+   "v_boost": 115,
+   "boost_duration_s": 5,
+   "boost_cooldown_s": 25,
+   "v_dive_max": 150,
+   "a_thrust": 18,
+   "pitch_rate_dps": 80,
+   "yaw_rate_dps": 45,
+   "roll_rate_dps": 120,
+   "rate_accel_dps2": 600,
+   "flip_cooldown_s": 3.0,
+   "flip_duration_s": 0.7,
+   "k_side": 0.6,
+   "k_up": 0.12,
+   "k_up_flight": 1.0,
+   "primary": {
+    "weapon": "gun_lancer",
+    "ammo": 300
+   },
+   "secondary": {
+    "weapon": "rocket_lancer",
+    "count": 8
+   },
+   "fuel_s": 300,
+   "refuel_ice": 30,
+   "refuel_time_s": 12,
+   "rearm_time_s": 8,
+   "repair_time_s": 18,
+   "cargo_ice": 0,
+   "tow_slots": 0,
+   "produced_at": "shipyard",
+   "possessable": true,
+   "autopilot": "ap_lancer"
+  },
+  {
+   "id": "bomber",
+   "status": "core",
+   "tags": [
+    "ship"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/bomber.glb"
+   },
+   "hp": 300,
+   "cost_ore": 450,
+   "cost_ice": 50,
+   "build_time_s": 45,
+   "requires": [
+    "hangar"
+   ],
+   "sensor_radius": 1200,
+   "bounding_radius": 10,
+   "score_value": 250,
+   "v_cruise": 70,
+   "v_boost": 95,
+   "boost_duration_s": 4,
+   "boost_cooldown_s": 30,
+   "v_dive_max": 140,
+   "a_thrust": 14,
+   "pitch_rate_dps": 50,
+   "yaw_rate_dps": 30,
+   "roll_rate_dps": 70,
+   "rate_accel_dps2": 480,
+   "flip_cooldown_s": 5.0,
+   "flip_duration_s": 1.0,
+   "k_side": 0.7,
+   "k_up": 0.15,
+   "k_up_flight": 1.2,
+   "primary": null,
+   "secondary": {
+    "weapon": "bomb",
+    "count": 6
+   },
+   "fuel_s": 360,
+   "refuel_ice": 45,
+   "refuel_time_s": 15,
+   "rearm_time_s": 10,
+   "repair_time_s": 22,
+   "cargo_ice": 0,
+   "tow_slots": 0,
+   "produced_at": "shipyard",
+   "possessable": true,
+   "autopilot": "ap_bomber"
+  },
+  {
+   "id": "scout",
+   "status": "core",
+   "tags": [
+    "ship"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/scout.glb"
+   },
+   "hp": 40,
+   "cost_ore": 60,
+   "cost_ice": 0,
+   "build_time_s": 10,
+   "requires": [
+    "shipyard"
+   ],
+   "sensor_radius": 2000,
+   "bounding_radius": 4,
+   "score_value": 50,
+   "v_cruise": 140,
+   "v_boost": 190,
+   "boost_duration_s": 8,
+   "boost_cooldown_s": 15,
+   "v_dive_max": 220,
+   "a_thrust": 30,
+   "pitch_rate_dps": 140,
+   "yaw_rate_dps": 80,
+   "roll_rate_dps": 220,
+   "rate_accel_dps2": 900,
+   "flip_cooldown_s": 1.5,
+   "flip_duration_s": 0.4,
+   "k_side": 0.5,
+   "k_up": 0.1,
+   "k_up_flight": 0.8,
+   "primary": null,
+   "secondary": null,
+   "fuel_s": 180,
+   "refuel_ice": 10,
+   "refuel_time_s": 6,
+   "rearm_time_s": 0,
+   "repair_time_s": 10,
+   "cargo_ice": 0,
+   "tow_slots": 0,
+   "produced_at": "shipyard",
+   "possessable": true,
+   "autopilot": "ap_scout"
+  },
+  {
+   "id": "hauler",
+   "status": "core",
+   "tags": [
+    "ship"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/hauler.glb"
+   },
+   "hp": 120,
+   "cost_ore": 200,
+   "cost_ice": 0,
+   "build_time_s": 25,
+   "requires": [
+    "shipyard"
+   ],
+   "sensor_radius": 1000,
+   "bounding_radius": 8,
+   "score_value": 100,
+   "v_cruise": 45,
+   "v_boost": 60,
+   "boost_duration_s": 4,
+   "boost_cooldown_s": 30,
+   "v_dive_max": 120,
+   "a_thrust": 15,
+   "pitch_rate_dps": 60,
+   "yaw_rate_dps": 40,
+   "roll_rate_dps": 90,
+   "rate_accel_dps2": 540,
+   "flip_cooldown_s": 4.0,
+   "flip_duration_s": 0.8,
+   "k_side": 0.8,
+   "k_up": 0.2,
+   "k_up_flight": 1.2,
+   "primary": null,
+   "secondary": null,
+   "fuel_s": 400,
+   "refuel_ice": 40,
+   "refuel_time_s": 12,
+   "rearm_time_s": 0,
+   "repair_time_s": 15,
+   "cargo_ice": 400,
+   "tow_slots": 1,
+   "produced_at": "shipyard",
+   "possessable": true,
+   "autopilot": "ap_hauler",
+   "v_cruise_loaded": 35
+  }
+ ]
+}

@@ -1,0 +1,134 @@
+{
+ "bot_promises": [
+  {
+   "id": "easy",
+   "status": "core",
+   "tags": [
+    "bot_tier"
+   ],
+   "audience_key": "promise.easy.audience",
+   "first_dart_s": [
+    null,
+    90
+   ],
+   "first_outpost_s": 540,
+   "first_attack_s": [
+    360,
+    null
+   ],
+   "raid_targets": [
+    "near_own_base"
+   ],
+   "bombers_from_s": 1080,
+   "uses_shields": "no",
+   "uses_rail_lance": "no",
+   "poles_by_s": null,
+   "command_rate_cap": 20,
+   "think_s": 3,
+   "reaction_s": 6,
+   "win_vs_lower": null,
+   "human_target_key": "promise.easy.human_target"
+  },
+  {
+   "id": "normal",
+   "status": "core",
+   "tags": [
+    "bot_tier"
+   ],
+   "audience_key": "promise.normal.audience",
+   "first_dart_s": [
+    25,
+    45
+   ],
+   "first_outpost_s": 360,
+   "first_attack_s": [
+    180,
+    360
+   ],
+   "raid_targets": [
+    "harvester",
+    "hauler"
+   ],
+   "bombers_from_s": 720,
+   "uses_shields": "yes",
+   "uses_rail_lance": "rarely",
+   "poles_by_s": 840,
+   "command_rate_cap": 40,
+   "think_s": 1,
+   "reaction_s": 2,
+   "win_vs_lower": [
+    0.8,
+    0.97
+   ],
+   "human_target_key": "promise.normal.human_target"
+  },
+  {
+   "id": "hard",
+   "status": "core",
+   "tags": [
+    "bot_tier"
+   ],
+   "audience_key": "promise.hard.audience",
+   "first_dart_s": [
+    25,
+    40
+   ],
+   "first_outpost_s": 300,
+   "first_attack_s": [
+    150,
+    300
+   ],
+   "raid_targets": [
+    "harvester",
+    "relay_pylon",
+    "refinery",
+    "docked_ship"
+   ],
+   "bombers_from_s": 600,
+   "uses_shields": "yes",
+   "uses_rail_lance": "yes",
+   "poles_by_s": 720,
+   "command_rate_cap": 80,
+   "think_s": 1,
+   "reaction_s": 0.5,
+   "win_vs_lower": [
+    0.7,
+    0.9
+   ],
+   "human_target_key": "promise.hard.human_target"
+  },
+  {
+   "id": "brutal",
+   "status": "core",
+   "tags": [
+    "bot_tier"
+   ],
+   "audience_key": "promise.brutal.audience",
+   "first_dart_s": [
+    25,
+    35
+   ],
+   "first_outpost_s": 270,
+   "first_attack_s": [
+    120,
+    240
+   ],
+   "raid_targets": [
+    "multi_prong",
+    "docked_ship"
+   ],
+   "bombers_from_s": 540,
+   "uses_shields": "yes",
+   "uses_rail_lance": "yes",
+   "poles_by_s": 600,
+   "command_rate_cap": 150,
+   "think_s": 1,
+   "reaction_s": 0,
+   "win_vs_lower": [
+    0.6,
+    0.85
+   ],
+   "human_target_key": "promise.brutal.human_target"
+  }
+ ]
+}

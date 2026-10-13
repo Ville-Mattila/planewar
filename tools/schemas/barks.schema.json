@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "barks.schema.json",
+  "$comment": "08 SL-3 rule 3 v1 bark table, rule 4 rate limits (FEAT-01). Strings live in the locale CSV domain barks (R0 C2-33).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "rate_limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_gap_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60,
+          "$comment": "08 SL-3 rule 4: one line every 1.5 s"
+        },
+        "queue_max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32,
+          "$comment": "08 SL-3 rule 4: 4 lines"
+        },
+        "line_life_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60,
+          "$comment": "08 SL-3 rule 4: 4 s"
+        },
+        "entity_key_cooldown_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600,
+          "$comment": "08 SL-3 rule 4: 20 s"
+        }
+      },
+      "required": [
+        "min_gap_s",
+        "queue_max",
+        "line_life_s",
+        "entity_key_cooldown_s"
+      ]
+    },
+    "barks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/bark"
+      }
+    }
+  },
+  "required": [
+    "rate_limits",
+    "barks"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "bark": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "source": {
+          "enum": [
+            "LAUNCHED",
+            "DOCKED",
+            "HIT_AFTER_IDLE",
+            "LANDING",
+            "RTB_FUEL",
+            "RTB_AMMO",
+            "RTB_DAMAGE",
+            "ALERT_HARVESTER_ATTACKED",
+            "ALERT_STRUCTURE_LOST",
+            "ALERT_LOW_POWER",
+            "ALERT_WING_STATE",
+            "ALERT_SUPPLY_AWAY",
+            "ALERT_METEOR_WARN"
+          ],
+          "$comment": "08 SL-3 rule 3 'Derived from' column; AlertKind names per R0 B.3"
+        },
+        "scope": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "SELF",
+              "WING",
+              "NEAR",
+              "ALERT"
+            ]
+          },
+          "$comment": "08 SL-3 rule 5 scopes; the table's WING/NEAR is both"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "$comment": "08 SL-3 rule 3 Prio column"
+        },
+        "cooldown_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600,
+          "$comment": "08 SL-3 rule 4: 20 s per entity per key"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "source",
+        "scope",
+        "priority",
+        "cooldown_s"
+      ]
+    }
+  }
+}

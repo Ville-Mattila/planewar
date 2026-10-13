@@ -1,0 +1,524 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "scoring.schema.json",
+  "title": "ScoringDef (godot/content/defs/scoring.json)",
+  "$comment": "R0 B.1 scoring.json (ScoringDef, owner 02 with 08 SL-1 landing block); 02 s17.1. Singleton: no id, status or tags (as economy.json). Score never affects the match (02 s17.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "kill_points": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scout": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "dart": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "hauler": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "lancer": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "bomber": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "harvester": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "siege_crawler": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      },
+      "required": [
+        "scout",
+        "dart",
+        "hauler",
+        "lancer",
+        "bomber",
+        "harvester",
+        "siege_crawler"
+      ],
+      "$comment": "02 s17.1 kill_* events (points)"
+    },
+    "kill_hauler_loaded_bonus": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "$comment": "02 s17.1 +50"
+    },
+    "structure_destroyed_ratio": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "$comment": "02 s17.1 (cost_ore + cost_ice) / 5"
+    },
+    "core_destroyed": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000,
+      "$comment": "02 s17.1 1,000"
+    },
+    "structure_damage_points_per_hp": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10,
+      "$comment": "02 s17.1 1 per 10 damage"
+    },
+    "assist": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "window_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60,
+          "$comment": "02 s17.1: last 10 s"
+        },
+        "min_share": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "02 s17.1: >= 25 % of the damage"
+        },
+        "kill_share": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "02 s17.1: 50 % of the kill value"
+        }
+      },
+      "required": [
+        "window_s",
+        "min_share",
+        "kill_share"
+      ],
+      "$comment": "02 s17.1 assist"
+    },
+    "landing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "points": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hard": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "fair": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "clean": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "ace": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "hard",
+            "fair",
+            "clean",
+            "ace"
+          ],
+          "$comment": "02 s17.1 landing grade points (HARD 5, FAIR 15, CLEAN 30, ACE 50)"
+        },
+        "q_thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fair": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "clean": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "ace": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "fair",
+            "clean",
+            "ace"
+          ],
+          "$comment": "02 s17.1 q bands"
+        },
+        "q_weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "v_vert": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "v_horiz": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "tilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "offset": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "v_vert",
+            "v_horiz",
+            "tilt",
+            "offset"
+          ],
+          "$comment": "02 s17.1 q formula weights; sum to 1.0"
+        },
+        "q_norms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "v_vert_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 50,
+              "$comment": "02 s17.1 q normaliser; equals flight_common landing_safe_v_vert 8"
+            },
+            "v_horiz_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "$comment": "02 s17.1 q normaliser; equals landing_safe_v_hor 15"
+            },
+            "tilt_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90,
+              "$comment": "02 s17.1 q normaliser; equals landing_safe_pitch_deg 25"
+            }
+          },
+          "required": [
+            "v_vert_mps",
+            "v_horiz_mps",
+            "tilt_deg"
+          ]
+        },
+        "hot_mult": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5,
+          "$comment": "02 s17.1 hot x1.5"
+        },
+        "hot_enemy_range_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000,
+          "$comment": "02 s17.1 enemy ship within 1,500 m of the pad"
+        },
+        "hot_hit_window_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60,
+          "$comment": "02 s17.1 hit in the last 5 s"
+        },
+        "dead_stick_bonus": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "02 s17.1 +20"
+        },
+        "dead_stick_fuel01": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "02 s17.1 fuel01 < 0.03 at touchdown"
+        },
+        "repair_time_mult": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "02 s17.1 repair x 0.9"
+        }
+      },
+      "required": [
+        "points",
+        "q_thresholds",
+        "q_weights",
+        "q_norms",
+        "hot_mult",
+        "hot_enemy_range_m",
+        "hot_hit_window_s",
+        "dead_stick_bonus",
+        "dead_stick_fuel01",
+        "repair_time_mult"
+      ],
+      "$comment": "02 s17.1 landing grades and modifiers (08 SL-1 block)"
+    },
+    "landing_grade": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "v_vert": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "$comment": "08 SL-1 q term 0.35 (1 - v_vert/8)"
+            },
+            "v_horiz": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "$comment": "08 SL-1 q term 0.25 (1 - v_horiz/15)"
+            },
+            "tilt": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "$comment": "08 SL-1 q term 0.20 (1 - tilt/25)"
+            },
+            "offset": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "$comment": "08 SL-1 q term 0.20 (1 - offset/pad_radius_m)"
+            }
+          },
+          "required": [
+            "v_vert",
+            "v_horiz",
+            "tilt",
+            "offset"
+          ],
+          "$comment": "08 SL-1 rule 2; must sum to 1.0 (validate_content.py check_landing_grade)"
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ace": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "clean": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "fair": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "ace",
+            "clean",
+            "fair"
+          ],
+          "$comment": "08 SL-1 rule 3: ACE 0.85, CLEAN 0.65, FAIR 0.40"
+        },
+        "points": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ace": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "clean": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "fair": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "hard": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000
+            }
+          },
+          "required": [
+            "ace",
+            "clean",
+            "fair",
+            "hard"
+          ],
+          "$comment": "08 SL-1 rule 4: ACE 50, CLEAN 30, FAIR 15, HARD 5"
+        },
+        "hot_multiplier": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5,
+          "$comment": "08 SL-1 rule 4: x1.5 if hot"
+        },
+        "hot_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000,
+          "$comment": "08 SL-1 rule 1: hostile within 1,500 m"
+        },
+        "hot_window_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60,
+          "$comment": "08 SL-1 rule 1: hit in the last 5 s"
+        },
+        "dead_stick_fuel01": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "08 SL-1 rule 4: fuel01 < 0.03"
+        },
+        "dead_stick_points": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "08 SL-1 rule 4: +20"
+        },
+        "manual_window_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "08 SL-1 rule 1: no auto-dock tick in the final 150 m"
+        }
+      },
+      "required": [
+        "weights",
+        "thresholds",
+        "points",
+        "hot_multiplier",
+        "hot_radius_m",
+        "hot_window_s",
+        "dead_stick_fuel01",
+        "dead_stick_points",
+        "manual_window_m"
+      ],
+      "$comment": "08 SL-1 Data block (FEAT-01): grade weights, thresholds, points and modifiers; equality with the 02 landing block is checked by validate_content.py"
+    },
+    "salvage_points_per_ore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10,
+      "$comment": "02 s17.1 1 per 4 Ore"
+    },
+    "ice_possessed_points_per_ice": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10,
+      "$comment": "02 s17.1 1 per 10 Ice"
+    },
+    "relay": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "capture": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "$comment": "02 s17.1 relay_capture 300"
+        },
+        "hold_per_min": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "02 s17.1 relay_hold_min 10 per minute held"
+        }
+      },
+      "required": [
+        "capture",
+        "hold_per_min"
+      ],
+      "$comment": "02 s17.1 relay events"
+    },
+    "commander_points_per_ore_spent": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10,
+      "$comment": "02 s17.1 1 per 25 Ore"
+    },
+    "commander_auto_kill_share": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "$comment": "02 s17.1 50 % of the kill value"
+    },
+    "match_win": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000,
+      "$comment": "02 s17.1 500"
+    }
+  },
+  "required": [
+    "kill_points",
+    "kill_hauler_loaded_bonus",
+    "structure_destroyed_ratio",
+    "core_destroyed",
+    "structure_damage_points_per_hp",
+    "assist",
+    "landing",
+    "landing_grade",
+    "salvage_points_per_ore",
+    "ice_possessed_points_per_ice",
+    "relay",
+    "commander_points_per_ore_spent",
+    "commander_auto_kill_share",
+    "match_win"
+  ],
+  "$defs": {
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    }
+  }
+}

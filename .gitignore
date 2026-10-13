@@ -1,0 +1,42 @@
+# Godot
+.godot/
+godot/.godot/
+*.translation
+export_credentials.cfg
+# Builds and exports
+build/
+exports/
+*.apk
+*.aab
+*.pck.tmp
+# Python
+__pycache__/
+*.pyc
+.venv/
+# Node
+node_modules/
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+# Secrets
+.env
+.env.*
+*.keystore
+*.jks
+# Vercel
+.vercel
+
+.vercel
+.env*
+
+# Agent worktrees
+.claude/worktrees/
+
+# Local test tooling (gdUnit4 is installed per CI job; reports are generated)
+godot/addons/gdUnit4/
+godot/reports/
+
+# Machine-specific agent notes
+CLAUDE.local.md

@@ -1,0 +1,253 @@
+{
+ "doctrines": [
+  {
+   "id": "vanguard",
+   "status": "core",
+   "tags": [
+    "doctrine"
+   ],
+   "modifiers": [
+    {
+     "select": {
+      "tags_any": [
+       "ship"
+      ]
+     },
+     "field": "v_cruise",
+     "op": "mul",
+     "value": 1.15
+    },
+    {
+     "select": {
+      "tags_any": [
+       "ship"
+      ]
+     },
+     "field": "v_boost",
+     "op": "mul",
+     "value": 1.15
+    },
+    {
+     "select": {
+      "tags_any": [
+       "ship"
+      ]
+     },
+     "field": "a_thrust",
+     "op": "mul",
+     "value": 1.15
+    },
+    {
+     "select": {
+      "tags_any": [
+       "ship"
+      ]
+     },
+     "field": "pitch_rate_dps",
+     "op": "mul",
+     "value": 1.15
+    },
+    {
+     "select": {
+      "tags_any": [
+       "ship"
+      ]
+     },
+     "field": "yaw_rate_dps",
+     "op": "mul",
+     "value": 1.15
+    },
+    {
+     "select": {
+      "tags_any": [
+       "ship"
+      ]
+     },
+     "field": "roll_rate_dps",
+     "op": "mul",
+     "value": 1.15
+    },
+    {
+     "select": {
+      "tags_any": [
+       "ship"
+      ]
+     },
+     "field": "v_dive_max",
+     "op": "mul",
+     "value": 1.1
+    },
+    {
+     "select": {
+      "tags_any": [
+       "ship"
+      ]
+     },
+     "field": "hp",
+     "op": "mul",
+     "value": 0.8
+    },
+    {
+     "select": {
+      "ids": [
+       "dart"
+      ]
+     },
+     "field": "secondary.count",
+     "op": "set",
+     "value": 1
+    }
+   ],
+   "rules": {
+    "flip_cooldown_s_override": 1.0
+   }
+  },
+  {
+   "id": "bulwark",
+   "status": "core",
+   "tags": [
+    "doctrine"
+   ],
+   "modifiers": [
+    {
+     "select": {
+      "tags_any": [
+       "structure",
+       "tower"
+      ]
+     },
+     "field": "hp",
+     "op": "mul",
+     "value": 1.25
+    },
+    {
+     "select": {
+      "weapon_mount": "tower"
+     },
+     "field": "range_m",
+     "op": "mul",
+     "value": 1.1
+    },
+    {
+     "select": {
+      "tags_any": [
+       "ship"
+      ]
+     },
+     "field": "v_cruise",
+     "op": "mul",
+     "value": 0.9
+    },
+    {
+     "select": {
+      "tags_any": [
+       "ship"
+      ]
+     },
+     "field": "v_boost",
+     "op": "mul",
+     "value": 0.9
+    },
+    {
+     "select": {
+      "tags_any": [
+       "structure",
+       "tower"
+      ]
+     },
+     "field": "cost_ore",
+     "op": "mul",
+     "value": 1.15
+    },
+    {
+     "select": {
+      "tags_any": [
+       "structure",
+       "tower"
+      ]
+     },
+     "field": "cost_ice",
+     "op": "mul",
+     "value": 1.15
+    }
+   ],
+   "rules": {
+    "hangar_blocks_rockets": true
+   }
+  },
+  {
+   "id": "foundry",
+   "status": "core",
+   "tags": [
+    "doctrine"
+   ],
+   "modifiers": [
+    {
+     "select": {
+      "tags_any": [
+       "structure",
+       "tower",
+       "ship",
+       "ground"
+      ]
+     },
+     "field": "cost_ore",
+     "op": "mul",
+     "value": 0.85
+    },
+    {
+     "select": {
+      "tags_any": [
+       "structure",
+       "tower",
+       "ship",
+       "ground"
+      ]
+     },
+     "field": "cost_ice",
+     "op": "mul",
+     "value": 0.85
+    },
+    {
+     "select": {
+      "ids": [
+       "harvester"
+      ]
+     },
+     "field": "cargo_ore",
+     "op": "mul",
+     "value": 1.25
+    },
+    {
+     "select": {
+      "ids": [
+       "hauler"
+      ]
+     },
+     "field": "tow_slots",
+     "op": "set",
+     "value": 2
+    },
+    {
+     "select": {
+      "weapon_mount": "ship"
+     },
+     "field": "damage_min",
+     "op": "mul",
+     "value": 0.85
+    },
+    {
+     "select": {
+      "weapon_mount": "ship"
+     },
+     "field": "damage_max",
+     "op": "mul",
+     "value": 0.85
+    }
+   ],
+   "rules": {
+    "reactor_unlock_s": 600
+   }
+  }
+ ]
+}

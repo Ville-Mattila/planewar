@@ -1,0 +1,23 @@
+{
+  "_doc": "docs/06 s6.2 and 01 s5.3: flight HUD thresholds and layout. Altitudes in metres above datum, angles in degrees.",
+  "deck_agl_m": 150,
+  "low_alt_m": 400,
+  "high_alt_m": 1500,
+  "fade_alt_m": 2000,
+  "uplink_start_m": 1500,
+  "uplink_pulse_from_m": 1800,
+  "uplink_lost_m": 2000,
+  "uplink_pulse_hz": 2.0,
+  "pole_deg": 1.0,
+  "ladder_step_deg": 10,
+  "ladder_half_range_deg": 40,
+  "ladder_px_per_deg": 4.0,
+  "ladder_width_du": 120,
+  "tape_width_du": 280,
+  "tape_deg_span": 90,
+  "tape_tick_deg": 10,
+  "readout_width_du": 96,
+  "font_du": 12,
+  "font_du_min": 9,
+  "line_du": 1.5
+}

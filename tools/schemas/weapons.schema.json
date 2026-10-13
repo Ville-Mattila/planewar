@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "weapons.schema.json",
+  "title": "WeaponDef[] (godot/content/defs/weapons.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "weapons": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/weapon"
+      }
+    }
+  },
+  "required": [
+    "weapons"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "weapon": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "kind": {
+          "enum": [
+            "gun",
+            "bomb",
+            "rocket",
+            "flak",
+            "rail",
+            "artillery"
+          ]
+        },
+        "weapon_mount": {
+          "enum": [
+            "ship",
+            "tower",
+            "ground"
+          ],
+          "$comment": "ground appended by R0 B.8 A-3 (siege_gun on the Siege Crawler); enum is append-only"
+        },
+        "projectile": {
+          "$ref": "#/$defs/id"
+        },
+        "damage_min": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "damage_max": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "structure_mult": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "ground_mult": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "rof": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "burst": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "burst_interval_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60
+        },
+        "salvo": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16
+        },
+        "reload_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 120
+        },
+        "range_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "range_min_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000,
+          "$comment": "optional, default 0; must be < range_m (validate_content.py). Appended by R0 B.8 A-2 (siege_gun 300 m)."
+        },
+        "spread_deg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "lock_cone_deg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "lock_time_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "turn_rate_dps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 720
+        },
+        "rearm_ice": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "ammo_per_shot": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "presentation",
+        "kind",
+        "weapon_mount",
+        "projectile",
+        "damage_min",
+        "damage_max"
+      ],
+      "$comment": "R0 B.1; 02 s4.1. Fields shown as '-' in 02 are omitted (default 0 / null)."
+    }
+  }
+}

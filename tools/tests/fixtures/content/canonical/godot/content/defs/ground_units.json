@@ -1,0 +1,62 @@
+{
+ "ground_units": [
+  {
+   "id": "harvester",
+   "status": "core",
+   "tags": [
+    "ground"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/harvester.glb"
+   },
+   "hp": 150,
+   "cost_ore": 250,
+   "cost_ice": 0,
+   "build_time_s": 20,
+   "produced_at": "vehicle_bay",
+   "requires": [
+    "vehicle_bay"
+   ],
+   "ground_speed": 12,
+   "ground_speed_loaded": 10,
+   "max_slope_deg": 25,
+   "cargo_ore": 300,
+   "mine_rate": 15,
+   "unload_time_s": 6,
+   "weapon": null,
+   "sensor_radius": 600,
+   "bounding_radius": 4.5,
+   "score_value": 120,
+   "possessable": true,
+   "autopilot": "ap_harvester"
+  },
+  {
+   "id": "siege_crawler",
+   "status": "core",
+   "tags": [
+    "ground"
+   ],
+   "presentation": {
+    "mesh": "res://assets/placeholder/siege_crawler.glb"
+   },
+   "hp": 400,
+   "cost_ore": 450,
+   "cost_ice": 0,
+   "build_time_s": 40,
+   "produced_at": "vehicle_bay",
+   "requires": [
+    "vehicle_bay",
+    "outpost"
+   ],
+   "ground_speed": 8,
+   "max_slope_deg": 20,
+   "weapon": "siege_gun",
+   "ammo": 20,
+   "sensor_radius": 1000,
+   "bounding_radius": 7,
+   "score_value": 150,
+   "possessable": true,
+   "autopilot": "ap_crawler"
+  }
+ ]
+}

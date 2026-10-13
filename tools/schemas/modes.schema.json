@@ -1,0 +1,323 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "modes.schema.json",
+  "title": "ModeDef[] (godot/content/defs/modes.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "modes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/mode"
+      }
+    },
+    "slots_by_player_count": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "2",
+        "4",
+        "6",
+        "8"
+      ],
+      "properties": {
+        "2": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "uniqueItems": true
+        },
+        "4": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "uniqueItems": true
+        },
+        "6": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "uniqueItems": true
+        },
+        "8": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+          },
+          "uniqueItems": true
+        }
+      },
+      "$comment": "R0 B.6: 2 [0,2]; 4 [0,2,4,6]; 6 [0,1,2,4,5,6]; 8 [0..7]"
+    }
+  },
+  "required": [
+    "modes",
+    "slots_by_player_count"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "mode": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "enum": [
+            "pvp_1v1",
+            "pvp_2v2",
+            "pvp_team",
+            "coop",
+            "custom",
+            "skirmish",
+            "campaign"
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "humans": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 8
+          },
+          "$comment": "[min, max]"
+        },
+        "teams": {
+          "type": "string"
+        },
+        "fill_after_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "$comment": "null = host / per slot / mission"
+        },
+        "fill_rating_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "optional; weight of a bot-filled match in the hidden rating. R0 B.6: pvp_1v1 0 (no MMR change), pvp_2v2 0.5; omitted = 1.0 (R0 B.8 A-4)"
+        },
+        "doctrine_pick": {
+          "enum": [
+            "lobby_blind",
+            "each_human",
+            "host_may_lock",
+            "per_slot",
+            "mission"
+          ]
+        },
+        "adjutant": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "off",
+              "economy",
+              "full"
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "moving_sun": {
+          "enum": [
+            "off",
+            "option",
+            "mission"
+          ]
+        },
+        "pause_save": {
+          "type": "boolean"
+        },
+        "pause_scope": {
+          "enum": [
+            "in_process",
+            "listen_host"
+          ],
+          "$comment": "optional, meaningful only when pause_save is true; omitted = in_process (offline pause + save/load). listen_host: the listen-server host may pause, no save/load (R0 B.6 coop; R0 B.9 A-16)"
+        },
+        "caps": {
+          "enum": [
+            "standard",
+            "reduced",
+            "lite",
+            "host"
+          ]
+        },
+        "caps_web_mobile": {
+          "enum": [
+            "standard",
+            "reduced",
+            "lite"
+          ],
+          "$comment": "optional; the caps profile app selects for in-process sessions on web and mobile builds (Config.is_web / is_mobile); omitted = caps. skirmish and campaign: lite until S-WEB-2 passes at reduced (data change, 09 s6). R0 B.9 A-17"
+        },
+        "rating": {
+          "enum": [
+            "none",
+            "hidden_mmr"
+          ]
+        },
+        "core_exposure_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "$comment": "null = per mission"
+        },
+        "hard_end_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "$comment": "null = per mission"
+        },
+        "maps": {
+          "enum": [
+            "rotation",
+            "any",
+            "mission"
+          ]
+        },
+        "hosting": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "dedicated",
+              "listen",
+              "in_process"
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "adjutant",
+        "caps",
+        "core_exposure_s",
+        "doctrine_pick",
+        "fill_after_s",
+        "hard_end_s",
+        "hosting",
+        "humans",
+        "maps",
+        "moving_sun",
+        "pause_save",
+        "rating",
+        "teams"
+      ],
+      "$comment": "02 s14 / R0 B.6 columns typed by CONTRACT-0 (QUESTION to 02 in the PR); id is one of the 7 modes."
+    }
+  }
+}

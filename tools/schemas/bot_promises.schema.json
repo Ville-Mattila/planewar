@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bot_promises.schema.json",
+  "title": "BotPromiseDef[] (godot/content/defs/bot_promises.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "bot_promises": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/bot_promise"
+      }
+    }
+  },
+  "required": [
+    "bot_promises"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "bot_promise": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "enum": [
+            "easy",
+            "normal",
+            "hard",
+            "brutal"
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "audience_key": {
+          "type": "string",
+          "pattern": "^promise\\.[a-z][a-z0-9_]*\\.audience$",
+          "$comment": "locale key promise.<id>.audience (R0 B.9 A-18); validate_content checks <id> equals the def id"
+        },
+        "first_dart_s": {
+          "$ref": "#/$defs/range"
+        },
+        "first_outpost_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        },
+        "first_attack_s": {
+          "$ref": "#/$defs/range"
+        },
+        "raid_targets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bombers_from_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3600
+        },
+        "uses_shields": {
+          "enum": [
+            "no",
+            "rarely",
+            "yes"
+          ]
+        },
+        "uses_rail_lance": {
+          "enum": [
+            "no",
+            "rarely",
+            "yes"
+          ]
+        },
+        "poles_by_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "command_rate_cap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "think_s": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 10
+        },
+        "reaction_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "win_vs_lower": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/range"
+            }
+          ]
+        },
+        "human_target_key": {
+          "type": "string",
+          "pattern": "^promise\\.[a-z][a-z0-9_]*\\.human_target$",
+          "$comment": "locale key promise.<id>.human_target (R0 B.9 A-18)"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "audience_key",
+        "bombers_from_s",
+        "command_rate_cap",
+        "first_attack_s",
+        "first_dart_s",
+        "first_outpost_s",
+        "human_target_key",
+        "poles_by_s",
+        "raid_targets",
+        "reaction_s",
+        "think_s",
+        "uses_rail_lance",
+        "uses_shields",
+        "win_vs_lower"
+      ],
+      "$comment": "02 s15 columns typed by CONTRACT-0 (QUESTION to 02 in the PR). Source of think_s / reaction_s / command_rate_cap (R0 C2-13)."
+    },
+    "range": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": [
+          "number",
+          "null"
+        ]
+      },
+      "$comment": "[lo, hi]; null = open end"
+    }
+  }
+}

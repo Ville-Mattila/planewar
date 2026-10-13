@@ -1,0 +1,299 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "commander_verbs.schema.json",
+  "$comment": "08 SL-5 Supply Canister data (FEAT-01): SupplyCanisterDef, status candidate. Shape: one-entry list.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "commander_verbs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "$ref": "#/$defs/supply_canister"
+      }
+    }
+  },
+  "required": [
+    "commander_verbs"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "$comment": "lowercase snake_case, loads as StringName (R0 B)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "supply_canister": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "const": "candidate",
+          "$comment": "08 SL-5: candidate until the C1-13 scope gate opens"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "cost_ore": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "08 SL-5 cost 15 Ore"
+        },
+        "cost_ice": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "08 SL-5 cost 40 Ice"
+        },
+        "launch_range_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20000,
+          "$comment": "08 SL-5 issue range 3,500 m"
+        },
+        "pad_cooldown_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600,
+          "$comment": "08 SL-5 pad cooldown 45 s"
+        },
+        "team_max_in_flight": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16,
+          "$comment": "08 SL-5 team cap 2"
+        },
+        "boost_mps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "08 SL-5 vertical boost 120 m/s"
+        },
+        "boost_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 60,
+          "$comment": "08 SL-5 boost 2 s"
+        },
+        "max_speed_mps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "08 SL-5 guided speed 160 m/s"
+        },
+        "max_accel_mps2": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 500,
+          "$comment": "08 SL-5 25 m/s^2"
+        },
+        "lead_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000,
+          "$comment": "08 SL-5 rendezvous lead 250 m"
+        },
+        "slow_target_mps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 200,
+          "$comment": "08 SL-5 slow target 5 m/s"
+        },
+        "hover_above_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000,
+          "$comment": "08 SL-5 hover 60 m"
+        },
+        "min_agl_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5000,
+          "$comment": "08 SL-5 80 m AGL floor"
+        },
+        "max_alt_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000,
+          "$comment": "08 SL-5 1,400 m datum ceiling"
+        },
+        "deploy_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "08 SL-5 deploy within 30 m"
+        },
+        "max_flight_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600,
+          "$comment": "08 SL-5 40 s flight"
+        },
+        "loiter_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 600,
+          "$comment": "08 SL-5 25 s beacon"
+        },
+        "pickup_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "$comment": "08 SL-5 pickup 18 m"
+        },
+        "hp": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "$comment": "08 SL-5 30 HP"
+        },
+        "fuel_frac": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "08 SL-5 +40 % fuel (O-7)"
+        },
+        "ammo_frac": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "08 SL-5 +50 % ammo (O-7)"
+        },
+        "divert_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20000,
+          "$comment": "08 SL-5 autopilot divert 1,500 m"
+        },
+        "divert_safe_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20000,
+          "$comment": "08 SL-5 no enemy within 800 m"
+        },
+        "opportunist_radius_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20000,
+          "$comment": "08 SL-5 opportunist 400 m"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "cost_ore",
+        "cost_ice",
+        "launch_range_m",
+        "pad_cooldown_s",
+        "team_max_in_flight",
+        "boost_mps",
+        "boost_s",
+        "max_speed_mps",
+        "max_accel_mps2",
+        "lead_m",
+        "slow_target_mps",
+        "hover_above_m",
+        "min_agl_m",
+        "max_alt_m",
+        "deploy_radius_m",
+        "max_flight_s",
+        "loiter_s",
+        "pickup_radius_m",
+        "hp",
+        "fuel_frac",
+        "ammo_frac",
+        "divert_radius_m",
+        "divert_safe_radius_m",
+        "opportunist_radius_m"
+      ]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+# D6 allowlist (docs/03 s12.4). One entry per line: <path>:<line> <reason>
+# path is relative to the repo root (godot/src/...); line may be * for the whole file.
+# Entries silence the D6 *warning* only; the error case (a 6000/8192 literal in an expression
+# with a position/length variable, in src/sim or src/presentation/planet) can never be allowed.

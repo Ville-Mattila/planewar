@@ -1,0 +1,80 @@
+; Engine configuration file. Normative settings: docs/03-technical-architecture.md s1.1.
+; Edited only through reviewed PRs.
+
+config_version=5
+
+[application]
+
+config/name="PLANEWAR"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+run/main_scene="res://scenes/app/boot.tscn"
+; TA-30: the web_spike_flight export preset adds the custom feature "spike_flight"; this override makes the
+; S-FLIGHT-1 spike its main scene. Every other preset and the editor keep boot.tscn.
+run/main_scene.spike_flight="res://spikes/s_flight_1/flight_spike.tscn"
+config/version="0.1.0+0"
+boot_splash/show_image=false
+
+[autoload]
+
+Log="*res://src/core/log.gd"
+ContentDB="*res://src/content/content_db.gd"
+App="*res://src/app/app.gd"
+
+[debug]
+
+gdscript/warnings/enable=true
+gdscript/warnings/exclude_addons=true
+gdscript/warnings/directory_rules={"res://addons": 0, "res://test": 0}
+gdscript/warnings/untyped_declaration=2
+gdscript/warnings/inferred_declaration=2
+gdscript/warnings/unsafe_property_access=2
+gdscript/warnings/unsafe_method_access=2
+gdscript/warnings/unsafe_call_argument=2
+gdscript/warnings/unsafe_cast=2
+gdscript/warnings/unsafe_void_return=2
+gdscript/warnings/return_value_discarded=2
+gdscript/warnings/missing_await=2
+gdscript/warnings/unused_variable=2
+gdscript/warnings/unused_parameter=2
+gdscript/warnings/shadowed_variable=2
+gdscript/warnings/integer_division=2
+gdscript/warnings/narrowing_conversion=2
+settings/stdout/flush_stdout_on_print=true
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=false
+pointing/emulate_mouse_from_touch=false
+
+[network]
+
+limits/debugger/max_chars_per_second=65536
+
+[physics]
+
+common/physics_ticks_per_second=30
+common/max_physics_steps_per_frame=4
+common/physics_interpolation=false
+3d/physics_engine="Jolt Physics"
+3d/run_on_separate_thread=false
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+renderer/rendering_method.web="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+textures/vram_compression/import_s3tc_bptc=true
+anti_aliasing/quality/msaa_3d=0
+lights_and_shadows/directional_shadow/size=2048
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=1
+environment/defaults/default_clear_color=Color(0, 0, 0, 1)
+mesh_lod/lod_change/threshold_pixels=2.0

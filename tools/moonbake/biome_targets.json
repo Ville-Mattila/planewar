@@ -1,0 +1,7 @@
+{
+  "_doc": "07 s9.4 map table: share of the sphere (percent) per biome, checked by M9 within +-5 pp (07 s9.5). Maps without a row skip M9.",
+  "tolerance_pp": 5,
+  "cradle": {"mare": 45, "highland": 30, "crater_floor": 10},
+  "anvil": {"mare": 25, "highland": 45, "crater_floor": 15},
+  "rimewater": {"mare": 12, "highland": 65, "crater_floor": 8}
+}
