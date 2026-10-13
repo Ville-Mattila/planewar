@@ -820,7 +820,10 @@
       "03 s6.3",
       " 03 TA-13"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": "public#4",
+    "note": "loader is Terrain.load_map (load shadows a global); sim/MODULE.md at 300 lines"
   },
   {
     "id": "TA-14",
