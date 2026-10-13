@@ -2663,7 +2663,9 @@
       " R0 C2-09",
       " 04 NET-03"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": "public#3"
   },
   {
     "id": "NET-04",
