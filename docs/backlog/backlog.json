@@ -3061,7 +3061,9 @@
       "06 s6",
       " 06 UX-16"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-13",
+    "pr": "archive#47+#50"
   },
   {
     "id": "UX-17",
