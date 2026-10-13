@@ -10,10 +10,13 @@ from pathlib import Path
 TOOLS = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(TOOLS))
 
+import gates  # noqa: E402
+
 try:
     import numpy as np
     from moonbake import seam, sphere
-except ImportError:  # numpy is installed by CI (tools/requirements.txt)
+except ImportError as exc:  # numpy is installed by CI (tools/requirements.txt)
+    gates.numpy_import_failed(exc)
     np = None
 
 # docs/03 s2.6 edge table: (face, edge, neighbour face, neighbour edge)
@@ -37,7 +40,7 @@ VECTORS = [
 ]
 
 
-@unittest.skipIf(np is None, "numpy not installed")
+@unittest.skipIf(np is None, gates.NUMPY_SKIP)
 class SphereParity(unittest.TestCase):
     def test_forward_vectors(self) -> None:
         for (f, u, v), want in VECTORS:

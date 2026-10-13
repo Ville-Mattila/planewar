@@ -15,12 +15,15 @@ TOOLS = Path(__file__).resolve().parent.parent
 REPO = TOOLS.parent
 sys.path.insert(0, str(TOOLS))
 
+import gates  # noqa: E402
+
 try:
     import numpy as np
     from moonbake import noise, pngio, ramp, validate
     from moonbake.bake import bake, render_files
     from moonbake.recipe import RecipeError, build_plan, load_recipe
-except ImportError:  # numpy is installed by CI (tools/requirements.txt)
+except ImportError as exc:  # numpy is installed by CI (tools/requirements.txt)
+    gates.numpy_import_failed(exc)
     np = None
 
 TINY_DIR = REPO / "godot/content/maps/tiny_test"
@@ -31,7 +34,7 @@ def results_by_code(results) -> dict:
     return {r.code: r for r in results}
 
 
-@unittest.skipIf(np is None, "numpy not installed")
+@unittest.skipIf(np is None, gates.NUMPY_SKIP)
 class Determinism(unittest.TestCase):
     def test_same_recipe_same_bytes(self) -> None:
         rec = load_recipe(TINY)
@@ -51,6 +54,7 @@ class Determinism(unittest.TestCase):
         self.assertNotEqual(render_files(bake(rec))["meta.json"], render_files(bake(other))["meta.json"])
 
     def test_committed_tiny_test_matches_fresh_bake(self) -> None:
+        gates.require_blobs(TINY_DIR)
         meta = json.loads((TINY_DIR / "meta.json").read_text(encoding="utf-8"))
         files = render_files(bake(load_recipe(TINY)))
         for name, want in meta["outputs"].items():
@@ -61,6 +65,7 @@ class Determinism(unittest.TestCase):
     def test_committed_radius_variant_matches_fresh_bake(self) -> None:
         """S-WORLD-1 R = 6,000 variant (TA-16): the only radius the schema accepts; outputs committed and fresh."""
         d = REPO / "godot/content/maps/s_world1_r6000"
+        gates.require_blobs(d)
         meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
         files = render_files(bake(load_recipe(d / "recipe.json")))
         self.assertEqual(meta["radius_m"], 6000.0)
@@ -95,7 +100,7 @@ def _rough() -> dict:
     return rec
 
 
-@unittest.skipIf(np is None, "numpy not installed")
+@unittest.skipIf(np is None, gates.NUMPY_SKIP)
 class Validation(unittest.TestCase):
     """Each check passes on the good recipe and fails on exactly its fixture."""
 
@@ -234,7 +239,7 @@ FIXTURE_CODES = {"good": None, "m01_relief": "M1", "m02_slot_slope": "M2", "m03_
                  "m09_biome_coverage": "M9", "m10_size": "M10", "m11_cube_edge": "M11"}
 
 
-@unittest.skipIf(np is None, "numpy not installed")
+@unittest.skipIf(np is None, gates.NUMPY_SKIP)
 class MapFixtures(unittest.TestCase):
     """The ART-37 fixtures run through the TA-15 validator: each fails only its check; good passes all."""
 
@@ -258,7 +263,7 @@ class MapFixtures(unittest.TestCase):
         self.assertEqual(codes, {"M1", "M2", "M3", "M4a", "M4b", "M5", "M6", "M7", "M8", "M9", "M10", "M11"})
 
 
-@unittest.skipIf(np is None, "numpy not installed")
+@unittest.skipIf(np is None, gates.NUMPY_SKIP)
 class RampAndPng(unittest.TestCase):
     def test_png_round_trip_and_stored_is_stable(self) -> None:
         img = (np.arange(8 * 5 * 4) % 251).astype(np.uint8).reshape(8, 5, 4)
@@ -290,10 +295,11 @@ class RampAndPng(unittest.TestCase):
 
     def test_committed_ramp_is_fresh(self) -> None:
         p = REPO / "godot/assets/textures/moon_ramp.png"
+        gates.require_blobs(p)
         self.assertEqual(p.read_bytes(), pngio.encode_png(ramp.build_ramp_image(ramp.load_ramps()), stored=True))
 
 
-@unittest.skipIf(np is None, "numpy not installed")
+@unittest.skipIf(np is None, gates.NUMPY_SKIP)
 class Cli(unittest.TestCase):
     def run_cli(self, *args: str) -> subprocess.CompletedProcess:
         return subprocess.run([sys.executable, str(TOOLS / "moonbake"), *args], capture_output=True, text=True)
@@ -304,6 +310,7 @@ class Cli(unittest.TestCase):
         self.assertIn("13/13", r.stdout)
 
     def test_check_and_bake(self) -> None:
+        gates.require_blobs(TINY_DIR)
         r = self.run_cli("check", str(TINY), "--quiet")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         with tempfile.TemporaryDirectory() as td:
