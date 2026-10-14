@@ -1504,7 +1504,9 @@
       " R0 C2-31",
       " 07 ART-15"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#42"
   },
   {
     "id": "ART-28",
