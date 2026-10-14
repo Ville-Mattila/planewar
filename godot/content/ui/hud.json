@@ -1,5 +1,5 @@
 {
-  "_doc": "docs/06 s6.2 and 01 s5.3: flight HUD thresholds and layout. Altitudes in metres above datum, angles in degrees.",
+  "_doc": "docs/06 s6.2-6.3 and 01 s5.3: flight HUD thresholds and layout, bomb sight and lead pip. Altitudes in metres above datum, angles in degrees.",
   "deck_agl_m": 150,
   "low_alt_m": 400,
   "high_alt_m": 1500,
@@ -19,5 +19,11 @@
   "readout_width_du": 96,
   "font_du": 12,
   "font_du_min": 9,
-  "line_du": 1.5
+  "line_du": 1.5,
+  "bomb_rate_hz": 15,
+  "bomb_horizon_s": 8,
+  "bomb_hit_radius_m": 15,
+  "lead_iterations": 3,
+  "sight_ring_du": 14,
+  "sight_pip_du": 5
 }

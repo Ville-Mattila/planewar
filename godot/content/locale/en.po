@@ -67,6 +67,9 @@ msgstr "HIGH"
 msgid "hud.band.low"
 msgstr "LOW"
 
+msgid "hud.bomb.tti"
+msgstr "TTI"
+
 msgid "hud.heading.north"
 msgstr "N"
 

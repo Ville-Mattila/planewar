@@ -10,5 +10,6 @@
   "hud.band.high": "HIGH",
   "hud.band.fade": "FADE",
   "hud.uplink": "UPLINK",
+  "hud.bomb.tti": "TTI",
   "hud.uplink.lost": "Uplink lost above 2,000 m. Autopilot is descending."
 }
