@@ -2,10 +2,10 @@ class_name SimWorld extends RefCounted
 ## The tick driver (03 s3.5, s4.1; R0 B.5 tick order). Content is injected at `_init` (no autoload in the sim);
 ## `load_map` builds every system for one match. `step()` runs, in order: 1 queued commands (+ disconnect releases),
 ## 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-50), 4 assist
-## substitution (AI-10), 5 kinematics (ships: DOCKED skipped, A-41, terrain contacts to Collision; ground: GroundMotion,
-## TA-38), 6 projectiles, 7 spatial rebuild, 8 collision, 9 weapon fire, damage from the contacts and fuses (Combat),
-## deferred deaths (+ footprints, sites, queues), 10 Economy, Construction, Production and the match timers (Docking and
-## scoring land later), 11 vision, 12 the
+## substitution (`AssistStep`: `Assist.link_bridge`, AI-08; auto-dock AI-10), 5 kinematics (ships: DOCKED skipped,
+## A-41, terrain contacts to Collision; ground: GroundMotion, TA-38), 6 projectiles, 7 spatial rebuild, 8 collision,
+## 9 weapon fire, damage from the contacts and fuses (Combat), deferred deaths (+ footprints, sites, queues),
+## 10 Economy, Construction, Production and the match timers (Docking and scoring land later), 11 vision, 12 the
 ## caller drains events. Helpers: `sim/world/`; control transitions: `sim/control/` (05 s2, AI-02).
 
 const _MAPS_ROOT: String = "res://content/maps/"
@@ -42,6 +42,9 @@ var _hook: SimAiHook = null
 var _pathing: Pathing = null           ## step 3b; sim_ai reaches it only through CommandSinkBase.pathing() (A-55)
 var _restoring: bool = false           ## deserialize: the region graphs come from the bytes, load_map skips prepare
 var _match_seed: int = 0
+var _bridge: Array[BridgeParams] = []  ## step 4: LINK_BRIDGE parameters by local ship index (null: no autopilot def)
+var _assist_probe: ProbeResult = ProbeResult.new()
+var _assist_in: PilotInput = PilotInput.new()
 var _map_id: StringName = &""
 var _dt: float = 0.0
 
@@ -282,6 +285,7 @@ func _wire(rules: MatchRules) -> void:
 	_view.production = _econ.production
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
 	vision = Vision.new(_store, _defs, rules.tick_hz)
+	_bridge = BridgeParams.table(c, _defs.rules, rules.tick_hz)
 
 
 # Map load (A-55): baked weights; region graphs for each distinct ground-unit slope mask (at most MASK_SLOTS, in
@@ -300,10 +304,10 @@ func _load_pathing(map_dir: String) -> Error:
 	return OK
 
 
-# Step 4 (R0 B.5): Assist.auto_dock() / Assist.link_bridge() (sim/steer, AI-10, AI-08) overwrite the input slots
-# of possessed entities holding DOCK near a free friendly pad or under LINK_BRIDGE. Stub until AI-10: no change.
+# Step 4 (R0 B.5): assist substitution (`AssistStep`, sim/steer): LINK_BRIDGE (05 C10, C13; AI-08) through
+# `Assist.link_bridge`. Assist.auto_dock() joins with AI-10.
 func _assist_substitution() -> void:
-	pass
+	AssistStep.run(_store, _players, _inputs, _terrain, _bridge, _assist_probe, _assist_in)
 
 
 # Step 9: Combat fires weapons (GD-36), applies the step-8 contacts (GD-08: damage, blasts, ramming) and the fuses,
