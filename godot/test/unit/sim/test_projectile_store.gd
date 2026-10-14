@@ -184,3 +184,26 @@ func test_default_quarantine_reuses_slot_immediately() -> void:
 	var again: int = p.alloc(ProjectileStore.SLUG, 5)
 	assert_int(EntityId.slot(again)).is_equal(EntityId.slot(first))
 	assert_int(EntityId.gen(again)).is_equal(EntityId.bump_gen(EntityId.gen(first)))
+
+
+## TA-46: 100k alloc/free cycles on one slot with the 0-tick quarantine run the generation through several
+## wraps; an id kept in a PackedInt32Array field (`target`, `shooter`) must still validate while live.
+func test_long_churn_one_slot_keeps_alive_and_index_of_consistent() -> void:
+	var p: ProjectileStore = ProjectileStore.new(1, 0)
+	var held: PackedInt32Array = PackedInt32Array()
+	var _r: int = held.resize(1)
+	var bad: int = 0
+	var prev: int = EntityId.NULL_ID
+	for t: int in 100000:
+		var id: int = p.alloc(ProjectileStore.SLUG, t)
+		held[0] = id
+		var back: int = held[0]
+		if id == EntityId.NULL_ID or back != id or not p.alive(back) or p.index_of(back) != 0:
+			bad += 1
+		if prev != EntityId.NULL_ID and (p.alive(prev) or EntityId.gen(id) != EntityId.bump_gen(EntityId.gen(prev))):
+			bad += 1
+		if not p.free_slot(p.index_of(back), t) or p.alive(back):
+			bad += 1
+		prev = back
+	assert_int(bad).is_equal(0)
+	assert_int(p.live_count()).is_equal(0)

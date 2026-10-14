@@ -1,0 +1,273 @@
+class_name CommandValidator extends RefCounted
+## S10 / S12 for `SimWorld.apply_command` (03 s3.5; 04's protocol-level class is `ProtocolValidator`). `validate`
+## runs the rate limit (04 s11.3 token bucket per player, C2-27) and then `check`, the state rules: ownership,
+## rights, caps, cost, phase, shape; placement is `Build.can_place`'s (TA-19). `check` is pure and runs again when
+## step 1 applies the command, so a command made invalid by an earlier one in the same tick has no effect.
+## The bucket counts every command that passes the rate check, accepted or not; PILOT_INPUT is exempt (04 0x04).
+
+## 04 s11.3 "COMMAND 10/s sustained, burst 30" (the one command-rate rule). needs content: rules.json fields.
+const RATE_PER_S: int = 10
+const BURST: int = 30
+## sim/MODULE.md "Data owned": pending command queue <= 256 per tick; overflow rejects with REJECTED_RATE.
+const QUEUE_MAX: int = 256
+## 05 C6r REJECTED_UPLINK at altitude >= 1,950 m = ceiling_hard_m - 50 m. needs content: a rules.json field.
+const _UPLINK_MARGIN_M: int = 50
+const _STATE: PackedStringArray = ["_tokens", "_last", "_claimed"]
+
+var order_rules: OrderRules = null                    ## null: every ORDER is REJECTED_INVALID_ORDER
+
+var _store: EntityStore
+var _players: PlayerTable
+var _defs: WorldDefs
+var _rules: MatchRules
+var _tokens: PackedInt32Array = PackedInt32Array()   ## per player, in 1 / tick_hz commands
+var _last: PackedInt32Array = PackedInt32Array()     ## tick of the last refill
+var _claimed: PackedInt32Array = PackedInt32Array()  ## POSSESS targets accepted since the last step 1
+var _spec: OrderSpec = OrderSpec.new()
+var _ids: PackedInt32Array = PackedInt32Array()
+var _uplink_alt: float = 0.0
+
+
+func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: MatchRules) -> void:
+	_store = store
+	_players = players
+	_defs = defs
+	_rules = rules
+	_uplink_alt = defs.rules.ceiling_hard_m - float(_UPLINK_MARGIN_M)
+	var e: int = _tokens.resize(PlayerTable.SLOTS) | _last.resize(PlayerTable.SLOTS)
+	assert(e == OK)
+	_tokens.fill(BURST * rules.tick_hz)
+	_last.fill(0)
+
+
+## Full S10 verdict for `cmd` arriving at `tick` with `queued` commands already pending; charges the bucket.
+func validate(cmd: Command, tick: int, ended: bool, queued: int) -> CommandResult:
+	var r: CommandResult = CommandResult.new()
+	var p: int = cmd.player
+	if p < 0 or p >= PlayerTable.SLOTS or not _players.is_active(p):
+		r.code = CommandResult.Code.REJECTED_MALFORMED
+		return r
+	if cmd.kind != Command.Kind.PILOT_INPUT:
+		if queued >= QUEUE_MAX or not _take_token(p, tick):
+			r.code = CommandResult.Code.REJECTED_RATE
+			return r
+	if ended:
+		r.code = CommandResult.Code.REJECTED_PHASE
+		return r
+	r.code = check(cmd) as CommandResult.Code
+	if r.code == CommandResult.Code.ACCEPTED and cmd.kind == Command.Kind.POSSESS:
+		var _a: bool = _claimed.push_back(cmd.target)
+	return r
+
+
+## Step 1 of every tick, before applying: POSSESS claims of the previous intake no longer hold.
+func begin_tick() -> void:
+	var _r: int = _claimed.resize(0)
+
+
+## The state rules of S10 / S12 for `cmd` (no rate, no phase); a CommandResult.Code.
+func check(cmd: Command) -> int:
+	var p: int = cmd.player
+	if cmd.kind >= Command.Kind.DEBUG_SPAWN and not _rules.debug_commands:
+		return CommandResult.Code.REJECTED_NO_RIGHTS
+	match cmd.kind:
+		Command.Kind.ORDER:
+			return _check_order(cmd)
+		Command.Kind.BUILD:
+			return _check_build(cmd)
+		Command.Kind.PRODUCE:
+			return _check_produce(cmd)
+		Command.Kind.CANCEL_BUILD, Command.Kind.CANCEL_PRODUCE:
+			return _check_cancel(cmd)
+		Command.Kind.SET_RALLY, Command.Kind.TOGGLE_AUTO_REPLENISH:
+			return _check_own_structure(cmd)
+		Command.Kind.POSSESS:
+			return _check_possess(p, cmd.target)
+		Command.Kind.RELEASE:
+			var cur: int = _players.possessed[p]
+			if cur == 0 or not _store.alive(cur):
+				return CommandResult.Code.REJECTED_DEAD
+			return CommandResult.Code.ACCEPTED if cmd.target == 0 or cmd.target == cur else CommandResult.Code.REJECTED_NOT_OWNER
+		Command.Kind.REQUEST_POSSESS, Command.Kind.HANDOVER:
+			return _check_request(cmd)
+		Command.Kind.PILOT_INPUT:
+			return CommandResult.Code.ACCEPTED if cmd.payload.size() == CommandPayload.PILOT_BYTES else CommandResult.Code.REJECTED_MALFORMED
+		Command.Kind.SURRENDER:
+			return CommandResult.Code.ACCEPTED if cmd.target == 0 else CommandResult.Code.REJECTED_MALFORMED
+		Command.Kind.SET_ADJUTANT:
+			return _check_adjutant(cmd)
+		Command.Kind.DEBUG_SPAWN:
+			return _check_debug_spawn(cmd)
+		Command.Kind.DEBUG_SET:
+			if not _store.alive(cmd.target):
+				return CommandResult.Code.REJECTED_DEAD
+			var f: int = CommandPayload.u8_at(cmd, 0)
+			var ok: bool = cmd.payload.size() == CommandPayload.DEBUG_SET_BYTES and f >= 0 and f <= CommandPayload.SET_KILL
+			return CommandResult.Code.ACCEPTED if ok else CommandResult.Code.REJECTED_MALFORMED
+	return CommandResult.Code.REJECTED_MALFORMED
+
+
+func write_state(buf: StreamPeerBuffer) -> void:
+	StateIO.put_props(buf, self, _STATE)
+
+
+func read_state(buf: StreamPeerBuffer) -> bool:
+	return StateIO.get_props(buf, self, _STATE) and _tokens.size() == PlayerTable.SLOTS
+
+
+func _take_token(p: int, tick: int) -> bool:
+	var cap: int = BURST * _rules.tick_hz
+	var t: int = mini(cap, _tokens[p] + maxi(tick - _last[p], 0) * RATE_PER_S)
+	_last[p] = tick
+	if t < _rules.tick_hz:
+		_tokens[p] = t
+		return false
+	_tokens[p] = t - _rules.tick_hz
+	return true
+
+
+func _commander(p: int) -> bool:
+	return _players.eliminated[p] == 0
+
+
+func _check_order(cmd: Command) -> int:
+	if not CommandPayload.read_order(cmd, _spec, _ids):
+		return CommandResult.Code.REJECTED_MALFORMED
+	if not _commander(cmd.player):
+		return CommandResult.Code.REJECTED_NO_RIGHTS
+	if order_rules == null:
+		return CommandResult.Code.REJECTED_INVALID_ORDER
+	var tm: int = _players.team[cmd.player]
+	for id: int in _ids:
+		if not _store.alive(id) or EntityId.is_wreck(id):
+			return CommandResult.Code.REJECTED_DEAD
+		var s: int = EntityId.slot(id)
+		if _store.team[s] != tm:
+			return CommandResult.Code.REJECTED_NOT_OWNER
+		var v: OrderRules.Verdict = order_rules.validate(_spec, _store.def_id[s], true)
+		if v != OrderRules.Verdict.OK:
+			return CommandResult.Code.REJECTED_MALFORMED if OrderRules.malformed(v) else CommandResult.Code.REJECTED_INVALID_ORDER
+	if _spec.target != 0 and not _store.alive(_spec.target):
+		return CommandResult.Code.REJECTED_INVALID_ORDER
+	return CommandResult.Code.ACCEPTED
+
+
+func _check_build(cmd: Command) -> int:
+	var d: int = CommandPayload.u16_at(cmd, 0)
+	var rot: int = CommandPayload.u8_at(cmd, 6)
+	if cmd.payload.size() != 7 or _defs.entity_kind(d) != EntityStore.K_STRUCTURE or rot > 3:
+		return CommandResult.Code.REJECTED_MALFORMED
+	if not _commander(cmd.player):
+		return CommandResult.Code.REJECTED_NO_RIGHTS
+	if TeamStats.count_owned(_store, cmd.player, _store.structures) >= _rules.caps.structures:
+		return CommandResult.Code.REJECTED_CAP
+	return _afford(cmd.player, d, 1)
+
+
+func _check_produce(cmd: Command) -> int:
+	var d: int = CommandPayload.u16_at(cmd, 0)
+	var n: int = CommandPayload.u8_at(cmd, 2)
+	var k: int = _defs.entity_kind(d)
+	var qmax: int = _defs.economy.queue_max if _defs.economy != null else 0
+	if cmd.payload.size() != 3 or (k != EntityStore.K_SHIP and k != EntityStore.K_GROUND) or n < 1 or n > qmax:
+		return CommandResult.Code.REJECTED_MALFORMED
+	var own: int = _check_own_structure(cmd)
+	if own != CommandResult.Code.ACCEPTED:
+		return own
+	if not _commander(cmd.player):
+		return CommandResult.Code.REJECTED_NO_RIGHTS
+	var units: int = TeamStats.count_owned(_store, cmd.player, _store.ships) + TeamStats.count_owned(_store, cmd.player, _store.ground)
+	if units + n > _rules.caps.units:
+		return CommandResult.Code.REJECTED_CAP
+	return _afford(cmd.player, d, n)
+
+
+## S12 (R0 C3-08): the player who queued / placed the item, or a teammate when that player is disconnected,
+## eliminated or a bot. Until Production records per-item queuers, a factory's items count as its owner's.
+func _check_cancel(cmd: Command) -> int:
+	var t: int = cmd.target
+	if not _store.alive(t) or EntityId.is_wreck(t):
+		return CommandResult.Code.REJECTED_DEAD
+	var s: int = EntityId.slot(t)
+	if _store.kind[s] != EntityStore.K_STRUCTURE:
+		return CommandResult.Code.REJECTED_MALFORMED
+	if cmd.kind == Command.Kind.CANCEL_BUILD and (_store.flags[s] & EntityStore.F_BUILDING) == 0:
+		return CommandResult.Code.REJECTED_MALFORMED
+	if cmd.kind == Command.Kind.CANCEL_PRODUCE and cmd.payload.size() != 1:
+		return CommandResult.Code.REJECTED_MALFORMED
+	var o: int = _store.owner[s]
+	if o == cmd.player:
+		return CommandResult.Code.ACCEPTED
+	if _store.team[s] == _players.team[cmd.player] and _players.cancel_delegable(o):
+		return CommandResult.Code.ACCEPTED
+	return CommandResult.Code.REJECTED_NOT_OWNER
+
+
+func _check_own_structure(cmd: Command) -> int:
+	var t: int = cmd.target
+	if not _store.alive(t) or EntityId.is_wreck(t):
+		return CommandResult.Code.REJECTED_DEAD
+	var s: int = EntityId.slot(t)
+	if _store.kind[s] != EntityStore.K_STRUCTURE:
+		return CommandResult.Code.REJECTED_MALFORMED
+	return CommandResult.Code.ACCEPTED if _store.owner[s] == cmd.player else CommandResult.Code.REJECTED_NOT_OWNER
+
+
+## 05 C6 / C6r guards, in its order.
+func _check_possess(p: int, t: int) -> int:
+	if not _store.alive(t) or EntityId.is_wreck(t):
+		return CommandResult.Code.REJECTED_DEAD
+	var s: int = EntityId.slot(t)
+	if _store.team[s] != _players.team[p]:
+		return CommandResult.Code.REJECTED_NOT_OWNER
+	if (_store.flags[s] & EntityStore.F_POSSESSABLE) == 0 or (_store.flags[s] & EntityStore.F_BUILDING) != 0:
+		return CommandResult.Code.REJECTED_NOT_POSSESSABLE
+	if _store.possessor[s] != EntityStore.NONE_U8 or _claimed.has(t):
+		return CommandResult.Code.REJECTED_ALREADY_POSSESSED
+	if _store.pos[s].length() - Sphere.PLANET_RADIUS >= _uplink_alt:
+		return CommandResult.Code.REJECTED_UPLINK
+	return CommandResult.Code.ACCEPTED
+
+
+func _check_request(cmd: Command) -> int:
+	var t: int = cmd.target
+	if not _store.alive(t) or EntityId.is_wreck(t):
+		return CommandResult.Code.REJECTED_DEAD
+	var s: int = EntityId.slot(t)
+	if _store.team[s] != _players.team[cmd.player]:
+		return CommandResult.Code.REJECTED_NOT_OWNER
+	var who: int = _store.possessor[s]
+	if cmd.kind == Command.Kind.REQUEST_POSSESS:
+		return CommandResult.Code.ACCEPTED if who != EntityStore.NONE_U8 and who != cmd.player else CommandResult.Code.REJECTED_MALFORMED
+	var to: int = CommandPayload.u8_at(cmd, 0)
+	if who != cmd.player:
+		return CommandResult.Code.REJECTED_NOT_OWNER
+	return CommandResult.Code.ACCEPTED if _players.is_active(to) and _players.team[to] == _players.team[cmd.player] else CommandResult.Code.REJECTED_MALFORMED
+
+
+func _check_adjutant(cmd: Command) -> int:
+	var prof: int = CommandPayload.u8_at(cmd, 1)
+	if cmd.payload.size() != 3 or prof > 2:
+		return CommandResult.Code.REJECTED_MALFORMED
+	var enabled: bool = cmd.payload[0] != 0
+	if enabled and (_rules.ranked or _rules.adjutant_allowed == &"off"):
+		return CommandResult.Code.REJECTED_NO_RIGHTS
+	if enabled and _rules.adjutant_allowed == &"economy" and prof != 2:
+		return CommandResult.Code.REJECTED_NO_RIGHTS
+	return CommandResult.Code.ACCEPTED
+
+
+func _check_debug_spawn(cmd: Command) -> int:
+	var d: int = CommandPayload.u16_at(cmd, 0)
+	var o: int = CommandPayload.u8_at(cmd, 2)
+	if cmd.payload.size() != CommandPayload.DEBUG_SPAWN_BYTES or _defs.entity_kind(d) < 0:
+		return CommandResult.Code.REJECTED_MALFORMED
+	return CommandResult.Code.ACCEPTED if o == EntityStore.NONE_U8 or o < PlayerTable.SLOTS else CommandResult.Code.REJECTED_MALFORMED
+
+
+func _afford(p: int, d: int, n: int) -> int:
+	var c: Vector2i = _defs.cost(p, d) * n
+	var t: int = _players.team[p]
+	if t < 0 or t >= PlayerTable.TEAMS or c.x > _players.team_ore[t] or c.y > _players.team_ice[t]:
+		return CommandResult.Code.REJECTED_COST
+	return CommandResult.Code.ACCEPTED
