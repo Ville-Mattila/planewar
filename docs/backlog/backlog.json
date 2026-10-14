@@ -1317,7 +1317,10 @@
       " R0 C1-06",
       " 03 TA-23"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#10",
+    "note": "follow-ups: quality_tiers.json chunk_pool_size/chunk_starvation_frames (HIGH needs ~300 slots, 03 s7.3 says 220); Terrain.biome_texel or TA-24 biome texture; 03 s7.5 theta_up 0.2 vs formula 0.608; LOW 1.25 s worst wait vs 1 s (TA-25 on devices); 1024-face maps unmeasured"
   },
   {
     "id": "ART-01",
