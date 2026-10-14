@@ -1254,7 +1254,10 @@
       " R0 C1-02",
       " 04 NET-08"
     ],
-    "status": "todo"
+    "status": "review",
+    "merged": "2026-10-14",
+    "pr": "public#32",
+    "note": "code done; perf gate open: pinned runner TA-42 blocked on HUM-04; dev-box row 12 ~14 ms vs 4.0 (A-62 measure-first); bandwidth 29.9 KB/s link at 940 entities; architect: 03 s4.2 note, INTEREST_HINT enum into Protocol?"
   },
   {
     "id": "NET-25",
@@ -6801,6 +6804,8 @@
       "04 s3.1",
       "04 s3.6"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#28"
   }
 ]
