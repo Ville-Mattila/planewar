@@ -1434,7 +1434,8 @@
       " R0 C1-17",
       " 03 TA-26"
     ],
-    "status": "todo"
+    "status": "todo",
+    "note": "800-view sync p95 7.7 ms vs 2.4 ms on tick frames: needs a bulk SimView accessor (sim lane)"
   },
   {
     "id": "ART-14",
@@ -1663,7 +1664,10 @@
       " R0 C2-08",
       " 05 AI-02"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#21",
+    "note": "contract: SimWorld.admin_release, CommandValidator(ControlMachine), S4 format 2, alert extra[0]=player slot; open: AI-15 complete_head/fail_head, GD-20 release_team, NET-19 decay owner; rules.json fields for 10 s request TTL, 10 s override echo, 50 m uplink margin"
   },
   {
     "id": "AI-03",
