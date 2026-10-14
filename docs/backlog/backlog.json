@@ -1837,8 +1837,7 @@
       " R0 C2-08",
       " 05 AI-08"
     ],
-    "status": "done",
-    "merged": "2026-10-15",
+    "status": "review",
     "pr": "public#53",
     "note": "SC-12 blocked: AI-issued RETURN rejected by SimSink.submit (needs sim system path, issuer -1, FLAG_PREPEND); needs SimView.overlay(id) + AI overlay end; content keys (AI-19) incl. recover_ceiling_gamma_deg/exit_alt_m; LINK_BRIDGE hold adds A-69 lift + nose-up trim (deviation from 05 hold-velocity)"
   },
