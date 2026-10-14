@@ -1,0 +1,22 @@
+{
+  "_doc": "AI-09 test parameters. 'landing' = the LandingParams keys proposed for the autopilots.json landing block (05 s4.4 / s5.5 values; AI-09 additions floor_agl_m, kp_floor, floor_tilt_deg, glide_tol_m, approach_*, hold_speed_mps, abort_*_agl_m, bearing_*; needs content: AI-19 writes them into ap_*). cruise_alt_agl_m is ap_dart's (300). 'rtb' = 05 s4.4 rtb.fuel_reserve_s plus the 05 s5.5 pad-selection and hold numbers. Flight gains and probe parameters are AI-05's (ai05_params.json).",
+  "landing": {
+    "cruise_alt_agl_m": 300.0, "gate_dist_m": 1200.0, "glide_deg": 8.0, "glide_tol_m": 25.0, "transition_dist_m": 250.0,
+    "approach_min_speed_mps": 40.0, "approach_lookahead_m": 400.0, "approach_capture_deg": 30.0,
+    "kp_alt": 0.5, "vz_max_mps": 60.0, "turn_cmd_max_deg": 60.0,
+    "hold_radius_m": 400.0, "hold_agl_m": 150.0, "hold_speed_mps": 50.0,
+    "goaround_agl_m": 200.0, "goaround_extend_m": 1500.0, "max_attempts": 3,
+    "kp_pos": 0.35, "kd_pos": 1.1, "kp_vz": 1.2, "max_tilt_deg": 30.0, "transition_max_tilt_deg": 75.0,
+    "transition_nose_deg": 45.0, "transition_exit_hspeed_mps": 15.0, "transition_exit_dist_m": 30.0,
+    "transition_speed_cap_mps": 30.0, "floor_agl_m": 20.0, "kp_floor": 1.0, "floor_tilt_deg": 45.0,
+    "sink_gain": 0.25, "sink_min_mps": 1.5, "sink_max_mps": 6.0, "flare_agl_m": 8.0, "flare_tilt_deg": 10.0,
+    "touch_vz_mps": 2.0, "abort_horiz_err_m": 12.0, "abort_horiz_agl_m": 15.0, "abort_vz_mps": 6.0,
+    "abort_vz_agl_m": 10.0, "abort_tti_s": 1.0,
+    "bearing_count": 8, "bearing_samples": 6, "bearing_clear_m": 60.0, "bearing_terrain_weight": 0.05
+  },
+  "rtb": {
+    "fuel_reserve_s": 30.0, "hold_fuel_reserve_s": 25.0, "pad_eta_scale_s": 60.0, "pad_queue_s": 15.0,
+    "pad_w_one_queued": 0.6, "pad_w_more_queued": 0.3, "threat_radius_m": 300.0,
+    "fuel01": 0.25, "hp01": 0.40, "fuel_margin": 1.2
+  }
+}
