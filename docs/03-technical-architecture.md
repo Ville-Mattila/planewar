@@ -1713,6 +1713,12 @@ class_name LandingGrade extends RefCounted                                   # s
 
 **How to add an order kind.** Orders are 05's vocabulary (`sim/orders/`, `order_rules.json`); append the id to `OrderSpec.Kind` here, add its completion/failure rule to `order_rules.json` and `Orders`, extend 04's ORDER payload only if the C2-06 layout cannot carry it, and add a scenario test.
 
+**How to add an AlertKind / Command.Kind / CommandResult.Code / Build.Reject.** Append in `sim/MODULE.md` and in the GDScript enum in the same PR as its contract test; notify 06 (`alerts.json`) and 04 (codec) with a `needs <lane>:` PR comment.
+
+**How to add a def field the sim reads.** Add it to the R0 B.1 field list via 02 (or 03 for `rules.json`), to the schema in `tools/schemas/` with `minimum`/`maximum` from the 01 anchor tolerance, and to the `*Def` class in `content`; run `python tools/validate_content.py`.
+
+(These four recipes live here since TA-14, R0 B.10 A-47; `sim/MODULE.md` keeps a pointer.)
+
 ---
 
 ## 16. Risk register
