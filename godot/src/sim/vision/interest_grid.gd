@@ -63,6 +63,12 @@ var _s_bc: PackedInt32Array = PackedInt32Array()
 var _s_cn: PackedInt32Array = PackedInt32Array()
 var _s_touched: PackedInt32Array = PackedInt32Array()
 var _s_touched_n: int = 0
+var _s_tb: PackedInt32Array = PackedInt32Array()       ## non-empty structure buckets
+var _s_tb_n: int = 0
+var _tb: PackedInt32Array = PackedInt32Array()         ## non-empty buckets this tick, first _tb_n valid
+var _tb_n: int = 0
+var _n_cells: int = 0                                   ## _count's running counters
+var _n_b: int = 0
 var _s_valid: bool = false
 
 static var _g_hmap: PackedInt32Array = PackedInt32Array()
@@ -83,7 +89,7 @@ func _init() -> void:
 	e |= cell_start.resize(TEAMS * CELLS) | cell_count.resize(TEAMS * CELLS) | ids.resize(TEAMS * STRIDE)
 	e |= list_size.resize(TEAMS) | _list_cells.resize(TEAMS * CELLS) | _list_cells_n.resize(TEAMS)
 	e |= _sc_start.resize(CELLS) | _sorted.resize(STRIDE) | _seen_cell.resize(STRIDE)
-	e |= _s_bc.resize(nb) | _s_cn.resize(CELLS) | _s_touched.resize(CELLS)
+	e |= _s_bc.resize(nb) | _s_cn.resize(CELLS) | _s_touched.resize(CELLS) | _s_tb.resize(nb) | _tb.resize(nb)
 	assert(e == OK)
 	bucket_count.fill(0)
 	_s_bc.fill(0)
@@ -129,31 +135,38 @@ func index(store: EntityStore) -> void:
 	var bc: PackedInt32Array = bucket_count     # sole owners while writing (no copy-on-write), restored below
 	var cn: PackedInt32Array = cell_n
 	var tch: PackedInt32Array = touched
+	var tb: PackedInt32Array = _tb
 	var key: PackedInt32Array = _key
 	bucket_count = PackedInt32Array()
 	cell_n = PackedInt32Array()
 	touched = PackedInt32Array()
+	_tb = PackedInt32Array()
 	_key = PackedInt32Array()
+	for k: int in _tb_n:
+		bc[tb[k]] = 0
 	for k: int in touched_n:
-		var c: int = tch[k]
-		cn[c] = 0
-		for g: int in GROUPS:
-			bc[c * GROUPS + g] = 0
+		cn[tch[k]] = 0
+	for k: int in _s_tb_n:
+		var b: int = _s_tb[k]
+		tb[k] = b
+		bc[b] = _s_bc[b]
 	for k: int in _s_touched_n:
 		var c: int = _s_touched[k]
 		tch[k] = c
 		cn[c] = _s_cn[c]
-		for g: int in GROUPS:
-			bc[c * GROUPS + g] = _s_bc[c * GROUPS + g]
+	_n_cells = _s_touched_n
+	_n_b = _s_tb_n
 	var hc: PackedInt32Array = store.hash_cell
 	var tm: PackedByteArray = store.team
-	var n: int = _count(store.ships, hc, tm, key, cn, bc, tch, _s_touched_n)
-	n = _count(store.ground, hc, tm, key, cn, bc, tch, n)
-	n = _count(store.wrecks, hc, tm, key, cn, bc, tch, n)
-	touched_n = n
+	_count(store.ships, hc, tm, key, cn, bc, tch, tb)
+	_count(store.ground, hc, tm, key, cn, bc, tch, tb)
+	_count(store.wrecks, hc, tm, key, cn, bc, tch, tb)
+	touched_n = _n_cells
+	_tb_n = _n_b
 	bucket_count = bc
 	cell_n = cn
 	touched = tch
+	_tb = tb
 	_scatter_all(store, key)
 	_key = key
 
@@ -216,10 +229,10 @@ func seen_from_mask(t: int, store: EntityStore, out: PackedInt32Array) -> int:
 	return n
 
 
+# Counts `list` into key / cn / bc; first-seen cells into tch at _n_cells, first-seen buckets into tb at _n_b.
 func _count(list: PackedInt32Array, hc: PackedInt32Array, tm: PackedByteArray, key: PackedInt32Array,
-		cn: PackedInt32Array, bc: PackedInt32Array, tch: PackedInt32Array, n0: int) -> int:
+		cn: PackedInt32Array, bc: PackedInt32Array, tch: PackedInt32Array, tb: PackedInt32Array) -> void:
 	var hmap: PackedInt32Array = _hmap
-	var n: int = n0
 	for s: int in list:
 		var c: int = hmap[hc[s]]
 		var g: int = tm[s]
@@ -228,40 +241,49 @@ func _count(list: PackedInt32Array, hc: PackedInt32Array, tm: PackedByteArray, k
 		var b: int = c * GROUPS + g
 		key[s] = b
 		if cn[c] == 0:
-			tch[n] = c
-			n += 1
+			tch[_n_cells] = c
+			_n_cells += 1
 		cn[c] += 1
+		if bc[b] == 0:
+			tb[_n_b] = b
+			_n_b += 1
 		bc[b] += 1
-	return n
 
 
 # The structures cache: keys into _key (kept between calls: dynamic slots never overwrite a live structure's key),
 # per-bucket and per-cell counts, the non-empty cells.
 func _count_structures(store: EntityStore) -> void:
+	for k: int in _s_tb_n:
+		_s_bc[_s_tb[k]] = 0
 	for k: int in _s_touched_n:
-		var c: int = _s_touched[k]
-		_s_cn[c] = 0
-		for g: int in GROUPS:
-			_s_bc[c * GROUPS + g] = 0
+		_s_cn[_s_touched[k]] = 0
 	var key: PackedInt32Array = _key
 	var cn: PackedInt32Array = _s_cn
 	var bc: PackedInt32Array = _s_bc
 	var tch: PackedInt32Array = _s_touched
+	var tb: PackedInt32Array = _s_tb
 	_key = PackedInt32Array()
 	_s_cn = PackedInt32Array()
 	_s_bc = PackedInt32Array()
 	_s_touched = PackedInt32Array()
-	_s_touched_n = _count(store.structures, store.hash_cell, store.team, key, cn, bc, tch, 0)
+	_s_tb = PackedInt32Array()
+	_n_cells = 0
+	_n_b = 0
+	_count(store.structures, store.hash_cell, store.team, key, cn, bc, tch, tb)
+	_s_touched_n = _n_cells
+	_s_tb_n = _n_b
 	_key = key
 	_s_cn = cn
 	_s_bc = bc
 	_s_touched = tch
+	_s_tb = tb
 	_s_list = store.structures.duplicate()
 	_s_team = store.team.duplicate()
 	_s_valid = true
 
 
-# Prefix sums over the touched cells' buckets, then every live slot into `items` at its bucket.
+# Prefix sums over the non-empty buckets (any order: consumers read one bucket's range), then every live slot into
+# `items` at its bucket.
 func _scatter_all(store: EntityStore, key: PackedInt32Array) -> void:
 	var bs: PackedInt32Array = bucket_start
 	var fl: PackedInt32Array = _fill
@@ -270,12 +292,11 @@ func _scatter_all(store: EntityStore, key: PackedInt32Array) -> void:
 	_fill = PackedInt32Array()
 	items = PackedInt32Array()
 	var run: int = 0
-	for k: int in touched_n:
-		var b0: int = touched[k] * GROUPS
-		for g: int in GROUPS:
-			bs[b0 + g] = run
-			fl[b0 + g] = run
-			run += bucket_count[b0 + g]
+	for k: int in _tb_n:
+		var b: int = _tb[k]
+		bs[b] = run
+		fl[b] = run
+		run += bucket_count[b]
 	_scatter(store.structures, key, fl, it)
 	_scatter(store.ships, key, fl, it)
 	_scatter(store.ground, key, fl, it)
