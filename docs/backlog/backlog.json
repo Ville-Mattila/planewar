@@ -1033,7 +1033,8 @@
       "02 s4.3",
       " 02 GD-08"
     ],
-    "status": "todo"
+    "status": "todo",
+    "note": "architect: structure_bomb_mult field (ROOF_BOMB_MULT literal, ADR-09); unarmed bomb on ground contact detonates vs dud (arm_s); siege-shell blast hurts ships within 12 m (confirm 02)"
   },
   {
     "id": "GD-36",
