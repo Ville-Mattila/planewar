@@ -38,6 +38,7 @@ static func cell0(c: int) -> int:
 func label_cluster(sl: int, c: int, lq: int) -> int:
 	var off: int = sl * CELLS
 	var c0: int = cell0(c)
+	_label_rev += 1
 	for y: int in CS:
 		for x: int in CS:
 			var cell: int = c0 + y * N + x

@@ -3,7 +3,7 @@ class_name PerfTickWorld extends RefCounted
 ## 8 teams around the 8 start slots (R0 B.6 longitudes), ships orbiting their base under a stub act-step hook (row
 ## 3-4), ground units, structures (every 6th a pad, every 5th a tower def), wrecks, and a projectile pool topped up
 ## between ticks (untimed, the stand-in for Combat's fire, GD-36): 80 % straight slugs, 15 % bombs, 5 % guided
-## rockets. Entities are written straight into the store (`SimWorld.store()` is tests' and net's), so the scenario
+## rockets; row 3b: PerfPathLoad (up to 120 ground units re-pathing every 10 s through the sink, TA-50). Entities are written straight into the store (`SimWorld.store()` is tests' and net's), so the scenario
 ## does not depend on command rate limits. Deterministic: core `Rng`, fixed seed.
 
 const SEED: int = 22
@@ -18,6 +18,7 @@ var _rng: Rng = Rng.new(SEED)
 var _bases: PackedVector3Array = PackedVector3Array()
 var _defs: Dictionary = {}
 var _hook: OrbitHook
+var path_load: PerfPathLoad
 
 
 ## Counts per kind and the map (&"" = flat datum); perf_tick.gd picks the S-SIM-1 or the A/B scale.
@@ -53,6 +54,8 @@ func _init(n_ships: int, n_ground: int, n_structures: int, n_wrecks: int, n_proj
 	_hook = OrbitHook.new()
 	_hook.ships = ships
 	_hook.bases = _bases
+	path_load = PerfPathLoad.new(n_ground, _bases)
+	_hook.path_load = path_load
 	world.set_ai_hook(_hook)
 	top_up()
 
@@ -121,9 +124,11 @@ func _put(def: StringName, team: int, alt: float, dist: float, kind_override: in
 class OrbitHook extends SimAiHook:
 	var ships: PackedInt32Array
 	var bases: PackedVector3Array
+	var path_load: PerfPathLoad
 	var _in: PilotInput = PilotInput.new()
 
-	func on_tick(_t: int, view: SimView, sink: CommandSinkBase) -> void:
+	func on_tick(t: int, view: SimView, sink: CommandSinkBase) -> void:
+		path_load.tick(t, sink)
 		for s: int in ships:
 			var id: int = EntityId.make(s, 1)
 			if not view.alive(id):

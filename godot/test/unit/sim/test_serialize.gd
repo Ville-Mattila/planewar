@@ -2,7 +2,8 @@ extends GdUnitTestSuite
 ## S4 and determinism (TA-18; ADR-10): serialize() then deserialize() then step() equals step() on the original,
 ## byte for byte, over 1,000 ticks of random commands, projectiles and terrain contacts; the AI hook's opaque bytes
 ## round-trip; Collision's per-slot state (episodes, projectile first ticks) is part of the bytes; two worlds fed the
-## same seed and command stream stay byte-identical. TA-21 later compacts the format (sim/serialize.gd).
+## same seed and command stream stay byte-identical; TA-50: pending tickets, the search in flight and a warm route
+## cache survive a save (Pathing bytes). TA-21 later compacts the format (sim/serialize.gd).
 
 const TICKS: int = 1000
 const RESYNC_EVERY: int = 25
@@ -102,6 +103,47 @@ func test_s4_round_trip_then_step_is_byte_identical_over_1000_ticks() -> void:
 	assert_int(a.tick()).is_equal(TICKS + 12)
 	assert_int(terrain_contacts).is_greater(0)               # Collision episode state was exercised
 	assert_int(events).is_greater(20)
+
+
+static func _mask_of(id: StringName) -> int:
+	for g: GroundUnitDef in WorldTestKit.content().ground_units:
+		if g.id == id:
+			return Pathing.mask_for(g.max_slope_deg)
+	return 0
+
+
+# TA-50 / A-55: a brain stub drives Pathing through the sink; the world is saved every 7 ticks (tickets pending, a
+# cell or region search in flight, cache warm) and the restored copy must stay byte-identical, hook bytes included.
+func test_s4_round_trip_with_pending_tickets_and_warm_cache() -> void:
+	var a: SimWorld = WorldTestKit.world(41, null, MAP)
+	var hook_a: PathBrainStub = PathBrainStub.new()
+	a.set_ai_hook(hook_a)
+	a.step()
+	var p: Pathing = hook_a.seen
+	assert_object(p).is_not_null()
+	hook_a.populate(p, Vector3(1.0, 0.2, 0.1).normalized(), 12, 8, _mask_of(&"harvester"), _mask_of(&"siege_crawler"))
+	var b: SimWorld = null
+	var in_flight: int = 0
+	var warm: int = 0
+	for t: int in 240:
+		if t % 7 == 0:
+			if p.pending() > 0 and (p.grid.state == PathSearch.RUNNING or p.clusters.state == PathSearch.RUNNING):
+				in_flight += 1
+			if p.pending() > 0 and p.cache.size() > 0:
+				warm += 1
+			b = SimWorld.deserialize(a.serialize(), WorldTestKit.content(), PathBrainStub.new())
+			assert_object(b).is_not_null()
+			assert_bool(b.serialize() == a.serialize()).is_true()
+		a.step()
+		b.step()
+		assert_bool(_events_bytes(a.drain_events()) == _events_bytes(b.drain_events())).is_true()
+		if a.serialize() != b.serialize():
+			fail("S4 pathing divergence at tick %d" % a.tick())
+			return
+	assert_int(in_flight).is_greater(0)
+	assert_int(warm).is_greater(0)
+	assert_int(p.cache_hits).is_greater(0)
+	assert_int(hook_a.done_count()).is_greater(20)
 
 
 func test_round_trip_reproduces_collision_and_store_state() -> void:

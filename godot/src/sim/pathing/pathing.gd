@@ -1,29 +1,19 @@
-class_name Pathing extends RefCounted
-## Time-sliced A* on the 6 x 256^2 path grid (ADR-05, 03 s3.6, R0 C1-05; S-NAV-1 = TA-20). `request` queues a
-## query and returns a ticket; `advance()` runs once per tick (step 3b) and spends at most `expansions_per_tick`
-## expansion units on the open tickets in FIFO order (one search in flight); `result` is empty until the ticket is
-## DONE. A query whose ends lie in different regions (PathRegions: connected parts of 16 x 16-cell clusters) first
-## searches the region graph goal -> start (PathClusters; exhaustion proves NO_PATH) and then the cell grid inside the
-## region corridor; a corridor miss (only after a region OVERFLOW) falls back to the unrestricted grid search, so the
-## hierarchy never changes reachability. The route cache (PathCache) answers a repeated (start cluster, goal cell, mask) at once
-## for the same start cell, or by splicing a short local search onto the cached route for another start cell.
-## Deterministic: integer budget, no clock, no RNG; Dictionary used for lookups only. No Nodes, no allocation per
-## expansion. Request masks: bits 0-7 = the unit's max slope in whole degrees (0 = weights only), see mask_for.
+class_name Pathing extends PathTickets
+## Time-sliced A* on the 6 x 256^2 path grid (ADR-05, 03 s3.6, R0 C1-05; S-NAV-1 = TA-20; wired by TA-50: SimWorld
+## step 3b, CommandSinkBase.pathing(), S4). `request` queues a query for a ticket; `advance()` spends at most
+## `expansions_per_tick` units per tick on the tickets in FIFO order (one search in flight). Ends in different regions
+## (PathRegions) search the region graph goal -> start first (exhaustion proves NO_PATH), then the cells inside the
+## region corridor (a corridor miss falls back to the full grid). PathCache answers a repeated (start cluster, goal
+## cell, mask) at once or by splicing. Deterministic (integer budget, no clock / RNG); no allocation per expansion.
 
-const NO_TICKET: int = -1
-const ST_UNKNOWN: int = 0                  ## stale or never issued ticket
-const ST_PENDING: int = 1
-const ST_DONE: int = 2
-const ST_NO_PATH: int = 3
-const MAX_TICKETS: int = 160               ## 03 s3.2 path_tickets row
-const MAX_CELLS: int = PathGrid.N * 4      ## longest result in cells
 const _PH_NONE: int = 0
 const _PH_ABSTRACT: int = 1
 const _PH_CORRIDOR: int = 2
 const _PH_FULL: int = 3
 const _PH_SPLICE: int = 4
-const _GEN_SHIFT: int = 8
 const JOB_COST: int = 8                    ## units charged per job start (region lookups, corridor stamping, finish)
+const _STATE: PackedStringArray = ["expansions_per_tick", "hier_min_cells", "ticks", "requests", "cache_hits", "splice_misses",
+	"fallbacks", "expansions_total", "abstract_units", "_phase", "_join_e", "_join_k"]
 
 var expansions_per_tick: int = 0           ## rules.path_expansions_per_tick
 var hier_min_cells: int = 0                ## flat search (no region layer) up to this great-circle distance in cells
@@ -37,22 +27,6 @@ var splice_misses: int = 0                 ## spliced hits that had to search af
 var fallbacks: int = 0                     ## corridor searches that fell back to the full grid
 var expansions_total: int = 0
 var abstract_units: int = 0                ## share of expansions_total spent on the cluster layer
-var _t_gen: PackedInt32Array = PackedInt32Array()
-var _t_state: PackedInt32Array = PackedInt32Array()
-var _t_start: PackedInt32Array = PackedInt32Array()
-var _t_goal: PackedInt32Array = PackedInt32Array()
-var _t_mask: PackedInt32Array = PackedInt32Array()
-var _t_len: PackedInt32Array = PackedInt32Array()
-var _t_seq: PackedInt32Array = PackedInt32Array()
-var _t_req_tick: PackedInt32Array = PackedInt32Array()
-var _t_done_tick: PackedInt32Array = PackedInt32Array()
-var _t_splice: PackedByteArray = PackedByteArray()
-var _t_queued: PackedByteArray = PackedByteArray()   ## 1 while the slot sits in the FIFO (never re-allocated then)
-var _t_cells: PackedInt32Array = PackedInt32Array()  ## MAX_TICKETS * MAX_CELLS
-var _q: PackedInt32Array = PackedInt32Array()
-var _qh: int = 0
-var _qn: int = 0
-var _seq: int = 0
 var _phase: int = _PH_NONE
 var _join_e: int = -1
 var _join_k: int = 0
@@ -61,19 +35,6 @@ var _join_k: int = 0
 func _init(expansions: int) -> void:
 	expansions_per_tick = expansions
 	assert(expansions > JOB_COST, "Pathing: budget must exceed one job start")
-	var _r: int = _t_gen.resize(MAX_TICKETS)
-	_r = _t_state.resize(MAX_TICKETS)
-	_r = _t_start.resize(MAX_TICKETS)
-	_r = _t_goal.resize(MAX_TICKETS)
-	_r = _t_mask.resize(MAX_TICKETS)
-	_r = _t_len.resize(MAX_TICKETS)
-	_r = _t_seq.resize(MAX_TICKETS)
-	_r = _t_req_tick.resize(MAX_TICKETS)
-	_r = _t_done_tick.resize(MAX_TICKETS)
-	_r = _t_splice.resize(MAX_TICKETS)
-	_r = _t_queued.resize(MAX_TICKETS)
-	_r = _t_cells.resize(MAX_TICKETS * MAX_CELLS)
-	_r = _q.resize(MAX_TICKETS)
 
 
 ## Loads the six baked `face<f>.path.u8` faces of `map_dir`, each SHA-256 checked against meta.json (as Terrain).
@@ -81,7 +42,10 @@ func load_weights(map_dir: String) -> Error:
 	var all: PackedByteArray = PathGrid.read_faces(map_dir)
 	if all.is_empty():
 		return ERR_FILE_CORRUPT
-	return OK if set_weights(all) else ERR_INVALID_DATA
+	if not set_weights(all):
+		return ERR_INVALID_DATA
+	grid.weights_custom = false
+	return OK
 
 
 ## Installs all CELLS weights at once (tests, tools); drops the cache and the cluster graphs.
@@ -162,11 +126,6 @@ func request(from: Vector3, to: Vector3, mask: int) -> int:
 	return ticket
 
 
-func status(ticket: int) -> int:
-	var sl: int = _slot(ticket)
-	return _t_state[sl] if sl >= 0 else ST_UNKNOWN
-
-
 ## Cell centres on the datum sphere (Sphere.PLANET_RADIUS), start cell to goal cell; empty unless DONE.
 func result(ticket: int) -> PackedVector3Array:
 	var out: PackedVector3Array = PackedVector3Array()
@@ -185,29 +144,6 @@ func result_cells(ticket: int) -> PackedInt32Array:
 	if sl < 0 or _t_state[sl] != ST_DONE:
 		return PackedInt32Array()
 	return _t_cells.slice(sl * MAX_CELLS, sl * MAX_CELLS + _t_len[sl])
-
-
-## advance() count at which the ticket completed (-1 while pending or unknown); request tick via request_tick.
-func done_tick(ticket: int) -> int:
-	var sl: int = _slot(ticket)
-	return _t_done_tick[sl] if sl >= 0 and _t_state[sl] >= ST_DONE else -1
-
-
-func request_tick(ticket: int) -> int:
-	var sl: int = _slot(ticket)
-	return _t_req_tick[sl] if sl >= 0 else -1
-
-
-## Frees the ticket (a pending query is dropped); the handle turns ST_UNKNOWN.
-func release(ticket: int) -> void:
-	var sl: int = _slot(ticket)
-	if sl >= 0:
-		_t_state[sl] = ST_UNKNOWN
-		_t_gen[sl] = (_t_gen[sl] + 1) & 0xFFFFF
-
-
-func pending() -> int:  # queued tickets
-	return _qn
 
 
 ## One tick of path work: at most expansions_per_tick units across the queue head-first (FIFO). Returns units used.
@@ -248,38 +184,6 @@ func weight(cell: int) -> int:
 ## Change counter of `face` (SimView.path_grid_version).
 func version(face: int) -> int:
 	return grid.version_of(face)
-
-
-func _slot(ticket: int) -> int:
-	if ticket < 0:
-		return -1
-	var sl: int = ticket & ((1 << _GEN_SHIFT) - 1)
-	if sl >= MAX_TICKETS or (ticket >> _GEN_SHIFT) != _t_gen[sl] or _t_state[sl] == ST_UNKNOWN:
-		return -1
-	return sl
-
-
-# A free slot, else the oldest finished one (its handle turns stale), else -1.
-func _alloc() -> int:
-	var best: int = -1
-	for sl: int in MAX_TICKETS:
-		var st: int = _t_state[sl]
-		if _t_queued[sl] != 0:
-			continue
-		if st == ST_UNKNOWN:
-			best = sl
-			break
-		if st != ST_PENDING and (best < 0 or _t_seq[sl] < _t_seq[best]):
-			best = sl
-	if best < 0:
-		return -1
-	if _t_state[best] != ST_UNKNOWN:
-		_t_gen[best] = (_t_gen[best] + 1) & 0xFFFFF
-	_seq += 1
-	_t_seq[best] = _seq
-	_t_state[best] = ST_PENDING
-	_t_done_tick[best] = -1
-	return best
 
 
 # Picks the job for the head ticket: a cache splice, a flat search (same region, or within hier_min_cells), or the
@@ -396,3 +300,20 @@ func _finish(sl: int, st: int, n: int) -> void:
 	_t_len[sl] = n
 	_t_done_tick[sl] = ticks
 	_phase = _PH_NONE
+
+
+## S4 (TA-50): counters, tickets and queue, each ticket's result cells, then the grid (changed weights, labels, the
+## cell search in flight), the region graphs (and the region search in flight) and the cache. Read it into a Pathing
+## that loaded the same map (load_weights, set_terrain); prepare is not needed, the graphs are in the bytes.
+func write_state(buf: StreamPeerBuffer) -> void:
+	super.write_state(buf)
+	StateIO.put_props(buf, self, _STATE)
+	grid.write_state(buf)
+	clusters.write_state(buf)
+	cache.write_state(buf)
+
+
+func read_state(buf: StreamPeerBuffer) -> bool:
+	if not super.read_state(buf) or not StateIO.get_props(buf, self, _STATE):
+		return false
+	return grid.read_state(buf) and clusters.read_state(buf) and cache.read_state(buf)

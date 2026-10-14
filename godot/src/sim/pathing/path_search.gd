@@ -1,7 +1,9 @@
 class_name PathSearch extends PathGrid
 ## Resumable cell-level A* over the path grid (03 s3.6, R0 C1-05): one search in flight, advanced by `run(budget)`
 ## where every heap pop counts as one expansion. Open set = binary min-heap over two parallel packed arrays (f key,
-## cell); closed / seen by a per-search tag per cell (no clearing); lazy deletion of stale heap entries.
+## cell); closed / seen by a u8 per-search tag per cell (cleared once every _SID_MAX searches); the parent of a cell
+## is the u8 index of the parent in the cell's own neighbours() list (neighbours8 is symmetric, TA-50 memory cut);
+## lazy deletion of stale heap entries.
 ## Edge cost a -> b = arc(a, b) * (w_a + w_b) / 2 in metres; h = great-circle(cell, goal) * (1 + heuristic_pct / 100),
 ## admissible and consistent at heuristic_pct 0 (arc >= great circle, w >= 1). Diagonals never cut a corner: both
 ## orthogonal cells beside a diagonal step must be passable, so no straight segment between consecutive cell
@@ -18,6 +20,10 @@ const MASK_SLOTS: int = 2                  ## request masks with a region graph 
 const NO_REGION: int = 255
 const _PCT: int = 100
 const _HEAP_INITIAL: int = 4096
+const _SID_MAX: int = 127                  ## u8 tags 2 * sid (open) and 2 * sid + 1 (closed); then one fill(0)
+const _INV: PackedInt32Array = [1, 0, 3, 2, 7, 6, 5, 4]   ## in-face: neighbours() index of the way back
+const _SEARCH_STATE: PackedStringArray = ["heuristic_pct", "state", "start", "goal", "limit_q", "corridor_stamp",
+	"corridor_on", "touched", "_hn", "_sid", "_hw", "_goal_dir", "_lab_off"]
 
 var heuristic_pct: int = 0                 ## heuristic inflation in percent (0 = exact A*)
 var state: int = EXHAUSTED
@@ -30,27 +36,30 @@ var corridor_stamp: int = 0
 var corridor_on: bool = false
 var touched: int = 0                       ## cells discovered by the current search (memory / flood metric)
 var _g: PackedFloat32Array = PackedFloat32Array()
-var _tag: PackedInt32Array = PackedInt32Array()       ## 2 * sid seen (open), 2 * sid + 1 closed
-var _par: PackedInt32Array = PackedInt32Array()
+var _tag: PackedByteArray = PackedByteArray()         ## 2 * sid seen (open), 2 * sid + 1 closed
+var _dir: PackedByteArray = PackedByteArray()         ## parent = neighbours(cell)[_dir[cell]]
 var _hk: PackedFloat32Array = PackedFloat32Array()
 var _hv: PackedInt32Array = PackedInt32Array()
 var _hn: int = 0
 var _sid: int = 0
 var _hw: float = 1.0
 var _goal_dir: Vector3 = Vector3.ZERO
-var _arc8: PackedFloat32Array = PackedFloat32Array()
+var _nbe: PackedInt32Array = PackedInt32Array()       ## neighbours of an edge cell while _back() reuses nb
 var _lab_off: int = 0
+var _label_rev: int = 0                               ## bumped by every label write; keys the compressed S4 block
+var _lab_blob: PackedByteArray = PackedByteArray()
+var _lab_blob_rev: int = -1
 
 
 func _init() -> void:
 	super()
 	var _r: int = _g.resize(CELLS)
 	_r = _tag.resize(CELLS)
-	_r = _par.resize(CELLS)
+	_r = _dir.resize(CELLS)
 	_r = corridor.resize(REGIONS)
 	_r = label.resize(MASK_SLOTS * CELLS)
 	label.fill(NO_REGION)
-	_r = _arc8.resize(8)
+	_r = _nbe.resize(8)
 	_r = _hk.resize(_HEAP_INITIAL)
 	_r = _hv.resize(_HEAP_INITIAL)
 
@@ -59,7 +68,7 @@ func _init() -> void:
 ## stamped with corridor_stamp. An impassable goal fails at once (EXHAUSTED); the start cell is always allowed.
 func begin(s: int, t: int, lq: int, use_corridor: bool) -> void:
 	_sid += 1
-	if _sid >= (1 << 29):
+	if _sid > _SID_MAX:
 		_tag.fill(0)
 		_sid = 1
 	start = s
@@ -72,8 +81,8 @@ func begin(s: int, t: int, lq: int, use_corridor: bool) -> void:
 	touched = 1
 	state = RUNNING if passable(t, lq) else EXHAUSTED
 	_g[s] = 0.0
-	_par[s] = -1
 	_tag[s] = _sid + _sid
+	_dir[s] = 0                              # never followed (write_path stops at start); fixed for S4 bytes
 	_push(Sphere.PLANET_RADIUS * center_dir(s).angle_to(_goal_dir) * _hw, s)
 
 
@@ -124,28 +133,120 @@ func found_cost() -> float:
 
 ## Writes the found path start..goal into out[off ..]; returns the cell count, or -1 when longer than `cap`.
 func write_path(out: PackedInt32Array, off: int, cap: int) -> int:
-	var n: int = 0
+	var n: int = 1
 	var c: int = goal
-	while c != -1:
+	while c != start:
+		c = _parent(c)
 		n += 1
-		c = _par[c]
-	if n > cap:
-		return -1
+		if n > cap:
+			return -1
 	c = goal
 	for k: int in n:
 		out[off + n - 1 - k] = c
-		c = _par[c]
+		if c != start:
+			c = _parent(c)
 	return n
+
+
+func _parent(c: int) -> int:
+	neighbours(c)
+	return nb[_dir[c]]
+
+
+# Index of `c` in neighbours(n) (n is a neighbour of the edge cell c; Sphere.neighbours8 is symmetric). Clobbers nb.
+func _back(n: int, c: int) -> int:
+	neighbours(n)
+	for d: int in 8:
+		if nb[d] == c:
+			return d
+	return 0
+
+
+## S4 (TA-50): the grid's bytes, the region labels (zstd, cached until the next label write), the search scalars,
+## and while a search runs its heap, the cells it tagged (tag, parent index, g; stale tags never match a later
+## search, so the reader zeroes the rest) and the corridor regions. Corridor regions are read only while running.
+func write_state(buf: StreamPeerBuffer) -> void:
+	super.write_state(buf)
+	if _lab_blob_rev != _label_rev:
+		_lab_blob = label.compress(FileAccess.COMPRESSION_ZSTD)
+		_lab_blob_rev = _label_rev
+	buf.put_var(_lab_blob)
+	StateIO.put_props(buf, self, _SEARCH_STATE)
+	var live: bool = state == RUNNING
+	var cells: PackedInt32Array = PackedInt32Array()
+	var lo: int = _sid + _sid
+	if live:
+		for c: int in CELLS:
+			if _tag[c] >= lo:
+				var _a: bool = cells.push_back(c)
+	var tags: PackedByteArray = PackedByteArray()
+	var dirs: PackedByteArray = PackedByteArray()
+	var gs: PackedFloat32Array = PackedFloat32Array()
+	for c: int in cells:
+		var _a: bool = tags.push_back(_tag[c])
+		_a = dirs.push_back(_dir[c])
+		_a = gs.push_back(_g[c])
+	var regs: PackedInt32Array = PackedInt32Array()
+	if live and corridor_on:
+		for r: int in REGIONS:
+			if corridor[r] == corridor_stamp:
+				var _a: bool = regs.push_back(r)
+	for v: Variant in [_hk.slice(0, _hn if live else 0), _hv.slice(0, _hn if live else 0), cells, tags, dirs, gs, regs]:
+		buf.put_var(v)
+
+
+## Inverse of write_state over a grid holding the same map; false on malformed bytes.
+func read_state(buf: StreamPeerBuffer) -> bool:
+	if not super.read_state(buf):
+		return false
+	var lab: PackedByteArray = get_z(buf, MASK_SLOTS * CELLS)
+	if lab.is_empty() or not StateIO.get_props(buf, self, _SEARCH_STATE):
+		return false
+	label = lab
+	_label_rev += 1
+	var parts: Array = []
+	for _k: int in 7:
+		parts.append(buf.get_var() if buf.get_available_bytes() > 0 else null)
+	var types: PackedInt32Array = [TYPE_PACKED_FLOAT32_ARRAY, TYPE_PACKED_INT32_ARRAY, TYPE_PACKED_INT32_ARRAY,
+		TYPE_PACKED_BYTE_ARRAY, TYPE_PACKED_BYTE_ARRAY, TYPE_PACKED_FLOAT32_ARRAY, TYPE_PACKED_INT32_ARRAY]
+	for k: int in 7:
+		if typeof(parts[k]) != types[k]:
+			return false
+	var hk: PackedFloat32Array = parts[0]
+	var hv: PackedInt32Array = parts[1]
+	var cells: PackedInt32Array = parts[2]
+	var tags: PackedByteArray = parts[3]
+	var dirs: PackedByteArray = parts[4]
+	var gs: PackedFloat32Array = parts[5]
+	var regs: PackedInt32Array = parts[6]
+	if hk.size() != hv.size() or hk.size() != (_hn if state == RUNNING else 0) or tags.size() != cells.size():
+		return false
+	if dirs.size() != cells.size() or gs.size() != cells.size():
+		return false
+	var _r: int = hk.resize(maxi(_HEAP_INITIAL, hk.size()))
+	_r = hv.resize(hk.size())
+	_hk = hk
+	_hv = hv
+	_tag.fill(0)
+	for k: int in cells.size():
+		var c: int = clampi(cells[k], 0, CELLS - 1)
+		_tag[c] = tags[k]
+		_dir[c] = dirs[k]
+		_g[c] = gs[k]
+	corridor.fill(0)
+	for r: int in regs:
+		corridor[clampi(r, 0, REGIONS - 1)] = corridor_stamp
+	return true
 
 
 func _expand(c: int, closed_tag: int) -> void:
 	var i: int = c & LOW
 	var j: int = (c >> SHIFT) & LOW
 	var edge: bool = i == 0 or i == LOW or j == 0 or j == LOW
+	neighbours(c)
 	if edge:
-		neighbours(c)
-	else:
-		_interior(c, i, j)
+		for k: int in 8:
+			_nbe[k] = nb[k]
 	var f: int = c >> (SHIFT + SHIFT)
 	var dc: Vector3 = _fn[f] + _fs[f] * _tan[i] + _ft[f] * _tan[j]   # angle_to is scale-invariant
 	var gc: float = _g[c]
@@ -153,7 +254,7 @@ func _expand(c: int, closed_tag: int) -> void:
 	var seen_tag: int = closed_tag - 1
 	var open: int = 0                      # bit d set: orthogonal neighbour d passable (corner rule)
 	for k: int in 8:
-		var n: int = nb[k]
+		var n: int = _nbe[k] if edge else nb[k]
 		if n < 0 or (k >= 4 and ((open >> (k & 1)) & 1) == 0) or (k >= 4 and ((open >> (2 + ((k >> 1) & 1))) & 1) == 0):
 			continue
 		var w: int = weights[n]
@@ -174,38 +275,15 @@ func _expand(c: int, closed_tag: int) -> void:
 			continue
 		var nf: int = n >> (SHIFT + SHIFT)
 		var dn: Vector3 = _fn[nf] + _fs[nf] * _tan[n & LOW] + _ft[nf] * _tan[(n >> SHIFT) & LOW]
-		var arc: float = Sphere.PLANET_RADIUS * dc.angle_to(dn) if edge else _arc8[k]
-		var g2: float = gc + arc * float(wc + w) * 0.5
+		var g2: float = gc + Sphere.PLANET_RADIUS * dc.angle_to(dn) * float(wc + w) * 0.5
 		if t == seen_tag and g2 >= _g[n]:
 			continue
 		if t != seen_tag:
 			touched += 1
 		_tag[n] = seen_tag
 		_g[n] = g2
-		_par[n] = c
+		_dir[n] = _back(n, c) if edge else _INV[k]
 		_push(g2 + Sphere.PLANET_RADIUS * dn.angle_to(_goal_dir) * _hw, n)
-
-
-# Neighbours and in-face step lengths of an interior cell (no cube edge within one cell).
-func _interior(c: int, i: int, j: int) -> void:
-	nb[0] = c - 1
-	nb[1] = c + 1
-	nb[2] = c - N
-	nb[3] = c + N
-	nb[4] = c - N - 1
-	nb[5] = c - N + 1
-	nb[6] = c + N - 1
-	nb[7] = c + N + 1
-	var au: int = j * N + i
-	var av: int = i * N + j
-	_arc8[0] = arc_u[au - 1]
-	_arc8[1] = arc_u[au]
-	_arc8[2] = arc_u[av - 1]
-	_arc8[3] = arc_u[av]
-	_arc8[4] = arc_d[au - N - 1]
-	_arc8[5] = arc_d[au - N - i - i + LOW - 1]
-	_arc8[6] = arc_d[au - i - i + LOW]
-	_arc8[7] = arc_d[au]
 
 
 func _push(key: float, v: int) -> void:

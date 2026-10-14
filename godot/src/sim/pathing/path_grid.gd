@@ -20,12 +20,15 @@ var slope_q: PackedByteArray = PackedByteArray()      ## CELLS bytes, max slope 
 var face_version: PackedInt32Array = PackedInt32Array()   ## bumped by every set_weight on that face (C1-05)
 var nb: PackedInt32Array = PackedInt32Array()         ## neighbours() output: 0 -u, 1 +u, 2 -v, 3 +v, 4..7 diagonals or -1
 var terrain: Terrain = null
-var arc_u: PackedFloat32Array = PackedFloat32Array()  ## metres (i, j) -> (i+1, j), any face; (i, j) -> (i, j+1) at i * N + j
-var arc_d: PackedFloat32Array = PackedFloat32Array()  ## metres (i, j) -> (i+1, j+1); anti-diagonals by the i mirror
+var weights_custom: bool = false           ## weights changed since load_weights (set_weight, set_weights): S4 writes them
+var slopes_custom: bool = false            ## override_slope used since the last set_terrain / set_weights: S4 writes slope_q
 var _tan: PackedFloat64Array = PackedFloat64Array()
 var _fn: PackedVector3Array = PackedVector3Array()
 var _fs: PackedVector3Array = PackedVector3Array()
 var _ft: PackedVector3Array = PackedVector3Array()
+var _w_rev: int = 0                        ## bumped by every weight change; keys the compressed S4 block
+var _w_blob: PackedByteArray = PackedByteArray()
+var _w_blob_rev: int = -1
 
 
 func _init() -> void:
@@ -44,19 +47,6 @@ func _init() -> void:
 		var _a: bool = _fs.push_back(b.x)
 		_a = _ft.push_back(b.y)
 		_a = _fn.push_back(b.z)
-	_build_arcs()
-
-
-# In-face step lengths are the same on every face (one mapping): arc_u by row, arc_d by 2 x 2 block.
-func _build_arcs() -> void:
-	var _r: int = arc_u.resize(N * N)
-	_r = arc_d.resize(N * N)
-	for j: int in N:
-		for i: int in LOW:
-			var a: Vector3 = center_dir(j * N + i)
-			arc_u[j * N + i] = Sphere.PLANET_RADIUS * a.angle_to(center_dir(j * N + i + 1))
-			if j < LOW:
-				arc_d[j * N + i] = Sphere.PLANET_RADIUS * a.angle_to(center_dir((j + 1) * N + i + 1))
 
 
 ## Installs CELLS weight bytes (the six `path.u8` faces concatenated); false and unchanged on a size mismatch.
@@ -65,6 +55,9 @@ func set_weights(bytes: PackedByteArray) -> bool:
 		return false
 	weights = bytes.duplicate()
 	slope_q.fill(SLOPE_UNKNOWN)
+	weights_custom = true
+	slopes_custom = false
+	_w_rev += 1
 	return true
 
 
@@ -93,6 +86,7 @@ static func read_faces(map_dir: String) -> PackedByteArray:
 func set_terrain(t: Terrain) -> void:
 	terrain = t
 	slope_q.fill(SLOPE_UNKNOWN)
+	slopes_custom = false
 
 
 func version_of(face: int) -> int:
@@ -183,6 +177,7 @@ func sample_slope(cell: int) -> int:
 ## also drops the region graphs and the cache.
 func override_slope(cell: int, slope_deg: int) -> void:
 	slope_q[cell] = mini(slope_deg * _SLOPE_Q_PER_DEG, SLOPE_NO_LIMIT - 1)
+	slopes_custom = true
 
 
 ## Slope limit in slope_q units for a request mask (bits 0-7 = max slope in whole degrees; 0 = no limit).
@@ -196,6 +191,8 @@ func set_weight(cell: int, w: int) -> bool:
 	var old: int = weights[cell]
 	var nw: int = clampi(w, W_ZERO, W_BLOCKED)
 	weights[cell] = nw
+	weights_custom = true
+	_w_rev += 1
 	var f: int = cell >> (SHIFT + SHIFT)
 	face_version[f] += 1
 	return blocks(old) != blocks(nw)
@@ -213,3 +210,63 @@ func version_sum(face_bits: int) -> int:
 		if ((face_bits >> f) & 1) != 0:
 			s += face_version[f]
 	return s
+
+
+## S4 (TA-50): face counters, then the weights only when they differ from the loaded map and slope_q only when a
+## slope was overridden (the lazy slope memo is a pure function of the terrain), each zstd-compressed.
+func write_state(buf: StreamPeerBuffer) -> void:
+	buf.put_var(face_version)
+	buf.put_var(weights_custom)
+	if weights_custom:
+		if _w_blob_rev != _w_rev:
+			_w_blob = weights.compress(FileAccess.COMPRESSION_ZSTD)
+			_w_blob_rev = _w_rev
+		buf.put_var(_w_blob)
+	buf.put_var(slopes_custom)
+	if slopes_custom:
+		put_z(buf, slope_q)
+
+
+## Reads write_state's bytes over a grid holding the same map's weights and terrain; false on malformed bytes.
+func read_state(buf: StreamPeerBuffer) -> bool:
+	var fv: Variant = buf.get_var()
+	var wc: Variant = buf.get_var()
+	if typeof(fv) != TYPE_PACKED_INT32_ARRAY or typeof(wc) != TYPE_BOOL:
+		return false
+	var fva: PackedInt32Array = fv
+	if fva.size() != FACES:
+		return false
+	face_version = fva
+	weights_custom = wc
+	if weights_custom:
+		var w: PackedByteArray = get_z(buf, CELLS)
+		if w.is_empty():
+			return false
+		weights = w
+		_w_rev += 1
+	var sc: Variant = buf.get_var()
+	if typeof(sc) != TYPE_BOOL:
+		return false
+	slopes_custom = sc
+	if slopes_custom:
+		var s: PackedByteArray = get_z(buf, CELLS)
+		if s.is_empty():
+			return false
+		slope_q = s
+	return true
+
+
+## S4 helpers: one zstd-compressed byte block (put_z) and its inverse to exactly `size` bytes (get_z; empty on error).
+static func put_z(buf: StreamPeerBuffer, bytes: PackedByteArray) -> void:
+	buf.put_var(bytes.compress(FileAccess.COMPRESSION_ZSTD))
+
+
+static func get_z(buf: StreamPeerBuffer, size: int) -> PackedByteArray:
+	if buf.get_available_bytes() <= 0:
+		return PackedByteArray()
+	var v: Variant = buf.get_var()
+	if typeof(v) != TYPE_PACKED_BYTE_ARRAY:
+		return PackedByteArray()
+	var z: PackedByteArray = v
+	var out: PackedByteArray = z.decompress(size, FileAccess.COMPRESSION_ZSTD)
+	return out if out.size() == size else PackedByteArray()

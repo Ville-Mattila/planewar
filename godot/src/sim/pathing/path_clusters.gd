@@ -6,6 +6,7 @@ class_name PathClusters extends PathRegions
 ## and every region adjacent to it into PathSearch's corridor; the cell search then runs inside that corridor.
 
 const _PCT: int = 100
+const _CLUSTER_STATE: PackedStringArray = ["heuristic_pct", "state", "start", "goal", "slot", "_hn", "_sid", "_hw", "_target_dir"]
 
 var heuristic_pct: int = 0
 var state: int = PathSearch.EXHAUSTED
@@ -125,6 +126,62 @@ func route() -> PackedInt32Array:
 		var _a: bool = out.push_back(r)
 		r = _par[r]
 	return out
+
+
+## S4 (TA-50): PathRegions' bytes, the search scalars and, while the region search runs, its heap and the regions
+## it tagged (tag, g, parent); stale tags never match a later search, so the reader zeroes the rest.
+func write_state(buf: StreamPeerBuffer) -> void:
+	super.write_state(buf)
+	StateIO.put_props(buf, self, _CLUSTER_STATE)
+	var live: bool = state == PathSearch.RUNNING
+	var regs: PackedInt32Array = PackedInt32Array()
+	var tags: PackedInt32Array = PackedInt32Array()
+	var pars: PackedInt32Array = PackedInt32Array()
+	var gs: PackedFloat32Array = PackedFloat32Array()
+	if live:
+		for r: int in REGIONS:
+			if _tag[r] >= _sid + _sid:
+				var _a: bool = regs.push_back(r)
+				_a = tags.push_back(_tag[r])
+				_a = pars.push_back(_par[r])
+				_a = gs.push_back(_g[r])
+	for v: Variant in [_hk.slice(0, _hn if live else 0), _hv.slice(0, _hn if live else 0), regs, tags, pars, gs]:
+		buf.put_var(v)
+
+
+## Inverse of write_state; false on malformed bytes.
+func read_state(buf: StreamPeerBuffer) -> bool:
+	if not super.read_state(buf) or not StateIO.get_props(buf, self, _CLUSTER_STATE):
+		return false
+	var parts: Array = []
+	for _k: int in 6:
+		parts.append(buf.get_var() if buf.get_available_bytes() > 0 else null)
+	var types: PackedInt32Array = [TYPE_PACKED_FLOAT32_ARRAY, TYPE_PACKED_INT32_ARRAY, TYPE_PACKED_INT32_ARRAY,
+		TYPE_PACKED_INT32_ARRAY, TYPE_PACKED_INT32_ARRAY, TYPE_PACKED_FLOAT32_ARRAY]
+	for k: int in 6:
+		if typeof(parts[k]) != types[k]:
+			return false
+	var hk: PackedFloat32Array = parts[0]
+	var hv: PackedInt32Array = parts[1]
+	var regs: PackedInt32Array = parts[2]
+	var tags: PackedInt32Array = parts[3]
+	var pars: PackedInt32Array = parts[4]
+	var gs: PackedFloat32Array = parts[5]
+	if hk.size() != hv.size() or hk.size() != (_hn if state == PathSearch.RUNNING else 0):
+		return false
+	if tags.size() != regs.size() or pars.size() != regs.size() or gs.size() != regs.size():
+		return false
+	var _r: int = hk.resize(maxi(REGIONS, hk.size()))
+	_r = hv.resize(hk.size())
+	_hk = hk
+	_hv = hv
+	_tag.fill(0)
+	for k: int in regs.size():
+		var r: int = clampi(regs[k], 0, REGIONS - 1)
+		_tag[r] = tags[k]
+		_par[r] = pars[k]
+		_g[r] = gs[k]
+	return true
 
 
 func _expand(r: int, closed_tag: int) -> void:

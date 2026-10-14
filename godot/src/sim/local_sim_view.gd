@@ -3,8 +3,8 @@ class_name LocalSimView extends SimView
 ## Reads are valid until the next `step()` and allocate nothing except the list getters (S3): `order_head` /
 ## `pending_order` refill one reused `OrderSpec` each, `team_state` / `player_state` one reused view per slot.
 ## Accessors whose system has not landed return the `SimView` default: service / pad queue (Docking GD-15),
-## production (Production), field_remaining (Economy), path_grid_version (Pathing TA-20), scores and landing grade
-## (sim/scoring), visibility beyond the own team (Vision TA-37: `visible_mask` stays 0 until then).
+## production (Production), field_remaining (Economy), scores and landing grade
+## (sim/scoring), visibility beyond the own team (Vision TA-37: `visible_mask` 0 until then). path_grid_version: TA-50.
 ## basis(id) = Basis(right, up, -fwd) with right = fwd x up (Godot's -Z forward).
 
 var _store: EntityStore
@@ -20,11 +20,13 @@ var _head: OrderSpec = OrderSpec.new()
 var _pending: OrderSpec = OrderSpec.new()
 var _teams: Array[TeamStateView] = []
 var _player_views: Array[PlayerStateView] = []
+var _pathing: Pathing = null
 
 
 func _init(store: EntityStore, projectiles: ProjectileStore, spatial: Spatial, terrain: Terrain, players: PlayerTable,
-		defs: WorldDefs, orders: OrderQueue, rules: MatchRules, state: MatchState) -> void:
+		defs: WorldDefs, orders: OrderQueue, rules: MatchRules, state: MatchState, pathing: Pathing = null) -> void:
 	_store = store
+	_pathing = pathing
 	_proj = projectiles
 	_spatial = spatial
 	_terrain = terrain
@@ -392,3 +394,7 @@ func _ids_of(live: PackedInt32Array) -> PackedInt32Array:
 
 static func _u8(v: int) -> int:
 	return -1 if v == EntityStore.NONE_U8 else v
+
+
+func path_grid_version(face: int) -> int:
+	return _pathing.version(face) if _pathing != null and face >= 0 and face < PathGrid.FACES else 0
