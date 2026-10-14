@@ -148,6 +148,23 @@ func test_format_header_and_version_refusal() -> void:
 	assert_int(SimSerialize.check(bytes.slice(0, 7))).is_equal(SimSerialize.Status.TOO_SHORT)
 	assert_int(SimSerialize.check(PackedByteArray())).is_equal(SimSerialize.Status.TOO_SHORT)
 
+	assert_int(bytes.size()).is_greater(SimSerialize.HEADER_BYTES)
+	assert_int(SimSerialize.HEADER_BYTES).is_equal(12 + 2 * SimSerialize.HASH_BYTES)
+
+
+func test_content_hash_in_header_and_mismatch_refusal() -> void:
+	var c: ContentSet = WorldTestKit.content()
+	assert_int(c.content_hash.size()).is_equal(SimSerialize.HASH_BYTES)
+	var bytes: PackedByteArray = WorldTestKit.world().serialize()
+	assert_array(bytes.slice(12 + SimSerialize.HASH_BYTES, SimSerialize.HEADER_BYTES)).is_equal(c.content_hash)
+	assert_int(SimSerialize.check_content(bytes, c)).is_equal(SimSerialize.Status.OK)
+	var other: ContentSet = ContentSet.new()
+	other.content_hash = c.content_hash.duplicate()
+	other.content_hash[0] ^= 1
+	assert_int(SimSerialize.check_content(bytes, other)).is_equal(SimSerialize.Status.CONTENT_MISMATCH)
+	assert_object(SimWorld.deserialize(bytes, other, null)).is_null()
+	assert_object(SimWorld.deserialize(bytes, c, null)).is_not_null()
+
 
 # A file with `raw` as its body and the header (hash included) of `bytes`: a body changed behind the checksum.
 func _file_with_raw(bytes: PackedByteArray, raw: PackedByteArray) -> PackedByteArray:
@@ -209,9 +226,9 @@ func test_refused_read_leaves_the_hook_untouched() -> void:
 	hook.counter = 99
 	var c: ContentSet = WorldTestKit.content()
 	raw.append(7)                                          # trailing byte, valid checksum
-	assert_object(SimWorld.deserialize(SimSerialize.pack(raw), c, hook)).is_null()
+	assert_object(SimWorld.deserialize(SimSerialize.pack(raw, c.content_hash), c, hook)).is_null()
 	assert_int(hook.counter).is_equal(99)
-	assert_object(SimWorld.deserialize(SimSerialize.pack(SimSerialize.write_raw(a)), c, hook)).is_not_null()
+	assert_object(SimWorld.deserialize(SimSerialize.pack(SimSerialize.write_raw(a), c.content_hash), c, hook)).is_not_null()
 	assert_int(hook.counter).is_equal(0)
 
 
