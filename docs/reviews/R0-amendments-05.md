@@ -156,3 +156,8 @@ Schemas carry bounds and `$comment` citations; `godot/content/defs/*.json` and t
 |---|---|---|---|
 | Architect | Fable 5.1 | 2026-10-14 | A-64..A-79 decided; OWNER: approve the required fields of A-66 (`unsupplied_rate_mult`, `vision_hz`) and A-79 (seven `economy.json` fields), the `REJECTED_PREREQ` append (A-79.4), and the backlog patch; default: all approved as applied |
 | Owner | | | |
+
+
+## Owner rulings (2026-10-14)
+
+Defaults applied per the owner's standing instruction to merge on recommendation: required fields approved; REJECTED_PREREQ appended; backlog patch approved and applied; ground_turn_rate_dps 40 kept as GD-34 anchor.
