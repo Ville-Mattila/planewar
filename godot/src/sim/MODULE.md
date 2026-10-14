@@ -20,7 +20,7 @@ change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check
 R0 B.5 signatures; "(03)" marks symbols 03 s15.4 adds. Anything not listed is private (prefix `_`).
 
 ```gdscript
-# planned: GroundMotion, Build, Pathing, OrderSpec, Assist, LandingGrade
+# planned: GroundMotion, Pathing, OrderSpec, Assist, LandingGrade
 class_name SimWorld extends RefCounted                                       # _init(content: ContentSet): defs injected, no autoload in the sim (TA-18)
 func load_map(map: MapDef, seed: int, rules: MatchRules) -> Result            # rules carries mode, caps profile, sim_budget_profile
 func add_player(slot: int, team: int, doctrine: StringName, kind: int) -> void   # kind: PlayerKind ordinal (Open items)
@@ -86,12 +86,7 @@ class_name ProjectileState extends RefCounted                                # s
 var p: Vector3; var v: Vector3                                               # after one step per 03 s5.4; guided re-aim and ttl stay in ProjectileMotion / ProjectileStore
 class_name GroundMotion extends RefCounted                                   # 03 s5.3; step() inside SimWorld only
 
-class_name Build extends RefCounted
-enum Reject { OK, ELIMINATED, PREREQ, CAP, OCCUPIED, SLOPE, NODE, NOT_VISIBLE, ENEMY_RADIUS, NO_RADIUS,
-              NO_PRESENCE, SPACING, FUNDS, SPEND_LOCKED }                    # 0-13 frozen
-func can_place(player: int, def_id: int, cell: int, rotation: int) -> Build.Reject   # the one placement validator (03 s3.6)
-func place(player: int, def_id: int, cell: int, rotation: int) -> int
-func footprint_cells(def_id: int, cell: int, rotation: int) -> PackedInt32Array      # (03) crosses cube edges via neighbour_cell
+# Build (can_place, place, footprint_cells, Build.Reject) lives in sim/build/ (TA-19): full API in sim/build/MODULE.md; Reject ordinals stay frozen in Enumerations below
 
 class_name Pathing extends PathTickets                                       # lives in sim/pathing/ (TA-20, wired TA-50: step 3b, S4): full API in sim/pathing/MODULE.md
 func request(from: Vector3, to: Vector3, mask: int) -> int                   # ticket

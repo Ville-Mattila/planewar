@@ -5,6 +5,8 @@ godot/.godot/
 export_credentials.cfg
 # Builds and exports
 build/
+!godot/src/sim/build/
+!godot/test/unit/sim/build/
 exports/
 *.apk
 *.aab
