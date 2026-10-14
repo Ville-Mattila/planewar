@@ -125,6 +125,9 @@ static func smoothstep01(e0: float, e1: float, x: float) -> float
 - C7: no function allocates on the heap except those returning arrays.
 - C8: `MAX_SIM_MAGNITUDE < 8192`.
 - C9: no start slot `22.5 + 45 k` lies within 10 degrees of a cube edge (asserted from the constants).
+- C10: `EntityId` bit 31 is always 0: generation is 11 bits (`GEN_MASK` 0x7FF, `GEN_MAX` 2047, wraps 2047 -> 1), so
+  `0 <= make(s, g) <= 0x7FFFFFFF`, a `PackedInt32Array` store-and-read returns the same int (no sign extension) and
+  the u32 wire form (04) equals the int (R0 B.10 A-48, TA-46; `test_entity_id.gd`, `test_projectile_store.gd` churn).
 - `PLANET_RADIUS` (6,000) is typed once, in `sphere.gd`; every other module derives from it (D6).
 
 ## Data owned
@@ -147,7 +150,7 @@ PC-mid, per call, `godot/test/perf/perf_core.gd`: `face_uv_to_dir` <= 0.6 us, `d
 ## Test entry points
 
 - `godot/test/unit/core/test_sphere.gd` (03 s2.8 vectors, C1-C5 on 10,000 random dirs, C8, C9, determinism)
-- `godot/test/unit/core/test_entity_id.gd`, `godot/test/unit/core/test_rng.gd` (C6), `godot/test/unit/core/test_result.gd`
+- `godot/test/unit/core/test_entity_id.gd` (C10), `godot/test/unit/core/test_rng.gd` (C6), `godot/test/unit/core/test_result.gd`
 - `godot/test/unit/core/test_log.gd`, `godot/test/unit/core/test_config.gd`, `godot/test/unit/core/test_mathx.gd`
 - `godot/test/perf/perf_core.gd` (`godot --headless --path godot -s res://test/perf/perf_core.gd`)
 
@@ -167,3 +170,6 @@ split into a second static class (e.g. `SphereCells`) before crossing it.
   `SLOT_COUNT` from it. `is_projectile` stays open-ended (`slot >= PROJECTILE_SLOT_MIN`, 03 s3.1; R0 B.10 A-42,
   `docs/reviews/R0-amendments-03.md`): it classifies the range, the store validates the index and generation, and no
   allocator mints a slot at or above `PROJECTILE_SLOT_END`. Decoders validate ids against the store, not the predicate.
+- TA-46 erratum (A-48, `docs/reviews/R0-amendments-03.md`; awaiting Architect/owner confirmation): generation narrowed
+  from 12 to 11 bits so ids never set bit 31 and survive `PackedInt32Array` storage; 03 s3.1 "bits 20-31 ... wraps
+  4095 -> 1" reads "bits 20-30 (bit 31 zero) ... wraps 2047 -> 1" once confirmed.

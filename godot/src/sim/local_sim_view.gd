@@ -221,7 +221,7 @@ func pad_occupant(pad: int) -> int:
 	if not _store.alive(pad):
 		return 0
 	for s: int in _store.ships:
-		if (_store.flags[s] & EntityStore.F_DOCKED) != 0 and _same(_store.link[s], pad):
+		if (_store.flags[s] & EntityStore.F_DOCKED) != 0 and _store.link[s] == pad:
 			return _store.id_of(s)
 	return 0
 
@@ -260,7 +260,7 @@ func pending_order(id: int) -> OrderSpec:
 func incoming_rockets(id: int) -> int:
 	var n: int = 0
 	for i: int in _proj.live:
-		if _proj.kind[i] == ProjectileStore.ROCKET and _same(_proj.target[i], id):
+		if _proj.kind[i] == ProjectileStore.ROCKET and _proj.target[i] == id:
 			n += 1
 	return n
 
@@ -366,11 +366,6 @@ func _ids_of(live: PackedInt32Array) -> PackedInt32Array:
 	for k: int in live.size():
 		out[k] = _store.id_of(live[k])
 	return out
-
-
-# EntityIds kept in PackedInt32Array fields wrap negative for generation >= 2048; compare the low 32 bits.
-static func _same(stored: int, id: int) -> bool:
-	return (stored & 0xFFFFFFFF) == (id & 0xFFFFFFFF)
 
 
 static func _u8(v: int) -> int:

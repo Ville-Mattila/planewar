@@ -234,3 +234,37 @@ sim lane's own classes into subdirectories would be a code move (not the Archite
 |---|---|---|---|
 | Architect | Fable 5.1 | 2026-10-13 | A-36..A-47 decided; A-36 `PROTOCOL_VERSION` (default 1) and A-40 over-budget branch (default: PM-01 decides with S-SIM-1) are OWNER items |
 | Owner | | | |
+
+## A-48 (post-merge erratum) `EntityId` generation is 11 bits; bit 31 stays clear
+
+**Context.** 03 s3.1 packs `slot (bits 0-19) | generation (bits 20-31)` with generation wrapping 4095 -> 1. GDScript
+`int` is 64-bit, but the stores keep ids in `PackedInt32Array` (`ProjectileStore.target` / `shooter`,
+`EntityStore.link`, `OrderQueue`, `Command.order` ids, `SimView.ids_near` / `visible_ids`). From generation 2048 on
+bit 31 is set, the stored value reads back sign-extended (negative) and no longer equals the id `EntityId.make`
+returns. TA-18 reported it and masked two compares in `LocalSimView` with `& 0xFFFFFFFF`. With the 0-tick projectile
+quarantine (A-20) a busy projectile slot reaches generation 2048 within minutes. Reproduced in TA-46: 100,000
+alloc/free cycles on one projectile slot gave 49,152 failed store-and-read checks.
+
+**Decision (proposed, TA-46).** Generation is **11 bits** (bits 20-30), `GEN_MASK` 0x7FF, `GEN_MAX` **2047**, wrap
+2047 -> 1 (never 0); **bit 31 is always 0**. Every id is a non-negative int31, so a `PackedInt32Array` round trip is
+exact and the 04 wire form (`u32` ids; `ENTITY_META` `generation u16`) equals the int with no normalisation. No
+constant is renamed, no signature or wire byte changes; `core/MODULE.md` gains invariant C10 and `LocalSimView` drops
+its masking helper.
+
+**Cost.** A slot's id recurs after 2,047 frees instead of 4,095. Entity ranges quarantine 64 ticks, so an entity id
+recurs after at least 131,008 ticks (73 min). The worst projectile case (one slot freed and reused every tick) recurs
+after 2,047 ticks (68 s), against a ~35-tick projectile life and a 100 ms interpolation window.
+
+**Alternatives.** (b) `& 0xFFFFFFFF` at every packed-array read: every current and future read site in `sim`,
+`sim_ai` and `net` must remember it, and a missed one is a silent equality bug. (c) make the sign-extended int32 the
+canonical id: the stores agree, but `decode_u32` yields the positive form, so every `net` decoder would have to
+re-sign. (d) `PackedInt64Array` for id fields: +4 B per id field per slot and a change to the 03 s3.2 / s3.3 layouts.
+
+**Docs to patch on confirmation (Architect).** 03 s3.1: "generation (bits 20-31)" -> "generation (bits 20-30; bit 31
+always 0)" and "wraps 4095 -> 1" -> "wraps 2047 -> 1"; a B.10 row A-48 in the register. 01 ADR-06 and 04 I15
+("generation << 20") stay true as written.
+
+| Role | Name | Date | Verdict |
+|---|---|---|---|
+| Architect | | | pending (TA-46 erratum) |
+| Owner | | | pending |
