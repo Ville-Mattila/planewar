@@ -9,7 +9,7 @@ once a wire has shipped (R0 B.9 A-23, B.10 A-36); `gen_module_api.py --check` mu
 |---|---|
 | Responsibility | The wire: protocol constants and the message catalogue, the snapshot codec (quantisation, tiers, deltas, keyframes), interest management, transports (`LocalTransport`, ENet, WebSocket), the client session (prediction, reconciliation, interpolation, `NetSimView`), event routing, replays. Server-authoritative 30 Hz; <= 30 KB/s and <= 1,200 B per unreliable packet per client (01 ADR-07, s8.3). |
 | Lane owner tier | Opus (codec, interest, prediction, client session, replays); Sonnet for well-specified pieces against this file (protocol tables, transports, command payload codecs, event router) |
-| May depend on | `core`, `content`; named `sim` types only: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain` (`tools/deps.json`) |
+| May depend on | `core`, `content`; named `sim` types only: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain`, `SimEvent`, `CommandResult` (`tools/deps.json`, R0 B.9 A-27) |
 | Must never touch | Nodes in codec/protocol code, `server/` (feature lane), `platform/`, `presentation`, `ui`; no `Thread` and no `WorkerThreadPool` (web is single-threaded, 03 s11); WebSocket only on web in v1.0 (WebRTC is v1.1, S-NET-2) |
 | Autoloads used | `Log` (never in per-entity loops) |
 | Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `SnapshotCodec` and its baselines (NET-06, NET-48 packet index, NET-49 byte cache), `Transport`/`LocalTransport`/`FaultModel` (NET-11) landed. Everything else is planned per 04 s19. |
@@ -227,7 +227,7 @@ func take(tick: int) -> PilotInput                      # stored input, else dec
 Link semantics (04 s15.1; deterministic: each pipe draws from `Rng.new(seed_value).fork("s2c:<conn>" | "c2s:<conn>")`): CH_CONTROL / CH_EVENTS (reliable ordered) are delayed, never lost, in send order, held to the end of a burst or stall window. CH_INPUT may be lost, duplicated, reordered. CH_SNAPSHOT (unreliable sequenced) additionally drops anything older than the newest delivered. A stall holds both directions and releases the backlog at its end.
 Bandwidth limit: serialisation delay, then unreliable packets queued > 250 ms are dropped. Presets (one-way): LAN 0/0/0; GOOD 40 ms +-5, 0.5 %; TARGET 100 ms +-15, 3 %, 1 % reorder; BAD 250 ms +-40, 5 %, 2 % reorder, 0.5 % dup; MOBILE_SWITCH = TARGET + loss window ticks 900-1019; TAB_STALL = GOOD + 45 s stall at tick 1,200. The 04 name `seed` is `seed_value` (`seed` is a GDScript global); presets are `FaultModel.preset()`, not `test/net/presets.gd`.
 
-Planned (04 s19): `codec_commands.gd` (NET-04), `KEYFRAME` + rolling refresh (NET-07), `Interest` (NET-08), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10), `ReplayWriter`/`ReplayReader` (NET-25).
+Planned (04 s19): `codec_commands.gd` (NET-04), `KEYFRAME` + rolling refresh (NET-07), `Interest` (NET-08), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10, done: `net/events/MODULE.md`), `ReplayWriter`/`ReplayReader` (NET-25).
 
 ## Wire layout
 

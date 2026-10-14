@@ -6,7 +6,7 @@
     "sim":          {"may_depend_on": ["core", "content"]},
     "sim_ai":       {"may_depend_on": ["core", "content", "sim"]},
     "net":          {"may_depend_on": ["core", "content"],
-                     "named_types": {"sim": ["SimWorld", "Command", "PilotInput", "Kinematics", "SimView", "Assist", "Terrain"]}},
+                     "named_types": {"sim": ["SimWorld", "Command", "PilotInput", "Kinematics", "SimView", "Assist", "Terrain", "SimEvent", "CommandResult"]}},
     "server":       {"may_depend_on": ["core", "content", "sim", "sim_ai", "net", "platform"]},
     "presentation": {"may_depend_on": ["core", "content"],
                      "named_types": {"sim": ["SimView", "SimEvent", "Terrain"], "net": ["NetSimView"]}},
