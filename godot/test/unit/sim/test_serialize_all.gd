@@ -149,23 +149,92 @@ func test_format_header_and_version_refusal() -> void:
 	assert_int(SimSerialize.check(PackedByteArray())).is_equal(SimSerialize.Status.TOO_SHORT)
 
 
-func test_truncated_corrupt_and_padded_bytes_give_null() -> void:
+# A file with `raw` as its body and the header (hash included) of `bytes`: a body changed behind the checksum.
+func _file_with_raw(bytes: PackedByteArray, raw: PackedByteArray) -> PackedByteArray:
+	var out: PackedByteArray = bytes.slice(0, SimSerialize.HEADER_BYTES)
+	out.encode_u32(8, raw.size())
+	out.append_array(raw.compress(SimSerialize.COMPRESSION))
+	return out
+
+
+func test_truncated_and_resized_bytes_give_null() -> void:
 	var a: SimWorld = WorldTestKit.world(3, null, MAP)
 	var _id: int = _put(a, &"dart", 0, 0, 300.0, 0.0, Vector3(0, 40.0, 0))
 	var bytes: PackedByteArray = a.serialize()
 	var c: ContentSet = WorldTestKit.content()
-	for cut: int in [12, 13, bytes.size() / 2, bytes.size() - 1]:
+	for cut: int in [SimSerialize.HEADER_BYTES, SimSerialize.HEADER_BYTES + 1, bytes.size() / 2, bytes.size() - 1]:
 		assert_object(SimWorld.deserialize(bytes.slice(0, cut), c, null)).is_null()
-	var huge: PackedByteArray = bytes.duplicate()
-	huge.encode_u32(8, SimSerialize.MAX_RAW_BYTES + 1)
-	assert_object(SimWorld.deserialize(huge, c, null)).is_null()
 	var wrong: PackedByteArray = bytes.duplicate()
 	wrong.encode_u32(8, bytes.decode_u32(8) + 5)
 	assert_object(SimWorld.deserialize(wrong, c, null)).is_null()
-	var padded: PackedByteArray = SimSerialize.write_raw(a)
-	padded.append(7)
-	assert_object(SimWorld.deserialize(SimSerialize.pack(padded), c, null)).is_null()
-	assert_object(SimWorld.deserialize(SimSerialize.pack(SimSerialize.write_raw(a)), c, null)).is_not_null()
+	assert_object(SimWorld.deserialize(bytes, c, null)).is_not_null()
+
+
+func test_declared_size_is_capped_before_allocation() -> void:
+	var bytes: PackedByteArray = WorldTestKit.world().serialize()
+	var tiny: PackedByteArray = bytes.slice(0, SimSerialize.HEADER_BYTES + 1)
+	tiny.encode_u32(8, SimSerialize.MAX_RAW_BYTES)
+	assert_int(SimSerialize.unpack(tiny).size()).is_equal(0)
+	tiny.encode_u32(8, SimSerialize.MAX_RAW_BYTES + 1)
+	assert_int(SimSerialize.unpack(tiny).size()).is_equal(0)
+
+
+func test_any_flipped_byte_is_refused() -> void:
+	var a: SimWorld = WorldTestKit.world(3, null, MAP)
+	var _ids: PackedInt32Array = _populate(a)
+	var bytes: PackedByteArray = a.serialize()
+	var c: ContentSet = WorldTestKit.content()
+	var raw: PackedByteArray = SimSerialize.unpack(bytes)
+	var offsets: Array[int] = [10, 100, 1000, raw.size() / 3, raw.size() / 2, raw.size() - 2]
+	for off: int in offsets:               # inside the raw body, behind the checksum
+		var bad: PackedByteArray = raw.duplicate()
+		bad[off] ^= 0x10
+		assert_object(SimWorld.deserialize(_file_with_raw(bytes, bad), c, null)).override_failure_message("raw byte %d" % off).is_null()
+	for off: int in [SimSerialize.HEADER_BYTES + 3, bytes.size() / 2, bytes.size() - 1]:   # inside the zstd frame
+		var bad2: PackedByteArray = bytes.duplicate()
+		bad2[off] ^= 0x01
+		assert_object(SimWorld.deserialize(bad2, c, null)).override_failure_message("file byte %d" % off).is_null()
+	for off: int in [12, 27, 43]:          # inside the stored hash
+		var bad3: PackedByteArray = bytes.duplicate()
+		bad3[off] ^= 0x80
+		assert_object(SimWorld.deserialize(bad3, c, null)).override_failure_message("hash byte %d" % off).is_null()
+	assert_object(SimWorld.deserialize(bytes, c, null)).is_not_null()
+
+
+func test_refused_read_leaves_the_hook_untouched() -> void:
+	var a: SimWorld = WorldTestKit.world(3, null, MAP)
+	a.set_ai_hook(WorldTestKit.RecordingHook.new())
+	var raw: PackedByteArray = SimSerialize.write_raw(a)
+	var hook: WorldTestKit.RecordingHook = WorldTestKit.RecordingHook.new()
+	hook.counter = 99
+	var c: ContentSet = WorldTestKit.content()
+	raw.append(7)                                          # trailing byte, valid checksum
+	assert_object(SimWorld.deserialize(SimSerialize.pack(raw), c, hook)).is_null()
+	assert_int(hook.counter).is_equal(99)
+	assert_object(SimWorld.deserialize(SimSerialize.pack(SimSerialize.write_raw(a)), c, hook)).is_not_null()
+	assert_int(hook.counter).is_equal(0)
+
+
+func test_out_of_range_state_is_refused_behind_a_valid_checksum() -> void:
+	var c: ContentSet = WorldTestKit.content()
+	var a: SimWorld = WorldTestKit.world(3, null, MAP)
+	a._rules.tick_hz = 0
+	assert_object(SimWorld.deserialize(a.serialize(), c, null)).is_null()
+	var b: SimWorld = WorldTestKit.world(3, null, MAP)
+	b._state.tick = -5
+	assert_object(SimWorld.deserialize(b.serialize(), c, null)).is_null()
+	var d: SimWorld = WorldTestKit.world(3, null, MAP)
+	d.store()._free_n[0] = 100000
+	assert_object(SimWorld.deserialize(d.serialize(), c, null)).is_null()
+	var e: SimWorld = WorldTestKit.world(3, null, MAP)
+	e.store().ships.push_back(EntityStore.SLOT_COUNT + 4)
+	assert_object(SimWorld.deserialize(e.serialize(), c, null)).is_null()
+	var f: SimWorld = WorldTestKit.world(3, null, MAP)
+	f.projectiles()._q_head = ProjectileStore.SLOT_COUNT + 1
+	assert_object(SimWorld.deserialize(f.serialize(), c, null)).is_null()
+	var g: SimWorld = WorldTestKit.world(3, null, MAP)
+	var _ok: bool = g.store().team.resize(10)
+	assert_object(SimWorld.deserialize(g.serialize(), c, null)).is_null()
 
 
 func test_size_report_sections_sum_to_the_raw_body() -> void:
