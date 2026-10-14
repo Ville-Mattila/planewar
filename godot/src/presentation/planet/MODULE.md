@@ -194,7 +194,9 @@ func build_ms_percentile(p: float) -> float
   (`Terrain.biome_face`), custom.b = cube face; the ids equal `Terrain.biome_at`. ART-14: the colour is blended over
   the 4 texels around the pixel with a noise-warped smoothstep (ramp rows are never blended as ids), so patch edges are
   soft; interior pixels (4 equal ids) take one ramp fetch. Ramp stops live in `content/biome_ramps.json` (07 s2.1).
-- P11 (TA-24): The Earth is a 6 degree disc exactly at -Z and the sun disc 2 degrees at `sun_dir` (`SkyMoon`).
+- P11 (TA-24, ART-15): The Earth is a 6 degree disc exactly at -Z and the sun disc 2 degrees at `sun_dir` (`SkyMoon`). The sky
+  includes `moon_light.gdshaderinc` (`ML_NO_LIGHT`): linear constants, output through `ml_encode`, flat space writes
+  `SPACE_ENC` (byte 5, 7, 12). Sun = disc + one flat halo (no pow glow); stars cool white, Earth land cool: the sun is the only warm hue.
 - P9: Every spatial material includes `src/presentation/shaders/moon_light.gdshaderinc` and works in linear light:
   inputs through `ml_to_linear`, ALBEDO / EMISSION through `ml_encode` (Godot 4.7.2 Compatibility decodes them with
   a polynomial; ART-01 REPORT s3). `MoonLight` constants equal the include's (`test_moon_light.gd`). `sun_dir` is
@@ -235,7 +237,8 @@ chunks inside the tier's detail range only; the pool holds 150 / 220 / 300 pairs
 - `godot/test/perf/bench_planet.gd` (build ms per depth, flatten cost, boost path per tier)
 - `godot/test/unit/presentation/planet/test_moon_terrain.gd` (shader constants == `MoonDetail`, 1.2 m / 0.6 m caps, mean-zero crater, biome array == `Terrain.biome_at`, ramp rows, sites uniform)
 - `godot/test/unit/presentation/planet/test_flatten_sites.gd` (flat inside / untouched outside, seamless over a cube edge, in-place rebuilds)
-- `godot/test/unit/presentation/planet/test_sky_moon.gd` (Earth at -Z, 6 and 2 degree discs, `apply`)
+- `godot/test/unit/presentation/planet/test_sky_moon.gd` (Earth at -Z, 6 and 2 degree discs, `apply`, ml_encode path, SPACE_ENC, star cells)
+- `godot/test/golden/world/sky_shot.tscn` (ART-15: `--view=earth|sun|stars|wide`, `--plain`; prints SKY_EARTH / SKY_SUN / SKY_STARS)
 - `godot/test/golden/world/z_scene.tscn` (Z1-Z5 and Z8 harness, `Z_RESULT` flicker metric, `--control` negative control; Xvfb + llvmpipe)
 - `godot/test/unit/presentation/planet/test_moon_light.gd` (include == CPU mirror, 07 hex derivation, night target, atlas import)
 - `godot/test/perf/bench_instance_uniforms.gd` (instance-uniform capacity and cost; windowed)
@@ -253,8 +256,8 @@ chunks inside the tier's detail range only; the pool holds 150 / 220 / 300 pairs
 
 ## Open items
 
-- ART-15 owns the final Earth / star look of `sky_moon.gdshader`; TA-24 ships a working version under the same
-  contract (6 degree disc at -Z, 2 degree sun disc). The sky colour space in Compatibility is unmeasured on device.
+- ART-15 (done): final Earth / star / sun look of `sky_moon.gdshader`; colour measured on PC GL 3.3 (ocean centre and
+  sun centre exact bytes, space within 0). The Android-mid cost (< 0.3 ms target) and sky colour on device are HUM-06.
 - The camera lane feeds `ViewState.near` = `CamMath.near_plane(PlanetRenderer.camera_height_agl(pos))`; the planet
   lane only exposes h_cam and carries the camera's near in `PlanetView.near_m` (planet may not depend on `camera`).
 - `EntityViewPool` (TA-26) calls `set_flatten_sites` with the full structure list on BUILD_STARTED / STRUCTURE_LOST.
