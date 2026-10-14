@@ -1,10 +1,10 @@
 class_name PlanetQuadtree extends RefCounted
 ## Six face quadtrees and the per-frame cut selection (03 s7.2, s7.4, s7.5). Node-free so tests run it
-## headless with a fake builder. Each frame `update` walks the trees level by level: a built node inside its
+## headless with a fake builder. Each frame `update` refines the trees best-first: a built node inside its
 ## split radius (and inside the frustum, not beyond the horizon, below MAX_DEPTH) is split when all 4
 ## children are built, else it keeps rendering and its missing children are queued (never a hole). Split
-## candidates of one level are taken by priority while the visible-chunk cap allows (+3 per split), so the
-## deepest, farthest nodes stay merged first. Merged subtrees go back to the pool after the merge grace.
+## candidates are taken by priority while the visible-chunk cap allows (+3 per split), so the farthest
+## nodes stay merged first. Merged subtrees go back to the pool after the merge grace.
 
 var config: PlanetTierConfig
 var scheduler: ChunkScheduler
@@ -13,11 +13,16 @@ var cut: Array[ChunkNode] = []               ## rendered leaves of the last upda
 var frame: int = 0
 var splits_refused_by_cap: int = 0           ## last update
 var splits_refused_by_pool: int = 0          ## last update
+var visited: int = 0                         ## nodes classified by the last update
 var slot_budget: int = 1 << 30               ## free pool slots this frame; queued children reserve them
 var _release: Callable                       ## func(node: ChunkNode) -> void: return node.slot to the pool
 var _level: Array[ChunkNode] = []
 var _next: Array[ChunkNode] = []
-var _cand: Array[ChunkNode] = []
+var _heap: Array[ChunkNode] = []
+var _view: PlanetView = null
+var _cam_dir: Vector3 = Vector3.ZERO
+var _horizon: float = PI
+var _now_ms: int = 0
 var _merging: Array[ChunkNode] = []
 
 
@@ -68,82 +73,119 @@ func prebuild(depth: int, build: Callable) -> int:
 	return count
 
 
-## Selects this frame's cut and refills the scheduler queue. `now_ms` drives the merge grace.
+## Selects this frame's cut and refills the scheduler queue. `now_ms` drives the merge grace. Best-first:
+## split candidates of every depth go through one max-heap on priority, so when the visible-chunk cap
+## binds it is the farthest (lowest priority) splits that are refused, never the ones under the camera.
 func update(view: PlanetView, now_ms: int) -> void:
 	frame += 1
 	scheduler.begin_plan()
 	cut.clear()
 	splits_refused_by_cap = 0
 	splits_refused_by_pool = 0
-	var cam_dir: Vector3 = view.position.normalized()
-	var horizon: float = HorizonCull.horizon_angle(view.position)
+	_view = view
+	_now_ms = now_ms
+	_cam_dir = view.position.normalized()
+	_horizon = HorizonCull.horizon_angle(view.position)
+	_heap.clear()
+	visited = 0
 	var count: int = 0
-	_level.clear()
 	for r: ChunkNode in roots:
-		_level.append(r)
-		count += 0 if HorizonCull.is_culled_angle(cam_dir, horizon, r.center, r.radius) else 1
-	while not _level.is_empty():
-		_cand.clear()
-		_next.clear()
-		for n: ChunkNode in _level:
-			_classify(n, view, cam_dir, horizon, now_ms)
-		_cand.sort_custom(_higher_priority)
-		for n: ChunkNode in _cand:
-			count = _try_split(n, cam_dir, horizon, count, now_ms)
-		var swap: Array[ChunkNode] = _level
-		_level = _next
-		_next = swap
+		count += 0 if _culled(r) else 1
+		_classify(r)
+	while not _heap.is_empty():
+		count = _try_split(_heap_pop(), count)
 	_expire_merges(now_ms)
 
 
-func _classify(n: ChunkNode, view: PlanetView, cam_dir: Vector3, horizon: float, now_ms: int) -> void:
-	if HorizonCull.is_culled_angle(cam_dir, horizon, n.center, n.radius):
-		_leaf(n, false, now_ms)
+func _culled(n: ChunkNode) -> bool:
+	return HorizonCull.is_culled_angle(_cam_dir, _horizon, n.center, n.radius, n.h_max)
+
+
+func _classify(n: ChunkNode) -> void:
+	visited += 1
+	if _culled(n):
+		_leaf(n, false, _now_ms)
 		return
-	var d: float = bounds_distance(view.position, n)
-	var inside: bool = view.sphere_in_frustum(n.center, n.radius)
-	n.priority = priority_of(d, n.edge_m, config.split_k, inside, view.is_ahead(n.center))
+	var d: float = bounds_distance(_view.position, n)
+	var inside: bool = _view.sphere_in_frustum(n.center, n.radius)
+	n.priority = priority_of(d, n.edge_m, config.split_k, inside, _view.is_ahead(n.center))
 	var want: bool
 	if n.split:
 		want = not wants_merge(d, n.edge_m, config.split_k, config.merge_hysteresis)
 	else:
 		want = inside and wants_split(d, n.edge_m, config.split_k, n.depth, config.max_depth)
 	if want and n.depth < config.max_depth and n.is_built():
-		_cand.append(n)
+		_heap_push(n)
 	else:
-		_leaf(n, true, now_ms)
+		_leaf(n, true, _now_ms)
 
 
-func _try_split(n: ChunkNode, cam_dir: Vector3, horizon: float, count: int, now_ms: int) -> int:
+func _try_split(n: ChunkNode, count: int) -> int:
 	var kids: Array[ChunkNode] = n.ensure_children(ChunkMesher.skirt_depth(n.depth))
 	var visible: int = 0
 	for c: ChunkNode in kids:
-		visible += 0 if HorizonCull.is_culled_angle(cam_dir, horizon, c.center, c.radius) else 1
+		visible += 0 if _culled(c) else 1
 	if count + visible - 1 > config.visible_chunks_cap:
 		splits_refused_by_cap += 1
-		_leaf(n, true, now_ms)
+		_leaf(n, true, _now_ms)
 		return count
 	if n.children_built():
 		n.split = true
 		n.merge_since_ms = -1
-		_next.append_array(kids)
+		for c: ChunkNode in kids:
+			_classify(c)
 		return count + visible - 1
 	var missing: int = 0
 	for c: ChunkNode in kids:
 		missing += 0 if c.is_built() else 1
 	if missing > slot_budget:
 		splits_refused_by_pool += 1
-		_leaf(n, true, now_ms)
+		_leaf(n, true, _now_ms)
 		return count
 	slot_budget -= missing
 	for c: ChunkNode in kids:
 		if not c.is_built():
 			c.priority = n.priority          # siblings build back to back: no partial sets hogging slots
-			scheduler.push(c, frame, now_ms)
+			scheduler.push(c, frame, _now_ms)
 	n.split = false
 	n.merge_since_ms = -1                    # children are wanted: never released while they build
 	_show(n)
 	return count
+
+
+# region max-heap on ChunkNode.priority
+func _heap_push(n: ChunkNode) -> void:
+	_heap.append(n)
+	var i: int = _heap.size() - 1
+	while i > 0:
+		var p: int = (i - 1) >> 1
+		if _heap[p].priority >= n.priority:
+			break
+		_heap[i] = _heap[p]
+		i = p
+	_heap[i] = n
+
+
+func _heap_pop() -> ChunkNode:
+	var top: ChunkNode = _heap[0]
+	var last: ChunkNode = _heap.pop_back()
+	var size: int = _heap.size()
+	if size == 0:
+		return top
+	var i: int = 0
+	while true:
+		var c: int = 2 * i + 1
+		if c >= size:
+			break
+		if c + 1 < size and _heap[c + 1].priority > _heap[c].priority:
+			c += 1
+		if _heap[c].priority <= last.priority:
+			break
+		_heap[i] = _heap[c]
+		i = c
+	_heap[i] = last
+	return top
+# endregion
 
 
 func _leaf(n: ChunkNode, shown: bool, now_ms: int) -> void:
@@ -224,6 +266,3 @@ func _collect_built(n: ChunkNode, out: Array[ChunkNode]) -> void:
 	for c: ChunkNode in n.children:
 		_collect_built(c, out)
 
-
-static func _higher_priority(a: ChunkNode, b: ChunkNode) -> bool:
-	return a.priority > b.priority

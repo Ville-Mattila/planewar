@@ -5,7 +5,8 @@ extends SceneTree
 ## boost path (160 m/s at 30 m AGL) at a fixed 1/60 s step reporting plan ms, builds per second, visible
 ## chunks, pool use, refused splits and the longest queue wait of a chunk built within 400 m of the camera
 ## (the parent-shown hole time of 03 s14.2).
-## godot --headless --path godot -s res://test/perf/bench_planet.gd [-- --frames=600 --map=s_world1_r6000]
+## godot --headless --path godot -s res://test/perf/bench_planet.gd [-- --frames=600 --map=s_world1_r6000
+##   --tier=low|medium|high --pool=N (override chunk_pool_size)]
 ## Headless uses the dummy RenderingServer: upload cost is a lower bound; frame time needs a windowed run
 ## (scenes/presentation/planet/planet_demo.tscn -- --bench).
 
@@ -13,24 +14,36 @@ const TIERS: String = "res://content/defs/quality_tiers.json"
 const BOOST_MPS: float = 160.0
 const BOOST_AGL: float = 30.0
 const STEP_S: float = 1.0 / 60.0
+const AHEAD_M: float = 150.0                  ## ground point ahead of the camera whose leaf depth is reported
 const SAMPLES_PER_DEPTH: int = 24
 
 
 func _initialize() -> void:
 	var frames: int = 600
 	var map_id: String = "s_world1_r6000"
+	var pool: int = 0
+	var only: String = ""
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--frames="):
 			frames = int(arg.substr(9))
 		elif arg.begins_with("--map="):
 			map_id = arg.substr(6)
+		elif arg.begins_with("--pool="):
+			pool = int(arg.substr(7))
+		elif arg.begins_with("--tier="):
+			only = arg.substr(7)
 	var terrain: Terrain = Terrain.new()
 	var err: Error = terrain.load_map("res://content/maps/" + map_id)
 	print("BENCH_PLANET map=%s err=%d n=%d" % [map_id, err, terrain.face_resolution])
 	var tiers: Array = JSON.parse_string(FileAccess.get_file_as_string(TIERS)).get("quality_tiers", [])
 	for t: Variant in tiers:
 		var d: Dictionary = t
-		_bench_tier(terrain, PlanetTierConfig.from_dict(d), frames)
+		var cfg: PlanetTierConfig = PlanetTierConfig.from_dict(d)
+		if not only.is_empty() and str(cfg.tier_id) != only:
+			continue
+		if pool > 0:
+			cfg.pool_size = pool
+		_bench_tier(terrain, cfg, frames)
 	quit(0)
 
 
@@ -44,7 +57,7 @@ func _bench_tier(terrain: Terrain, cfg: PlanetTierConfig, frames: int) -> void:
 	print("BENCH_PLANET tier=%s prebuild_chunks=%d prebuild_ms=%.1f" % [cfg.tier_id, r.prebuilt, float(Time.get_ticks_usec() - t0) * 0.001])
 	_bench_depths(r, cfg)
 	_boost_path(r, cfg, frames)
-	root.queue_free()
+	root.free()
 
 
 func _bench_depths(r: PlanetRenderer, cfg: PlanetTierConfig) -> void:
@@ -71,6 +84,7 @@ func _boost_path(r: PlanetRenderer, cfg: PlanetTierConfig, frames: int) -> void:
 	var refused_pool: int = 0
 	var refused_cap: int = 0
 	var under_min: int = 99
+	var max_visited: int = 0
 	var forced: int = 0
 	for f: int in frames:
 		var dir: Vector3 = Sphere.from_lat_lon(lat, lon, 1.0)
@@ -84,17 +98,18 @@ func _boost_path(r: PlanetRenderer, cfg: PlanetTierConfig, frames: int) -> void:
 		forced += 1 if r.scheduler.last_forced else 0
 		refused_pool += r.quadtree.splits_refused_by_pool
 		refused_cap += r.quadtree.splits_refused_by_cap
-		var leaf: ChunkNode = r.quadtree.leaf_at(dir)
+		max_visited = maxi(max_visited, r.quadtree.visited)
+		var leaf: ChunkNode = r.quadtree.leaf_at(dir * Sphere.PLANET_RADIUS + east * AHEAD_M)
 		if f >= 120:
 			under_min = mini(under_min, leaf.depth if leaf != null else -1)
 		lon += BOOST_MPS * STEP_S / (Sphere.PLANET_RADIUS * cos(lat))
 	plan.sort()
 	var secs: float = float(frames) * STEP_S
-	print("BENCH_PLANET tier=%s boost frames=%d plan_ms_p50=%.2f p95=%.2f builds_per_s=%.1f forced=%d max_visible=%d cap=%d pool_used=%d/%d pool_exhausted=%d refused_cap=%d refused_pool=%d worst_near_wait_s=%.2f depth_under_cam_min=%d build_ms_p50=%.2f p95=%.2f" % [
+	print("BENCH_PLANET tier=%s boost frames=%d plan_ms_p50=%.2f p95=%.2f builds_per_s=%.1f forced=%d max_visible=%d cap=%d pool_used=%d/%d pool_exhausted=%d refused_cap=%d refused_pool=%d worst_near_wait_s=%.2f depth_ahead_min=%d visited_max=%d build_ms_p50=%.2f p95=%.2f" % [
 		cfg.tier_id, frames, plan[plan.size() >> 1], plan[int(float(plan.size() - 1) * 0.95)],
 		float(r.scheduler.total_builds - builds0) / secs, forced, max_vis, cfg.visible_chunks_cap,
 		r.pool.in_use(), r.pool.capacity(), r.pool_exhausted, refused_cap, refused_pool, float(r.worst_near_wait_ms) * 0.001, under_min,
-		r.build_ms_percentile(0.5), r.build_ms_percentile(0.95)])
+		max_visited, r.build_ms_percentile(0.5), r.build_ms_percentile(0.95)])
 
 
 ## Frustum of a 75 degree, 16:9 camera at `pos` looking along `fwd` with `up` (near 0.3, far 40 km).

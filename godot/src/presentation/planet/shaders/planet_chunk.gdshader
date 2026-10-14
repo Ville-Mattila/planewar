@@ -10,6 +10,9 @@ const vec3 AMB_LOW = vec3(0.0242, 0.0273, 0.0395);    // #2B3142 x 0.22 hemisphe
 const vec3 AMB_HIGH = vec3(0.2671, 0.3515, 0.5776);   // #8EA0C8 x 0.38 hemisphere ambient, high
 const float WRAP = 0.30;                              // 07 s1.5 wrap diffuse
 
+uniform vec3 debug_color = vec3(1.0);                // LOD debug tint (PlanetRenderer.debug_depth_tint)
+uniform float debug_mix = 0.0;
+
 varying float v_h;
 varying float v_slope;
 varying vec3 v_up;
@@ -22,7 +25,7 @@ void vertex() {
 
 void fragment() {
 	float t = clamp(v_h * 1.6 - 0.45 + v_slope * 0.8, 0.0, 1.0);
-	vec3 albedo = mix(MARE, HIGHLAND, t);
+	vec3 albedo = mix(mix(MARE, HIGHLAND, t), debug_color, debug_mix);
 	ALBEDO = albedo;
 	vec3 n_world = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	vec3 amb = mix(AMB_LOW, AMB_HIGH, 0.5 + 0.5 * dot(n_world, v_up));
