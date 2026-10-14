@@ -1,15 +1,20 @@
 class_name AiState extends RefCounted
 ## AI state proper, structure of arrays indexed by entity slot (05 s4.3; the entity store holds only `ai_tag`, R0 C2-07).
 ## Beyond the 05 s4.3 fields it carries the driver's per-slot scheduling data (`cls`, `eid`, `stagger`, `last_wake`,
-## `wake_pending`). `serialize` writes only registered slots (`cls != NO_CLASS`), ascending, so bytes are a function of state.
+## `wake_pending`), the landing fields of AI-09 and the overlay state of AI-08 (`overlay`, `ov_flags`; the overlays use
+## `integ`). `serialize` writes only registered slots (`cls != NO_CLASS`), ascending, so bytes are a function of state.
 
 const NO_CLASS: int = 255
-const FORMAT: int = 2
+const FORMAT: int = 3
 const WAKE_NEVER: int = -1000000
 const LAND_BUSY: int = 1                ## land_flags: the pad is occupied, queued or claimed by another ship
 const LAND_THREAT: int = 2              ## land_flags: an enemy projectile is inbound to the pad
 const LAND_FOREIGN: int = 4             ## land_flags: the pad is no longer this ship's team's
-const RECORD_MIN: int = 147             ## slot u32, 7 u8, 9 i32, 18 f32 (6 Vector3), 6 f32, path count i32
+const RECORD_MIN: int = 149             ## slot u32, 9 u8, 9 i32, 18 f32 (6 Vector3), 6 f32, path count i32
+## `ov_flags` bits (AI-08): PULL_UP running, system RETURN already requested, POSSESSED at the last check.
+const OV_PULL_UP: int = 1
+const OV_RTB_SENT: int = 2
+const OV_POSSESSED: int = 4
 
 var mode: PackedInt32Array = PackedInt32Array()           ## brain-specific enum value
 var mode_since: PackedInt32Array = PackedInt32Array()     ## tick
@@ -29,6 +34,8 @@ var eid: PackedInt32Array = PackedInt32Array()            ## the registered full
 var stagger: PackedInt32Array = PackedInt32Array()        ## think when (tick + stagger) % P == 0
 var last_wake: PackedInt32Array = PackedInt32Array()      ## tick of the last accepted wake
 var wake_pending: PackedByteArray = PackedByteArray()     ## 1 = think on the next on_tick regardless of phase
+var overlay: PackedByteArray = PackedByteArray()          ## ControlMachine.Overlay SAFETY / RECOVER_CEILING run here, or NONE
+var ov_flags: PackedByteArray = PackedByteArray()         ## OV_* bits
 var land_phase: PackedByteArray = PackedByteArray()       ## LandingController.Phase of the current landing
 var land_attempts: PackedByteArray = PackedByteArray()    ## go-arounds on the current pad
 var land_abort: PackedByteArray = PackedByteArray()       ## LandingController.Abort of the last abort
@@ -56,7 +63,8 @@ func ensure_capacity(slots: int) -> void:
 		mode.resize(slots), mode_since.resize(slots), overlay_since.resize(slots), target.resize(slots),
 		aux_id.resize(slots), guidance_vel.resize(slots), guidance_point.resize(slots), aim_lead.resize(slots),
 		tti.resize(slots), timer.resize(slots), fire_mask.resize(slots), path_ticket.resize(slots), cls.resize(slots),
-		eid.resize(slots), stagger.resize(slots), last_wake.resize(slots), wake_pending.resize(slots),
+		eid.resize(slots), stagger.resize(slots), last_wake.resize(slots), wake_pending.resize(slots), overlay.resize(slots),
+		ov_flags.resize(slots),
 		land_phase.resize(slots), land_attempts.resize(slots), land_abort.resize(slots), land_flags.resize(slots),
 		land_bearing.resize(slots), land_mark.resize(slots), land_ga_dir.resize(slots), integ.resize(slots),
 		ground_h.resize(slots), lift.resize(slots), pad_claim.resize(slots)]
@@ -84,6 +92,8 @@ func clear_slot(s: int) -> void:
 	stagger[s] = 0
 	last_wake[s] = WAKE_NEVER
 	wake_pending[s] = 0
+	overlay[s] = 0
+	ov_flags[s] = 0
 	land_phase[s] = 0
 	land_attempts[s] = 0
 	land_abort[s] = 0
@@ -140,6 +150,8 @@ func _write_slot(b: StreamPeerBuffer, s: int) -> void:
 	b.put_u8(cls[s])
 	b.put_u8(wake_pending[s])
 	b.put_u8(fire_mask[s])
+	b.put_u8(overlay[s])
+	b.put_u8(ov_flags[s])
 	for v: int in [land_phase[s], land_attempts[s], land_abort[s], land_flags[s]]:
 		b.put_u8(v)
 	for v: int in [mode[s], mode_since[s], overlay_since[s], target[s], aux_id[s], path_ticket[s], eid[s], stagger[s],
@@ -206,6 +218,8 @@ func _read_slot(b: StreamPeerBuffer) -> bool:
 	cls[s] = b.get_u8()
 	wake_pending[s] = b.get_u8()
 	fire_mask[s] = b.get_u8()
+	overlay[s] = b.get_u8()
+	ov_flags[s] = b.get_u8()
 	land_phase[s] = b.get_u8()
 	land_attempts[s] = b.get_u8()
 	land_abort[s] = b.get_u8()

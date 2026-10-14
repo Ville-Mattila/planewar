@@ -1,6 +1,8 @@
 class_name AiDriver extends SimAiHook
 ## The AI's tick-order step 3 (05 s4.3, R0 B.5): schedules class-batched autopilot thinks and per-tick acts, plus the
-## staggered Commander bot thinks. Think: entity thinks when `(tick + stagger) % P == 0`; `stagger` is a per-entity
+## staggered Commander bot thinks, and the overlays SAFETY / RECOVER_CEILING (AI-08, `Overlays`): a per-tick check of
+## the possessed entities sees the POSSESSED -> released edge, the overlay runs after the class's act (its input
+## wins) and the entity does not think until it ends; then it is woken. Think: entity thinks when `(tick + stagger) % P == 0`; `stagger` is a per-entity
 ## round-robin number, so every phase holds an equal share. Event wake: `wake` forces a think on the next `on_tick`, at most
 ## once per `WAKE_MIN_GAP` ticks per entity. Act: every tick over the whole class batch. No per-entity objects, no
 ## allocation per tick (budget: 03 s4.2 "AI think + act", 6.0 ms; this class is the scheduling share of it).
@@ -32,6 +34,12 @@ var _stats_thinks: int = 0
 var _stats_bot_thinks: int = 0
 var _stats_us: int = 0
 var _stats_ticks: int = 0
+var _stats_overlay_ticks: int = 0
+var _ov_params: Array[OverlayParams] = []
+var _terrain: Terrain = Terrain.new()   ## the flat datum until the session passes the map's terrain
+var _ov_ids: PackedInt32Array = PackedInt32Array()
+var _probe: ProbeResult = ProbeResult.new()
+var _ov_in: PilotInput = PilotInput.new()
 
 
 func _init(rng: Rng = null, think_period_ticks: int = 10, cut_period_ticks: int = 15,
@@ -43,6 +51,7 @@ func _init(rng: Rng = null, think_period_ticks: int = 10, cut_period_ticks: int 
 	for c: int in MAX_CLASSES:
 		_batches.append(AiBatch.new())
 		_brains.append(null)
+		_ov_params.append(null)
 
 
 ## Autopilot think period P in ticks: the cut period offline (Lite) or under cut-ladder rung 1, else the default.
@@ -70,6 +79,18 @@ func set_brain(cls: int, brain: AiBrain, bot: bool = false) -> void:
 	_brains[cls] = brain
 	if bot:
 		_bot_brain = brain
+
+
+## Overlay parameters of class `cls` (null: that class runs no overlays). The session builds them with
+## `OverlayParams.for_ship` / `for_ground` from the class's autopilot def.
+func set_overlay_params(cls: int, p: OverlayParams) -> void:
+	_ov_params[cls] = p
+
+
+## The terrain the overlays probe: the session passes `SimWorld.terrain()` after `load_map` (read-only, public map
+## data, not a vision cheat). Default: the flat datum.
+func set_terrain(t: Terrain) -> void:
+	_terrain = t
 
 
 ## Registers entity `id` in class batch `cls`; false if invalid or already registered (slot taken).
@@ -108,10 +129,16 @@ func wake(id: int, tick: int) -> bool:
 	return true
 
 
-## Feeds one drained sim event: HIT on an AI entity wakes it; DEATH unregisters the dead and wakes whoever targeted it.
+## Feeds one drained sim event: HIT on an AI entity wakes it; DEATH unregisters the dead and wakes whoever targeted it;
+## POSSESSED marks the entity for the per-tick release check (AI-08) and drops a running overlay.
 func on_event(ev: SimEvent) -> void:
 	if ev.kind == SimEvent.Kind.HIT:
 		var _w: bool = wake(ev.a, ev.tick)
+	elif ev.kind == SimEvent.Kind.POSSESSED:
+		var s: int = EntityId.slot(ev.a)
+		if s > 0 and s < state.capacity and state.cls[s] != AiState.NO_CLASS and state.eid[s] == ev.a:
+			Overlays.clear(state, s)
+			state.ov_flags[s] = state.ov_flags[s] | AiState.OV_POSSESSED
 	elif ev.kind == SimEvent.Kind.DEATH:
 		var _u: bool = unregister(ev.a)
 		for b: AiBatch in _batches:
@@ -150,12 +177,19 @@ func on_tick(tick: int, view: SimView, sink: CommandSinkBase) -> void:
 	for c: int in MAX_CLASSES:
 		var brain: AiBrain = _brains[c]
 		var b: AiBatch = _batches[c]
-		if brain == null or b.ids.is_empty():
+		var op: OverlayParams = _ov_params[c]
+		if b.ids.is_empty() or (brain == null and op == null):
 			continue
-		var n: int = _collect_due(b, tick, p, view)
-		if n > 0:
-			brain.think_batch(b.due, n, view, state, _sink, tick)
-		brain.act_batch(b.ids, view, state, _sink)
+		var nov: int = _scan_overlays(b, view, tick, p, op) if op != null else 0
+		if brain != null:
+			var n: int = _collect_due(b, tick, p, view)
+			if n > 0:
+				brain.think_batch(b.due, n, view, state, _sink, tick)
+			brain.act_batch(b.ids, view, state, _sink)
+		for i: int in nov:
+			if Overlays.run(_ov_ids[i], view, state, op, _terrain, _sink, tick, _probe, _ov_in):
+				var _w: bool = wake(_ov_ids[i], tick)
+		_stats_overlay_ticks += nov
 	_bots(tick, view)
 	_stats_us += Time.get_ticks_usec() - t0
 	_stats_ticks += 1
@@ -175,12 +209,44 @@ func _collect_due(b: AiBatch, tick: int, p: int, view: SimView) -> int:
 				var _e: int = _dead.resize(dead + 1)
 			_dead[dead] = id
 			dead += 1
-		elif view.control_state(id) != 2:
+		elif view.control_state(id) != ControlMachine.State.POSSESSED and state.overlay[s] == Overlays.NONE:
 			b.due[n] = id
 			n += 1
 	for i: int in dead:
 		var _u: bool = unregister(_dead[i])
 	_stats_thinks += n
+	return n
+
+
+## AI-08 release edge. The control state is read every tick for entities marked possessed (OV_POSSESSED) or in an
+## overlay, and on the entity's think phase `(tick + stagger) % p == 0` otherwise (1/p of the roster per tick), so a
+## possession is noticed within p ticks or at once through `on_event(POSSESSED)`. POSSESSED marks the entity (and
+## drops a running overlay); the first tick a marked live entity is not POSSESSED starts the overlay (no latency).
+## Fills `_ov_ids` with the entities in an overlay, in batch (slot) order; returns the count.
+func _scan_overlays(b: AiBatch, view: SimView, tick: int, p: int, op: OverlayParams) -> int:
+	var n: int = 0
+	var flags: PackedByteArray = state.ov_flags
+	var ov: PackedByteArray = state.overlay
+	var stag: PackedInt32Array = state.stagger
+	for id: int in b.ids:
+		var s: int = EntityId.slot(id)
+		var f: int = flags[s]
+		if f == 0 and ov[s] == 0 and (tick + stag[s]) % p != 0:
+			continue
+		if view.control_state(id) == ControlMachine.State.POSSESSED:
+			if state.overlay[s] != Overlays.NONE:
+				Overlays.clear(state, s)
+			state.ov_flags[s] = state.ov_flags[s] | AiState.OV_POSSESSED
+			continue
+		if (f & AiState.OV_POSSESSED) != 0:
+			state.ov_flags[s] = f & ~AiState.OV_POSSESSED
+			if view.alive(id):
+				Overlays.enter(id, view, state, op, tick)
+		if state.overlay[s] != Overlays.NONE and view.alive(id):
+			if _ov_ids.size() <= n:
+				var _e: int = _ov_ids.resize(n + 1)
+			_ov_ids[n] = id
+			n += 1
 	return n
 
 
@@ -197,7 +263,7 @@ func _bots(tick: int, view: SimView) -> void:
 func stats() -> Dictionary:
 	return {"thinks": _stats_thinks, "bot_thinks": _stats_bot_thinks, "ticks": _stats_ticks, "us": _stats_us,
 		"us_per_tick": float(_stats_us) / float(maxi(_stats_ticks, 1)), "submits": _sink.submits, "drives": _sink.drives,
-		"registered": state.registered_count()}
+		"registered": state.registered_count(), "overlay_ticks": _stats_overlay_ticks}
 
 
 func reset_stats() -> void:
@@ -205,6 +271,7 @@ func reset_stats() -> void:
 	_stats_bot_thinks = 0
 	_stats_us = 0
 	_stats_ticks = 0
+	_stats_overlay_ticks = 0
 
 
 ## S4 bytes: FORMAT, flags, reg counter, bots, rng state, then the AiState blob (length-prefixed).

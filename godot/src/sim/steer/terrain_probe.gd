@@ -69,6 +69,16 @@ static func sample_clearance(terrain: Terrain, p: Vector3, v: Vector3, gravity: 
 	return r0 + v.dot(n0) * t - 0.5 * gravity * t * t - Sphere.PLANET_RADIUS - terrain.height_at(dir)
 
 
+## R0 B.12 A-69 lift: the worst sample's clearance without the gravity drop, c' = c_w + 0.5 g t_w^2 (the controller
+## holds the commanded path against gravity), `max(0, h_req - c') / max(t_w, lift_min_time_s)` capped at
+## `lift_max_frac * speed`. Read from a filled `ProbeResult`: no extra sample (the worst sample is the ballistic one).
+static func drop_free_lift(r: ProbeResult, probe_params: ProbeParams, h_req: float, speed: float) -> float:
+	var t: float = r.worst_t_s
+	var c: float = r.min_clearance_m + 0.5 * probe_params.gravity * t * t
+	var lift: float = maxf(0.0, h_req - c) / maxf(t, probe_params.lift_min_time_s)
+	return minf(lift, probe_params.lift_max_frac * speed)
+
+
 ## Crossing time when sample 0 (t0, c0 <= 0) is already under the surface: extrapolate back through sample 1,
 ## clamped to [0, t0]; a path not rising towards the surface gives t0.
 static func _first_hit(t0: float, c0: float, t1: float, c1: float) -> float:
