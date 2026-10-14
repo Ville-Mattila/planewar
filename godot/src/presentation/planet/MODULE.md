@@ -228,6 +228,7 @@ chunks inside the tier's detail range only; the pool holds 150 / 220 / 300 pairs
 - `godot/test/unit/presentation/planet/test_chunk_pool.gd` (pool reuse, no Node churn)
 - `godot/test/unit/presentation/planet/test_horizon_cull.gd` (conservative horizon, frustum planes)
 - `godot/test/unit/presentation/planet/test_chunk_mesher.gd` (bit-identical heights, direction table, winding, skirts, seams)
+- `godot/test/unit/presentation/planet/test_chunk_mesher_1024.gd` (1,024 map with 370 m single-texel cliffs: vertices == `height_at` at every depth, no skirt vertex above the surface)
 - `godot/test/perf/bench_planet.gd` (build ms per depth, flatten cost, boost path per tier)
 - `godot/test/unit/presentation/planet/test_moon_terrain.gd` (shader constants == `MoonDetail`, 1.2 m / 0.6 m caps, mean-zero crater, biome array == `Terrain.biome_at`, ramp rows, sites uniform)
 - `godot/test/unit/presentation/planet/test_flatten_sites.gd` (flat inside / untouched outside, seamless over a cube edge, in-place rebuilds)
