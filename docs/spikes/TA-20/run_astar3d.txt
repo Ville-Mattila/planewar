@@ -1,0 +1,6 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+RESULT section=setup_costs slope_sample_us_per_cell=4.80 prepare20_ms=3538 prepare25_ms=3182 build_us_per_cluster=2303.3 blocked_mask20=518 orphans=0 overflows=0
+RESULT section=setup map=baked pct=25 budget=120 load_err=0 init_ms=80.1 weights_ms=23.9 blocked_cells=344 mem_mb=8.85
+RESULT section=astar build_ms=10988 mem_mb=282.8 points=392698 links=1570566 b100m_astar3d_ms=0.063 b100m_astar3d_worst_ms=1.703 b100m_custom_ms=0.221 b100m_custom_exp=12 b100m_cost_ratio=1.000 b1000m_astar3d_ms=0.274 b1000m_astar3d_worst_ms=1.244 b1000m_custom_ms=0.797 b1000m_custom_exp=38 b1000m_cost_ratio=0.997 b5000m_astar3d_ms=4.460 b5000m_astar3d_worst_ms=8.412 b5000m_custom_ms=3.294 b5000m_custom_exp=155 b5000m_cost_ratio=0.988 b15000m_astar3d_ms=150.549 b15000m_astar3d_worst_ms=245.437 b15000m_custom_ms=13.228 b15000m_custom_exp=672 b15000m_cost_ratio=0.983
+RESULT correctness_failures=0

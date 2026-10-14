@@ -1,0 +1,16 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+RESULT section=setup_costs slope_sample_us_per_cell=9.20 prepare20_ms=4654 prepare25_ms=5481 build_us_per_cluster=3030.2 blocked_mask20=33496 orphans=0 overflows=2
+RESULT section=setup map=rough pct=50 budget=40 load_err=0 init_ms=134.0 weights_ms=4262.7 blocked_cells=33025 mem_mb=8.80
+RESULT section=strat_100m n=250 ticks_p50=1 ticks_p95=1 ticks_max=82 exp_p50=13 exp_p95=21 exp_max=3241 us_per_exp=23.92 worst_tick_ms=3.985 ratio_p50=1.179 ratio_p95=1.734 ratio_max=51.784 no_path=0
+RESULT section=strat_1000m n=250 ticks_p50=2 ticks_p95=47 ticks_max=248 exp_p50=61 exp_p95=1879 exp_max=9909 us_per_exp=20.02 worst_tick_ms=18.636 ratio_p50=1.205 ratio_p95=2.716 ratio_max=8.286 no_path=8
+RESULT section=strat_5000m n=250 ticks_p50=24 ticks_p95=197 ticks_max=395 exp_p50=923 exp_p95=7852 exp_max=15785 us_per_exp=16.85 worst_tick_ms=55.625 ratio_p50=1.218 ratio_p95=1.604 ratio_max=2.417 no_path=14
+RESULT section=strat_15000m n=250 ticks_p50=82 ticks_p95=205 ticks_max=1110 exp_p50=3256 exp_p95=8178 exp_max=44379 us_per_exp=20.74 worst_tick_ms=51.085 ratio_p50=1.192 ratio_p95=1.279 ratio_max=1.617 no_path=14
+RESULT section=edge n=200 ticks_p50=5 ticks_p95=81 ticks_max=249 exp_p50=163 exp_p95=3222 exp_max=9959 us_per_exp=17.94 worst_tick_ms=15.166 ratio_p50=1.213 ratio_p95=2.550 ratio_max=5.733 no_path=14
+RESULT section=edge cross_face_paths=177
+RESULT section=corner n=50 ticks_p50=2 ticks_p95=31 ticks_max=116 exp_p50=54 exp_p95=1237 exp_max=4627 us_per_exp=20.78 worst_tick_ms=2.802 ratio_p50=1.203 ratio_p95=3.311 ratio_max=3.601 no_path=1
+RESULT section=corner cross_face_paths=48
+RESULT section=reweight cells=500 total_ms=4.683 per_cell_us=9.37 worst_us=132
+RESULT section=after_reweight n=100 ticks_p50=18 ticks_p95=155 ticks_max=487 exp_p50=684 exp_p95=6195 exp_max=26770 us_per_exp=32.63 worst_tick_ms=90.766 ratio_p50=0.000 ratio_p95=0.000 ratio_max=0.000 no_path=5
+RESULT section=load ticks=9000 wall_ms=29821.5 mean_ms=0.8115 p50_ms=0.588 p95_ms=2.147 p99_ms=3.891 max_ms=30.624 exp_mean=40.7 exp_p95=43 exp_max=122 us_per_exp=19.92 requests=4951 harvester_req=1801 harvester_hit=0.953 crawler_req=1800 crawler_hit=0.132 splice_misses=28 fallbacks=0 latency_p50=272 latency_p95=298 latency_max=299 no_path=2 rejected=0 arrivals=1 abstract_share=0.260 cache_entries=117
+RESULT correctness_failures=0
