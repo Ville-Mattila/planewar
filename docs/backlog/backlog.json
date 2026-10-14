@@ -913,9 +913,10 @@
       " R0 C3-08",
       " 03 TA-19"
     ],
-    "status": "todo",
+    "status": "in_progress",
     "acceptance_append": "; pad structures need no radius sizing for the approach: the RAM exemption covers the approach column (R0 B.11 A-53, code in TA-49)",
-    "note": "PR #35 covers Build only; remaining: Economy core, Production queues (cap 5, CAP_REACHED), SimWorld wiring. Architect/content: build.gd consts (slope 15 deg, presence 300 m, spacing 800/1500 m, site HP fraction) need def fields (ADR-09)"
+    "note": "PR #35 covers Build only; remaining: Economy core, Production queues (cap 5, CAP_REACHED), SimWorld wiring. Architect/content: build.gd consts (slope 15 deg, presence 300 m, spacing 800/1500 m, site HP fraction) need def fields (ADR-09)",
+    "pr": "public#35 (Build part)"
   },
   {
     "id": "TA-20",
