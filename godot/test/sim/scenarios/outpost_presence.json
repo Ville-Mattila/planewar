@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "outpost_presence",
+  "title": "An Outpost needs one of the player's own ships within the presence radius of the site: refused with NO_PRESENCE without, placed with",
+  "refs": ["02 s6.2", "02 s6.3"],
+  "status": "active",
+  "world": { "kind": "solo_kit", "seed": 7 },
+  "ticks": 6,
+  "script": [
+    { "at": 1, "do": "build", "player": 0, "def": "outpost", "west_m": 1000, "expect": "REJECTED_PLACEMENT", "expect_reject": "NO_PRESENCE" },
+    { "at": 2, "do": "spawn", "def": "dart", "owner": 0, "team": 0, "alt": -80, "east": -1000, "pin": true, "as": "scout_ship" },
+    { "at": 4, "do": "build", "player": 0, "def": "outpost", "west_m": 1000, "expect": "ACCEPTED" }
+  ],
+  "checks": [
+    { "at": 3, "query": "structure_count", "def": "outpost", "owner": 0, "value": 0 },
+    { "at": 6, "query": "structure_count", "def": "outpost", "owner": 0, "value": 1 }
+  ]
+}

@@ -48,7 +48,7 @@ ID_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 class Report:
     def __init__(self) -> None:
         self.errors: list[str] = []
-        self.counts = {"schemas": 0, "defs": 0, "maps": 0, "examples": 0, "parse_only": 0}
+        self.counts = {"schemas": 0, "defs": 0, "maps": 0, "examples": 0, "parse_only": 0, "scenarios": 0}
 
     def add(self, where: str, msg: str) -> None:
         self.errors.append(f"{where}: {msg}")
@@ -387,6 +387,39 @@ def run_examples(val: Validator, rep: Report, root: Path, stems: set[str]) -> No
             check_hover_floor(rep, f"{rel}:", data, gravity_of(root))
 
 
+def run_scenarios(val: Validator, rep: Report, root: Path, stems: set[str]) -> None:
+    """TA-33: godot/test/sim/scenarios/*.json against sim_scenario.schema.json; id = file stem, planned needs a
+    reason, active needs ticks and something that can fail, and no tick past the end of the run."""
+    if "sim_scenario" not in stems:
+        return
+    for path in sorted((root / "godot/test/sim/scenarios").glob("*.json")):
+        rel = path.relative_to(root).as_posix()
+        rep.counts["scenarios"] += 1
+        data = load_json(path, rep, rel)
+        if data is None:
+            continue
+        validate(val, rep, rel, data, "sim_scenario")
+        if not isinstance(data, dict):
+            continue
+        if data.get("id") != path.stem:
+            rep.add(f"{rel}:/id", f"id '{data.get('id')}' must equal the file stem '{path.stem}'")
+        if data.get("status") == "planned":
+            if not data.get("planned_reason"):
+                rep.add(f"{rel}:/planned_reason", "a planned scenario must say which feature is missing")
+            continue
+        ticks = data.get("ticks")
+        if not isinstance(ticks, int):
+            rep.add(f"{rel}:/ticks", "an active scenario needs ticks")
+            continue
+        if not data.get("events") and not data.get("checks"):
+            rep.add(rel, "an active scenario needs events or checks (otherwise nothing can fail)")
+        for key in ("script", "events", "checks"):
+            for i, item in enumerate(data.get(key, [])):
+                at = item.get("at", item.get("tick")) if isinstance(item, dict) else None
+                if isinstance(at, int) and at > ticks:
+                    rep.add(f"{rel}:/{key}/{i}", f"tick {at} is after the end of the run ({ticks})")
+
+
 def run(root: Path) -> Report:
     rep = Report()
     schema_dir = root / "tools/schemas"
@@ -395,6 +428,7 @@ def run(root: Path) -> Report:
     stems = run_schemas(store, rep, schema_dir)
     run_defs(val, rep, root, stems)
     run_examples(val, rep, root, stems)
+    run_scenarios(val, rep, root, stems)
     return rep
 
 
@@ -423,7 +457,8 @@ def main(argv: list[str] | None = None) -> int:
             return 1
     status = "FAIL" if rep.errors else "ok"
     print(f"validate_content: {c['schemas']} schemas, {c['defs']} def files, {c['maps']} map recipes, "
-          f"{c['examples']} doc examples ({c['examples'] - c['parse_only']} schema-validated, {c['parse_only']} parse-only): "
+          f"{c['examples']} doc examples ({c['examples'] - c['parse_only']} schema-validated, {c['parse_only']} parse-only), "
+          f"{c['scenarios']} sim scenarios: "
           f"{status}" + (f", content_hash {digest}" if digest else "") + (f", {len(rep.errors)} violations" if rep.errors else ""))
     return 1 if rep.errors else 0
 

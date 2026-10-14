@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "id": "tail_down_landing_grade",
+  "title": "A tail-down touchdown on a pad earns its LandingGrade and a LANDING event with that grade",
+  "refs": ["02 s5.4", "03 s15.4"],
+  "status": "planned",
+  "planned_reason": "LandingGrade scoring (sim/scoring/) and Docking are unimplemented: sim/MODULE.md lists LandingGrade as planned and test_landing.gd as planned"
+}

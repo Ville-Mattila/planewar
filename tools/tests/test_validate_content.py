@@ -22,10 +22,10 @@ REPO = TOOLS.parent
 FIX = Path(__file__).resolve().parent / "fixtures" / "content"
 CANON = FIX / "canonical"
 # 03 CONTRACT-0 brief / R0 C1-10: the 15 schemas; GD-05 (R0 B.1 scoring.json) adds `scoring` -> 16; AI-01 (R0 B.1 order_rules.json) adds `order_rules` -> 17;
-# TA-47 (R0 B.9 A-22) adds `quality_tiers` -> 18; FEAT-01 (08 SL-2/3/5) adds wing, callsigns, barks, commander_verbs -> 22; ART-14 adds biome_ramps (content/biome_ramps.json, not a def file) -> 23.
+# TA-47 (R0 B.9 A-22) adds `quality_tiers` -> 18; FEAT-01 (08 SL-2/3/5) adds wing, callsigns, barks, commander_verbs -> 22; ART-14 adds biome_ramps (content/biome_ramps.json, not a def file) -> 23; TA-33 adds sim_scenario (test/sim/scenarios/*.json, not a def file) -> 24.
 CONTRACT0 = sorted("ships ground_units weapons projectiles structures towers doctrines economy match_rules modes "
                    "bot_promises bot_profiles autopilots map_recipe rules scoring order_rules quality_tiers "
-                   "wing callsigns barks commander_verbs biome_ramps".split())
+                   "wing callsigns barks commander_verbs biome_ramps sim_scenario".split())
 SINGLETONS = {"rules", "economy", "match_rules", "map_recipe", "scoring", "order_rules", "wing", "callsigns", "biome_ramps"}
 
 
@@ -65,7 +65,7 @@ class SchemaSet(unittest.TestCase):
     def test_exactly_the_contract0_set(self) -> None:
         got = sorted(p.name[: -len(".schema.json")] for p in (TOOLS / "schemas").glob("*.schema.json"))
         self.assertEqual(got, CONTRACT0)
-        self.assertEqual(len(got), 23)
+        self.assertEqual(len(got), 24)
 
     def test_meta_clean(self) -> None:
         store = SchemaStore(TOOLS / "schemas")
@@ -87,6 +87,8 @@ class SchemaSet(unittest.TestCase):
         """Every collection entry: id, status (core|candidate), tags required; _doc allowed; no name_key (R0 B, C2-33)."""
         first: dict[str, Any] = {}
         for stem in CONTRACT0:
+            if stem == "sim_scenario":   # TA-33: a test-scenario schema, not a def file (no _doc / def envelope)
+                continue
             sch = json.loads((TOOLS / "schemas" / f"{stem}.schema.json").read_text(encoding="utf-8"))
             self.assertNotIn("name_key", json.dumps(sch), stem)
             self.assertIn("notes" if stem == "map_recipe" else "_doc", sch["properties"], stem)
@@ -238,7 +240,7 @@ class Repo(unittest.TestCase):
     def test_real_repo_passes(self) -> None:
         code, out = run(REPO)
         self.assertEqual(code, 0, out)
-        self.assertIn("23 schemas", out)
+        self.assertIn("24 schemas", out)
 
 
 class Canonical(Tree):
