@@ -207,3 +207,32 @@ func test_long_churn_one_slot_keeps_alive_and_index_of_consistent() -> void:
 		prev = back
 	assert_int(bad).is_equal(0)
 	assert_int(p.live_count()).is_equal(0)
+
+
+func test_spawn_fills_every_field_in_one_call() -> void:
+	# GD-36: Combat's weapon fire writes a projectile through spawn() (no pool array copied by the caller).
+	var p: ProjectileStore = ProjectileStore.new(2000)
+	var id: int = p.spawn(ProjectileStore.ROCKET, 9, Vector3(1, 2, 3), Vector3(4, 5, 6), 6.0, 3, 4, 2, 1, 77, 55,
+		ProjectileStore.F_GUIDED)
+	var i: int = p.index_of(id)
+	assert_bool(p.alive(id)).is_true()
+	assert_int(p.kind[i]).is_equal(ProjectileStore.ROCKET)
+	assert_vector(p.pos[i]).is_equal(Vector3(1, 2, 3))
+	assert_vector(p.prev_pos[i]).is_equal(Vector3(1, 2, 3))
+	assert_vector(p.vel[i]).is_equal(Vector3(4, 5, 6))
+	assert_float(p.ttl[i]).is_equal(6.0)
+	assert_int(p.projectile_def[i]).is_equal(3)
+	assert_int(p.weapon_def[i]).is_equal(4)
+	assert_int(p.owner[i]).is_equal(2)
+	assert_int(p.team[i]).is_equal(1)
+	assert_int(p.shooter[i]).is_equal(77)
+	assert_int(p.target[i]).is_equal(55)
+	assert_int(p.flags[i]).is_equal(ProjectileStore.F_ALIVE | ProjectileStore.F_GUIDED)
+
+
+func test_spawn_respects_the_live_cap() -> void:
+	var p: ProjectileStore = ProjectileStore.new(1)
+	var _a: int = p.spawn(ProjectileStore.SLUG, 1, Vector3.ZERO, Vector3.ZERO, 1.0, 0, 0, 0, 0, 0, 0, 0)
+	var b: int = p.spawn(ProjectileStore.SLUG, 1, Vector3.ZERO, Vector3.ZERO, 1.0, 0, 0, 0, 0, 0, 0, 0)
+	assert_int(b).is_equal(EntityId.NULL_ID)
+	assert_int(p.live_count()).is_equal(1)

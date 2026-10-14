@@ -127,12 +127,35 @@ func spawn(def_id: int, owner: int, team: int, p: Vector3, v: Vector3, fwd_in: V
 	var sd: ShipDef = _defs.ship(owner, def_id)
 	if sd != null:
 		_store.fuel[s] = sd.fuel_s
-		_store.ammo[s] = sd.primary_ammo
-		_store.rockets[s] = clampi(sd.secondary_count, 0, 255)
 		_store.flip_time[s] = -sd.flip_cooldown_s
 		_store.boost_time[s] = -sd.boost_cooldown_s
+	_load_out(s, owner, def_id)
 	var _e: SimEvent = _events.emit(SimEvent.Kind.SPAWN, id, def_id, p, 0.0, team)
 	return s
+
+
+# Rounds of a fresh entity (GD-36): ship primary ammo and its secondary count into `bombs` or `rockets` by the weapon's
+# kind, a ground unit's `ammo`, a tower's `ammo_pool` (the tower's pool lives in `ammo`).
+func _load_out(s: int, owner: int, def_id: int) -> void:
+	var r: ResolvedDefs = _defs.resolved(owner)
+	var sd: ShipDef = r.ship(def_id)
+	if sd != null:
+		_store.ammo[s] = sd.primary_ammo
+		var wd: int = _defs.content.weapon_index.get(sd.secondary_weapon, -1)
+		var sec: WeaponDef = r.weapon(wd)
+		if sec != null and sec.kind == &"bomb":
+			_store.bombs[s] = clampi(sd.secondary_count, 0, 255)
+		else:
+			_store.rockets[s] = clampi(sd.secondary_count, 0, 255)
+		return
+	var g: GroundUnitDef = r.ground_unit(def_id)
+	if g != null:
+		_store.ammo[s] = g.ammo
+		return
+	var t: StructureDef = r.structure(def_id)
+	if t != null and t.is_tower():
+		var pool: float = t.tower.get("ammo_pool", 0.0)
+		_store.ammo[s] = roundi(pool)
 
 
 func _debug_set(cmd: Command) -> void:

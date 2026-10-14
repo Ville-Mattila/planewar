@@ -175,6 +175,7 @@ class_name ProjectileStore extends RefCounted                                # 0
 func _init(cap_live: int, quarantine_ticks: int = QUARANTINE_TICKS) -> void                 # (TA-11) cap_live = MatchRules.caps.projectiles; index = slot - 4096
 func alloc(projectile_kind: int, tick: int) -> int;  func free_slot(index: int, tick: int) -> bool;  func alive(id: int) -> bool;  func live_count() -> int;  func free_count() -> int;  func quarantined_count() -> int
 func index_of(id: int) -> int;  func id_of(index: int) -> int;  func clear_slot(i: int) -> void;  var live: PackedInt32Array   # live indices, ascending
+func spawn(projectile_kind: int, tick: int, p: Vector3, v: Vector3, ttl_s: float, projectile_local: int, weapon_local: int, owner_slot: int, team_id: int, shooter_id: int, target_id: int, extra_flags: int) -> int   # (GD-36) alloc + every field in one call; target = rocket lock / flak burst tick
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # (TA-18) S4, as EntityStore
 class_name Spatial extends RefCounted                                        # sim/spatial.gd (TA-14): counting-sort GRID_HASH hash, _init(store, projectiles)
 func rebuild() -> void;  func ids_near(p: Vector3, radius: float, mask: int) -> PackedInt32Array;  func ids_in_hash_cell(cell: int) -> PackedInt32Array
@@ -282,7 +283,7 @@ TA-18: `godot/test/unit/sim/test_sim_world.gd` (S1, S3, S5, S11, hook, profile, 
 TA-50: `godot/test/sim/test_path_scenario.gd` (step 3b, `pathing()` via `godot/test/unit/sim/path_brain_stub.gd`), S4 with pending tickets in `test_serialize.gd`, `godot/test/perf/perf_path_load.gd` (row 3b).
 
 TA-37: `godot/test/unit/sim/vision/test_vision.gd`, `godot/test/unit/sim/vision/test_vision_lists.gd`, `godot/test/perf/perf_vision.gd` (sim/vision/MODULE.md V1-V9).
-Planned (plain text until on disk, D10): test_build.gd (cross-edge footprints), test_landing.gd; godot/test/sim/scenarios/*.json (Outpost presence, victory, Core shield, caps); godot/test/contract/test_sim_view_contract.gd.
+GD-36: `test_projectile_store.gd` (`spawn`); weapon fire and fuse tests are listed by the combat subsystem contract. Planned (plain text until on disk, D10): test_build.gd (cross-edge footprints), test_landing.gd; godot/test/sim/scenarios/*.json (Outpost presence, victory, Core shield, caps); godot/test/contract/test_sim_view_contract.gd.
 
 ## How to add X
 
