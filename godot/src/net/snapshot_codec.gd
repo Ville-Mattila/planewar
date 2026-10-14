@@ -3,7 +3,7 @@ class_name SnapshotCodec extends RefCounted
 ## entity once per tick into the shared cache (packed arrays indexed by roster index == sim slot) and the
 ## per-team visible lists; encode() then does per-client work only: gap ids, FULL / A-DELTA / B-DELTA / C-BLIP
 ## records against that client's acked baseline (gravity-aware dead reckoning), the 15-byte pilot block and
-## splitting at 1,200 B. Every record is applied to the client's mirror frame through BaselineFrame, the same
+## splitting at 1,200 B into <= 4 indexed packets (A-36). Every record is applied to the client's mirror frame through BaselineFrame, the same
 ## calls SnapshotDecoder makes, so server and client baselines stay identical. No allocation per entity.
 
 const HEADER_BYTES: int = 10
@@ -37,9 +37,9 @@ var dt: float = 0.0
 var prepare_count: int = 0
 var cache_tick: int = -1
 ## Packets per tick per client (1..MAX_PACKETS_PER_TICK). Records past the limit are deferred: not in the mirror,
-## re-planned on a later tick. Default 1: a split tick can never become a delta baseline (BaselineStore), and
-## with tier B on alternate ticks a split-every-B-tick scene would never advance B's baseline.
-var max_packets: int = 1
+## re-planned on a later tick. Default 4 (A-36): a split tick carries its packet index, so the client acks it
+## once complete and it is a baseline like any other.
+var max_packets: int = MAX_PACKETS_PER_TICK
 var deferred: int = 0                       # records deferred by the packet cap in the last encode()
 # Cumulative record counters (tests, perf notes, the NET-09 governor).
 var n_full: int = 0
@@ -187,19 +187,14 @@ func encode(store: BaselineStore, tick: int, a: PackedInt32Array, b: PackedInt32
 	deferred = 0
 	var base_tick: int = store.base_for(tick)
 	var base: BaselineFrame = store.frame_at(base_tick)
-	# A split tick cannot become a baseline (BaselineStore), so after one (or with no baseline) send a single
-	# packet: that tick can be acked as the next baseline and the deferred records follow on the next tick.
-	var limit: int = clampi(max_packets, 1, MAX_PACKETS_PER_TICK) if base != null and not store.last_split else 1
 	var frame: BaselineFrame = store.begin(tick, base_tick)
-	_w.start(tick, base_tick, pilot, out, limit)
+	_w.start(tick, base_tick, pilot, out, clampi(max_packets, 1, MAX_PACKETS_PER_TICK))
 	_capped = false
 	_encode_tier(a, Tier.A, base, frame, store.team)
 	_encode_tier(b, Tier.B, base, frame, store.team)
 	_encode_tier(c, Tier.C, base, frame, store.team)
-	var n: int = _w.finish()
-	frame.usable = n == 1
-	store.last_split = n > 1
-	return n
+	frame.usable = true                     # A-36: the client acks only complete ticks
+	return _w.finish()
 
 
 func _encode_tier(list: PackedInt32Array, tier: int, base: BaselineFrame, frame: BaselineFrame, team: int) -> void:

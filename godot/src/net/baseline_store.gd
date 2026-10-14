@@ -2,15 +2,15 @@ class_name BaselineStore extends RefCounted
 ## Per-client ring of the last DEPTH (32) snapshot frames (04 s3.4 baseline rule). The server keeps one per
 ## client as the mirror of what that client holds; the client keeps its own for decoding. Frames are reused,
 ## never reallocated; a frame is found by tick only while its ring slot still carries that tick.
-## Only single-packet ticks become server baselines: SNAPSHOT has no packet index, so a client cannot tell a
-## complete split tick from a partial one (contract question in the NET-06 PR); split ticks still decode.
+## A client acknowledges only a complete tick (every packet index 0 .. LAST received, R0 B.10 A-36), so any
+## acknowledged tick, split or not, is a server baseline.
 
 const DEPTH: int = 32
 
 var team: int = 0
 var acked_tick: int = 0                     # server: newest acked usable tick; 0 = none
-var newest_tick: int = 0                    # client: newest tick decoded (the ack it sends)
-var last_split: bool = false                # server: the previous encode for this client needed > 1 packet
+var newest_tick: int = 0                    # client: newest tick with at least one packet decoded
+var complete_tick: int = 0                  # client: newest complete tick (the ack it sends, A-36)
 var _frames: Array[BaselineFrame] = []
 
 
@@ -57,7 +57,7 @@ func base_for(t: int) -> int:
 func reset() -> void:
 	acked_tick = 0
 	newest_tick = 0
-	last_split = false
+	complete_tick = 0
 	for f: BaselineFrame in _frames:
 		f.tick = 0
 		f.usable = false

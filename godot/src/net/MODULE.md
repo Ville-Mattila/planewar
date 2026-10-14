@@ -12,7 +12,7 @@ once a wire has shipped (R0 B.9 A-23, B.10 A-36); `gen_module_api.py --check` mu
 | May depend on | `core`, `content`; named `sim` types only: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain` (`tools/deps.json`) |
 | Must never touch | Nodes in codec/protocol code, `server/` (feature lane), `platform/`, `presentation`, `ui`; no `Thread` and no `WorkerThreadPool` (web is single-threaded, 03 s11); WebSocket only on web in v1.0 (WebRTC is v1.1, S-NET-2) |
 | Autoloads used | `Log` (never in per-entity loops) |
-| Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `SnapshotCodec` and its baselines (NET-06), `Transport`/`LocalTransport`/`FaultModel` (NET-11) landed. Everything else is planned per 04 s19. |
+| Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `SnapshotCodec` and its baselines (NET-06, NET-48 packet index), `Transport`/`LocalTransport`/`FaultModel` (NET-11) landed. Everything else is planned per 04 s19. |
 
 ## Public API
 
@@ -42,7 +42,7 @@ static func channel_allows(channel: int, id: int) -> bool;  static func name_of(
 #   KeyframeScope, ChatStatus, PlayerStatus, MatchEndReason, RosterRemoveReason, AdminNotice, SessionPhase.
 # Wire mirrors of R0 B.3 sim enums: CommandKind, ResultCode, BuildReject, EventKind, ReleaseReason,
 #   ControlState, DockState, PlayerKind, QuickPingKind.
-# Flag bits: SNAP_HAS_A/B/C, SNAP_HAS_PILOT, SNAP_CONTINUED, SNAP_LAST; TEAM_CORE_EXPOSURE, TEAM_LOW_POWER,
+# Flag bits: SNAP_HAS_A/B/C, SNAP_HAS_PILOT, SNAP_CONTINUED, SNAP_LAST, SNAP_INDEX_SHIFT (6); TEAM_CORE_EXPOSURE, TEAM_LOW_POWER,
 #   TEAM_CORE_SHIELD_UP, TEAM_SPEND_LOCK_ACTIVE; PSTATUS_AUTO_ECONOMY, PSTATUS_ADJUTANT_ON; LOBBY_REVEALED,
 #   LOBBY_SLOT_LOCKED/AUTO_ECONOMY/CONNECTED/BOT; TEAM_DETAIL_FULL; PROJ_HAS_FUSE.
 
@@ -166,7 +166,7 @@ var pilot: PilotBlock;  var pilot_tick: int;  var missing: PackedInt32Array;  va
 func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) -> void;  func current() -> BaselineFrame;  func decode(bytes: PackedByteArray) -> int
 
 class_name BaselineStore extends RefCounted           # net/baseline_store.gd: ring of DEPTH (32) frames per client
-const DEPTH: int;  var team: int;  var acked_tick: int;  var newest_tick: int;  var last_split: bool;  func _init(team_id: int = 0) -> void
+const DEPTH: int;  var team: int;  var acked_tick: int;  var newest_tick: int;  var complete_tick: int;  func _init(team_id: int = 0) -> void
 func frame_at(t: int) -> BaselineFrame;  func begin(t: int, base_tick: int) -> BaselineFrame;  func ack(t: int) -> void;  func base_for(t: int) -> int;  func reset() -> void
 
 class_name BaselineFrame extends RefCounted           # net/baseline_frame.gd: what one client holds per roster index after a tick
@@ -242,13 +242,13 @@ step one code to its other neighbour when that lowers the angular error (decoder
 Flags = control state bits 0-1, then DOCKED, FIRING, BOOSTING, BRAKING, CLASS_BIT, DYING (bits 2-7). Tier-B coarse spare bits (A-24): spare 0-4 = flags 0-4, spare 5 = flags bit 6, spare 6 = flags bit 7; BRAKING is dropped.
 `CHAT_RELAY` (0x8C) Max is 222, as in 04 s2.3 (A-26). `SessionPhase` is defined only in `Protocol` (A-28).
 
-SNAPSHOT (04 s3.4, s3.5; NET-06): header id, tick u32, baseline_tick u32 (0 = no baseline, FULL only), flags (bits 6-7 = packet index 0-3, LAST on the highest index, R0 B.10 A-36; NET-06 rejects them set, NET-48 applies the index); sections
+SNAPSHOT (04 s3.4, s3.5; NET-06): header id, tick u32, baseline_tick u32 (0 = no baseline, FULL only), flags (bits 6-7 = packet index 0-3, LAST on the highest index, R0 B.10 A-36, NET-48); sections
 A, B, C in that order, each a u8 count (1-255) then records. A record starts with the roster-index gap: u8 1-254 from the
 previous record of the packet (the chain runs across sections and restarts per packet; 0 only for index 0 as the first
 record), or 0xFF + u16 index. Next byte 0xFF = FULL (vec3q, quat_s3, vel, hp, flags, +ai_tag own team); otherwise A/B: a
 DELTA mask (bit 7 and bit 6 clear, not both POS bits), groups in mask-bit order; C: a C-BLIP (e8 clamped to 254 so it
 never reads 0xFF, n8, alt6 | state << 6). POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x
-i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 = ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends the first packet of a tick.
+i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 = ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends packet index 0. Decoder (A-36): HAS_PILOT off index 0, CONTINUED on index 3 or an index above the tick's LAST is MALFORMED; a repeated index is STALE; a missing one is loss.
 
 ## Invariants
 
@@ -266,7 +266,7 @@ i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = c
 - N9: the server mirror (`BaselineStore` per client) and the client's frame for every fully received tick are
   identical (`same_state`): both change only through `BaselineFrame.set_*` with `DeadReckon` arithmetic. A frame is a
   delta baseline only when the client acknowledged it, which it does only for a complete tick (every packet index
-  received; A-36, NET-48; before NET-48 only a one-packet tick is `usable`); `prepare_tick` runs once per tick.
+  received, `BaselineStore.complete_tick`; A-36, NET-48); every emitted frame is `usable`; `prepare_tick` runs once per tick.
 - N10: `SnapshotDecoder.decode` validates the whole packet before applying; anything but OK changes nothing.
 
 ## Data owned
@@ -284,7 +284,7 @@ the row stays; NET-49 caches FULL / C-BLIP bytes once per tick; NET-08 measures 
 ## Test entry points
 
 `test/unit/net/test_protocol.gd` (NET-01 catalogue vs 04 s2.1/s2.3, enum ordinals, PROTOCOL_VERSION); `test/unit/net/test_codec_roundtrip.gd` (NET-02 codec_roundtrip_test: 10,000 points, cell corners, A-23 envelope, A-24 flags, quaternions, velocity, hp, sizes); `test/net/test_codec_full_records.gd`; `test/perf/bench_codec.gd` (BENCH_CODEC).
-NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example, masks, dead reckoning, blip, pilot block, A-24), `test_snapshot_malformed.gd` (20,000 mutations), `test/net/test_snapshot_delta.gd` (3,000 ticks), `test_snapshot_budget.gd` (splitting, bandwidth, determinism); `test/perf/bench_snapshot.gd` (BENCH_SNAPSHOT); helper `test/net/snap_rig.gd`.
+NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example, masks, dead reckoning, blip, pilot block, A-24), `test_snapshot_malformed.gd` (20,000 mutations; NET-48 index rules), `test/net/test_snapshot_delta.gd` (3,000 ticks, random splits), `test_snapshot_budget.gd` (splitting, lost middle packet never acked, bandwidth, determinism); `test/perf/bench_snapshot.gd` (BENCH_SNAPSHOT); helper `test/net/snap_rig.gd`.
 NET-03: `test/unit/net/test_pilot_wire.gd` (all byte values round trip, reserved bytes, V-INP shape, 20,000 mutations), `test_input_buffer.gd` (window, duplicates, stale epoch, strikes, 10-tick decay then one bridge, hand-off, determinism), `test/net/test_input_link.gd` (LocalTransport: BAD preset recovers single/double loss, triple loss drops one tick, silence bridge once, slow client, determinism).
 `godot/test/unit/net/test_roster.gd` + `godot/test/net/test_roster_sync.gd` (NET-05: add/remove with every reason, meta/remove round trips and sizes, malformed rejected, held record applied after meta, timeout at exactly 30 ticks with one REQUEST_KEYFRAME, re-add in the hold window, determinism, LocalTransport pair).
 `godot/test/unit/net/test_transport_local.gd` (NET-11: channel ordering/reliability, determinism per seed, burst, stall, bandwidth, close, stats).
@@ -297,4 +297,4 @@ Planned: interest benchmarks (NET-08), fuzz_test.gd (NET-23).
 
 ## Open items
 
-NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 + perf note and NET-03's questions: closed by R0 B.10 A-36..A-40, A-44..A-46 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 and the silence rule (keep BOOST / BRAKE, drop FLIP / DOCK / RELEASE / FIRE1/2; 10 ticks, NQ10 closed) are ratified as written above. Pending code: NET-48 (A-36 packet index, complete-tick ack, every frame `usable`, `last_split` removed, `max_packets` default 4; `PROTOCOL_VERSION` stays 1, OWNER); NET-49 (A-40 FULL / C-BLIP byte cache, canonical-schedule 8-client bench row); sim lane: `PilotInput`'s `to_bytes` comment (A-46; the wire form is `PilotWire`).
+NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 + perf note and NET-03's questions: closed by R0 B.10 A-36..A-40, A-44..A-46 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 and the silence rule (keep BOOST / BRAKE, drop FLIP / DOCK / RELEASE / FIRE1/2; 10 ticks, NQ10 closed) are ratified as written above. A-36 landed in NET-48 (`PROTOCOL_VERSION` stays 1, OWNER). Pending code: NET-49 (A-40 FULL / C-BLIP byte cache, canonical-schedule 8-client bench row); sim lane: `PilotInput`'s `to_bytes` comment (A-46; the wire form is `PilotWire`).

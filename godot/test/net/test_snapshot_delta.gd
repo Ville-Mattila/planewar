@@ -15,6 +15,9 @@ var _packets: int = 0
 var _bad_status: int = 0
 var _mismatch: int = 0
 var _compared: int = 0
+var _splits: int = 0
+var _incomplete: int = 0
+var _acked_incomplete: int = 0
 
 
 func before_test() -> void:
@@ -25,6 +28,9 @@ func before_test() -> void:
 	_bad_status = 0
 	_mismatch = 0
 	_compared = 0
+	_splits = 0
+	_incomplete = 0
+	_acked_incomplete = 0
 
 
 ## One tick for one client: encode, deliver each packet unless `drop` says so, compare complete ticks, queue
@@ -34,6 +40,8 @@ func _pump(store: BaselineStore, dec: SnapshotDecoder, k: int, pilot: PilotBlock
 	_rig.lists(k, _a, _b, _c)
 	var out: Array[PackedByteArray] = []
 	var n: int = _rig.codec.encode(store, _rig.tick, _a, _b, _c, pilot, out)
+	if drop != null and n > 1 and drop.randf() < 0.3:
+		out.reverse()                                     # reordered split tick: LAST before index 0
 	var got: int = 0
 	for p: PackedByteArray in out:
 		_max_packet = maxi(_max_packet, p.size())
@@ -49,25 +57,39 @@ func _pump(store: BaselineStore, dec: SnapshotDecoder, k: int, pilot: PilotBlock
 		_compared += 1
 		if not dec.current().same_state(store.frame_at(_rig.tick)):
 			_mismatch += 1
-	acks.append(Vector2i(_rig.tick + delay, dec.store.newest_tick))
+	if got < n:
+		_incomplete += 1
+		if dec.store.complete_tick == _rig.tick:
+			_acked_incomplete += 1
+	_splits += 1 if n > 1 else 0
+	acks.append(Vector2i(_rig.tick + delay, dec.store.complete_tick))
 	while acks.size() > 0 and acks[0].x <= _rig.tick:
 		store.ack(acks[0].y)
 		acks.remove_at(0)
 
 
+## With random splits (NET-48, A-36): a FULL storm (every entity teleported to new cells) on ~2 % of ticks
+## splits that tick into 2-4 packets; 30 % of split ticks arrive reversed; a tick missing a packet is never acked.
 func test_codec_delta_3000_ticks_identical_baselines() -> void:
 	_rig.build(Vector3i(30, 60, 30), Vector3i(18, 25, 12), 4, 11)
 	var store: BaselineStore = BaselineStore.new(0)
 	var dec: SnapshotDecoder = _rig.new_decoder(0)
 	var drop: RandomNumberGenerator = RandomNumberGenerator.new()
 	drop.seed = 99
+	var storm: RandomNumberGenerator = RandomNumberGenerator.new()
+	storm.seed = 48
 	var acks: Array[Vector2i] = []
 	for t: int in 3000:
+		if storm.randf() < 0.02:
+			_rig.teleport(storm.randf_range(0.2, 0.6))
 		_rig.step()
 		_pump(store, dec, 0, null, drop, 0.05, 3, acks)
+	print("CODEC_DELTA splits=%d incomplete=%d compared=%d" % [_splits, _incomplete, _compared])
 	assert_int(_bad_status).is_equal(0)
 	assert_int(_mismatch).is_equal(0)
-	assert_int(_compared).is_greater(2700)
+	assert_int(_splits).is_greater(40)
+	assert_int(_acked_incomplete).is_equal(0)
+	assert_int(_compared).is_greater(2600)
 	assert_int(_max_packet).is_less_equal(Protocol.MAX_UNRELIABLE_BYTES)
 	assert_int(_rig.tick - store.acked_tick).is_less(BaselineStore.DEPTH)
 

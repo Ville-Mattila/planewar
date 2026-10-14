@@ -2,7 +2,8 @@ extends GdUnitTestSuite
 ## NET-06 packet budget and system properties: no packet over 1,200 B with splitting (FULL storm after a
 ## teleport, 255-record sections), bandwidth at 400 entities against 04 s4.6 (<= 30 KB/s per client at 100 and
 ## 167 ms ack delay incl. 38 B/packet transport overhead), determinism, one prepare_tick per tick for 8 clients,
-## and the held-record path when ENTITY_META is late (NET-05 RosterSync).
+## and the held-record path when ENTITY_META is late (NET-05 RosterSync). NET-48 (A-36): packet index in flags
+## bits 6-7, a split tick is a baseline once acked, a tick missing its middle packet is never acked.
 
 const OVERHEAD: int = 38                    # UDP 8 + IPv4 20 + ENet 10 (04 s4.6)
 
@@ -32,7 +33,7 @@ func _round(store: BaselineStore, dec: SnapshotDecoder, k: int, pilot: PilotBloc
 	for p: PackedByteArray in out:
 		assert_int(p.size()).is_less_equal(Protocol.MAX_UNRELIABLE_BYTES)
 		assert_int(dec.decode(p)).is_equal(SnapshotDecoder.Status.OK)
-	store.ack(dec.store.newest_tick)
+	store.ack(dec.store.complete_tick)
 	return out
 
 
@@ -56,9 +57,11 @@ func test_full_storm_splits_under_1200_and_converges() -> void:
 		assert_bool((fl & Protocol.SNAP_LAST) != 0).is_equal(last)
 		assert_bool((fl & Protocol.SNAP_CONTINUED) != 0).is_equal(not last)
 		assert_bool((fl & Protocol.SNAP_HAS_PILOT) != 0).is_equal(i == 0)
+		assert_int(fl >> 6).is_equal(i)                                  # A-36 packet index
 		assert_int(out[i].decode_u32(1)).is_equal(60)
 	assert_int(_rig.codec.n_full - full0).is_greater(200)
-	assert_bool(store.frame_at(60).usable).is_false()
+	assert_bool(store.frame_at(60).usable).is_true()
+	assert_int(store.acked_tick).is_equal(60)                          # a complete split tick is a baseline
 	# The deferred FULLs follow (C only on its 1-in-15 ticks); afterwards the client holds every entity.
 	for t: int in 240:
 		_rig.step()
@@ -67,6 +70,39 @@ func test_full_storm_splits_under_1200_and_converges() -> void:
 	assert_bool(cur.same_state(store.frame_at(_rig.tick))).is_true()
 	for i: int in _rig.frame.count:
 		assert_int(Codec.pos_cell(cur.pos[i])).is_equal(Codec.pos_cell(Codec.quantize_pos(_rig.frame.pos[i])))
+
+
+## A-36 acceptance: tick 60 goes out as 4 packets, index 1 is lost. The client never completes (so never acks)
+## tick 60, the server keeps encoding against tick 59, and the next complete tick becomes the baseline.
+func test_lost_middle_packet_never_acked_next_complete_tick_is_baseline() -> void:
+	_rig.build(Vector3i(40, 200, 160), Vector3i(24, 70, 60), 4, 3)
+	var store: BaselineStore = BaselineStore.new(0)
+	var dec: SnapshotDecoder = _rig.new_decoder(0)
+	for t: int in 59:
+		_rig.step()
+		var _o: Array[PackedByteArray] = _round(store, dec, 0, _pilot())
+	assert_int(store.acked_tick).is_equal(59)
+	_rig.teleport(0.6)
+	_rig.step()
+	_rig.lists(0, _a, _b, _c)
+	var out: Array[PackedByteArray] = []
+	assert_int(_rig.codec.encode(store, 60, _a, _b, _c, _pilot(), out)).is_greater_equal(3)
+	for i: int in out.size():
+		if i != 1:
+			assert_int(dec.decode(out[i])).is_equal(SnapshotDecoder.Status.OK)   # loss, not malformation
+	assert_int(dec.store.newest_tick).is_equal(60)
+	assert_int(dec.store.complete_tick).is_equal(59)
+	store.ack(dec.store.complete_tick)
+	assert_int(store.acked_tick).is_equal(59)
+	var bases: PackedInt32Array = PackedInt32Array()
+	for t: int in 4:
+		_rig.step()
+		var sent: Array[PackedByteArray] = _round(store, dec, 0, _pilot())
+		var _p: bool = bases.push_back(sent[0].decode_u32(5))
+		assert_bool(dec.current().same_state(store.frame_at(_rig.tick))).is_true()
+	assert_int(bases[0]).is_equal(59)                                  # tick 61 against 59, never 60
+	assert_int(bases[1]).is_equal(61)                                  # tick 61 was complete and acked
+	assert_int(bases[3]).is_equal(63)
 
 
 func test_section_count_255_splits() -> void:
@@ -111,7 +147,7 @@ func _bandwidth(delay: int, loss: float) -> Vector2:
 				packets += 1
 			if drop.randf() >= loss:
 				var _s: int = dec.decode(p)
-		acks.append(Vector2i(_rig.tick + delay, dec.store.newest_tick))
+		acks.append(Vector2i(_rig.tick + delay, dec.store.complete_tick))
 		while acks.size() > 0 and acks[0].x <= _rig.tick:
 			store.ack(acks[0].y)
 			acks.remove_at(0)

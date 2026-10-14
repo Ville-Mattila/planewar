@@ -2,7 +2,8 @@ class_name SnapshotWriter extends RefCounted
 ## Packet assembly for SnapshotCodec.encode (04 s3.4): 10-byte header (id, tick u32, baseline_tick u32, flags),
 ## sections A, B, C each opened lazily with a u8 count, roster-index gaps (u8 1-254, 0 only for index 0 as the
 ## packet's first record, 0xFF + u16 escape), the pilot block at the end of the first packet, and a split into
-## CONTINUED packets when the next record would pass 1,200 B or a section count would pass 255. The gap
+## CONTINUED packets when the next record would pass 1,200 B or a section count would pass 255; flags bits 6-7
+## carry the packet index within the tick, LAST on the highest (R0 B.10 A-36). The gap
 ## chain runs across sections within a packet (04 s3.5: section B's first gap continues from section A).
 
 var packets: int = 0
@@ -92,7 +93,7 @@ func _emit(last: bool) -> void:
 	if packets == 0 and _pilot != null:
 		_at = _pilot.write(_buf, _at)
 		_flags |= Protocol.SNAP_HAS_PILOT
-	_flags |= Protocol.SNAP_LAST if last else Protocol.SNAP_CONTINUED
+	_flags |= (Protocol.SNAP_LAST if last else Protocol.SNAP_CONTINUED) | (packets << Protocol.SNAP_INDEX_SHIFT)
 	_buf[0] = Protocol.SNAPSHOT
 	_buf.encode_u32(1, _tick)
 	_buf.encode_u32(5, _base)

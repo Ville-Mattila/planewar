@@ -4,6 +4,10 @@ class_name SnapshotDecoder extends RefCounted
 ## it to the BaselineStore frame of its tick, through the same BaselineFrame calls the server mirror uses. A
 ## malformed packet changes nothing and never errors. Records for roster indices without ENTITY_META stop the
 ## decode with MISSING_ROSTER and `missing` filled, so the caller can RosterSync.hold() the bytes (04 s3.1).
+## Packet index (flags bits 6-7, R0 B.10 A-36): per tick the decoder records which indices arrived and the LAST
+## index; HAS_PILOT off index 0, CONTINUED on index 3, or an index above the tick's LAST is MALFORMED, a repeated
+## index is STALE, a missing index is loss. A tick is complete when 0 .. LAST all arrived; only then does
+## `store.complete_tick` (the ack the client sends) advance.
 
 enum Status { OK, MALFORMED, STALE, NO_BASELINE, MISSING_ROSTER }
 const MAX_RECORDS: int = 512
@@ -30,6 +34,10 @@ var _fl: PackedByteArray = PackedByteArray()
 var _ai: PackedInt32Array = PackedInt32Array()
 var _gap_idx: int = 0
 var _tick: int = 0
+# packets received per tick, ring keyed by tick % BaselineStore.DEPTH (A-36)
+var _rx_tick: PackedInt32Array = PackedInt32Array()
+var _rx_got: PackedByteArray = PackedByteArray()          # bit k = packet index k arrived
+var _rx_last: PackedInt32Array = PackedInt32Array()       # index of the LAST packet, -1 not yet seen
 
 
 func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) -> void:
@@ -46,6 +54,10 @@ func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) 
 	var _r6: int = _hp.resize(MAX_RECORDS)
 	var _r7: int = _fl.resize(MAX_RECORDS)
 	var _r8: int = _ai.resize(MAX_RECORDS)
+	var _r9: int = _rx_tick.resize(BaselineStore.DEPTH)
+	var _ra: int = _rx_got.resize(BaselineStore.DEPTH)
+	var _rb: int = _rx_last.resize(BaselineStore.DEPTH)
+	_rx_tick.fill(0)
 
 
 ## The newest decoded frame (the client's current replicated state), or null.
@@ -61,9 +73,7 @@ func decode(bytes: PackedByteArray) -> int:
 	var tick: int = bytes.decode_u32(1)
 	var base: int = bytes.decode_u32(5)
 	var fl: int = bytes[9]
-	var ends: int = fl & (Protocol.SNAP_CONTINUED | Protocol.SNAP_LAST)
-	if tick == 0 or (fl & 0xC0) != 0 or (base != 0 and base >= tick) or ends == 0 \
-			or ends == (Protocol.SNAP_CONTINUED | Protocol.SNAP_LAST):
+	if tick == 0 or (base != 0 and base >= tick) or not _index_ok(tick, fl):
 		return _bad()
 	if tick < store.newest_tick:
 		return Status.STALE
@@ -80,6 +90,9 @@ func decode(bytes: PackedByteArray) -> int:
 	var want: int = end + (PilotBlock.BYTES if fl & Protocol.SNAP_HAS_PILOT else 0)
 	if end < 0 or want != size:
 		return _bad()
+	var k: int = fl >> Protocol.SNAP_INDEX_SHIFT
+	if _got(tick) & (1 << k):
+		return Status.STALE                 # this index of this tick was already applied
 	if cur == null:
 		cur = store.begin(tick, base)
 	_apply_all(cur)
@@ -87,7 +100,42 @@ func decode(bytes: PackedByteArray) -> int:
 		var _ok: bool = pilot.read(bytes, end)
 		pilot_tick = tick
 	store.newest_tick = tick
+	_mark(tick, k, (fl & Protocol.SNAP_LAST) != 0)
 	return Status.OK
+
+
+## Header flag rules: exactly one of CONTINUED / LAST; the A-36 packet index against what this tick already saw.
+func _index_ok(tick: int, fl: int) -> bool:
+	var ends: int = fl & (Protocol.SNAP_CONTINUED | Protocol.SNAP_LAST)
+	if ends == 0 or ends == (Protocol.SNAP_CONTINUED | Protocol.SNAP_LAST):
+		return false
+	var k: int = fl >> Protocol.SNAP_INDEX_SHIFT
+	if (fl & Protocol.SNAP_HAS_PILOT) != 0 and k != 0:
+		return false
+	var got: int = _got(tick)
+	var last: int = _rx_last[tick % BaselineStore.DEPTH] if got != 0 else -1
+	if ends == Protocol.SNAP_LAST:
+		return (got >> (k + 1)) == 0 and (last < 0 or last == k)
+	return k < SnapshotCodec.MAX_PACKETS_PER_TICK - 1 and (last < 0 or k < last)
+
+
+## Packet indices of `tick` received so far (bit mask; 0 when none or the ring slot holds another tick).
+func _got(tick: int) -> int:
+	var r: int = tick % BaselineStore.DEPTH
+	return _rx_got[r] if _rx_tick[r] == tick else 0
+
+
+func _mark(tick: int, k: int, last: bool) -> void:
+	var r: int = tick % BaselineStore.DEPTH
+	if _rx_tick[r] != tick:
+		_rx_tick[r] = tick
+		_rx_got[r] = 0
+		_rx_last[r] = -1
+	_rx_got[r] |= 1 << k
+	if last:
+		_rx_last[r] = k
+	if _rx_last[r] >= 0 and _rx_got[r] == (1 << (_rx_last[r] + 1)) - 1 and tick > store.complete_tick:
+		store.complete_tick = tick
 
 
 func _bad() -> int:

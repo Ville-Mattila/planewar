@@ -185,6 +185,7 @@ const SNAP_HAS_C: int = 4
 const SNAP_HAS_PILOT: int = 8
 const SNAP_CONTINUED: int = 16
 const SNAP_LAST: int = 32
+const SNAP_INDEX_SHIFT: int = 6             # bits 6-7: packet index 0-3 within the tick (R0 B.10 A-36)
 const TEAM_CORE_EXPOSURE: int = 1           # TEAM_STATE.flags = TeamStateView constants (R0 B.8 A-8)
 const TEAM_LOW_POWER: int = 2
 const TEAM_CORE_SHIELD_UP: int = 4
