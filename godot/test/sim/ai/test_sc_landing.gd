@@ -36,6 +36,7 @@ func _touchdown_ok(sc: LandingScenario, i: int, what: String, vz_max: float = -1
 	var td: Vector4 = sc.world.touchdown[i]
 	var c: FlightCommonDef = sc.world.common
 	assert_int(sc.world.outcome[i]).override_failure_message(what).is_equal(LandingWorld.Outcome.LANDED)
+	assert_int(sc.world.scrapes[i]).override_failure_message(what).is_equal(0)   # A-70: no terrain contact
 	assert_float(td.x).override_failure_message(what).is_less_equal(vz_max if vz_max > 0.0 else c.landing_safe_v_vert)
 	assert_float(td.y).override_failure_message(what).is_less_equal(vh_max if vh_max > 0.0 else c.landing_safe_v_hor)
 	assert_float(td.z).override_failure_message(what).is_less_equal(TILT_MAX_DEG)
@@ -98,7 +99,8 @@ func test_sc03_rtb_far_fuel_margin() -> void:
 
 
 # SC-04 landing_100_seeds: Dart RETURN from random positions 2-4 km out (random bearing, heading, 150-450 m),
-# 100 seeds. >= 99 docks without damage; median gate-to-dock <= 35 s; at most 1 go-around per landing (flat pad).
+# 100 seeds. >= 99 docks without damage; median gate-to-dock <= 35 s; at most 1 go-around per landing (flat pad); a
+# terrain contact counts as a failed landing (R0 B.12 A-70).
 func test_sc04_landing_100_seeds() -> void:
 	for model: StringName in MODELS:
 		var rng: Rng = Rng.new(904)
@@ -118,7 +120,8 @@ func test_sc04_landing_100_seeds() -> void:
 			var _ok: bool = sc.run(180 * 30)
 			max_ga = maxi(max_ga, sc.go_arounds[0])
 			var td: Vector4 = sc.world.touchdown[0]
-			if sc.world.outcome[0] == LandingWorld.Outcome.LANDED and td.z <= TILT_MAX_DEG:
+			# A-70: any terrain contact (scrape) before the dock is a failed landing
+			if sc.world.outcome[0] == LandingWorld.Outcome.LANDED and td.z <= TILT_MAX_DEG and sc.world.scrapes[0] == 0:
 				docked += 1
 				var _b: bool = times.push_back(sc.gate_to_dock_s(0))
 				worst = Vector4(maxf(worst.x, td.x), maxf(worst.y, td.y), maxf(worst.z, td.z), maxf(worst.w, td.w))

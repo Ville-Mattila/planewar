@@ -264,7 +264,7 @@ func test_bearing_threat_penalty_and_ties() -> void:
 
 # region L4-L6 law
 func test_hover_law_holds_weight_upright() -> void:
-	_place(0.0, Vector3.UP, 20.0, Vector3.ZERO)
+	_place(0.0, Vector3.UP, 40.0, Vector3.ZERO)   # above the hover_agl_m floor
 	LandingController.thrust_law(LandingController.Phase.TRANSITION, _ship, _pad, _prm, _g, _out)
 	assert_float(_out.thrust * _dart.a_thrust).is_equal_approx(_rules.gravity, 0.05)
 	assert_float(_out.roll).is_equal(0.0)
@@ -280,18 +280,23 @@ func test_flare_thrust_axis_within_flare_tilt() -> void:
 			assert_float(rad_to_deg(t.angle_to(Vector3.RIGHT))).is_less_equal(10.0 + 1e-3)
 
 
-func test_floor_climbs_when_low_and_off_the_pad() -> void:
-	# below floor_agl_m and outside the pad radius the vertical command climbs, within floor_tilt_deg
-	_place(60.0, Vector3.UP, _prm.floor_agl_m - 8.0, Vector3.ZERO)
+func test_floor_climbs_in_l4_and_off_the_pad_in_l5() -> void:
+	# below hover_agl_m (R0 B.12 A-70) L5 off the pad climbs, within floor_tilt_deg
+	_place(60.0, Vector3.UP, _prm.hover_agl_m - 8.0, Vector3.ZERO)
 	var low: Vector3 = LandingController.thrust_vector(LandingController.Phase.HOVER, _ship, _pad, _prm)
 	assert_float(low.dot(Vector3.RIGHT)).is_greater(_rules.gravity + 1.0)
 	assert_float(rad_to_deg(low.angle_to(Vector3.RIGHT))).is_less_equal(rad_to_deg(atan(_prm.tan_floor_tilt)) + 1e-3)
-	_place(60.0, Vector3.UP, _prm.floor_agl_m + 8.0, Vector3.ZERO)
+	_place(60.0, Vector3.UP, _prm.hover_agl_m + 8.0, Vector3.ZERO)
 	var high: Vector3 = LandingController.thrust_vector(LandingController.Phase.HOVER, _ship, _pad, _prm)
 	assert_float(high.dot(Vector3.RIGHT)).is_less(low.dot(Vector3.RIGHT))
-	_place(5.0, Vector3.UP, _prm.floor_agl_m - 8.0, Vector3.ZERO)   # over the pad: no floor, it sinks
+	_place(5.0, Vector3.UP, _prm.hover_agl_m - 8.0, Vector3.ZERO)   # L5 over the pad: no floor, it sinks
 	var pad_t: Vector3 = LandingController.thrust_vector(LandingController.Phase.HOVER, _ship, _pad, _prm)
 	assert_float(pad_t.dot(Vector3.RIGHT)).is_less(_rules.gravity)
+	# A-70: in L4 the floor holds over the pad too (vz_cmd >= 0 below hover_agl_m), sinking or not
+	for vz: float in [0.0, -3.0]:
+		_place(5.0, Vector3.UP, _prm.hover_agl_m - 8.0, Vector3.RIGHT * vz)
+		var l4: Vector3 = LandingController.thrust_vector(LandingController.Phase.TRANSITION, _ship, _pad, _prm)
+		assert_float(l4.dot(Vector3.RIGHT)).is_greater(_rules.gravity)
 
 
 func test_vertical_first_allocation_never_exceeds_thrust() -> void:

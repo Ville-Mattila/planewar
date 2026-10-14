@@ -67,7 +67,7 @@ var transition_dist_m: float; var approach_min_speed: float; var approach_lookah
 var kp_alt: float; var vz_max: float; var turn_cmd_max: float; var hold_radius_m: float; var hold_agl_m: float; var hold_speed: float
 var goaround_agl_m: float; var goaround_extend_m: float; var max_attempts: int; var kp_pos: float; var kd_pos: float; var kp_vz: float
 var tan_tilt: float; var tan_transition_tilt: float; var cos_transition_nose: float; var transition_exit_hspeed: float
-var transition_exit_dist_m: float; var transition_speed_cap: float; var floor_agl_m: float; var kp_floor: float; var tan_floor_tilt: float
+var transition_exit_dist_m: float; var transition_speed_cap: float; var hover_agl_m: float; var kp_floor: float; var tan_floor_tilt: float
 var sink_gain: float; var sink_min: float; var sink_max: float; var flare_agl_m: float; var tan_flare_tilt: float; var touch_vz: float
 var abort_horiz_err_m: float; var abort_horiz_agl_m: float; var abort_vz: float; var abort_vz_agl_m: float; var abort_tti_s: float
 var bearing_count: int; var bearing_samples: int; var bearing_clear_m: float; var bearing_terrain_weight: float
@@ -114,8 +114,9 @@ DONE (it sees DOCKED) and diverts (`abort_reason` PAD_INVALID, `attempts` > `max
 established (approach side, within `approach_capture_deg` of the line, inbound), then pure pursuit on the glide slope with
 05's speed schedule; L4 needs established + `|h - h(d)| <= glide_tol_m` at `transition_dist_m`, else a GLIDE go-around. L3
 climbs to `goaround_agl_m` along the approach course, extends `goaround_extend_m`, counts an attempt, resets the bearing.
-AI-09 additions to the 05 law: (1) a **height floor** in L4-L5 while outside the pad radius: below `floor_agl_m` (pad plane
-or terrain) the vertical command climbs at `kp_floor` per m and the tilt is capped at `floor_tilt_deg`; (2) **vertical-first
+AI-09 additions to the 05 law: (1) the **height floor** (R0 B.12 A-70) in L4, and in L5 while outside the pad radius:
+below `hover_agl_m` (pad plane or terrain) the vertical command climbs at `kp_floor` per m (never descends) and the tilt is
+capped at `floor_tilt_deg`; (2) **vertical-first
 allocation**: the horizontal demand gets at most `sqrt(a^2 - a_v^2)` of the thrust; (3) L4 -> L5 also needs the nose within
 `transition_nose_deg` of the pad normal and the ship outside the L5 horizontal-abort envelope (offset + speed / kd_pos);
 L5 sinks only as far as the ship is centred including its drift, and L5 -> L6 likewise. Velocity-phase commands turn at
@@ -128,7 +129,7 @@ and a per-candidate threat penalty array (no `ThreatSampler` exists yet); `shoul
 `approach_lookahead_m` 400, `approach_capture_deg` 30, `kp_alt` 0.5, `vz_max_mps` 60, `turn_cmd_max_deg` 60,
 `hold_radius_m` 400, `hold_agl_m` 150, `hold_speed_mps` 50, `goaround_agl_m` 200, `goaround_extend_m` 1500,
 `transition_max_tilt_deg` 75 (A-34), `transition_nose_deg` 45, `transition_exit_hspeed_mps` 15, `transition_exit_dist_m` 30,
-`transition_speed_cap_mps` 30, `floor_agl_m` 20, `kp_floor` 1, `floor_tilt_deg` 45, `sink_gain` 0.25, `sink_min_mps` 1.5,
+`transition_speed_cap_mps` 30, `kp_floor` 1, `floor_tilt_deg` 45, `sink_gain` 0.25, `sink_min_mps` 1.5,
 `sink_max_mps` 6, `flare_tilt_deg` 10, `abort_horiz_agl_m` 15, `abort_vz_agl_m` 10, `abort_tti_s` 1, `bearing_count` 8,
 `bearing_samples` 6, `bearing_clear_m` 60, `bearing_terrain_weight` 0.05 (fixture `test/sim/ai/ai09_params.json`).
 
@@ -165,8 +166,9 @@ and a per-candidate threat penalty array (no `ThreatSampler` exists yet); `shoul
   37/200 fast Dart runs). SC-02..SC-08 pass under `speed_scaled` (`test_sc_landing.gd`; SC-04 100/100, median 31 s).
 - LC3: each 05 abort rule fires in exactly its phases (`test_abort_rules`, `test_tti_abort_only_when_the_impact_is_off_the_pad`);
   an abort always enters GO_AROUND; GO_AROUND and DONE never abort.
-- LC4: L6 never commands the thrust axis past `flare_tilt_deg`; |T| never exceeds the thrust available along it; below the
-  floor and off the pad the vertical command is a climb (`test_flare_*`, `test_vertical_first_*`, `test_floor_*`).
+- LC4: L6 never commands the thrust axis past `flare_tilt_deg`; |T| never exceeds the thrust available along it; below
+  `hover_agl_m` in L4 (and in L5 off the pad) the vertical command is a climb (`test_flare_*`, `test_vertical_first_*`,
+  `test_floor_*`). A terrain contact in L4-L6 is a failed landing in every closed-loop test (A-70).
 
 ## Performance budget
 

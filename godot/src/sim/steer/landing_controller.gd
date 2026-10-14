@@ -4,7 +4,7 @@ class_name LandingController extends RefCounted
 ## L1 TRANSIT -> L2 APPROACH (bearing, glide slope, speed schedule) -> L4 TRANSITION -> L5 HOVER -> L6 FLARE, with
 ## L2b HOLD for a busy pad and L3 GO_AROUND on any abort. L1-L3 fly a guidance velocity through
 ## FlightController.track_velocity; L4-L6 fly the 05 position law through track_thrust_vector, with two AI-09
-## additions: a height floor while the ship is not over the pad, and vertical-first thrust allocation (horizontal
+## additions: a height floor (R0 B.12 A-70: L4, and L5 off the pad), and vertical-first thrust allocation (horizontal
 ## authority is what is left of the thrust once the vertical demand is met), so a fast entry never trades height
 ## for braking. `Assist.auto_dock` (AI-10) runs the same `thrust_law` for a possessed ship.
 ## The caller owns pad selection and the DONE transition (it sees the sim's DOCKED state); after an abort it reads
@@ -267,8 +267,9 @@ static func thrust_law(phase: int, ship: ShipSnapshot, pad: PadSnapshot, prm: La
 
 ## The 05 s5.5 position law's thrust acceleration T = a_h + a_v n + g n (m/s^2, world), for L4-L6 `phase`: the
 ## horizontal part is limited to the phase's tilt and to what the thrust has left after the vertical demand
-## (vertical first); below floor_agl_m (pad plane or terrain) and outside the pad radius the vertical command climbs
-## back to the floor and the tilt is limited to floor_tilt_deg (AI-09). |T| <= the thrust available along T.
+## (vertical first). Height floor (R0 B.12 A-70): below hover_agl_m (pad plane or terrain) in L4, and in L5 while
+## outside the pad radius, the vertical command climbs back to the floor (vz_cmd >= 0) and the tilt is limited to
+## floor_tilt_deg; descent starts in L5 over the pad. |T| <= the thrust available along T.
 static func thrust_vector(phase: int, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams) -> Vector3:
 	var n: Vector3 = pad.n
 	var rel: Vector3 = pad.p - ship.p
@@ -287,10 +288,10 @@ static func thrust_vector(phase: int, ship: ShipSnapshot, pad: PadSnapshot, prm:
 		tan_lim = prm.tan_transition_tilt
 	elif phase == Phase.FLARE:
 		tan_lim = prm.tan_flare_tilt
-	if phase != Phase.FLARE and ed > pad.radius_m:
+	if phase == Phase.TRANSITION or (phase == Phase.HOVER and ed > pad.radius_m):
 		var hf: float = minf(h, ship.p.length() - Sphere.PLANET_RADIUS - ship.ground_h - ship.bounding_radius)
-		if hf < prm.floor_agl_m:
-			vz_cmd = maxf(vz_cmd, prm.kp_floor * (prm.floor_agl_m - hf))
+		if hf < prm.hover_agl_m:
+			vz_cmd = maxf(vz_cmd, prm.kp_floor * (prm.hover_agl_m - hf))
 			tan_lim = minf(tan_lim, prm.tan_floor_tilt)
 	# thrust available once the nose is near the pad normal (efficiency at the speed along it), never less than now
 	var fwd: Vector3 = -ship.b.z

@@ -10,7 +10,7 @@ const KEYS: PackedStringArray = ["cruise_alt_agl_m", "gate_dist_m", "glide_deg",
 	"approach_min_speed_mps", "approach_lookahead_m", "approach_capture_deg", "kp_alt", "vz_max_mps", "turn_cmd_max_deg",
 	"hold_radius_m", "hold_agl_m", "hold_speed_mps", "goaround_agl_m", "goaround_extend_m", "max_attempts",
 	"kp_pos", "kd_pos", "kp_vz", "max_tilt_deg", "transition_max_tilt_deg", "transition_nose_deg",
-	"transition_exit_hspeed_mps", "transition_exit_dist_m", "transition_speed_cap_mps", "floor_agl_m", "kp_floor",
+	"transition_exit_hspeed_mps", "transition_exit_dist_m", "transition_speed_cap_mps", "hover_agl_m", "kp_floor",
 	"floor_tilt_deg", "sink_gain", "sink_min_mps", "sink_max_mps", "flare_agl_m", "flare_tilt_deg", "touch_vz_mps",
 	"abort_horiz_err_m", "abort_horiz_agl_m", "abort_vz_mps", "abort_vz_agl_m", "abort_tti_s",
 	"bearing_count", "bearing_samples", "bearing_clear_m", "bearing_terrain_weight"]
@@ -42,7 +42,7 @@ var cos_transition_nose: float = 0.0   ## L4 brakes while the nose is further th
 var transition_exit_hspeed: float = 0.0   ## L4 -> L5 horizontal speed
 var transition_exit_dist_m: float = 0.0   ## L4 -> L5 horizontal distance to the pad centre
 var transition_speed_cap: float = 0.0  ## L4-L6 horizontal speed command cap
-var floor_agl_m: float = 0.0           ## L4-L5 height floor while not over the pad (AI-09: no scrapes)
+var hover_agl_m: float = 0.0           ## height floor: L4, and L5 off the pad (R0 B.12 A-70; 05 s4.4 key)
 var kp_floor: float = 0.0              ## 1/s: climb rate per m below the floor
 var tan_floor_tilt: float = 0.0        ## tilt limit while below the floor (vertical authority first)
 var sink_gain: float = 0.0             ## L5 sink = clamp(sink_gain * h, sink_min, sink_max)
@@ -97,7 +97,7 @@ static func from_dict(landing: Dictionary, gravity_mps2: float) -> LandingParams
 	p.transition_exit_hspeed = _f(landing, "transition_exit_hspeed_mps")
 	p.transition_exit_dist_m = _f(landing, "transition_exit_dist_m")
 	p.transition_speed_cap = _f(landing, "transition_speed_cap_mps")
-	p.floor_agl_m = _f(landing, "floor_agl_m")
+	p.hover_agl_m = _f(landing, "hover_agl_m")
 	p.kp_floor = _f(landing, "kp_floor")
 	p.tan_floor_tilt = tan(deg_to_rad(_f(landing, "floor_tilt_deg")))
 	p.sink_gain = _f(landing, "sink_gain")
