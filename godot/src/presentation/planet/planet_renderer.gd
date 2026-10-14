@@ -8,10 +8,10 @@ class_name PlanetRenderer extends Node3D
 ## Emitted after every chunk build (03 s7.4 "build ms logged per chunk"); the ring below keeps the numbers.
 signal chunk_built(face: int, depth: int, ix: int, iy: int, ms: float)
 
-const SHADER: Shader = preload("res://src/presentation/planet/shaders/planet_chunk.gdshader")
 const PREBUILD_DEPTH: int = 2                ## 03 s7.4: depth 0-2 (126 chunks) at load
 const BUILD_LOG_SIZE: int = 512              ## ring of per-chunk build times
 const NEAR_M: float = 400.0                  ## hole statistic radius (R0 C1-06 boost-path criterion)
+const SITE_REFRESH_FRAMES: int = 15         ## re-pick the shader's nearest footprint sites this often
 const POOL_RESERVE: int = 8                  ## below this many free slots (plus 4 per build of the frame budget
                                              ## when splits were refused for lack of slots) pending merges are
                                              ## released early
@@ -32,22 +32,23 @@ var build_log_depth: PackedInt32Array = PackedInt32Array()
 var build_log_count: int = 0
 var pool_exhausted: int = 0                  ## builds refused for lack of a slot
 var worst_near_wait_ms: int = 0              ## longest queue wait of a chunk built within NEAR_M of the camera
+var flatten_rebuilds: int = 0                ## chunks rebuilt in place after a set_flatten_sites
 var _now_ms: int = 0
 var _view: PlanetView = null
 var _shown: Array[ChunkNode] = []
 var _depth_materials: Array[Material] = []
+var _flatten: FlattenSites = FlattenSites.new()
+var _dirty: Array[ChunkNode] = []
+var _site_frame: int = 0
 
 
 ## Creates the pool, mesher, scheduler and quadtree for `p_terrain` at tier `p_config` and builds depth
-## 0..PREBUILD_DEPTH synchronously. `p_material` defaults to the interim chunk shader.
+## 0..PREBUILD_DEPTH synchronously. `p_material` defaults to the moon_terrain material of `p_terrain` (MoonTerrain.make_material).
 func setup(p_terrain: Terrain, p_config: PlanetTierConfig, p_material: Material = null) -> void:
 	terrain = p_terrain
 	config = p_config
 	if p_material == null:
-		var sm: ShaderMaterial = ShaderMaterial.new()
-		sm.shader = SHADER
-		sm.render_priority = -1              # 03 s7.6: planet -1, structures 0
-		material = sm
+		material = MoonTerrain.make_material(terrain, config)
 	else:
 		material = p_material
 	var _r: int = build_log_ms.resize(BUILD_LOG_SIZE)
@@ -59,6 +60,7 @@ func setup(p_terrain: Terrain, p_config: PlanetTierConfig, p_material: Material 
 			m.set_shader_parameter(&"debug_mix", 0.6)
 			_depth_materials.append(m)
 	mesher = ChunkMesher.new(terrain, config.max_depth)
+	mesher.flatten = _flatten
 	pool = ChunkPool.new(self, config.pool_size, material)
 	scheduler = ChunkScheduler.new()
 	scheduler.configure(config)
@@ -83,12 +85,40 @@ func update_view(view: PlanetView, now_ms: int) -> void:
 	quadtree.update(view, now_ms)
 	plan_ms = float(Time.get_ticks_usec() - t0) * 0.001
 	var _n: int = scheduler.run(_build)
+	_rebuild_dirty()
+	_refresh_sites(view.position)
 	for n: ChunkNode in quadtree.cut:
 		pool.set_visible(n.slot, true)
 	for n: ChunkNode in _shown:
 		if n.shown_frame != quadtree.frame and n.is_built():
 			pool.set_visible(n.slot, false)
 	_shown.assign(quadtree.cut)
+
+
+## Footprints of structures the terrain is flattened under (03 s7.6, R0 C2-31): `sites` are world positions (only
+## the direction is used), `radii` the footprint radii in metres. Called by `EntityViewPool` on BUILD_STARTED /
+## STRUCTURE_LOST with the full current list. Cosmetic: gameplay height stays `Terrain.height_at`. Built chunks
+## near an old or new site are rebuilt in place over the next frames (no hole: the old mesh shows until then).
+func set_flatten_sites(sites: PackedVector3Array, radii: PackedFloat32Array) -> void:
+	var fresh: FlattenSites = FlattenSites.new()
+	fresh.set_sites(terrain, sites, radii)
+	for n: ChunkNode in quadtree.built_nodes():
+		if (_flatten.affects(n) or fresh.affects(n)) and not _dirty.has(n):
+			_dirty.append(n)
+	_flatten.set_sites(terrain, sites, radii)
+	_site_frame = 0
+	if _view != null:
+		_refresh_sites(_view.position)
+
+
+func flatten_site_count() -> int:
+	return _flatten.size()
+
+
+## Camera height above the terrain (m) at world position `pos`: the `h_cam` the camera rig feeds to
+## `CamMath.near_plane` to produce `ViewState.near` (03 s7.6). `PlanetView.near_m` carries it back each frame.
+func camera_height_agl(pos: Vector3) -> float:
+	return Sphere.altitude(pos) - terrain.height_at(pos)
 
 
 func visible_chunks() -> int:
@@ -126,6 +156,32 @@ func _build(node: ChunkNode) -> float:
 	build_log_count += 1
 	chunk_built.emit(node.face, node.depth, node.ix, node.iy, node.build_ms)
 	return node.build_ms
+
+
+## Rebuilds flagged chunks in place, within what the frame's build budget has left (at least one).
+func _rebuild_dirty() -> void:
+	var room: int = maxi(1, config.builds_per_frame - scheduler.last_builds)
+	while room > 0 and not _dirty.is_empty():
+		var n: ChunkNode = _dirty.pop_back()
+		room -= 1
+		if not n.is_built():
+			continue
+		var mat: Material = material if _depth_materials.is_empty() else _depth_materials[n.depth]
+		mesher.build_into(n, pool.meshes[n.slot], mat)
+		flatten_rebuilds += 1
+
+
+## Pushes the nearest footprints to every terrain material (the detail fade under structures).
+func _refresh_sites(cam: Vector3) -> void:
+	if _site_frame > 0:
+		_site_frame -= 1
+		return
+	_site_frame = SITE_REFRESH_FRAMES
+	var sites: PackedVector4Array = _flatten.shader_sites(cam)
+	if material is ShaderMaterial:
+		MoonTerrain.set_sites(material as ShaderMaterial, sites)
+	for m: Material in _depth_materials:
+		MoonTerrain.set_sites(m as ShaderMaterial, sites)
 
 
 func _release(node: ChunkNode) -> void:

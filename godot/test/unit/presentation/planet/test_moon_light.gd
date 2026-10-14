@@ -150,3 +150,20 @@ func test_imported_atlas_keeps_swatch_rgb_under_zero_alpha() -> void:
 		assert_int(c.g8).is_equal(e.g8)
 		assert_int(c.b8).is_equal(e.b8)
 		assert_int(c.a8).is_equal(e.a8)
+
+
+## TA-24: moon_ramp.png.import had no dest path (valid=false); the ramp must load as a 64 x 16 RGBA8 with
+## row = biome id (07 s2.1): mare mid at column 31/32, reserved rows magenta.
+func test_imported_ramp_loads_with_biome_rows() -> void:
+	var tex: Texture2D = load(MoonTerrain.RAMP_PATH)
+	assert_object(tex).is_not_null()
+	var img: Image = tex.get_image()
+	assert_int(img.get_width()).is_equal(64)
+	assert_int(img.get_height()).is_equal(16)
+	var mid: Color = img.get_pixel(32, 0)
+	assert_int(mid.r8).is_between(63, 66)       # #404552
+	assert_int(mid.g8).is_between(68, 71)
+	assert_int(mid.b8).is_between(81, 84)
+	var hi: Color = img.get_pixel(63, 3)         # rim_ejecta high #D6D1C4
+	assert_int(hi.r8).is_equal(0xD6)
+	assert_int(img.get_pixel(10, 12).r8).is_equal(255)   # reserved row 12: magenta

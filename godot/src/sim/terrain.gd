@@ -154,6 +154,15 @@ func biome_at(dir: Vector3) -> int:
 	return _biomes[_nearest_texel(dir)]
 
 
+## The baked u8 biome ids of one face, row-major (y * n + x), n = face_resolution: the bulk upload path of the
+## terrain material (TA-24); empty on the flat stub or an out-of-range face. Read-only copy.
+func biome_face(face: int) -> PackedByteArray:
+	if face_resolution == 0 or face < 0 or face >= FACE_COUNT:
+		return PackedByteArray()
+	var size: int = face_resolution * face_resolution
+	return _biomes.slice(face * size, (face + 1) * size)
+
+
 ## Slope in degrees (0..90, 0.5 degree steps) of build-grid cell `cell` = face * n * n + j * n + i with
 ## n = face_resolution (GRID_BUILD = 1024 on production maps; the cache is the baked slope.u8).
 func slope_deg_at(cell: int) -> float:

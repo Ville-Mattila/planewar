@@ -10,7 +10,7 @@ const DEFAULT_SUN_DIR: Vector3 = Vector3(0, 0, 1)                ## +Z = Noon Po
 const SUN_COLOR: Color = Color("#FFF1DC")
 const SUN_ENERGY: float = 1.25
 const SPACE_COLOR: Color = Color("#05070C")
-const MOON_SHADER_PATH: String = "res://src/presentation/planet/shaders/moon_surface.gdshader"
+const MOON_SHADER_PATH: String = "res://src/presentation/planet/shaders/moon_terrain.gdshader"
 const UNIT_SHADER_PATH: String = "res://src/presentation/shaders/unit_lit.gdshader"
 const UNIT_INSTANCED_SHADER_PATH: String = "res://src/presentation/shaders/unit_lit_instanced.gdshader"
 const ATLAS_PATH: String = "res://assets/textures/unit_atlas.png"
@@ -87,8 +87,10 @@ static func make_environment() -> Environment:
 	return env
 
 
+## The planet material without a map (1 x 1 mare biome, default detail range): lookdev scenes and tests.
+## The renderer builds the real one with `MoonTerrain.make_material`.
 static func moon_material() -> ShaderMaterial:
-	return _material(MOON_SHADER_PATH)
+	return MoonTerrain.base_material()
 
 
 ## Shared unit material (team and state as material uniforms). `instanced` = the instance-uniform variant.

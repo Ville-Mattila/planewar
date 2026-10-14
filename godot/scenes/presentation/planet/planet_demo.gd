@@ -3,10 +3,13 @@ class_name PlanetDemo extends Node3D
 ## filters exclude scenes/presentation/**). Mouse look (hold right button), WASD + Q/E, Shift = x8 speed.
 ## User args after `--`: `--tier=low|medium|high`, `--map=<id>`, `--autofly` (160 m/s boost path at the
 ## start altitude), `--lod` (tint chunks by depth), `--alt=<m AGL>`, `--pitch=<deg>`, `--frames=N` (print fps / frame-time / build stats and
-## quit after N frames), `--shot=<png path>` (save the frame before quitting). ART-01: the moon is drawn with the
-## first-pass moon_surface material on the shared light model (MoonLight sun, LDR environment, `sun_dir`);
-## `--lat=<deg>` / `--lon=<deg>` / `--yaw=<deg>` place the camera (default 30 / slot 0 / 0), `--interim` keeps the
-## TA-23 chunk shader, `--hud=0` hides the stats label (goldens).
+## quit after N frames), `--shot=<png path>` (save the frame before quitting). TA-24: the moon is drawn with
+## moon_terrain (biome ramp, crater detail) on the shared light model (MoonLight sun, `sun_dir`) under sky_moon
+## (Earth at -Z); the camera near plane follows `CamMath.near_plane(PlanetRenderer.camera_height_agl)`.
+## `--lat=<deg>` / `--lon=<deg>` / `--yaw=<deg>` place the camera (default 30 / slot 0 / 0), `--hud=0` hides the
+## stats label (goldens), `--sun=<deg>` rotates the sun about +Y (default 0 = +Z), `--sky=0` keeps the plain
+## space colour background, `--earth-probe` prints the Earth disc centroid next to the projection of -Z
+## (acceptance: Earth exactly at -Z, a 6 degree disc).
 
 const TIERS: String = "res://content/defs/quality_tiers.json"
 const BOOST_MPS: float = 160.0
@@ -30,7 +33,9 @@ var _ft: PackedFloat32Array = PackedFloat32Array()
 var _label: Label
 var _lat_deg: float = 30.0
 var _lon_deg: float = Sphere.SLOT_LON0_DEG
-var _interim: bool = false
+var _sky: bool = true
+var _earth_probe: bool = false
+var _sun_deg: float = 0.0
 var _hud: bool = true
 
 
@@ -44,7 +49,7 @@ func _ready() -> void:
 	renderer = PlanetRenderer.new()
 	renderer.debug_depth_tint = _lod_tint
 	add_child(renderer)
-	renderer.setup(terrain, _config(), null if _interim else MoonLight.moon_material())
+	renderer.setup(terrain, _config())
 	renderer.camera = cam
 	_label = Label.new()
 	_label.position = Vector2(8, 8)
@@ -78,8 +83,12 @@ func _parse_args() -> void:
 			_lon_deg = float(arg.substr(6))
 		elif arg.begins_with("--yaw="):
 			_yaw = deg_to_rad(float(arg.substr(6)))
-		elif arg == "--interim":
-			_interim = true
+		elif arg == "--earth-probe":
+			_earth_probe = true
+		elif arg == "--sky=0":
+			_sky = false
+		elif arg.begins_with("--sun="):
+			_sun_deg = float(arg.substr(6))
 		elif arg == "--hud=0":
 			_hud = false
 
@@ -100,9 +109,11 @@ func _setup_world() -> void:
 	MoonLight.ensure_globals()
 	var sun: DirectionalLight3D = MoonLight.make_sun()   # light travels -Z (07 s1.5)
 	add_child(sun)
-	MoonLight.set_sun_dir(MoonLight.DEFAULT_SUN_DIR, sun)
+	MoonLight.set_sun_dir(MoonLight.DEFAULT_SUN_DIR.rotated(Vector3.UP, deg_to_rad(_sun_deg)), sun)
 	var we: WorldEnvironment = WorldEnvironment.new()
 	we.environment = MoonLight.make_environment()
+	if _sky:
+		SkyMoon.apply(we.environment)
 	add_child(we)
 	cam = Camera3D.new()
 	cam.fov = 75.0
@@ -133,8 +144,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	_fly(delta)
-	var ground: float = terrain.height_at(cam.global_position)
-	var h_cam: float = Sphere.altitude(cam.global_position) - ground
+	var h_cam: float = renderer.camera_height_agl(cam.global_position)
 	cam.near = CamMath.near_plane(h_cam)
 	_frame += 1
 	if _frame > 30:
@@ -178,7 +188,33 @@ func _finish() -> void:
 			_tier, n, _ft[n >> 1], _ft[int(float(n - 1) * 0.95)], _ft[int(float(n - 1) * 0.99)],
 			renderer.visible_chunks(), renderer.scheduler.total_builds, renderer.build_ms_percentile(0.5),
 			renderer.build_ms_percentile(0.95), renderer.worst_near_wait_ms, renderer.pool.in_use(), renderer.pool.capacity()])
+	var img: Image = get_viewport().get_texture().get_image()
+	if _earth_probe:
+		_probe_earth(img)
 	if not _shot.is_empty():
-		var img: Image = get_viewport().get_texture().get_image()
 		var _e: Error = img.save_png(_shot)
 	get_tree().quit(0)
+
+
+## Centroid and diameter of the blue-dominant Earth disc found around the projection of -Z; prints
+## EARTH_PROBE with the offset in pixels and in degrees (should be ~0) and the disc size in degrees.
+func _probe_earth(img: Image) -> void:
+	var want: Vector2 = cam.unproject_position(cam.global_position + SkyMoon.earth_dir() * 1000.0)
+	var sum: Vector2 = Vector2.ZERO
+	var n: int = 0
+	var x0: int = clampi(int(want.x) - 60, 0, img.get_width() - 1)
+	var y0: int = clampi(int(want.y) - 60, 0, img.get_height() - 1)
+	for y: int in range(y0, mini(y0 + 120, img.get_height())):
+		for x: int in range(x0, mini(x0 + 120, img.get_width())):
+			var c: Color = img.get_pixel(x, y)
+			if c.r + c.g + c.b > 0.35 and c.b > c.r:
+				sum += Vector2(x, y)
+				n += 1
+	if n == 0:
+		print("EARTH_PROBE none")
+		return
+	var centroid: Vector2 = sum / float(n)
+	var px_per_deg: float = float(img.get_height()) * 0.5 / tan(deg_to_rad(cam.fov * 0.5)) * PI / 180.0
+	var diameter_deg: float = 2.0 * sqrt(float(n) / PI) / px_per_deg
+	print("EARTH_PROBE projected=(%.1f,%.1f) centroid=(%.1f,%.1f) offset_deg=%.2f diameter_deg=%.2f" % [
+		want.x, want.y, centroid.x, centroid.y, (centroid - want).length() / px_per_deg, diameter_deg])

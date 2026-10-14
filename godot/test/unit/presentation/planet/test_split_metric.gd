@@ -71,10 +71,18 @@ func test_tier_knobs_come_from_quality_tiers_json() -> void:
 	assert_int(high.max_depth).is_equal(6)
 	assert_int(high.builds_per_frame).is_equal(6)
 	assert_float(high.build_ms_cap).is_equal(4.0)
-	# not in the file yet: 03 s7 defaults
+	# TA-24: starvation frames and pool size are in the file (03 s7.3 / s11: 150 / 220 / 300); grace is a default
+	assert_int(low.starvation_frames).is_equal(2)
 	assert_int(high.starvation_frames).is_equal(2)
 	assert_float(high.merge_grace_s).is_equal(1.0)
-	assert_int(high.pool_size).is_equal(220)
+	assert_int(low.pool_size).is_equal(150)
+	assert_int(med.pool_size).is_equal(220)
+	assert_int(high.pool_size).is_equal(300)
+	assert_float(low.detail_range_m).is_equal(300.0)
+	assert_float(med.detail_range_m).is_equal(500.0)
+	assert_float(high.detail_range_m).is_equal(600.0)
+	for c: PlanetTierConfig in [low, med, high]:
+		assert_int(c.pool_size).is_greater(c.visible_chunks_cap)
 
 
 func test_optional_keys_override_defaults() -> void:

@@ -168,3 +168,13 @@ func test_build_into_tightens_bounds_and_uploads_one_surface() -> void:
 	assert_float(n.radius).is_less(r0)
 	assert_float(n.h_min).is_equal(_mesher.last_h_min)
 	assert_float(n.h_max).is_greater_equal(n.h_min)
+
+
+## TA-24: custom.b carries the cube face (the shader reads the biome per pixel), custom.a stays the skirt flag.
+func test_custom_b_is_the_face_and_a_marks_skirts() -> void:
+	for node: ChunkNode in _nodes():
+		var arrays: Array = _mesher.build_arrays(node)
+		var custom: PackedByteArray = arrays[Mesh.ARRAY_CUSTOM0]
+		for v: int in ChunkMesher.VERTEX_COUNT:
+			assert_int(custom[v * 4 + 2]).is_equal(node.face)
+			assert_int(custom[v * 4 + 3]).is_equal(255 if v >= ChunkMesher.GRID_VERTS else 0)

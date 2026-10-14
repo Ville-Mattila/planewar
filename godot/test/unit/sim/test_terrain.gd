@@ -291,6 +291,21 @@ func _edge_y(edge: int, s: int, n: int) -> int:
 
 
 # region normal and slope
+func test_biome_face_matches_biome_at_texels() -> void:
+	assert_int(_terrain.biome_face(0).size()).is_equal(0)
+	var t: Terrain = _load_tiny()
+	var n: int = t.face_resolution
+	assert_int(t.biome_face(6).size()).is_equal(0)
+	for f: int in Terrain.FACE_COUNT:
+		var b: PackedByteArray = t.biome_face(f)
+		assert_int(b.size()).is_equal(n * n)
+		for y: int in [0, (n - 1) >> 2, n - 1]:
+			for x: int in [0, (n - 1) >> 1, n - 1]:
+				var uv: Vector2 = Vector2(float(x), float(y)) / float(n - 1)
+				var d: Vector3 = Sphere.face_uv_to_dir(f, uv.x, uv.y)
+				assert_int(b[y * n + x]).is_equal(t.biome_at(d))
+
+
 func test_flat_map_normal_is_radial_and_slope_zero() -> void:
 	_write_synthetic(30000, 0)
 	assert_int(_terrain.load_map(SCRATCH)).is_equal(OK)
