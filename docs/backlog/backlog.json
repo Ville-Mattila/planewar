@@ -931,7 +931,10 @@
       " R0 C1-05",
       " 03 TA-20"
     ],
-    "status": "todo"
+    "status": "review",
+    "merged": "2026-10-14",
+    "pr": "public#23",
+    "note": "S-NAV-1 partial: amortised 0.27-0.34 ms, cache 0.94-0.97, 0 correctness failures pass; isolated 15 km worst 37 ticks (bar 30) and row 3b p95 1.6 ms (budget 0.5) fail; memory 8.8 MB vs 2 MB; recommended: re-baseline 3b to 1.7 ms, path_expansions_per_tick 120, cut rung; not wired into SimWorld step 3b; architect: brains->Pathing access, 03 s3.6 heuristic overestimates, impassable 0 vs 255"
   },
   {
     "id": "TA-21",
