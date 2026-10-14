@@ -1749,7 +1749,10 @@
       " R0 C1-01",
       " 05 AI-04"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#45",
+    "note": "session must forward drained SimEvents to AiDriver.on_event (on_tick has no events); register() callers come with spawn wiring; periods are ctor args until autopilots.json/bot_profiles.json"
   },
   {
     "id": "AI-05",
