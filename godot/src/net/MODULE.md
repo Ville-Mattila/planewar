@@ -143,7 +143,7 @@ const GAP_MAX: int; const GAP_ESCAPE: int; const FULL_BODY_BYTES: int; const SMA
 const MASK_POS_SMALL: int; const MASK_POS_LARGE: int; const MASK_ORI: int; const MASK_VEL: int; const MASK_HP: int; const MASK_FLAGS: int; const MASK_CELL_CHANGED: int; const MASK_FULL: int
 enum Tier { A, B, C }
 enum Kind { NONE, FULL, DELTA, BLIP }
-var gravity: float;  var dt: float;  var prepare_count: int;  var cache_tick: int;  var max_packets: int;  var deferred: int;  var cache_bytes: bool   # false = pre-NET-49 FULL/C-BLIP path, same bytes
+var gravity: float;  var dt: float;  var prepare_count: int;  var cache_tick: int;  var max_packets: int;  var deferred: int;  var cache_bytes: bool   # false = pre-NET-49 FULL/C-BLIP path, same bytes; var append_frame: bool
 var n_full: int;  var n_delta: int;  var n_blip: int;  var n_pos_small: int;  var n_pos_large: int   # cumulative record counters
 var c_tick: PackedInt32Array;  var c_pos: PackedInt64Array;  var c_ori: PackedInt64Array;  var c_coarse: PackedInt32Array;  var c_vel: PackedInt32Array;  var c_fine: PackedInt64Array
 var c_hp: PackedByteArray;  var c_flags: PackedByteArray;  var c_ai: PackedByteArray;  var c_team: PackedByteArray;  var c_grav: PackedByteArray;  var c_blip: PackedInt32Array
@@ -166,7 +166,7 @@ class_name SnapshotDecoder extends RefCounted         # net/snapshot_decoder.gd:
 enum Status { OK, MALFORMED, STALE, NO_BASELINE, MISSING_ROSTER }
 const MAX_RECORDS: int;  var store: BaselineStore;  var roster: Roster;  var gravity_def: PackedByteArray;  var gravity: float;  var dt: float
 var pilot: PilotBlock;  var pilot_tick: int;  var missing: PackedInt32Array;  var malformed: int;  var records_applied: int
-func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) -> void;  func current() -> BaselineFrame;  func decode(bytes: PackedByteArray) -> int
+func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) -> void;  func current() -> BaselineFrame;  func decode(bytes: PackedByteArray) -> int;  func forget_tick(tick: int) -> void;  func reset() -> void   # NET-25 replay chunks / seek
 
 class_name BaselineStore extends RefCounted           # net/baseline_store.gd: ring of DEPTH (32) frames per client
 const DEPTH: int;  var team: int;  var acked_tick: int;  var newest_tick: int;  var complete_tick: int;  func _init(team_id: int = 0) -> void
@@ -227,7 +227,7 @@ func take(tick: int) -> PilotInput                      # stored input, else dec
 Link semantics (04 s15.1; deterministic: each pipe draws from `Rng.new(seed_value).fork("s2c:<conn>" | "c2s:<conn>")`): CH_CONTROL / CH_EVENTS (reliable ordered) are delayed, never lost, in send order, held to the end of a burst or stall window. CH_INPUT may be lost, duplicated, reordered. CH_SNAPSHOT (unreliable sequenced) additionally drops anything older than the newest delivered. A stall holds both directions and releases the backlog at its end.
 Bandwidth limit: serialisation delay, then unreliable packets queued > 250 ms are dropped. Presets (one-way): LAN 0/0/0; GOOD 40 ms +-5, 0.5 %; TARGET 100 ms +-15, 3 %, 1 % reorder; BAD 250 ms +-40, 5 %, 2 % reorder, 0.5 % dup; MOBILE_SWITCH = TARGET + loss window ticks 900-1019; TAB_STALL = GOOD + 45 s stall at tick 1,200. The 04 name `seed` is `seed_value` (`seed` is a GDScript global); presets are `FaultModel.preset()`, not `test/net/presets.gd`.
 
-Planned (04 s19): `codec_commands.gd` (NET-04), `KEYFRAME` + rolling refresh (NET-07), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10, done: `net/events/MODULE.md`), `Interest` (NET-08, done: `net/interest/MODULE.md`), `ReplayWriter`/`ReplayReader` (NET-25).
+Planned (04 s19): `codec_commands.gd` (NET-04), `KEYFRAME` + rolling refresh (NET-07), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10, done: `net/events/MODULE.md`), `Interest` (NET-08, done: `net/interest/MODULE.md`), `ReplayWriter`/`ReplayReader` (NET-25, done: `net/replay/MODULE.md`).
 
 ## Wire layout
 

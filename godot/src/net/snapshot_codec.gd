@@ -5,6 +5,7 @@ class_name SnapshotCodec extends RefCounted
 ## baseline (gravity-aware dead reckoning), the 15-byte pilot block, splitting at 1,200 B into <= 4 indexed packets
 ## (A-36). Every record goes to the client's mirror frame through the BaselineFrame calls SnapshotDecoder makes, so
 ## both baselines stay identical. FULL and C-BLIP bytes come from SnapshotByteCache (A-40). No allocation per entity.
+## `append_frame` (replay pseudo-client, NET-25) adds another encode() chunk to the frame already begun for the tick.
 
 const HEADER_BYTES: int = 10
 const MAX_PACKET_BYTES: int = Protocol.MAX_UNRELIABLE_BYTES
@@ -37,16 +38,16 @@ var dt: float = 0.0
 var prepare_count: int = 0
 var cache_tick: int = -1
 ## Packets per tick per client (1..MAX_PACKETS_PER_TICK); records past it are deferred (not in the mirror, re-planned
-## later). Default 4 (A-36): a split tick carries packet indices, so once complete and acked it is a baseline.
+## later). Default 4 (A-36): a split tick is a baseline once complete and acked.
 var max_packets: int = MAX_PACKETS_PER_TICK
 var deferred: int = 0                       # records deferred by the packet cap in the last encode()
 var cache_bytes: bool = true                # false: the pre-NET-49 FULL / C-BLIP path (same bytes, more cost)
+var append_frame: bool = false              # true: encode() continues the frame already begun for `tick` (replay chunks)
 var n_full: int = 0                         # cumulative record counters (tests, perf notes, NET-09 governor)
 var n_delta: int = 0
 var n_blip: int = 0
 var n_pos_small: int = 0
 var n_pos_large: int = 0
-# Shared per-tick cache, indexed by roster index; an index is in the cache when c_tick[i] == cache_tick.
 var c_tick: PackedInt32Array = PackedInt32Array()
 var c_pos: PackedInt64Array = PackedInt64Array()
 var c_ori: PackedInt64Array = PackedInt64Array()
@@ -59,7 +60,6 @@ var c_ai: PackedByteArray = PackedByteArray()
 var c_team: PackedByteArray = PackedByteArray()
 var c_grav: PackedByteArray = PackedByteArray()
 var c_blip: PackedInt32Array = PackedInt32Array()        # lazy
-## B / C only: built on first use in a tick (once per entity, shared by every client); stamps = valid tick.
 var _coarse_tick: PackedInt32Array = PackedInt32Array()
 var _blip_tick: PackedInt32Array = PackedInt32Array()
 var _row: PackedInt32Array = PackedInt32Array()          # entity row in _frame
@@ -71,7 +71,6 @@ var _frame: SnapshotFrame = null
 var _vis: PackedInt32Array = PackedInt32Array()          # TEAM_MAX x CAPACITY
 var _vis_n: PackedInt32Array = PackedInt32Array()
 var _w: SnapshotWriter = SnapshotWriter.new()
-# record plan of the entity being encoded
 var _k_kind: int = Kind.NONE
 var _k_mask: int = 0
 var _k_body: int = 0
@@ -191,9 +190,10 @@ func encode(store: BaselineStore, tick: int, a: PackedInt32Array, b: PackedInt32
 	_tick = tick
 	_enc_id += 1
 	deferred = 0
-	var base_tick: int = store.base_for(tick)
+	var frame: BaselineFrame = store.frame_at(tick) if append_frame else null
+	var base_tick: int = frame.base_tick if frame != null else store.base_for(tick)
 	var base: BaselineFrame = store.frame_at(base_tick)
-	var frame: BaselineFrame = store.begin(tick, base_tick)
+	frame = frame if frame != null else store.begin(tick, base_tick)
 	_w.start(tick, base_tick, pilot, out, clampi(max_packets, 1, MAX_PACKETS_PER_TICK))
 	_capped = false
 	_encode_tier(a, Tier.A, base, frame, store.team)

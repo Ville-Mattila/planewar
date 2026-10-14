@@ -65,6 +65,21 @@ func current() -> BaselineFrame:
 	return store.frame_at(store.newest_tick)
 
 
+## Replay playback (NET-25): forget which packet indices of `tick` arrived, so a second chunk of the same tick (its own
+## index 0 .. LAST run) is accepted instead of STALE. Records already applied stay.
+func forget_tick(tick: int) -> void:
+	_rx_tick[tick % BaselineStore.DEPTH] = 0
+
+
+## Replay seek (NET-25): drop every frame and receipt; the next packet must be a FULL tick (base 0).
+func reset() -> void:
+	store.reset()
+	_rx_tick.fill(0)
+	pilot_tick = 0
+	malformed = 0
+	records_applied = 0
+
+
 ## Decodes one SNAPSHOT packet. Returns a Status; only OK changes state.
 func decode(bytes: PackedByteArray) -> int:
 	var size: int = bytes.size()
