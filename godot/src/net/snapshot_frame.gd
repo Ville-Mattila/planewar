@@ -19,6 +19,9 @@ var team: PackedByteArray = PackedByteArray()
 var gravity: PackedByteArray = PackedByteArray()
 var under_fire: PackedByteArray = PackedByteArray()
 var visible_mask: PackedInt32Array = PackedInt32Array()
+## Entity generation per row (EntityId.gen; 0 = unknown). Interest (NET-08) re-sends ENTITY_META when a slot's
+## generation changes; the codec ignores it.
+var gen: PackedInt32Array = PackedInt32Array()
 
 
 ## Sets count and sizes every array; new rows are zero.
@@ -35,6 +38,7 @@ func resize(n: int) -> void:
 	var _i: int = gravity.resize(count)
 	var _j: int = under_fire.resize(count)
 	var _k: int = visible_mask.resize(count)
+	var _l: int = gen.resize(count)
 
 
 ## Fills row i. `visible` is the team bitmask (0 = own team only).

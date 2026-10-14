@@ -12,7 +12,7 @@ once a wire has shipped (R0 B.9 A-23, B.10 A-36); `gen_module_api.py --check` mu
 | May depend on | `core`, `content`; named `sim` types only: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain`, `SimEvent`, `CommandResult` (`tools/deps.json`, R0 B.9 A-27) |
 | Must never touch | Nodes in codec/protocol code, `server/` (feature lane), `platform/`, `presentation`, `ui`; no `Thread` and no `WorkerThreadPool` (web is single-threaded, 03 s11); WebSocket only on web in v1.0 (WebRTC is v1.1, S-NET-2) |
 | Autoloads used | `Log` (never in per-entity loops) |
-| Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `SnapshotCodec` and its baselines (NET-06, NET-48 packet index, NET-49 byte cache), `Transport`/`LocalTransport`/`FaultModel` (NET-11) landed. Everything else is planned per 04 s19. |
+| Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `SnapshotCodec` and its baselines (NET-06, NET-48 packet index, NET-49 byte cache), `Transport`/`LocalTransport`/`FaultModel` (NET-11), `Interest` (NET-08) landed. Everything else is planned per 04 s19. |
 
 ## Public API
 
@@ -134,7 +134,7 @@ static func tick_to_ms(tick: int) -> float;  func burst_end_tick(tick: int) -> i
 class_name SnapshotFrame extends RefCounted           # net/snapshot_frame.gd: prepare_tick input, rows 0..count-1 (SimView adapter: NET-15)
 var tick: int;  var count: int;  var slot: PackedInt32Array;  var pos: PackedVector3Array;  var vel: PackedVector3Array;  var rot: PackedVector4Array
 var hp01: PackedFloat32Array;  var flags: PackedByteArray;  var ai_tag: PackedByteArray;  var team: PackedByteArray;  var gravity: PackedByteArray
-var under_fire: PackedByteArray;  var visible_mask: PackedInt32Array;  func resize(n: int) -> void
+var under_fire: PackedByteArray;  var visible_mask: PackedInt32Array;  var gen: PackedInt32Array;  func resize(n: int) -> void   # gen: EntityId generation (NET-08 Interest)
 func set_entity(i: int, slot_id: int, p: Vector3, v: Vector3, q: Quaternion, hp: float, flag_byte: int, team_id: int, tag: int = 0, has_gravity: bool = false, visible: int = 0) -> void
 
 class_name SnapshotCodec extends RefCounted           # net/snapshot_codec.gd: shared cache (indexed by roster index) + per-client encode
@@ -227,7 +227,7 @@ func take(tick: int) -> PilotInput                      # stored input, else dec
 Link semantics (04 s15.1; deterministic: each pipe draws from `Rng.new(seed_value).fork("s2c:<conn>" | "c2s:<conn>")`): CH_CONTROL / CH_EVENTS (reliable ordered) are delayed, never lost, in send order, held to the end of a burst or stall window. CH_INPUT may be lost, duplicated, reordered. CH_SNAPSHOT (unreliable sequenced) additionally drops anything older than the newest delivered. A stall holds both directions and releases the backlog at its end.
 Bandwidth limit: serialisation delay, then unreliable packets queued > 250 ms are dropped. Presets (one-way): LAN 0/0/0; GOOD 40 ms +-5, 0.5 %; TARGET 100 ms +-15, 3 %, 1 % reorder; BAD 250 ms +-40, 5 %, 2 % reorder, 0.5 % dup; MOBILE_SWITCH = TARGET + loss window ticks 900-1019; TAB_STALL = GOOD + 45 s stall at tick 1,200. The 04 name `seed` is `seed_value` (`seed` is a GDScript global); presets are `FaultModel.preset()`, not `test/net/presets.gd`.
 
-Planned (04 s19): `codec_commands.gd` (NET-04), `KEYFRAME` + rolling refresh (NET-07), `Interest` (NET-08), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10, done: `net/events/MODULE.md`), `ReplayWriter`/`ReplayReader` (NET-25).
+Planned (04 s19): `codec_commands.gd` (NET-04), `KEYFRAME` + rolling refresh (NET-07), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10, done: `net/events/MODULE.md`), `Interest` (NET-08, done: `net/interest/MODULE.md`), `ReplayWriter`/`ReplayReader` (NET-25).
 
 ## Wire layout
 
@@ -282,11 +282,11 @@ Bandwidth: 04 s4.6 (24 KB/s typical, 30 KB/s cap per client, 01 s8.3). CPU: the 
 replay" row (R0 B.7, 4.0 ms p95, 8 clients) covers `prepare_tick` and per-client encoding; `Protocol` lookups are O(1).
 NET-49 canonical bench (A-40: 940 entities, 8 clients, 04 s4.1 schedule + 3 refresh FULLs, desktop p50): prepare 2.8 ms
 + encode sum 6.8-6.9 ms = 9.6-9.8 ms, over the row; the FULL / C-BLIP cache saves 0-2 % (a FULL is mostly one client's
-per tick). A/B deltas stay per client. NET-08 measures the row on the pinned runner; over-budget branch: A-40 OWNER.
+per tick). A/B deltas stay per client. NET-08 (real Interest, same scene, dev box ~3.4x slower than NET-49's that day: canonical 32.5 ms p50): prepare 9.6 + interest 2.6 (p95 5.2) + meta 0.02 + encode 21.1 = 34.3 ms p50, i.e. interest ~8 % of row 12 and ~0.8 ms at NET-49 speed; A/B/C 37.8 / 179.6 / 723 per scheduled tick, 945 B per client tick, 29.9 KB/s link; events (bench_events interest, rosters 940) route 10.9 + shots 2.1 ms p50. Row 12 stays 4.0 ms (A-62 (3)); the pinned-runner gate is TA-42; over-budget branch: A-40 OWNER.
 
 ## Test entry points
 
-`test/unit/net/test_protocol.gd` (NET-01 catalogue vs 04 s2.1/s2.3, enum ordinals, PROTOCOL_VERSION); `test/unit/net/test_codec_roundtrip.gd` (NET-02 codec_roundtrip_test: 10,000 points, cell corners, A-23 envelope, A-24 flags, quaternions, velocity, hp, sizes); `test/net/test_codec_full_records.gd`; `test/perf/bench_codec.gd` (BENCH_CODEC). Planned: interest benchmarks (NET-08), fuzz_test.gd (NET-23).
+`test/unit/net/test_protocol.gd` (NET-01 catalogue vs 04 s2.1/s2.3, enum ordinals, PROTOCOL_VERSION); `test/unit/net/test_codec_roundtrip.gd` (NET-02 codec_roundtrip_test: 10,000 points, cell corners, A-23 envelope, A-24 flags, quaternions, velocity, hp, sizes); `test/net/test_codec_full_records.gd`; `test/perf/bench_codec.gd` (BENCH_CODEC). NET-08: `godot/test/unit/net/test_interest.gd`, `godot/test/net/test_interest_codec.gd` (list in net/interest/MODULE.md). Planned: fuzz_test.gd (NET-23).
 NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example, masks, dead reckoning, blip, pilot block, A-24), `test_snapshot_malformed.gd` (20,000 mutations; NET-48 index rules), `test/net/test_snapshot_delta.gd` (3,000 ticks, random splits), `test_snapshot_budget.gd` (splitting, lost middle packet never acked, bandwidth, determinism, NET-49 cache bytes identical, rolling refresh); `test/perf/bench_snapshot.gd` (BENCH_SNAPSHOT canonical + all_tiers, `--history`); helper `test/net/snap_rig.gd`.
 NET-03: `test/unit/net/test_pilot_wire.gd` (all byte values round trip, reserved bytes, V-INP shape, 20,000 mutations), `test_input_buffer.gd` (window, duplicates, stale epoch, strikes, 10-tick decay then one bridge, hand-off, determinism), `test/net/test_input_link.gd` (LocalTransport: BAD preset recovers single/double loss, triple loss drops one tick, silence bridge once, slow client, determinism).
 `godot/test/unit/net/test_roster.gd` + `godot/test/net/test_roster_sync.gd` (NET-05: add/remove with every reason, meta/remove round trips and sizes, malformed rejected, held record applied after meta, timeout at exactly 30 ticks with one REQUEST_KEYFRAME, re-add in the hold window, determinism, LocalTransport pair); `godot/test/unit/net/test_roster_wrecks.gd` (NET-50, A-54: slot 1,535, wreck events to a filtered client, meta / remove / snapshot at 1,535, non-wreck bytes pinned); `godot/test/unit/net/test_transport_local.gd` (NET-11: channel ordering/reliability, determinism per seed, burst, stall, bandwidth, close, stats); `godot/test/net/test_fault_presets.gd` (NET-11: loss/latency/reorder/dup statistics per preset over 6,000 packets, MOBILE_SWITCH, TAB_STALL).
