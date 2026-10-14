@@ -3,7 +3,10 @@ class_name PlanetDemo extends Node3D
 ## filters exclude scenes/presentation/**). Mouse look (hold right button), WASD + Q/E, Shift = x8 speed.
 ## User args after `--`: `--tier=low|medium|high`, `--map=<id>`, `--autofly` (160 m/s boost path at the
 ## start altitude), `--lod` (tint chunks by depth), `--alt=<m AGL>`, `--pitch=<deg>`, `--frames=N` (print fps / frame-time / build stats and
-## quit after N frames), `--shot=<png path>` (save the frame before quitting).
+## quit after N frames), `--shot=<png path>` (save the frame before quitting). ART-01: the moon is drawn with the
+## first-pass moon_surface material on the shared light model (MoonLight sun, LDR environment, `sun_dir`);
+## `--lat=<deg>` / `--lon=<deg>` / `--yaw=<deg>` place the camera (default 30 / slot 0 / 0), `--interim` keeps the
+## TA-23 chunk shader, `--hud=0` hides the stats label (goldens).
 
 const TIERS: String = "res://content/defs/quality_tiers.json"
 const BOOST_MPS: float = 160.0
@@ -25,6 +28,10 @@ var _yaw: float = 0.0
 var _pitch: float = 0.0
 var _ft: PackedFloat32Array = PackedFloat32Array()
 var _label: Label
+var _lat_deg: float = 30.0
+var _lon_deg: float = Sphere.SLOT_LON0_DEG
+var _interim: bool = false
+var _hud: bool = true
 
 
 func _ready() -> void:
@@ -37,11 +44,12 @@ func _ready() -> void:
 	renderer = PlanetRenderer.new()
 	renderer.debug_depth_tint = _lod_tint
 	add_child(renderer)
-	renderer.setup(terrain, _config())
+	renderer.setup(terrain, _config(), null if _interim else MoonLight.moon_material())
 	renderer.camera = cam
 	_label = Label.new()
 	_label.position = Vector2(8, 8)
 	var layer: CanvasLayer = CanvasLayer.new()
+	_label.visible = _hud
 	layer.add_child(_label)
 	add_child(layer)
 
@@ -64,6 +72,16 @@ func _parse_args() -> void:
 			_lod_tint = true
 		elif arg.begins_with("--shot="):
 			_shot = arg.substr(7)
+		elif arg.begins_with("--lat="):
+			_lat_deg = float(arg.substr(6))
+		elif arg.begins_with("--lon="):
+			_lon_deg = float(arg.substr(6))
+		elif arg.begins_with("--yaw="):
+			_yaw = deg_to_rad(float(arg.substr(6)))
+		elif arg == "--interim":
+			_interim = true
+		elif arg == "--hud=0":
+			_hud = false
 
 
 func _config() -> PlanetTierConfig:
@@ -79,24 +97,18 @@ func _config() -> PlanetTierConfig:
 
 
 func _setup_world() -> void:
-	var sun: DirectionalLight3D = DirectionalLight3D.new()
-	sun.light_color = Color("#FFF1DC")
-	sun.light_energy = 1.25
-	sun.basis = Basis.looking_at(-Sphere.POLE_AXIS, Sphere.PRIME_AXIS)   # light travels -Z (07 s1.5)
+	MoonLight.ensure_globals()
+	var sun: DirectionalLight3D = MoonLight.make_sun()   # light travels -Z (07 s1.5)
 	add_child(sun)
-	var env: Environment = Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color("#05070C")
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_energy = 0.0
+	MoonLight.set_sun_dir(MoonLight.DEFAULT_SUN_DIR, sun)
 	var we: WorldEnvironment = WorldEnvironment.new()
-	we.environment = env
+	we.environment = MoonLight.make_environment()
 	add_child(we)
 	cam = Camera3D.new()
 	cam.fov = 75.0
 	cam.far = CamMath.FAR_PLANE
 	add_child(cam)
-	var dir: Vector3 = Sphere.from_lat_lon(deg_to_rad(30.0), deg_to_rad(Sphere.SLOT_LON0_DEG), 1.0)
+	var dir: Vector3 = Sphere.from_lat_lon(deg_to_rad(_lat_deg), deg_to_rad(_lon_deg), 1.0)
 	cam.global_position = dir * (Sphere.PLANET_RADIUS + terrain.height_at(dir) + _alt)
 	_pitch = deg_to_rad(_pitch_deg)
 	_orient()

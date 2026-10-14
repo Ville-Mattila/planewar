@@ -1,0 +1,31 @@
+{
+  "_doc": "World golden scene list (presentation lane; ART-01 look-dev entries). Each entry renders one PNG at 1280x720 on the Compatibility renderer: run `godot --path godot --rendering-driver opengl3 <scene> -- <args> --shot=<out.png>`; entries with measure=true also print LOOKDEV_MEASURE / LOOKDEV_NIGHT_TARGET lines that must stay inside `tolerance` (fraction). Images are not committed (CLAUDE.md); TA-35 adds the nightly runner and the perceptual compare keyed by adapter string. device status: pc = rendered locally, xvfb_llvmpipe = needs the ci lane to loop this list in nightly.yml golden-screenshots, android_mid / web_mobile = PENDING HUMAN (HUM-06 devices). Source: docs/spikes/ART-01/REPORT.md.",
+  "devices": {
+    "pc": "done locally 2026-10-14: NVIDIA RTX 5070 Laptop, GL 3.3 (opengl3) and ANGLE D3D11 (opengl3_angle)",
+    "xvfb_llvmpipe": "PENDING ci: nightly golden job renders only test/golden/shot_main.tscn",
+    "android_mid": "PENDING HUMAN (HUM-06)",
+    "web_mobile": "PENDING HUMAN (HUM-06)"
+  },
+  "goldens": [
+    {"id": "art01_pole_measure", "scene": "res://test/golden/world/lookdev_shot.tscn", "args": ["--view=pole"], "measure": true, "tolerance": 0.20,
+     "checks": "night mare at the Midnight Pole vs 07 s1.5 (luminance); 8 team glows equal their 07 s2.2 hex"},
+    {"id": "art01_pole_measure_instanced", "scene": "res://test/golden/world/lookdev_shot.tscn", "args": ["--view=pole", "--instanced"], "measure": true, "tolerance": 0.20,
+     "checks": "same through instance uniforms (unit_lit_instanced)"},
+    {"id": "art01_test_sphere", "scene": "res://test/golden/world/lookdev_shot.tscn", "args": ["--view=sphere"], "measure": false,
+     "checks": "day top, wrap band at the terminator, earthshine night bottom, limb rim on the day limb"},
+    {"id": "art01_samples_day", "scene": "res://test/golden/world/lookdev_shot.tscn", "args": ["--view=samples_day"], "measure": true, "tolerance": 0.10,
+     "checks": "12 sample meshes, 8 teams, apron and ground vs the CPU model (MoonLight.shade_linear)"},
+    {"id": "art01_samples_terminator", "scene": "res://test/golden/world/lookdev_shot.tscn", "args": ["--view=samples_terminator"], "measure": true, "tolerance": 0.10,
+     "checks": "wrap gives terminator faces 23 % sun"},
+    {"id": "art01_samples_night", "scene": "res://test/golden/world/lookdev_shot.tscn", "args": ["--view=samples_night"], "measure": true, "tolerance": 0.10,
+     "checks": "earthshine-lit night, team glows readable"},
+    {"id": "art01_planet_orbit", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=0", "--alt=9000", "--pitch=-89", "--frames=300", "--hud=0"], "measure": false,
+     "checks": "moon_surface on the TA-23 renderer: day side, terminator, earthshine night, rim from orbit"},
+    {"id": "art01_planet_day", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=40", "--alt=150", "--pitch=-10", "--frames=300", "--hud=0"], "measure": false,
+     "checks": "day side at Chase height, no rim wash at the horizon"},
+    {"id": "art01_planet_terminator", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=4", "--alt=400", "--pitch=-25", "--yaw=90", "--frames=300", "--hud=0"], "measure": false,
+     "checks": "terminator band"},
+    {"id": "art01_planet_night", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=-55", "--alt=400", "--pitch=-25", "--frames=300", "--hud=0"], "measure": false,
+     "checks": "earthshine night side"}
+  ]
+}

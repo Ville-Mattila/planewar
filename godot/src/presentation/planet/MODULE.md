@@ -11,7 +11,7 @@ in the same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lin
 | May depend on | `core`, `content`; named sim type `Terrain` (read-only) (`tools/deps.json`) |
 | Must never touch | the sim (writes nothing, reads only `Terrain`), `net`, `camera`, `ui`; no Node per quadtree node (only the pooled MeshInstance3D); no autoloads; no threads; no hard-coded 6,000 or 8,192 (D6) |
 | Autoloads used | none |
-| Status | implemented (TA-23); interim material until TA-24 |
+| Status | implemented (TA-23); first-pass `moon_surface` material on the shared light model (ART-01) until TA-24 |
 
 ## Public API
 
@@ -99,6 +99,24 @@ func release_children(n: ChunkNode) -> void
 func leaf_at(dir: Vector3) -> ChunkNode
 func built_nodes() -> Array[ChunkNode]
 
+class_name MoonLight extends RefCounted          # shared light model, CPU side (07 s1.5; ART-01); all static
+const SUN_DIR_PARAM: StringName; const DEFAULT_SUN_DIR: Vector3; const SUN_COLOR: Color; const SUN_ENERGY: float; const SPACE_COLOR: Color
+const MOON_SHADER_PATH: String; const UNIT_SHADER_PATH: String; const UNIT_INSTANCED_SHADER_PATH: String; const ATLAS_PATH: String
+const INCLUDE_PATH: String; const WRAP: float; const AMB_LOW: Vector3; const AMB_HIGH: Vector3; const EARTH: Vector3; const EARTH_GAIN: float
+const EARTH_BASE: float; const NIGHT_LO: float; const NIGHT_HI: float; const RIM: Vector3; const RIM_NEAR: float; const RIM_FAR: float
+const NIGHT_TARGET: Vector3; const NIGHT_TOLERANCE: float
+static func ensure_globals() -> void                               # registers global uniform sun_dir once
+static func set_sun_dir(dir: Vector3, sun: DirectionalLight3D = null) -> void
+static func sun_basis(dir: Vector3) -> Basis
+static func make_sun() -> DirectionalLight3D
+static func make_environment() -> Environment
+static func moon_material() -> ShaderMaterial
+static func unit_material(instanced: bool = false) -> ShaderMaterial
+static func day_factor(up: Vector3, sun: Vector3) -> float
+static func earth_k(up: Vector3, sun: Vector3) -> float
+static func shade_linear(albedo: Vector3, n: Vector3, up: Vector3, sun: Vector3) -> Vector3   # CPU mirror of the include
+static func night_pole_ratio() -> Vector3
+
 class_name PlanetRenderer extends Node3D         # the Node: owns pool, mesher, scheduler, quadtree (03 s7)
 signal chunk_built(face: int, depth: int, ix: int, iy: int, ms: float)
 const SHADER: Shader; const PREBUILD_DEPTH: int; const BUILD_LOG_SIZE: int; const NEAR_M: float; const POOL_RESERVE: int
@@ -130,6 +148,10 @@ func build_ms_percentile(p: float) -> float
   is culled; the node's own `h_max` replaces RELIEF_MAX in theta_up.
 - P7: The pool allocates `pool_size` instance + mesh pairs in `setup` and never creates or frees Nodes afterwards.
 - P8: The renderer writes nothing to the sim and reads only `Terrain` and `PlanetView`.
+- P9: Every spatial material includes `src/presentation/shaders/moon_light.gdshaderinc` and works in linear light:
+  inputs through `ml_to_linear`, ALBEDO / EMISSION through `ml_encode` (Godot 4.7.2 Compatibility decodes them with
+  a polynomial; ART-01 REPORT s3). `MoonLight` constants equal the include's (`test_moon_light.gd`). `sun_dir` is
+  registered by `MoonLight.ensure_globals()` before any such material is created.
 
 ## Data owned
 
@@ -159,7 +181,11 @@ build. Chunk build (arrays + upload) measured by `godot/test/perf/bench_planet.g
 - `godot/test/unit/presentation/planet/test_horizon_cull.gd` (conservative horizon, frustum planes)
 - `godot/test/unit/presentation/planet/test_chunk_mesher.gd` (bit-identical heights, direction table, winding, skirts, seams)
 - `godot/test/perf/bench_planet.gd` (build ms per depth, boost path per tier)
-- Demo: `godot/scenes/presentation/planet/planet_demo.tscn` (free camera; `--autofly`, `--lod`, `--frames`, `--shot`)
+- `godot/test/unit/presentation/planet/test_moon_light.gd` (include == CPU mirror, 07 hex derivation, night target, atlas import)
+- `godot/test/perf/bench_instance_uniforms.gd` (instance-uniform capacity and cost; windowed)
+- Goldens: `godot/test/golden/world/goldens.json` (look-dev scene `lookdev_shot.tscn` with `LOOKDEV_MEASURE` probes)
+- Demo: `godot/scenes/presentation/planet/planet_demo.tscn` (free camera; `--autofly`, `--lod`, `--frames`, `--shot`,
+  `--lat/--lon/--yaw`, `--interim`, `--hud=0`)
 
 ## How to add X (recipes for the cheapest tier)
 
@@ -170,7 +196,11 @@ build. Chunk build (arrays + upload) measured by `godot/test/perf/bench_planet.g
 
 ## Open items
 
-- TA-24: `moon_terrain.gdshader` replaces the interim `shaders/planet_chunk.gdshader`; biome id (custom.b) is 0
-  until then (`Terrain` exposes no texel-indexed biome read; the shader samples the biome face).
+- TA-24: `moon_terrain.gdshader` replaces `shaders/moon_surface.gdshader` (ART-01 first pass: mare -> highland by
+  height01 + slope01, no biome face, no ramp LUT, no detail displacement, no flatten fade) and the interim
+  `shaders/planet_chunk.gdshader` (still `PlanetRenderer.SHADER`, used when `setup` gets no material); biome id
+  (custom.b) is 0 until then. Keep `ml_to_linear` on the ramp LUT samples and `ml_encode` on the outputs.
+- ART-03 / TA-24: `ml_encode` costs two pows + two Newton steps per output; measure on Android-mid (HUM-06) and
+  fall back to one Newton step or a 256-entry LUT if fill-bound.
 - TA-25: variant B, three radii, device numbers; `chunk_pool_size` (HIGH is pool-bound at 220 with cap 150).
 - `ViewState` (06) will hand `PlanetView` over; until then `PlanetView.from_camera`.
