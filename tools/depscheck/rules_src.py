@@ -7,7 +7,8 @@ from pathlib import Path
 
 from .source import CLASS_RE, Context, Line, Violation, module_of, scan
 
-IDENT_RE = re.compile(r"\b[A-Z][A-Za-z0-9_]*\b")
+# A-50: a qualified token Foo.Bar references Foo only; a member after a dot is not a type.
+IDENT_RE = re.compile(r"(?<![.\w])[A-Z][A-Za-z0-9_]*\b")
 RES_SRC_RE = re.compile(r"res://(src|scenes)/([A-Za-z0-9_]+)/([^\"']*)")
 D2_PATTERNS = [
     (re.compile(r"\bextends\s+Node\w*"), "extends a Node type"),
