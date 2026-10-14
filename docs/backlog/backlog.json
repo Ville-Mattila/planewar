@@ -1341,7 +1341,7 @@
       " 07 s3.1",
       " 07 ART-01"
     ],
-    "status": "review",
+    "status": "done",
     "merged": "2026-10-14",
     "pr": "public#13",
     "note": "PC criteria pass; PENDING HUMAN (HUM-06): Android-mid + Web-mobile goldens, Adreno instance uniforms, ml_encode cost on Android; instance-uniform fallback chosen (per-material + team/state cache); rim fade-in 1.5-4.5 km is an owner taste check; moon_ramp.png.import needs the unit_atlas fix (TA-24)"
@@ -1361,7 +1361,10 @@
       "07 s3",
       " 07 ART-03"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#14",
+    "note": "presentation/ has no top-level MODULE.md; UnitMaterialCache API undocumented (architect)"
   },
   {
     "id": "TA-24",
