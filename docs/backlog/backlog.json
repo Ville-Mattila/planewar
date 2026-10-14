@@ -844,8 +844,11 @@
       " R0 C1-19",
       " 03 TA-14"
     ],
-    "status": "todo",
-    "acceptance_append": "; sim/pilot_input.gd comment names PilotWire.to_wire/from_wire (R0 B.10 A-46); if sim/MODULE.md needs lines, the How-to-add-X recipes move to 03 s15.4 with a pointer (A-47)"
+    "status": "done",
+    "acceptance_append": "; sim/pilot_input.gd comment names PilotWire.to_wire/from_wire (R0 B.10 A-46); if sim/MODULE.md needs lines, the How-to-add-X recipes move to 03 s15.4 with a pointer (A-47)",
+    "merged": "2026-10-14",
+    "pr": "public#12",
+    "note": "1,200-entity dense case over budget (collision 8.0 ms vs 5.0, rebuild 1.51 vs 1.2) -> S-SIM-1 cut ladder; architect: 03 \"139 m per ring\" is ~94 m (fix s2.7/s3.6/s6.1); shooter_grace_ticks needs a def field; TA-19 pad radius vs approach"
   },
   {
     "id": "TA-18",
@@ -860,7 +863,7 @@
       "CONTRACT-0"
     ],
     "milestone": "M2",
-    "acceptance": "S1, S3, S5, S10, S11, S12 invariant tests; a 100-tick scripted scenario yields the expected event sequence; drive on a possessed id returns false; profile array populated ; owns the step-6 projectile loop with a reused ProjectileState scratch (TA-43 follow-up); decide ProjectileMotion public or private",
+    "acceptance": "S1, S3, S5, S10, S11, S12 invariant tests; a 100-tick scripted scenario yields the expected event sequence; drive on a possessed id returns false; profile array populated ; owns the step-6 projectile loop with a reused ProjectileState scratch (TA-43 follow-up); decide ProjectileMotion public or private ; step 5 calls Collision.report_terrain(slot, tick, hit_normal_speed); serialize Collision per-slot state (S4)",
     "docs": [
       "03 s4.1",
       " R0 B.5",
