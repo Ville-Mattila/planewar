@@ -2,8 +2,9 @@ class_name PerfTickWorld extends RefCounted
 ## The perf_tick scenario (03 s4.4, s14.1 shape until TA-22 commits s_sim_1.json): a SimWorld with 8 players on
 ## 8 teams around the 8 start slots (R0 B.6 longitudes), ships orbiting their base under a stub act-step hook (row
 ## 3-4), ground units, structures (every 6th a pad, every 5th a tower def), wrecks, and a projectile pool topped up
-## between ticks (untimed, the stand-in for Combat's fire, GD-36): 80 % straight slugs, 15 % bombs, 5 % guided
-## rockets; row 3b: PerfPathLoad (up to 120 ground units re-pathing every 10 s through the sink, TA-50). Entities are written straight into the store (`SimWorld.store()` is tests' and net's), so the scenario
+## between ticks (untimed): 80 % straight slugs, 15 % bombs, 5 % guided rockets; GD-36 weapon fire on top (row 9):
+## every other ship holds FIRE1 (guns of Darts / Lancers, ~100 firing), one Lancer per team holds FIRE2 (a seeker
+## with no enemy in range, the human worst case), Autocannon Turrets and Flak Batteries hold FIRE1; row 3b: PerfPathLoad (up to 120 ground units re-pathing every 10 s through the sink, TA-50). Entities are written straight into the store (`SimWorld.store()` is tests' and net's), so the scenario
 ## does not depend on command rate limits. Deterministic: core `Rng`, fixed seed.
 
 const SEED: int = 22
@@ -12,6 +13,8 @@ const ORBIT_M: float = 1200.0
 
 var world: SimWorld
 var ships: PackedInt32Array = PackedInt32Array()
+var fire: PackedInt32Array = PackedInt32Array()     ## per ships[k]: buttons held (GD-36)
+var towers: PackedInt32Array = PackedInt32Array()   ## gun and flak towers holding FIRE1
 var projectiles_target: int = 0
 
 var _rng: Rng = Rng.new(SEED)
@@ -38,21 +41,32 @@ func _init(n_ships: int, n_ground: int, n_structures: int, n_wrecks: int, n_proj
 	var ship_ids: Array[StringName] = [&"dart", &"dart", &"lancer", &"bomber", &"scout", &"hauler"]
 	var structure_ids: Array[StringName] = [&"solar_array", &"refinery", &"reactor", &"relay_pylon", &"sensor_mast"]
 	var tower_ids: Array[StringName] = [&"autocannon_turret", &"flak_battery", &"missile_tower"]
+	var seekers: int = 0
 	for k: int in n_ships:
-		var s: int = _put(ship_ids[k % ship_ids.size()], k % TEAMS, _rng.range_f(80.0, 900.0), _rng.range_f(0.0, ORBIT_M))
+		var sid: StringName = ship_ids[k % ship_ids.size()]
+		var s: int = _put(sid, k % TEAMS, _rng.range_f(80.0, 900.0), _rng.range_f(0.0, ORBIT_M))
 		ships.push_back(s)
+		var b: int = PilotInput.FIRE1 if k % 2 == 0 else 0
+		if sid == &"lancer" and seekers < TEAMS and k % TEAMS == seekers:
+			b |= PilotInput.FIRE2
+			seekers += 1
+		fire.push_back(b)
 		var p: Vector3 = world.store().pos[s]
 		world.store().vel[s] = Sphere.tangent_frame(p).x.rotated(p.normalized(), _rng.range_f(0.0, TAU)) * 120.0
 	for k: int in n_ground:
 		_put([&"harvester", &"siege_crawler"][k % 2], k % TEAMS, 0.0, _rng.range_f(100.0, ORBIT_M))
 	for k: int in n_structures:
 		var id: StringName = &"pad" if k % 6 == 0 else (tower_ids[k % 3] if k % 5 == 0 else structure_ids[k % structure_ids.size()])
-		_put(id, k % TEAMS, 0.0, _rng.range_f(0.0, ORBIT_M * 0.8))
+		var t: int = _put(id, k % TEAMS, 0.0, _rng.range_f(0.0, ORBIT_M * 0.8))
+		if id == &"autocannon_turret" or id == &"flak_battery":
+			towers.push_back(t)
 	for k: int in n_wrecks:
 		_put(&"dart", k % TEAMS, 0.0, _rng.range_f(0.0, ORBIT_M), EntityStore.K_WRECK)
 	projectiles_target = n_projectiles
 	_hook = OrbitHook.new()
 	_hook.ships = ships
+	_hook.fire = fire
+	_hook.towers = towers
 	_hook.bases = _bases
 	path_load = PerfPathLoad.new(n_ground, _bases)
 	_hook.path_load = path_load
@@ -110,6 +124,9 @@ func _put(def: StringName, team: int, alt: float, dist: float, kind_override: in
 	st.up[s] = dir
 	st.radius[s] = 6.0 if kind == EntityStore.K_SHIP or kind == EntityStore.K_GROUND else 14.0
 	st.hp[s] = 100.0
+	st.ammo[s] = 1000000          # GD-36: guns and tower pools never run dry inside the run
+	st.bombs[s] = 255
+	st.rockets[s] = 255
 	var sd: ShipDef = WorldTestKit.content().ships[d] if kind == EntityStore.K_SHIP else null
 	if sd != null:
 		st.fuel[s] = sd.fuel_s * 100.0
@@ -123,13 +140,23 @@ func _put(def: StringName, team: int, alt: float, dist: float, kind_override: in
 ## around its base and hold 300-600 m above the datum.
 class OrbitHook extends SimAiHook:
 	var ships: PackedInt32Array
+	var fire: PackedInt32Array
+	var towers: PackedInt32Array
 	var bases: PackedVector3Array
 	var path_load: PerfPathLoad
 	var _in: PilotInput = PilotInput.new()
 
 	func on_tick(t: int, view: SimView, sink: CommandSinkBase) -> void:
 		path_load.tick(t, sink)
-		for s: int in ships:
+		_in.thrust = 0.0
+		_in.pitch = 0.0
+		_in.yaw = 0.0
+		_in.roll = 0.0
+		_in.buttons = PilotInput.FIRE1
+		for s: int in towers:
+			var _ok: bool = sink.drive(EntityId.make(s, 1), _in)
+		for k: int in ships.size():
+			var s: int = ships[k]
 			var id: int = EntityId.make(s, 1)
 			if not view.alive(id):
 				continue
@@ -145,5 +172,5 @@ class OrbitHook extends SimAiHook:
 			_in.yaw = clampf(-b.x.dot(want) * 2.0, -1.0, 1.0)
 			_in.pitch = clampf((450.0 - alt) * 0.01 - v.dot(n) * 0.05, -1.0, 1.0)
 			_in.roll = clampf(-b.x.dot(n) * 2.0, -1.0, 1.0)
-			_in.buttons = 0
+			_in.buttons = fire[k]
 			sink.drive(id, _in)

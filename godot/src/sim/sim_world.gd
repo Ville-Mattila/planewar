@@ -3,14 +3,14 @@ class_name SimWorld extends RefCounted
 ## `load_map` builds every system for one match. `step()` runs, in order: 1 queued commands (+ disconnect
 ## releases), 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-50), 4 assist
 ## substitution (AI-10), 5 kinematics (DOCKED ships skipped, A-41; terrain contacts to Collision), 6 projectiles,
-## 7 spatial rebuild, 8 collision, 9 damage from the contacts (Combat, GD-08) and the deferred deaths,
+## 7 spatial rebuild, 8 collision, 9 weapon fire, damage from the contacts and fuses (Combat, GD-08 / GD-36), deferred deaths,
 ## 10 match timers (Economy, Production, Build, Docking and scoring land later), 11 vision (sim/vision/), 12 the caller
 ## drains events. Systems not yet built are named in their step and cost nothing. Helpers: `sim/world/`; control
 ## transitions: `sim/control/` (05 s2, AI-02).
 
 const _MAPS_ROOT: String = "res://content/maps/"
 const _MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const _FORMAT: int = 3
+const _FORMAT: int = 4   ## 4: Combat fire state (GD-36)
 const _RULES_STATE: PackedStringArray = ["mode", "caps_profile", "sim_budget_profile", "core_exposure_s", "hard_end_s",
 	"debug_commands", "profile_enabled", "friendly_fire", "adjutant_allowed", "sun_period_s", "ranked", "tick_hz"]
 const _CAPS_STATE: PackedStringArray = ["id", "units", "structures", "projectiles", "wrecks", "slots"]
@@ -169,7 +169,7 @@ func drain_events() -> Array[SimEvent]:
 
 
 ## The whole match state (S4) in a fixed order: header, rules, clock, players, input slots, rate buckets, pending
-## commands, entity and projectile stores, Collision's per-slot state, orders, pathing, then the AI hook's bytes.
+## commands, entity and projectile stores, Collision's per-slot state, Combat's fire state, orders, pathing, then the AI hook's bytes.
 ## Events are not included: the caller drains them every tick (step 12).
 func serialize() -> PackedByteArray:
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
@@ -189,6 +189,7 @@ func serialize() -> PackedByteArray:
 	_store.write_state(buf)
 	_proj.write_state(buf)
 	StateIO.put_props(buf, collision, _COLLISION_STATE)
+	_combat.write_state(buf)
 	buf.put_var(OrderQueueCodec.serialize(_orders))
 	_pathing.write_state(buf)
 	buf.put_var(_hook.serialize() if _hook != null else PackedByteArray())
@@ -316,7 +317,7 @@ func _wire(rules: MatchRules) -> void:
 	_applier = CommandApplier.new(_store, _orders, _players, _inputs, _events, _defs, _validator, _control)
 	_intake = CommandIntake.new(_validator, _applier, _state)
 	_motion = ProjectileMotion.new(_store, _proj, _defs)
-	_combat = Combat.new(_store, _proj, collision, spatial, _defs, rules, _events, _applier)
+	_combat = Combat.new(_store, _proj, collision, spatial, _defs, rules, _events, _applier, _inputs)
 	_ships = ShipMotion.new(_store, _inputs, _defs, collision, _terrain)
 	_profiler.enabled = rules.profile_enabled
 	_pathing = Pathing.from_rules(_defs.rules)
@@ -333,7 +334,7 @@ func _read_state(buf: StreamPeerBuffer) -> bool:
 		return false
 	if not (_store.read_state(buf) and _proj.read_state(buf)):
 		return false
-	if not StateIO.get_props(buf, collision, _COLLISION_STATE):
+	if not StateIO.get_props(buf, collision, _COLLISION_STATE) or not _combat.read_state(buf):
 		return false
 	var ov: Variant = buf.get_var()
 	if typeof(ov) != TYPE_PACKED_BYTE_ARRAY:
@@ -371,10 +372,13 @@ func _assist_substitution() -> void:
 	pass
 
 
-# Step 9: Combat (GD-08) applies the step-8 contacts (damage, blasts, ramming; weapon fire and fuses are GD-36's),
-# then the deferred deaths of this tick are freed (03 s4.1 rule 6). Combat draws on the world's `rng`, passed per step (S7).
+# Step 9: Combat fires weapons (GD-36), applies the step-8 contacts (GD-08: damage, blasts, ramming) and the fuses,
+# then the deferred deaths of this tick drop their fire state and are freed (03 s4.1 rule 6). Combat draws on the
+# world's `rng`, passed per step (S7).
 func _step_combat(t: int) -> void:
 	_combat.step(t, rng)
+	for s: int in _applier.dying:
+		_combat.forget(s)
 	_applier.resolve_deaths(t)
 
 

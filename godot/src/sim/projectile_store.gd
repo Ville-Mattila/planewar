@@ -39,7 +39,7 @@ var owner: PackedByteArray
 var team: PackedByteArray
 var flags: PackedByteArray
 var shooter: PackedInt32Array
-var target: PackedInt32Array
+var target: PackedInt32Array   ## ROCKET: lock target EntityId; FLAK: timed-fuse burst tick (GD-36); 0 = none
 var ttl: PackedFloat32Array
 var hash_cell: PackedInt32Array
 
@@ -90,6 +90,29 @@ func alloc(projectile_kind: int, tick: int) -> int:
 	var e: int = live.insert(live.bsearch(i), i)
 	assert(e == OK)
 	return EntityId.make(EntityId.PROJECTILE_SLOT_MIN + i, generation[i])
+
+
+## Allocates and fills one projectile in a single call (Combat's weapon fire, GD-36): the writes go through this
+## object's own members, so a caller never copies a pool array (03 s12.2 rule 11). `prev_pos` = `p`; `extra_flags`
+## are OR-ed onto F_ALIVE (F_GUIDED for a locked rocket). NULL_ID at live_cap or with no free slot.
+func spawn(projectile_kind: int, tick: int, p: Vector3, v: Vector3, ttl_s: float, projectile_local: int,
+		weapon_local: int, owner_slot: int, team_id: int, shooter_id: int, target_id: int, extra_flags: int) -> int:
+	var id: int = alloc(projectile_kind, tick)
+	if id == EntityId.NULL_ID:
+		return id
+	var i: int = index_of(id)
+	pos[i] = p
+	prev_pos[i] = p
+	vel[i] = v
+	ttl[i] = ttl_s
+	projectile_def[i] = projectile_local
+	weapon_def[i] = weapon_local
+	owner[i] = owner_slot
+	team[i] = team_id
+	shooter[i] = shooter_id
+	target[i] = target_id
+	flags[i] = F_ALIVE | extra_flags
+	return id
 
 
 ## Frees a live local index at `tick` (generation bump, clear, quarantine). False if not live.

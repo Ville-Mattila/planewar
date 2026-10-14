@@ -13,7 +13,7 @@ extends Node
 ## falls back to the S-CI-1 SoakWorldStub so the harness still prints PERF_TICK.
 
 ## Bump when the measured scope changes; ab_perf.py skips (does not fail) an A/B whose fingerprints differ.
-const HARNESS_VERSION: int = 2   ## 2: TA-50 row-3b path load
+const HARNESS_VERSION: int = 3   ## 2: TA-50 row-3b path load; 3: GD-36 weapon fire
 const WARMUP_TICKS: int = 300
 const STEP_DT: float = 1.0 / 30.0
 const WORLD_SCRIPT: String = "res://test/perf/perf_tick_world.gd"
