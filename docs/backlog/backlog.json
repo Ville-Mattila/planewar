@@ -6691,7 +6691,10 @@
       "03 s6.1",
       "05 s2.3"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#31",
+    "note": "ControlMachine.configure(rules) added; rung 8 via SimWorld.path_expansions_per_tick() for TA-50; content defs rules_def/match_rules_def gained typed fields; shooter_grace now 10 (was 0)"
   },
   {
     "id": "TA-50",
