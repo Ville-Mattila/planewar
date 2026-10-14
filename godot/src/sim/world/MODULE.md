@@ -21,11 +21,12 @@ lane-internal by decision (TA-18 / TA-43 follow-up): clients and `sim_ai` call `
 
 ```gdscript
 class_name CommandIntake extends RefCounted                                  # the pending queue (<= 256 / tick) + the one entry of apply_command and SimSink.submit
-var pending: Array[Command]
+var pending: Array[Command];  var economy: EconomyHub                        # (TA-19) BUILD / CANCEL_BUILD / PRODUCE / CANCEL_PRODUCE are routed to it in step 1
 func submit(cmd: Command) -> CommandResult;  func apply_all(tick: int) -> void
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name CommandValidator extends RefCounted                               # S10 rate + state rules, S12
 const RATE_PER_S: int; const BURST: int; const QUEUE_MAX: int;  var order_rules: OrderRules
+var build: Build; var production: Production; var last_reject: int   # (TA-19) set by EconomyHub: BUILD -> can_place (REJECTED_PLACEMENT + reject), PRODUCE -> team factory, queue room, REJECTED_LOCKED, S12 by queuer
 func validate(cmd: Command, tick: int, ended: bool, queued: int) -> CommandResult   # rate (bucket charged), phase, then check()
 func check(cmd: Command) -> int                                              # pure state rules; CommandResult.Code; re-run in step 1
 func begin_tick() -> void;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
@@ -78,7 +79,11 @@ func possessable(def_id: int) -> bool;  func radius_of(def_id: int) -> float;  s
 class_name TeamStats                                                         # LocalSimView's team aggregates, O(structures), never on the tick path
 static func stockpile_cap(store: EntityStore, defs: WorldDefs, team: int) -> Vector2i;  static func power_balance(store: EntityStore, defs: WorldDefs, team: int) -> Vector2
 static func tech_available(store: EntityStore, defs: WorldDefs, team: int, def_id: int) -> bool;  static func has_structure(store: EntityStore, team: int, def_id: int) -> bool
-static func count_owned(store: EntityStore, player: int, live: PackedInt32Array) -> int
+static func count_owned(store: EntityStore, player: int, live: PackedInt32Array) -> int;  static func fill_player(v: PlayerStateView, pl: PlayerTable, slot: int) -> void
+class_name EconomyHub extends RefCounted                                     # (TA-19) composes Build, Economy, Construction, Production; routes their commands, deaths and step 10
+var build: Build; var economy: Economy; var construction: Construction; var production: Production
+static func handles(kind: Command.Kind) -> bool;  func apply(cmd: Command) -> void;  func begin_tick(t: int) -> void;  func step(t: int, dt: float) -> void;  func on_death(s: int) -> void
+func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3, tick: int) -> bool;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name StateIO                                                           # S4 bytes: named properties via put_var / get_var, type-checked
 static func put_props(buf: StreamPeerBuffer, o: Object, names: PackedStringArray) -> void;  static func get_props(buf: StreamPeerBuffer, o: Object, names: PackedStringArray) -> bool
 static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: PackedStringArray, n: int) -> bool;  static func ints_in(v: PackedInt32Array, count: int, lo: int, hi: int) -> bool   # (TA-21) range checks of restored state
@@ -92,6 +97,7 @@ static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: 
 - W4: `ShipMotion` and `ProjectileMotion` allocate nothing per entity: one `ShipState`, one `PilotInput`, one `ProjectileState` scratch; each SoA array is copied at most once per tick (copy-on-write of the local handle).
 - W5: every class holding state has `write_state` / `read_state`; `SimWorld.serialize` writes them in a fixed order and `deserialize(serialize())` reproduces each byte for byte (S4).
 - W6: Control state, overlay and `ReleaseReason` are `ControlMachine`'s enums (AI-02, sim/control/MODULE.md CM1); nothing here redefines them.
+- W7: `EconomyHub` owns no state of its own; `on_death` runs for every dying structure before the deferred free (footprint, site, queue), so a freed slot never keeps a footprint or a queue.
 
 ## Data owned
 
@@ -99,7 +105,7 @@ static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: 
 
 ## Events emitted / consumed
 
-`CommandApplier`: SPAWN, DEATH, CAP_REACHED; the control events (POSSESSED, RELEASED, ...) are `ControlMachine`'s (sim/control/MODULE.md). `SimWorld` step 10: CORE_EXPOSURE, MATCH_END. Consumes every `Command.Kind`.
+`CommandApplier`: SPAWN, DEATH, CAP_REACHED (debug spawn over the cap); `EconomyHub` (with `Construction`, `Economy`, `Production`): BUILD_STARTED, BUILD_DONE, STRUCTURE_LOST, LOW_POWER, CAP_REACHED (a production head over the unit cap), ALERT (BUILD_DONE, STORAGE_FULL, LOW_POWER, WAITING_FOR_ORE / ICE, SPEND_LOCKED, PRODUCTION_BLOCKED_CAP); the control events (POSSESSED, RELEASED, ...) are `ControlMachine`'s (sim/control/MODULE.md). `SimWorld` step 10: CORE_EXPOSURE, MATCH_END. Consumes every `Command.Kind`.
 
 ## Performance budget
 
@@ -107,7 +113,7 @@ static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: 
 
 ## Test entry points
 
-`godot/test/unit/sim/test_command_validator.gd` (S10, S12, W1, W2), `godot/test/unit/sim/test_sim_world.gd` (W3, steps 5, 6, 9, 10),
+`godot/test/unit/sim/test_command_validator.gd` (S10, S12, W1, W2), `godot/test/unit/sim/build/test_construction.gd` (EconomyHub routing, W5 for the economy section), `godot/test/unit/sim/test_sim_world.gd` (W3, steps 5, 6, 9, 10),
 `godot/test/unit/sim/test_serialize.gd` (W5), `godot/test/unit/sim/test_enums.gd` (W6), `godot/test/unit/sim/test_command_payload.gd`, `godot/test/sim/test_tick_scenario.gd`, `godot/test/perf/perf_tick.gd`.
 
 ## How to add X (recipes for the cheapest tier)

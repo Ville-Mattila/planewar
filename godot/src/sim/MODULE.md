@@ -3,7 +3,7 @@
 Contract for `godot/src/sim/**`. Committed by CONTRACT-0 from R0 Part B (B.3 enumerations, B.4 deps, B.5 motion, tick order,
 signatures) and 03 s15.4; supersedes 01 s9.4's signatures. A change to "Public API", "Enumerations" or "Invariants" is a contract
 change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines (ADR-14). Subsystems
-(`sim/steer/`, `sim/orders/`, `sim/control/`, `sim/scoring/`, `sim/ground/` = TA-38 ground motion, `sim/world/` = TA-18's tick-driver helpers, `sim/combat/` = GD-08's step-9 damage, `sim/vision/` = step 11, TA-37) keep their own `MODULE.md` (R0 B.9 A-21).
+(`sim/steer/`, `sim/orders/`, `sim/control/`, `sim/scoring/`, `sim/ground/` = TA-38 ground motion, `sim/world/` = TA-18's tick-driver helpers, `sim/combat/` = GD-08's step-9 damage, `sim/vision/` = step 11, TA-37, `sim/build/` + `sim/economy/` + `sim/production/` = TA-19) keep their own `MODULE.md` (R0 B.9 A-21).
 
 | Field | Value |
 |---|---|
@@ -13,7 +13,7 @@ change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, no signals, no `Thread` (D2, D3) |
 | Public types other lanes may name (D1) | `input`: `PilotInput`. `ui`: `SimView`, `SimEvent`, `Command`, `CommandResult`, `PilotInput`, `AlertKind`, `OrderSpec`, `LandingGrade`, read-only `Terrain`. `campaign`: commands, events, `SimView`, `CommandSinkBase`. `net`: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain` (read) |
 | Autoloads used | None: content arrives as a `ContentSet` (`SimWorld._init`, TA-18; `ContentDB` builds the same set); `Log` allowed |
-| Status | API frozen with CONTRACT-0 (2026-10-10); amendments 01 (R0 B.8, same day) appended `ProjectileState`, `TeamStateView`, `PlayerStateView`; amendments 02 (R0 B.9, 2026-10-13) appended the `step_projectile` `out` parameter, `brake_fade_mps` and the projectile 0-tick quarantine; TA-18 (2026-10-14) implemented the tick driver and appended `SimSink`, `LocalSimView`, hook / store state bytes, `MatchRules.from_defs`; amendments 04 (R0 B.11, 2026-10-14) ratified TA-18's three type corrections (A-49), dropped the planned `PlayerKind` holder (A-50) and appended `CommandSinkBase.pathing()` (A-55, TA-50) and `SimView.read_poses` (A-56, TA-51 landed; A-55 wired by TA-50); TA-37 (2026-10-14) appended `SimWorld.vision` and `interest_start / count / ids` (step 11, `sim/vision/`); internals open until S-SIM-1 (TA-22) |
+| Status | API frozen with CONTRACT-0 (2026-10-10); amendments 01 (R0 B.8, same day) appended `ProjectileState`, `TeamStateView`, `PlayerStateView`; amendments 02 (R0 B.9, 2026-10-13) appended the `step_projectile` `out` parameter, `brake_fade_mps` and the projectile 0-tick quarantine; TA-18 (2026-10-14) implemented the tick driver and appended `SimSink`, `LocalSimView`, hook / store state bytes, `MatchRules.from_defs`; amendments 04 (R0 B.11, 2026-10-14) ratified TA-18's three type corrections (A-49), dropped the planned `PlayerKind` holder (A-50) and appended `CommandSinkBase.pathing()` (A-55, TA-50) and `SimView.read_poses` (A-56, TA-51 landed; A-55 wired by TA-50); TA-37 (2026-10-14) appended `SimWorld.vision` and `interest_start / count / ids` (step 11, `sim/vision/`); TA-19 (2026-10-14) wired `Build`, `Economy`, `Construction`, `Production` through `EconomyHub` (format 7; `sim/economy/`, `sim/production/`, `sim/build/`); internals open until S-SIM-1 (TA-22) |
 
 ## Public API
 
@@ -23,7 +23,8 @@ R0 B.5 signatures; "(03)" marks symbols 03 s15.4 adds. Anything not listed is pr
 # planned: GroundMotion, Pathing, OrderSpec, Assist, LandingGrade
 class_name SimWorld extends RefCounted                                       # _init(content: ContentSet): defs injected, no autoload in the sim (TA-18)
 func load_map(map: MapDef, seed: int, rules: MatchRules) -> Result            # rules carries mode, caps profile, sim_budget_profile
-func add_player(slot: int, team: int, doctrine: StringName, kind: int) -> void   # kind: PlayerKind ordinal (Open items)
+func add_player(slot: int, team: int, doctrine: StringName, kind: int) -> void   # kind: PlayerKind ordinal (Open items); start_ore / start_ice are per player, summed into the team pool (C2-14)
+func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3) -> bool    # (TA-19) economy.start_kit around `centre`, Refinery toward `toward`; after add_player, before step 1
 func remove_player(slot: int) -> void;  func admin_release(slot: int) -> void   # disconnect (05 C12) / admin (C18), applied in the next step 1
 func set_ai_hook(hook: SimAiHook) -> void                                    # sim_ai attaches here; sim never imports sim_ai
 func apply_command(cmd: Command) -> CommandResult
@@ -36,7 +37,7 @@ static func deserialize(bytes: PackedByteArray, content: ContentSet, hook: SimAi
 func profile() -> PackedFloat32Array                                         # 14 rows of 03 s4.4 for the last tick
 func set_budget_profile(level: int) -> void;  func path_expansions_per_tick() -> int   # cut rungs 1..level (<= 8) of 03 s4.3; rung 3 caps live projectiles, 8 lowers the path budget (TA-49; TA-50 hands the value to Pathing)
 func terrain() -> Terrain                                                    # read-only sampler shared with presentation
-func store() -> EntityStore;  func projectiles() -> ProjectileStore;  var rng: Rng;  var spatial: Spatial;  var collision: Collision
+func store() -> EntityStore;  func economy() -> EconomyHub;  func projectiles() -> ProjectileStore;  var rng: Rng;  var spatial: Spatial;  var collision: Collision
 var vision: Vision;  func interest_start() -> PackedInt32Array;  func interest_count() -> PackedInt32Array;  func interest_ids() -> PackedInt32Array
     # store / projectiles (03): net encoder and tests only, presentation uses view(); rng = S7's one RNG; spatial / collision (TA-18), vision (TA-37): read-only; interest_* = the per-team interest-cell lists of 03 s3.6, layout in sim/vision/MODULE.md (S3: shared, valid until the next step)
 
@@ -91,7 +92,7 @@ class_name ProjectileState extends RefCounted                                # s
 var p: Vector3; var v: Vector3                                               # after one step per 03 s5.4; guided re-aim and ttl stay in ProjectileMotion / ProjectileStore
 class_name GroundMotion extends RefCounted                                   # 03 s5.3; step() inside SimWorld only
 
-# Build (can_place, place, footprint_cells, Build.Reject) lives in sim/build/ (TA-19): full API in sim/build/MODULE.md; Reject ordinals stay frozen in Enumerations below
+# Build (can_place, place, footprint_cells, Build.Reject) lives in sim/build/ (TA-19): full API in sim/build/MODULE.md; Reject ordinals stay frozen in Enumerations below. Economy: sim/economy/, Production (queues, S13): sim/production/, each with its own MODULE.md
 
 class_name Pathing extends PathTickets                                       # lives in sim/pathing/ (TA-20, wired TA-50: step 3b, S4): full API in sim/pathing/MODULE.md
 func request(from: Vector3, to: Vector3, mask: int) -> int                   # ticket
@@ -244,7 +245,7 @@ default +) over the first `flip_duration_s / 2`, then a half loop; ends upright,
 - S1: `step()` mutates state only through systems in the tick order; `apply_command` queues, never mutates (commands apply in step 1 of the next `step()`), except `PILOT_INPUT`, which is stored into the per-player input slot.
 - S2: `EntityId`s are never reused within 64 ticks of free (units, structures, wrecks). Projectile slots are exempt (0-tick quarantine, owner 2026-10-13, R0 B.9 A-20): a freed projectile slot may be re-allocated the same tick; the generation bump keeps every projectile `EntityId` unique, and 04 keys projectile entities by the full id.
 - S3: `view()` reads are valid until the next `step()`; it never allocates on read except list getters.
-- S4: `serialize()` then `deserialize()` then `step()` equals `step()` on the original byte for byte (same machine) for 1,000 random ticks; `serialize()` appends the AI hook's opaque bytes and `deserialize` hands them back to the hook. Every stateful subsystem is in the bytes (stores, players, inputs, rate buckets, pending commands, control, Collision, Combat fire, orders, pathing, vision clocks, RNG, tick). `deserialize` returns null, touching neither the hook nor any caller state, for another `FORMAT`, bad magic, truncation, a SHA-256 mismatch (any flipped byte), an implausible declared size, trailing bytes, or a state out of range (array sizes, counters, live lists, indices, `tick_hz` > 0); the hook gets its bytes only after every check passed. After load `interest_*` are re-bucketed at load-time positions (`visible_mask` is exact), so they can differ from the original for up to one vision period. Build state has `write_state` but joins when SimWorld owns a `Build`.
+- S4: `serialize()` then `deserialize()` then `step()` equals `step()` on the original byte for byte (same machine) for 1,000 random ticks; `serialize()` appends the AI hook's opaque bytes and `deserialize` hands them back to the hook. Every stateful subsystem is in the bytes (stores, players, inputs, rate buckets, pending commands, control, Collision, Combat fire, orders, pathing, vision clocks, RNG, tick). `deserialize` returns null, touching neither the hook nor any caller state, for another `FORMAT`, bad magic, truncation, a SHA-256 mismatch (any flipped byte), an implausible declared size, trailing bytes, or a state out of range (array sizes, counters, live lists, indices, `tick_hz` > 0); the hook gets its bytes only after every check passed. After load `interest_*` are re-bucketed at load-time positions (`visible_mask` is exact), so they can differ from the original for up to one vision period. Build, Economy, Construction and Production state is the "economy" section (format 7; the build grid is saved sparsely).
 - S5: every `SimEvent` has `tick == tick()` of the step that produced it.
 - S6: no float literal other than 0.0, 0.5, 1.0, 2.0, -1.0 appears in `src/sim/**` (D6); every sim constant lives in a def (ADR-09).
 - S7: the only RNG is `SimWorld.rng` and its forks.
@@ -253,7 +254,7 @@ default +) over the first `flip_duration_s / 2`, then a half loop; ends upright,
 - S10: `apply_command` validates ownership, rights, caps, cost, placement (`Build.can_place`), phase and rate before accepting; the rate limit is 04's token bucket per player (10 commands/s sustained, burst 30; `REJECTED_RATE`); a rejected command has no effect.
 - S11: `CommandSinkBase.drive` never writes the input slot of a POSSESSED entity.
 - S12: `CANCEL_PRODUCE` / `CANCEL_BUILD` succeed only for the player who queued/placed the item, or a teammate if that player is disconnected, eliminated or a bot (R0 C3-08).
-- S13: production queues never exceed `economy.queue_max` (5).
+- S13: production queues never exceed `economy.queue_max` (5): the validator refuses a PRODUCE that would pass it (`REJECTED_CAP`) and step 1 re-checks.
 - S14: enumeration ordinals in this file equal the GDScript enums; appending is the only allowed change.
 - S15: the def JSON the sim reads validates against `tools/schemas/*.schema.json` (`tools/validate_content.py`); field names are R0 B.1's.
 - S16: after `Spatial.rebuild()` every live entity and projectile is in exactly its `Sphere.cell_of(pos, GRID_HASH)` cell; `ids_near` equals the brute-force set at any radius; `Spatial` holds no Dictionary (test_spatial.gd).
@@ -286,7 +287,7 @@ TA-18: `godot/test/unit/sim/test_sim_world.gd` (S1, S3, S5, S11, hook, profile, 
 (S10, S12), `godot/test/unit/sim/test_serialize.gd` + `test_serialize_all.gd` (S4 over all subsystems, version refusal, size, determinism; TA-21), `godot/test/perf/bench_serialize.tscn`, `godot/test/unit/sim/test_enums.gd` (S14), `godot/test/unit/sim/test_local_sim_view.gd`,
 `godot/test/unit/sim/test_match_rules.gd`, `godot/test/unit/sim/test_command_payload.gd`, `godot/test/sim/test_tick_scenario.gd` (100-tick event sequence), `godot/test/perf/perf_tick_world.gd`.
 TA-50: `godot/test/sim/test_path_scenario.gd` (step 3b, `pathing()` via `godot/test/unit/sim/path_brain_stub.gd`), S4 with pending tickets in `test_serialize.gd`, `godot/test/perf/perf_path_load.gd` (row 3b). TA-37: `godot/test/unit/sim/vision/test_vision.gd`, `godot/test/unit/sim/vision/test_vision_lists.gd`, `godot/test/perf/perf_vision.gd` (sim/vision/MODULE.md V1-V9).
-GD-36: `test_projectile_store.gd` (`spawn`); weapon fire and fuse tests are listed by the combat subsystem contract. Planned (plain text until on disk, D10): test_build.gd (cross-edge footprints), test_landing.gd; godot/test/sim/scenarios/*.json (Outpost presence, victory, Core shield, caps); godot/test/contract/test_sim_view_contract.gd.
+GD-36: `test_projectile_store.gd` (`spawn`); weapon fire and fuse tests are listed by the combat subsystem contract. TA-19: `godot/test/unit/sim/economy/test_economy.gd`, `godot/test/unit/sim/production/test_production.gd`, `godot/test/unit/sim/build/test_construction.gd` (S4 economy, S12, S13). Planned (plain text until on disk, D10): test_landing.gd; godot/test/sim/scenarios/*.json (Outpost presence, victory, Core shield, caps); godot/test/contract/test_sim_view_contract.gd.
 
 ## How to add X
 

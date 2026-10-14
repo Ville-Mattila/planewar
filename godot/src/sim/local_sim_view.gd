@@ -3,7 +3,7 @@ class_name LocalSimView extends SimView
 ## Reads are valid until the next `step()` and allocate nothing except the list getters (S3): `order_head` /
 ## `pending_order` refill one reused `OrderSpec` each, `team_state` / `player_state` one reused view per slot.
 ## Accessors whose system has not landed return the `SimView` default: service / pad queue (Docking GD-15),
-## production (Production), field_remaining (Economy), scores and landing grade (sim/scoring); path_grid_version: TA-50.
+## field_remaining (Economy), scores and landing grade (sim/scoring); path_grid_version: TA-50.
 ## `visible_to` / `visible_ids`: `visible_mask` bit t (Vision, sim/vision/, team t's last staggered pass) or the own team.
 ## basis(id) = Basis(right, up, -fwd) with right = fwd x up (Godot's -Z forward).
 
@@ -21,6 +21,7 @@ var _pending: OrderSpec = OrderSpec.new()
 var _teams: Array[TeamStateView] = []
 var _player_views: Array[PlayerStateView] = []
 var _pathing: Pathing = null
+var production: Production = null   ## set by SimWorld (TA-19): queue and progress reads
 
 
 func _init(store: EntityStore, projectiles: ProjectileStore, spatial: Spatial, terrain: Terrain, players: PlayerTable,
@@ -323,20 +324,18 @@ func player_state(slot: int) -> PlayerStateView:
 	if slot < 0 or slot >= PlayerTable.SLOTS:
 		return null
 	var v: PlayerStateView = _player_views[slot]
-	v.slot = slot
-	v.team = _players.team[slot]
-	v.kind = _players.kind[slot]
-	v.doctrine = StringName(_players.doctrine[slot])
-	v.possessed = _players.possessed[slot]
-	v.eliminated = _players.eliminated[slot] != 0
-	v.commander_rights = _players.is_active(slot) and not v.eliminated
-	v.connected = _players.connected[slot] != 0
-	v.disconnect_tick = _players.disconnect_tick[slot]
-	v.adjutant_profile = _players.adjutant_profile[slot]
-	v.adjutant_toggles = _players.adjutant_toggles[slot]
+	TeamStats.fill_player(v, _players, slot)
 	v.unit_count = unit_count(slot)
 	v.structure_count = TeamStats.count_owned(_store, slot, _store.structures)
 	return v
+
+
+func production_queue(factory: int) -> PackedInt32Array:
+	return production.queue_of(EntityId.slot(factory)) if production != null and _store.alive(factory) else PackedInt32Array()
+
+
+func production_progress01(factory: int) -> float:
+	return production.progress01(EntityId.slot(factory)) if production != null and _store.alive(factory) else 0.0
 
 
 func terrain_height(dir: Vector3) -> float:

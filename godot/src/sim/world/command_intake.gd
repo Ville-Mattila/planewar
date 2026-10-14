@@ -5,6 +5,7 @@ class_name CommandIntake extends RefCounted
 ## accepted between two steps survive a save.
 
 var pending: Array[Command] = []
+var economy: EconomyHub = null   ## BUILD / CANCEL_BUILD / PRODUCE / CANCEL_PRODUCE go here (TA-19); set by SimWorld
 
 var _validator: CommandValidator
 var _applier: CommandApplier
@@ -31,7 +32,10 @@ func submit(cmd: Command) -> CommandResult:
 func apply_all(tick: int) -> void:
 	_validator.begin_tick()
 	for cmd: Command in pending:
-		_applier.apply(cmd, tick)
+		if economy != null and EconomyHub.handles(cmd.kind):
+			economy.apply(cmd)
+		else:
+			_applier.apply(cmd, tick)
 	pending.clear()
 
 

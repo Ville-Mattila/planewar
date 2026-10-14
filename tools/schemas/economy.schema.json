@@ -138,9 +138,58 @@
       "type": "number",
       "minimum": 0,
       "maximum": 1
+    },
+    "build_max_slope_deg": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 90,
+      "$comment": "02 s6.2 rule 2: 15 degrees"
+    },
+    "outpost_presence_radius_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5000,
+      "$comment": "02 s6.2 rule 5(a): 300 m"
+    },
+    "outpost_spacing_friendly_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 20000,
+      "$comment": "02 s6.2 rule 5(b): 800 m"
+    },
+    "outpost_spacing_enemy_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 20000,
+      "$comment": "02 s6.2 rule 5(c): 1500 m"
+    },
+    "site_hp_fraction": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "$comment": "02 s6.3: a site has hp * max(0.1, progress)"
+    },
+    "start_refinery_dist_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5000,
+      "$comment": "02 s8.1: Refinery 500 m from the Core toward Home Field A"
+    },
+    "start_adjacent_dist_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5000,
+      "$comment": "02 s8.1: Shipyard adjacent to the Core, Vehicle Bay beside the Refinery"
     }
   },
   "required": [
+    "build_max_slope_deg",
+    "outpost_presence_radius_m",
+    "outpost_spacing_friendly_m",
+    "outpost_spacing_enemy_m",
+    "site_hp_fraction",
+    "start_adjacent_dist_m",
+    "start_refinery_dist_m",
     "cancel_refund_assembly",
     "cancel_refund_queued",
     "construction_slots_base",

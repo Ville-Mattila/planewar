@@ -49,12 +49,12 @@ func test_team_and_player_views() -> void:
 	var v: SimView = w.view()
 	var eco: EconomyDef = WorldTestKit.content().economy
 	var ts: TeamStateView = v.team_state(0)
-	assert_int(ts.ore).is_equal(eco.start_ore)
-	assert_int(ts.ice).is_equal(eco.start_ice)
+	assert_int(ts.ore).is_equal(eco.start_ore * 2)          # C2-14: per player, summed into the pool (players 0 and 2)
+	assert_int(ts.ice).is_equal(eco.start_ice * 2)
 	assert_array(Array(ts.members)).is_equal([0, 2])
 	var core_def: StructureDef = WorldTestKit.content().structures[WorldTestKit.def_id(&"core") - DefRanges.STRUCTURE_BASE]
 	assert_int(ts.ore_cap).is_equal(core_def.storage_ore)
-	assert_vector(v.stockpile(0)).is_equal(Vector3(float(eco.start_ore), float(eco.start_ice), 1.0))
+	assert_vector(v.stockpile(0)).is_equal(Vector3(float(eco.start_ore * 2), float(eco.start_ice * 2), 1.0))
 	assert_object(v.team_state(0)).is_same(ts)
 	var ps: PlayerStateView = v.player_state(1)
 	assert_int(ps.team).is_equal(1)

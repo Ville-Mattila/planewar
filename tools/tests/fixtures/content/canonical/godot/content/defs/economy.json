@@ -29,5 +29,12 @@
  "self_repair_delay_s": 10,
  "early_share_lock_s": 120,
  "early_share_ore": 800,
- "unused_slot_yield": 0.5
+ "unused_slot_yield": 0.5,
+ "build_max_slope_deg": 15,
+ "outpost_presence_radius_m": 300,
+ "outpost_spacing_friendly_m": 800,
+ "outpost_spacing_enemy_m": 1500,
+ "site_hp_fraction": 0.1,
+ "start_refinery_dist_m": 500,
+ "start_adjacent_dist_m": 100
 }

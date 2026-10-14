@@ -14,6 +14,9 @@ const QUEUE_MAX: int = 256
 const _STATE: PackedStringArray = ["_tokens", "_last", "_claimed"]
 
 var order_rules: OrderRules = null                    ## null: every ORDER is REJECTED_INVALID_ORDER
+var build: Build = null                               ## set by EconomyHub: BUILD runs `can_place`, PRODUCE the early share lock
+var production: Production = null                     ## set by EconomyHub: queue room, item owners (S12, S13)
+var last_reject: int = 0                              ## `Build.Reject` of the last `check` that returned REJECTED_PLACEMENT
 
 var _store: EntityStore
 var _players: PlayerTable
@@ -59,6 +62,8 @@ func validate(cmd: Command, tick: int, ended: bool, queued: int) -> CommandResul
 		r.code = CommandResult.Code.REJECTED_PHASE
 		return r
 	r.code = check(cmd) as CommandResult.Code
+	if r.code == CommandResult.Code.REJECTED_PLACEMENT:
+		r.reject = last_reject
 	if r.code == CommandResult.Code.ACCEPTED and cmd.kind == Command.Kind.POSSESS:
 		var _a: bool = _claimed.push_back(cmd.target)
 	return r
@@ -164,7 +169,11 @@ func _check_build(cmd: Command) -> int:
 		return CommandResult.Code.REJECTED_NO_RIGHTS
 	if TeamStats.count_owned(_store, cmd.player, _store.structures) >= _rules.caps.structures:
 		return CommandResult.Code.REJECTED_CAP
-	return _afford(cmd.player, d, 1)
+	var a: int = _afford(cmd.player, d, 1)
+	if a != CommandResult.Code.ACCEPTED or build == null:
+		return a
+	last_reject = build.can_place(cmd.player, d, CommandPayload.u32_at(cmd, 2), rot)
+	return CommandResult.Code.ACCEPTED if last_reject == Build.Reject.OK else CommandResult.Code.REJECTED_PLACEMENT
 
 
 func _check_produce(cmd: Command) -> int:
@@ -174,19 +183,24 @@ func _check_produce(cmd: Command) -> int:
 	var qmax: int = _defs.economy.queue_max if _defs.economy != null else 0
 	if cmd.payload.size() != 3 or (k != EntityStore.K_SHIP and k != EntityStore.K_GROUND) or n < 1 or n > qmax:
 		return CommandResult.Code.REJECTED_MALFORMED
-	var own: int = _check_own_structure(cmd)
+	var own: int = _check_team_factory(cmd, d)
 	if own != CommandResult.Code.ACCEPTED:
 		return own
 	if not _commander(cmd.player):
 		return CommandResult.Code.REJECTED_NO_RIGHTS
+	if not TeamStats.tech_available(_store, _defs, _players.team[cmd.player], d):
+		return CommandResult.Code.REJECTED_NO_RIGHTS
 	var units: int = TeamStats.count_owned(_store, cmd.player, _store.ships) + TeamStats.count_owned(_store, cmd.player, _store.ground)
-	if units + n > _rules.caps.units:
-		return CommandResult.Code.REJECTED_CAP
-	return _afford(cmd.player, d, n)
+	if units + n > _rules.caps.units or (production != null and production.length(EntityId.slot(cmd.target)) + n > qmax):
+		return CommandResult.Code.REJECTED_CAP   # S13: queue_max items per queue
+	var a: int = _afford(cmd.player, d, n)
+	if a == CommandResult.Code.ACCEPTED and build != null and build.lock_blocks(cmd.player, _defs.cost(cmd.player, d).x * n):
+		return CommandResult.Code.REJECTED_LOCKED
+	return a
 
 
 ## S12 (R0 C3-08): the player who queued / placed the item, or a teammate when that player is disconnected,
-## eliminated or a bot. Until Production records per-item queuers, a factory's items count as its owner's.
+## eliminated or a bot. A queue item belongs to the player who queued it (`Production.queuer`), a site to its placer.
 func _check_cancel(cmd: Command) -> int:
 	var t: int = cmd.target
 	if not _store.alive(t) or EntityId.is_wreck(t):
@@ -199,11 +213,30 @@ func _check_cancel(cmd: Command) -> int:
 	if cmd.kind == Command.Kind.CANCEL_PRODUCE and cmd.payload.size() != 1:
 		return CommandResult.Code.REJECTED_MALFORMED
 	var o: int = _store.owner[s]
+	if cmd.kind == Command.Kind.CANCEL_PRODUCE and production != null:
+		o = production.queuer(s, CommandPayload.u8_at(cmd, 0))
+		if o < 0:
+			return CommandResult.Code.REJECTED_DEAD   # no such queue item
 	if o == cmd.player:
 		return CommandResult.Code.ACCEPTED
 	if _store.team[s] == _players.team[cmd.player] and _players.cancel_delegable(o):
 		return CommandResult.Code.ACCEPTED
 	return CommandResult.Code.REJECTED_NOT_OWNER
+
+
+## PRODUCE: any teammate may queue at a finished friendly factory that makes `unit` (02 s6.4: queues are team-shared).
+func _check_team_factory(cmd: Command, unit: int) -> int:
+	var t: int = cmd.target
+	if not _store.alive(t) or EntityId.is_wreck(t):
+		return CommandResult.Code.REJECTED_DEAD
+	var s: int = EntityId.slot(t)
+	if _store.kind[s] != EntityStore.K_STRUCTURE:
+		return CommandResult.Code.REJECTED_MALFORMED
+	if _store.team[s] != _players.team[cmd.player]:
+		return CommandResult.Code.REJECTED_NOT_OWNER
+	if (_store.flags[s] & EntityStore.F_BUILDING) != 0 or (production != null and not production.can_make(_store.def_id[s], unit)):
+		return CommandResult.Code.REJECTED_MALFORMED
+	return CommandResult.Code.ACCEPTED
 
 
 func _check_own_structure(cmd: Command) -> int:

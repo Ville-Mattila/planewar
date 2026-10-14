@@ -7,18 +7,12 @@ class_name Build extends RefCounted
 enum Reject { OK, ELIMINATED, PREREQ, CAP, OCCUPIED, SLOPE, NODE, NOT_VISIBLE, ENEMY_RADIUS, NO_RADIUS,
 		NO_PRESENCE, SPACING, FUNDS, SPEND_LOCKED }
 
-## needs content: these belong in rules.json (02 s6.2); constants until a content task adds the fields.
-const MAX_SLOPE_DEG: float = 15.0
-const PRESENCE_RADIUS: float = 300.0
-const MIN_SPACING_FRIENDLY: float = 800.0
-const MIN_SPACING_ENEMY: float = 1500.0   # warning D6 accepted: needs content
-const SITE_HP_FRACTION: float = 0.1   ## 02 s6.3: a site has hp * max(0.1, progress)
-
-const _STATE: PackedStringArray = ["spent_ore", "delivered_ore", "_tick"]
+const _STATE: PackedStringArray = ["spent_ore", "delivered_ore", "_tick", "rot"]
 
 var grid: BuildGrid
 var spent_ore: PackedInt32Array = PackedInt32Array()       ## per player, Ore paid so far (Economy writes)
 var delivered_ore: PackedInt32Array = PackedInt32Array()   ## per player, Ore its Harvesters and Core trickle delivered
+var rot: PackedByteArray = PackedByteArray()               ## per entity slot, the rotation (0-3) its structure was placed with
 
 var _defs: WorldDefs
 var _store: EntityStore
@@ -28,6 +22,11 @@ var _fp: BuildFootprint
 var _tick: int = 0
 var _core_def: int = -1
 var _outpost_def: int = -1
+var _max_slope: float = 0.0        ## economy.json build_max_slope_deg ... site_hp_fraction (02 s6.2, s6.3)
+var _presence: float = 0.0
+var _spacing_friendly: float = 0.0
+var _spacing_enemy: float = 0.0
+var _site_hp: float = 0.0
 
 
 func _init(defs: WorldDefs, store: EntityStore, players: PlayerTable, terrain: Terrain, rules: MatchRules,
@@ -38,23 +37,29 @@ func _init(defs: WorldDefs, store: EntityStore, players: PlayerTable, terrain: T
 	_rules = rules
 	grid = BuildGrid.new(terrain, grid_n)
 	_fp = BuildFootprint.new(grid_n)
-	var e: int = spent_ore.resize(PlayerTable.SLOTS) | delivered_ore.resize(PlayerTable.SLOTS)
+	var e: int = spent_ore.resize(PlayerTable.SLOTS) | delivered_ore.resize(PlayerTable.SLOTS) | rot.resize(EntityId.WRECK_SLOT_MIN)
 	assert(e == OK)
 	spent_ore.fill(0)
 	delivered_ore.fill(0)
+	rot.fill(0)
+	var ec: EconomyDef = defs.economy if defs.economy != null else EconomyDef.new()
+	_max_slope = ec.build_max_slope_deg
+	_presence = ec.outpost_presence_radius_m
+	_spacing_friendly = ec.outpost_spacing_friendly_m
+	_spacing_enemy = ec.outpost_spacing_enemy_m
+	_site_hp = ec.site_hp_fraction
 	_core_def = defs.content.entity_index.get(&"core", -1)
 	_outpost_def = defs.content.entity_index.get(&"outpost", -1)
 
 
-## S4: Ore counters, clock and the grid flags. Not yet part of `SimSerialize` (SimWorld owns no Build until Economy lands);
-## the section is appended there then (format bump).
+## S4: Ore counters, clock, placed rotations and the grid flags (the "build" section of `SimSerialize`, format 7).
 func write_state(buf: StreamPeerBuffer) -> void:
 	StateIO.put_props(buf, self, _STATE)
 	grid.write_state(buf)
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
-	if not StateIO.get_props(buf, self, _STATE) or spent_ore.size() != PlayerTable.SLOTS or delivered_ore.size() != PlayerTable.SLOTS:
+	if not StateIO.get_props(buf, self, _STATE) or spent_ore.size() != PlayerTable.SLOTS or delivered_ore.size() != PlayerTable.SLOTS or rot.size() != EntityId.WRECK_SLOT_MIN:
 		return false
 	return grid.read_state(buf)
 
@@ -92,10 +97,20 @@ func can_place(player: int, def_id: int, cell: int, rotation: int) -> Build.Reje
 
 
 ## Reserves the footprint and creates the construction site (F_BUILDING); 0 when can_place rejects. Payment and the
-## construction-slot start belong to Economy / Production (later in TA-19), not here.
+## construction-slot start are `Construction`'s (sim/build/), not here.
 func place(player: int, def_id: int, cell: int, rotation: int) -> int:
 	if can_place(player, def_id, cell, rotation) != Reject.OK:
 		return 0
+	return stamp(player, def_id, cell, rotation, false)
+
+
+## Creates the structure entity without validating (`place` after can_place; the start kit, finished). 0 when the
+## store is full or the def has no footprint. Occupies the footprint cells and records the rotation.
+func stamp(player: int, def_id: int, cell: int, rotation: int, finished: bool) -> int:
+	var sd: StructureDef = _defs.resolved(player).structure(def_id)
+	if sd == null or sd.footprint.size() != 2:
+		return 0
+	var cells: PackedInt32Array = _fp.cells(cell, sd.footprint[0], sd.footprint[1], rotation)
 	var id: int = _store.alloc(EntityStore.K_STRUCTURE, _tick)
 	if id == EntityId.NULL_ID:
 		return 0
@@ -108,12 +123,20 @@ func place(player: int, def_id: int, cell: int, rotation: int) -> int:
 	_store.up[s] = p.normalized()
 	_store.fwd[s] = Sphere.tangent_frame(p).x
 	_store.radius[s] = _defs.radius_of(def_id)
-	_store.hp[s] = _defs.hp_max(player, def_id) * SITE_HP_FRACTION
-	_store.flags[s] |= EntityStore.F_BUILDING
+	_store.hp[s] = _defs.hp_max(player, def_id) * (1.0 if finished else _site_hp)
+	if not finished:
+		_store.flags[s] |= EntityStore.F_BUILDING
 	_store.anchor_cell[s] = cell
-	var sd: StructureDef = _defs.resolved(player).structure(def_id)
-	grid.occupy(_fp.cells(cell, sd.footprint[0], sd.footprint[1], rotation))
+	rot[s] = rotation
+	grid.occupy(cells)
 	return id
+
+
+## Frees the footprint of structure slot `s` (death or cancelled site); the entity itself is the caller's.
+func release_site(s: int) -> void:
+	var sd: StructureDef = _defs.resolved(_store.owner[s]).structure(_store.def_id[s])
+	if sd != null and sd.footprint.size() == 2 and _store.anchor_cell[s] >= 0:
+		grid.release(_fp.cells(_store.anchor_cell[s], sd.footprint[0], sd.footprint[1], rot[s]))
 
 
 func _over_cap(player: int, def_id: int, sd: StructureDef) -> bool:
@@ -145,7 +168,7 @@ func _check_cells(cells: PackedInt32Array, sd: StructureDef) -> Reject:
 		worst = maxf(worst, grid.slope_deg(c))
 	if occupied:
 		return Reject.OCCUPIED
-	if worst > MAX_SLOPE_DEG:
+	if worst > _max_slope:
 		return Reject.SLOPE
 	if node_bad or (sd.on_node != &"" and not cold_seen):
 		return Reject.NODE
@@ -170,7 +193,7 @@ func _check_vision_and_radius(team: int, def_id: int, centre: Vector3) -> Reject
 				seen = _sees(s, sd, p, centre)
 			if sd == null:
 				if mine and is_outpost and (_store.flags[s] & EntityStore.F_DOCKED) == 0 \
-						and p.distance_to(centre) <= PRESENCE_RADIUS:
+						and p.distance_to(centre) <= _presence:
 					present = true
 				continue
 			var gc: float = Sphere.great_circle(p, centre)
@@ -179,7 +202,7 @@ func _check_vision_and_radius(team: int, def_id: int, centre: Vector3) -> Reject
 			if mine and built and sd.build_radius > 0.0 and gc <= sd.build_radius:
 				in_radius = true
 			if _store.def_id[s] == _core_def or _store.def_id[s] == _outpost_def:
-				if gc < (MIN_SPACING_FRIENDLY if mine else MIN_SPACING_ENEMY):
+				if gc < (_spacing_friendly if mine else _spacing_enemy):
 					spacing = true
 	if not seen:
 		return Reject.NOT_VISIBLE   # before ENEMY_RADIUS: never reveal enemy structures through fog (02 s6.2 order)
@@ -209,14 +232,19 @@ func _sees(s: int, sd: StructureDef, p: Vector3, centre: Vector3) -> bool:
 func _check_funds(player: int, team: int, sd: StructureDef) -> Reject:
 	if _players.team_ore[team] < sd.cost_ore or _players.team_ice[team] < sd.cost_ice:
 		return Reject.FUNDS
+	return Reject.SPEND_LOCKED if lock_blocks(player, sd.cost_ore) else Reject.OK
+
+
+## True while the early share lock (02 s6.4, R0 C3-08) forbids `player` to spend `cost_ore` more: a team of two or more,
+## before `early_share_lock_s`, spent + cost over `early_share_ore` + the Ore this player delivered.
+func lock_blocks(player: int, cost_ore: int) -> bool:
 	var hz: int = _rules.tick_hz
 	var econ: EconomyDef = _defs.economy
 	if econ == null or hz <= 0 or float(_tick) >= econ.early_share_lock_s * float(hz):
-		return Reject.OK
+		return false
+	var team: int = _players.team[player]
 	var mates: int = 0
 	for q: int in PlayerTable.SLOTS:
 		if _players.is_active(q) and _players.team[q] == team:
 			mates += 1
-	if mates >= 2 and spent_ore[player] + sd.cost_ore > econ.early_share_ore + delivered_ore[player]:
-		return Reject.SPEND_LOCKED
-	return Reject.OK
+	return mates >= 2 and spent_ore[player] + cost_ore > econ.early_share_ore + delivered_ore[player]

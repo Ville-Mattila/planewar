@@ -4,14 +4,14 @@ class_name SimSerialize
 ## mostly zeros; ~600 KB raw is ~185 KB at 1,200 entities and 2,000 projectiles). Raw body, in this order (names in
 ## `SECTIONS`): header (seed, RNG, map), rules, clock,
 ## players, input slots, rate buckets, pending commands, control, entity store, projectile store, Collision's per-slot
-## state, Combat's fire state, orders, pathing, vision, the AI hook's opaque bytes. Build state joins when SimWorld owns a
-## `Build` (it does not yet; `Build.write_state` exists). Events are not included: the caller drains them each tick.
+## state, Combat's fire state, orders, pathing, vision, economy (`EconomyHub`: Build, Economy, Construction, Production),
+## the AI hook's opaque bytes. Events are not included: the caller drains them each tick.
 ## Versioning: `FORMAT` counts layout changes; there is no migration, a world is only read by the format that wrote it.
 ## `check` names the reason a byte array is refused so a save slot UI can say "from an older version". Saves are for the
 ## same build on the same machine (ADR-03/06): the bytes are a function of the state alone.
 
 const MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const FORMAT: int = 6           ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header
+const FORMAT: int = 7           ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section
 const HASH_BYTES: int = 32
 const HEADER_BYTES: int = 12 + HASH_BYTES   ## magic, format, raw size (u32 each), SHA-256 of the raw body
 const COMPRESSION: int = FileAccess.COMPRESSION_ZSTD
@@ -19,7 +19,7 @@ const MAX_RAW_BYTES: int = 64 << 20   ## a header claiming more is refused befor
 const MAX_TICK_HZ: int = 1000
 const MAX_RATIO: int = 256            ## ... as is one claiming more than this many times the compressed size
 const SECTIONS: PackedStringArray = ["header", "rules", "clock", "players", "inputs", "rate_buckets", "pending_commands",
-	"control", "entities", "projectiles", "collision", "combat", "orders", "pathing", "vision", "hook"]
+	"control", "entities", "projectiles", "collision", "combat", "orders", "pathing", "vision", "economy", "hook"]
 const _RULES_STATE: PackedStringArray = ["mode", "caps_profile", "sim_budget_profile", "core_exposure_s", "hard_end_s",
 	"debug_commands", "profile_enabled", "friendly_fire", "adjutant_allowed", "sun_period_s", "ranked", "tick_hz"]
 const _CAPS_STATE: PackedStringArray = ["id", "units", "structures", "projectiles", "wrecks", "slots"]
@@ -115,8 +115,10 @@ static func write_raw(w: SimWorld, marks: PackedInt32Array = PackedInt32Array())
 	_mark(buf, marks, 13)
 	StateIO.put_props(buf, w.vision, _VISION_STATE)
 	_mark(buf, marks, 14)
-	buf.put_var(w._hook.serialize() if w._hook != null else PackedByteArray())
+	w._econ.write_state(buf)
 	_mark(buf, marks, 15)
+	buf.put_var(w._hook.serialize() if w._hook != null else PackedByteArray())
+	_mark(buf, marks, 16)
 	return buf.data_array
 
 
@@ -200,6 +202,8 @@ static func _read_body(w: SimWorld, buf: StreamPeerBuffer) -> bool:
 	if not OrderQueueCodec.deserialize(w._orders, ob) or not w._pathing.read_state(buf):
 		return false
 	if not StateIO.get_props(buf, w.vision, _VISION_STATE) or w.vision.last_pass.size() != Vision.TEAMS:
+		return false
+	if not w._econ.read_state(buf):
 		return false
 	for p: int in PlayerTable.SLOTS:
 		if w._players.is_active(p):

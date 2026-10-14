@@ -1,5 +1,5 @@
 {
-  "_doc": "02 s8.1 starting kit and globals table (economy.json); R0 B.1 economy.json field list and values; R0 B.6 start kit and early share lock; 02 s9.1 unused-slot yield. Singleton file: the schema carries one file-level _doc, so the per-value citations are the section ids named here.",
+  "_doc": "02 s6.2 placement rules and s6.3 site HP (build_max_slope_deg 15, outpost_presence_radius_m 300, outpost_spacing_friendly_m 800 and outpost_spacing_enemy_m 1500, site_hp_fraction 0.1); 02 s8.1 start kit geometry (start_refinery_dist_m 500 m from the Core toward Home Field A, start_adjacent_dist_m 100 m for the Shipyard and the Vehicle Bay); 02 s8.1 starting kit and globals table (economy.json); R0 B.1 economy.json field list and values; R0 B.6 start kit and early share lock; 02 s9.1 unused-slot yield. Singleton file: the schema carries one file-level _doc, so the per-value citations are the section ids named here.",
   "start_ore": 800,
   "start_ice": 300,
   "start_kit": ["core", "refinery", "shipyard", "vehicle_bay", "harvester"],
@@ -24,5 +24,12 @@
   "self_repair_delay_s": 10,
   "early_share_lock_s": 120,
   "early_share_ore": 800,
-  "unused_slot_yield": 0.5
+  "unused_slot_yield": 0.5,
+  "build_max_slope_deg": 15,
+  "outpost_presence_radius_m": 300,
+  "outpost_spacing_friendly_m": 800,
+  "outpost_spacing_enemy_m": 1500,
+  "site_hp_fraction": 0.1,
+  "start_refinery_dist_m": 500,
+  "start_adjacent_dist_m": 100
 }
