@@ -194,7 +194,7 @@ Guards are evaluated by `ControlMachine` inside `SimWorld.apply_command` (tick s
 
 `ReleaseReason` is the single enum of R0 B.3 (`PLAYER`, `DEATH`, `CEILING`, `HANDOVER`, `DISCONNECT`, `MATCH`, `INVALID`, `ADMIN`), defined in `sim/control/control_machine.gd` and used unchanged by 04's `RELEASED` message.
 
-Notes. Commands are applied in server arrival order within a tick; with two `POSSESS` on the same entity in one tick, the first wins and the second gets `REJECTED_ALREADY_POSSESSED`. The altitude guard in C6 (no possession at >= 1,950 m) is a validity rule, not a cooldown; it stops a pilot re-grabbing a ship the ceiling has just released (01 s4.4 rule 7 keeps "no cooldowns"). A player eliminated as a *commander* (own Core lost, team alive) keeps every possession; they stay a pilot (01 s3.3).
+Notes. Commands are applied in server arrival order within a tick; with two `POSSESS` on the same entity in one tick, the first wins and the second gets `REJECTED_ALREADY_POSSESSED`. The altitude guard in C6 (no possession at >= 1,950 m = `rules.ceiling_hard_m - rules.uplink_margin_m`, 50 m; the request TTL of C10 / C17 is `rules.request_ttl_s` and the s3.4 echo window `rules.override_echo_s`, both 10 s; R0 B.11 A-51, read by TA-49) is a validity rule, not a cooldown; it stops a pilot re-grabbing a ship the ceiling has just released (01 s4.4 rule 7 keeps "no cooldowns"). A player eliminated as a *commander* (own Core lost, team alive) keeps every possession; they stay a pilot (01 s3.3).
 
 ### 2.4 Overlays: safety handoff, ceiling recovery, link bridge
 
@@ -1186,3 +1186,4 @@ Revised 2026-10-10 against `reviews/R0-resolution-register.md` and 01 v1.1.
 | R0 B.8 A-5, A-6 (CONTRACT-0 amendments 01) | Rosters are per phase only (R0 B.1 shape); Adjutant profiles carry `promise: null` and are validated against the `normal` cadence | s7.7, s8 |
 | R0 B.10 A-44, A-45 (CONTRACT-0 amendments 03, 2026-10-13) | C13 silent-pilot reuse: BOOST / BRAKE held, FLIP / DOCK / RELEASE / FIRE bits cleared; the 10-tick window is confirmed (04 NQ10 closed) | s2.3 (C13) |
 
+| R0 B.11 A-51, A-55, A-61 (CONTRACT-0 amendments 04, 2026-10-14) | C6 uplink guard, C10 / C17 request TTL and the s3.4 echo window are `rules.json` fields (`uplink_margin_m` 50, `request_ttl_s` 10, `override_echo_s` 10; code in TA-49); brains reach the time-sliced A* through `CommandSinkBase.pathing()` (s5.7 unchanged otherwise); AI-02's `ControlMachine` contract ratified as built | s2.3 (notes), s5.7 |

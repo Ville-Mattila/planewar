@@ -12,7 +12,7 @@ change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check
 | May depend on | `core`, `sim` (`Terrain`; R0 B.4: inside the sim module) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads, clocks, RNG (D2, D3) |
 | Autoloads used | None |
-| Status | spike implementation (TA-20, 2026-10-14); not yet wired into `SimWorld` step 3b or S4 bytes (Open items) |
+| Status | spike implementation (TA-20, 2026-10-14; S-NAV-1 partial pass ratified by R0 B.11 A-55: regions hierarchy, metre cost with the inflated great-circle heuristic, weights 0 and 255 both impassable, `path_expansions_per_tick` 120, cut rung 8 = 60); not yet wired into `SimWorld` step 3b or S4 bytes (TA-50) |
 
 ## Public API
 
@@ -119,7 +119,8 @@ None. Consumes no `Command`; `set_weight` is called by Build / structure placeme
 
 ## Performance budget
 
-03 s4.2 row 3b: 0.5 ms per tick. Measured in `docs/spikes/TA-20/REPORT.md`; `path_expansions_per_tick` calibration there.
+03 s4.2 row 3b: 0.5 ms per tick (unchanged until S-SIM-1 on the pinned runner, R0 B.11 A-55 / A-62). Measured in `docs/spikes/TA-20/REPORT.md`
+at 120 expansions, dev box quiet: amortised 0.27-0.34 ms, p95 1.56-1.70 ms, max 3.6 ms; ~15 us per expansion in-tick (cold arrays), 4.55 us warm.
 
 ## Test entry points
 
@@ -135,10 +136,11 @@ harness `godot/spikes/s_nav_1/run.tscn` (03 s14.3 measurements).
 
 ## Open items
 
-- Wiring (follow-up): `SimWorld` owns a `Pathing`, calls `load_weights` + `set_terrain` + `prepare` in `load_map`,
-  `advance()` at step 3b (row `ROW_PATHING`), exposes it to the AI hook, and serialises tickets / cache for S4 (TA-21).
-- `needs content:` `path_expansions_per_tick` recalibrated per REPORT; `heuristic_pct`, `JOB_COST`, `BUILD_COST`,
-  `LINK_COST` and `MASK_SLOTS` belong in `rules.json` (named consts until then, ADR-09).
-- `needs tools (moonbake):` bake the per-path-cell max slope (and optionally region labels for the v1 masks) so
-  `prepare` stops sampling texels at load.
-- Memory over the 03 s13 2 MB row; options in the REPORT.
+- Wiring is **TA-50** (R0 B.11 A-55): `SimWorld` owns a `Pathing`, calls `load_weights` + `set_terrain` + `prepare` per ground-unit
+  mask in `load_map`, `advance()` at step 3b (row `ROW_PATHING`), exposes it to `sim_ai` as `CommandSinkBase.pathing()` (never a
+  `SimWorld` reference), serialises tickets / queue / cache for S4, and applies the REPORT s6 memory reductions (8.8 -> ~6 MB; the
+  03 s11.3 row is re-baselined to that measurement). `expansions_per_tick` follows `rules.path_expansions_per_tick` (120) and cut rung 8
+  (`rules.cut_ladder.rung_8_path_expansions_per_tick`, 60) through `SimWorld.set_budget_profile`.
+- `rules.path_heuristic_pct` (25) exists (A-51); TA-49 feeds it to `set_heuristic_pct`. `JOB_COST`, `BUILD_COST`, `LINK_COST` and
+  `MASK_SLOTS` stay named consts: they are the time-slicing's own unit prices and slot count, not sim-affecting balance (ADR-09 as read in A-51).
+- Baked per-path-cell max slope (and optionally region labels for the v1 masks) so `prepare` stops sampling texels at load: **TA-54** (tools, M3).

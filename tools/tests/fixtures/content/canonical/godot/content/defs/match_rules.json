@@ -35,5 +35,7 @@
    "wrecks": 60,
    "slots": 4
   }
- }
+ },
+ "arc_open_divisor": 6,
+ "arc_expand_divisor": 2
 }

@@ -1,5 +1,5 @@
 {
-  "_doc": "02 s12.1 rules table (match_rules.json); R0 B.1 match_rules.json field list; R0 B.7 caps profiles (standard / reduced / lite); R0 B.6 and OQ-R0-8 keep per-mode core_exposure_s / hard_end_s in modes.json. Singleton file: one file-level _doc citing the sections, per-value citations are the rows of 02 s12.1 named here (victory, elimination, shield, surrender, session timing, caps).",
+  "_doc": "02 s12.1 rules table (match_rules.json); R0 B.1 match_rules.json field list; R0 B.7 caps profiles (standard / reduced / lite); R0 B.6 and OQ-R0-8 keep per-mode core_exposure_s / hard_end_s in modes.json. Singleton file: one file-level _doc citing the sections, per-value citations are the rows of 02 s12.1 named here (victory, elimination, shield, surrender, session timing, caps). R0 B.11 A-51: arc_open_divisor 6 and arc_expand_divisor 2 are the 01 s3.3 bands (Open 0-5, Expand 5-15, Siege 15-30 of a 30 min exposure) as divisors of the mode's core_exposure_s.",
   "victory": "all_enemy_cores",
   "eliminate_on_core_loss": true,
   "eliminated_selfdestruct_s": 60,
@@ -36,5 +36,7 @@
       "wrecks": 60,
       "slots": 4
     }
-  }
+  },
+  "arc_open_divisor": 6,
+  "arc_expand_divisor": 2
 }
