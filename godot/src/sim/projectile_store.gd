@@ -23,6 +23,10 @@ const NONE_U8: int = 255
 const QUARANTINE_TICKS: int = 0
 ## 03 s3.1 range PROJECTILE_SLOT_MIN .. PROJECTILE_SLOT_END - 1 (R0 B.9 A-20).
 const SLOT_COUNT: int = EntityId.PROJECTILE_SLOT_END - EntityId.PROJECTILE_SLOT_MIN
+## Every array, the live list, cap, free stack and quarantine ring, in serialization order (S4, TA-18).
+const _STATE: PackedStringArray = ["generation", "pos", "vel", "prev_pos", "kind", "projectile_def", "weapon_def", "owner",
+	"team", "flags", "shooter", "target", "ttl", "hash_cell", "live", "live_cap", "_free", "_free_n", "_q_slot", "_q_tick",
+	"_q_head", "_q_n", "_q_last"]
 
 var generation: PackedInt32Array
 var pos: PackedVector3Array
@@ -147,6 +151,16 @@ func free_count() -> int:
 
 func quarantined_count() -> int:
 	return _q_n
+
+
+## Appends the whole pool (S4) to `buf`.
+func write_state(buf: StreamPeerBuffer) -> void:
+	StateIO.put_props(buf, self, _STATE)
+
+
+## Replaces the whole pool from `write_state` bytes; false on a type or size mismatch.
+func read_state(buf: StreamPeerBuffer) -> bool:
+	return StateIO.get_props(buf, self, _STATE) and generation.size() == SLOT_COUNT and _free.size() == SLOT_COUNT
 
 
 func _release_due(tick: int) -> void:
