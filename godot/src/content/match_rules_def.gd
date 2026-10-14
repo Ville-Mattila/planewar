@@ -15,11 +15,13 @@ var spectators_max: int = 0
 var join_window_s: float = 0.0
 var load_timeout_s: float = 0.0
 var countdown_s: float = 0.0
+var arc_open_divisor: int = 6    ## R0 B.11 A-51: 01 s3.3 arc bands as divisors of core_exposure_s (Open ends at /6)
+var arc_expand_divisor: int = 2  ## Expand ends at /2; Siege to the exposure, Overtime after
 var caps: Dictionary = {}  ## StringName profile id -> CapsDef
 
 const SPEC: Dictionary = {
 	"f": "eliminated_selfdestruct_s core_shield_until_s core_bomb_mult_exposure surrender_min_s surrender_min_s_1v1 reconnect_grace_s join_window_s load_timeout_s countdown_s",
-	"i": "core_value spectator_delay_ticks spectators_max",
+	"i": "core_value spectator_delay_ticks spectators_max arc_open_divisor arc_expand_divisor",
 	"b": "eliminate_on_core_loss",
 	"n": "victory",
 	"extra": "caps",

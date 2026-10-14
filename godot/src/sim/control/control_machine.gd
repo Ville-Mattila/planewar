@@ -18,11 +18,11 @@ const DECAY_TICKS: int = 10
 ## A-44: stick axes halve per silent tick; thrust, BOOST and BRAKE are held, every momentary button is cleared.
 const DECAY_FACTOR: float = 0.5
 const KEEP_BUTTONS: int = PilotInput.BOOST | PilotInput.BRAKE
-## 05 s2.1 / C17 / V-REQ: a hand-over request lives 10 s. needs content: a rules.json field.
+## 05 s2.1 / C17 / V-REQ: a hand-over request lives 10 s. Documented default of `rules.request_ttl_s` (`configure`).
 const REQUEST_TTL_S: int = 10
-## 05 s3.4: the OVERRIDDEN echo fires when the replaced head is younger than 10 s. needs content: a rules.json field.
+## 05 s3.4: the OVERRIDDEN echo fires when the replaced head is younger than 10 s. Default of `rules.override_echo_s`.
 const ECHO_WINDOW_S: int = 10
-## 05 C6r: REJECTED_UPLINK at altitude >= ceiling_hard_m - 50 m (1,950 m). needs content: a rules.json field.
+## 05 C6r: REJECTED_UPLINK at altitude >= ceiling_hard_m - 50 m (1,950 m). Default of `rules.uplink_margin_m`.
 const UPLINK_MARGIN_M: int = 50
 const _STATE: PackedStringArray = ["_request_from", "_request_tick", "_last_input", "_silent", "_fresh", "_admin", "_team_out"]
 
@@ -33,6 +33,7 @@ var _players: PlayerTable
 var _inputs: InputSlots
 var _events: SimEvents
 var _hz: int = 1
+var _request_ttl_s: int = REQUEST_TTL_S
 var _uplink_r: float = 0.0
 var _ceiling_r: float = 0.0
 var _request_from: PackedByteArray = PackedByteArray()   # per main-range slot: requesting player or NONE_U8
@@ -66,6 +67,13 @@ func _init(store: EntityStore, queue: OrderQueue, players: PlayerTable, inputs: 
 	_fresh.fill(0)
 	_admin.fill(0)
 	_team_out.fill(0)
+
+
+## R0 B.11 A-51: the uplink margin, request TTL and echo window come from `rules`; the consts are the defaults.
+func configure(rules: RulesDef) -> void:
+	_uplink_r = _ceiling_r - float(rules.uplink_margin_m)
+	_request_ttl_s = rules.request_ttl_s
+	orders.echo_window_s = rules.override_echo_s
 
 
 # --- guards (pure) -------------------------------------------------------------------------------------------------
@@ -135,7 +143,7 @@ func request_from(id: int) -> int:
 		return -1
 	var s: int = EntityId.slot(id)
 	var q: int = _request_from[s]
-	if q == EntityStore.NONE_U8 or _events.tick - _request_tick[s] > REQUEST_TTL_S * _hz:
+	if q == EntityStore.NONE_U8 or _events.tick - _request_tick[s] > _request_ttl_s * _hz:
 		return -1
 	return q
 

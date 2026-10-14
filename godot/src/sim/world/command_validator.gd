@@ -5,7 +5,8 @@ class_name CommandValidator extends RefCounted
 ## step 1 applies the command, so a command made invalid by an earlier one in the same tick has no effect.
 ## The bucket counts every command that passes the rate check, accepted or not; PILOT_INPUT is exempt (04 0x04).
 
-## 04 s11.3 "COMMAND 10/s sustained, burst 30" (the one command-rate rule). needs content: rules.json fields.
+## 04 s11.3 "COMMAND 10/s sustained, burst 30" (the one command-rate rule): documented defaults of `rules.json`
+## `command_rate_per_s` / `command_burst` (R0 B.11 A-51), which `_init` reads.
 const RATE_PER_S: int = 10
 const BURST: int = 30
 ## sim/MODULE.md "Data owned": pending command queue <= 256 per tick; overflow rejects with REJECTED_RATE.
@@ -18,6 +19,8 @@ var _store: EntityStore
 var _players: PlayerTable
 var _defs: WorldDefs
 var _rules: MatchRules
+var _rate: int = RATE_PER_S
+var _burst: int = BURST
 var _control: ControlMachine
 var _tokens: PackedInt32Array = PackedInt32Array()   ## per player, in 1 / tick_hz commands
 var _last: PackedInt32Array = PackedInt32Array()     ## tick of the last refill
@@ -32,9 +35,12 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	_defs = defs
 	_rules = rules
 	_control = control
+	if defs.rules != null:
+		_rate = defs.rules.command_rate_per_s
+		_burst = defs.rules.command_burst
 	var e: int = _tokens.resize(PlayerTable.SLOTS) | _last.resize(PlayerTable.SLOTS)
 	assert(e == OK)
-	_tokens.fill(BURST * rules.tick_hz)
+	_tokens.fill(_burst * rules.tick_hz)
 	_last.fill(0)
 
 
@@ -111,8 +117,8 @@ func read_state(buf: StreamPeerBuffer) -> bool:
 
 
 func _take_token(p: int, tick: int) -> bool:
-	var cap: int = BURST * _rules.tick_hz
-	var t: int = mini(cap, _tokens[p] + maxi(tick - _last[p], 0) * RATE_PER_S)
+	var cap: int = _burst * _rules.tick_hz
+	var t: int = mini(cap, _tokens[p] + maxi(tick - _last[p], 0) * _rate)
 	_last[p] = tick
 	if t < _rules.tick_hz:
 		_tokens[p] = t

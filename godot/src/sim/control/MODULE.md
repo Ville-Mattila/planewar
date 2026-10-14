@@ -27,9 +27,10 @@ enum ReleaseReason { PLAYER, DEATH, CEILING, HANDOVER, DISCONNECT, MATCH, INVALI
 enum OrderFail { INVALID_TARGET, UNREACHABLE, STUCK, OVERRIDDEN, INVALID_ON_RESUME, NO_PAD, NO_AMMO }   # ORDER_FAILED reason, R0 B.3 order
 const DECAY_TICKS: int                                                       # 10 = net InputBuffer.DECAY_TICKS (A-45)
 const DECAY_FACTOR: float; const KEEP_BUTTONS: int                           # 0.5 per silent tick; BOOST | BRAKE held (A-44)
-const REQUEST_TTL_S: int; const ECHO_WINDOW_S: int; const UPLINK_MARGIN_M: int   # 10 s, 10 s, 50 m (needs content)
+const REQUEST_TTL_S: int; const ECHO_WINDOW_S: int; const UPLINK_MARGIN_M: int   # defaults of rules.json request_ttl_s / override_echo_s / uplink_margin_m (A-51)
 var orders: ControlOrders
 func _init(store: EntityStore, queue: OrderQueue, players: PlayerTable, inputs: InputSlots, events: SimEvents, ceiling_hard_m: float, tick_hz: int) -> void
+func configure(rules: RulesDef) -> void                                      # (TA-49) uplink margin, request TTL, echo window from rules.json; SimWorld calls it after _init
 func check_possess(p: int, t: int, claimed: bool) -> int                     # C6 / C6r, CommandResult.Code; pure
 func check_release(p: int, t: int) -> int;  func check_request(cmd: Command) -> int   # C9; C8 / C10 (V-REQ); pure
 func spectator(p: int) -> bool                                               # open slot, or team lost its last Core
@@ -46,6 +47,7 @@ func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPee
 class_name ControlOrders extends RefCounted                                  # C1-C5, C7, the C9 resume rule
 var queue: OrderQueue; var rules: OrderRules                                 # rules null: every order valid on resume
 func _init(store: EntityStore, q: OrderQueue, players: PlayerTable, events: SimEvents, tick_hz: int) -> void
+var echo_window_s: int                                                       # (TA-49) rules.override_echo_s, set by ControlMachine.configure
 func room(s: int, flags: int) -> bool                                        # C3 guard (REJECTED_CAP when false)
 func order(spec: OrderSpec, ids: PackedInt32Array) -> void                   # C1 / C2 (+ OVERRIDDEN echo) / C3 / C7
 func complete_head(s: int) -> bool;  func fail_head(s: int, reason: int) -> bool   # C4 ORDER_DONE; C5 ORDER_FAILED
@@ -96,8 +98,8 @@ measure 15.5 µs per tick with 8 possessed ships (20,000-tick loop, owner's mach
 
 ## Open items
 
-- `rules.json` `request_ttl_s` 10, `override_echo_s` 10 and `uplink_margin_m` 50 exist (R0 B.11 A-51); **TA-49** reads them in `_init`
-  and `REQUEST_TTL_S` / `ECHO_WINDOW_S` / `UPLINK_MARGIN_M` become the documented defaults (no symbol removed). Contract ratified as built (A-61).
+- `rules.json` `request_ttl_s` 10, `override_echo_s` 10 and `uplink_margin_m` 50 exist (R0 B.11 A-51); **TA-49** reads them in `configure(rules)` (a new method, so `_init` keeps its signature)
+  and `REQUEST_TTL_S` / `ECHO_WINDOW_S` / `UPLINK_MARGIN_M` are the documented defaults (no symbol removed). Contract ratified as built (A-61).
 - Callers still to land (named in their acceptance by A-61): AI-15 / brains call `ControlOrders.complete_head` / `fail_head` (C4, C5);
   Economy / GD-20 calls `release_team` when a team loses its last Core (C16); NET-19 maps `RELEASED` / `HANDOVER` to 04 messages and is
   the one owner of the C13 decay (server `InputBuffer` or sim C13, never both; both use 10 ticks); AI-08 executes the overlays.

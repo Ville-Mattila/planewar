@@ -30,6 +30,7 @@ var expansions_total: int; var abstract_units: int
 func load_weights(map_dir: String) -> Error;  func set_weights(bytes: PackedByteArray) -> bool
 func set_terrain(t: Terrain) -> void;  func override_slope(cell: int, slope_deg: int) -> void;  func prepare(mask: int) -> void
 func set_heuristic_pct(pct: int) -> void;  static func mask_for(max_slope_deg: float) -> int
+static func from_rules(rules: RulesDef) -> Pathing                           # (TA-49) rules.path_expansions_per_tick + path_heuristic_pct (A-51)
 func request(from: Vector3, to: Vector3, mask: int) -> int                   # R0 B.5; NO_TICKET when 160 are pending
 func status(ticket: int) -> int;  func result(ticket: int) -> PackedVector3Array;  func result_cells(ticket: int) -> PackedInt32Array
 func done_tick(ticket: int) -> int;  func request_tick(ticket: int) -> int;  func release(ticket: int) -> void;  func pending() -> int
