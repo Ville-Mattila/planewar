@@ -15,6 +15,7 @@ const K_PROJECTILE: int = DefRanges.K_PROJECTILE
 
 var rules: RulesDef = null
 var flight_common: FlightCommonDef = null
+var ground_common: GroundCommonDef = null
 var ships: Array[ShipDef] = []
 var ground_units: Array[GroundUnitDef] = []
 var structures: Array[StructureDef] = []  ## incl. towers
@@ -212,6 +213,7 @@ func _adopt(s: ContentSet, texts: Dictionary) -> void:
 	_texts = texts
 	rules = s.rules
 	flight_common = s.flight_common
+	ground_common = s.ground_common
 	ships = s.ships
 	ground_units = s.ground_units
 	structures = s.structures

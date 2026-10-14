@@ -118,6 +118,10 @@ Reading order for a lane engineer: the B.11 table in `docs/reviews/R0-resolution
 
 **Default if the owner says nothing:** (a). What S-SIM-1 (TA-22) must prove, verbatim for its acceptance: each of 6 concurrent instances p95 <= 25 ms and p99 <= 33 ms with the recommended `sim_budget_profile`, the per-row table above filled for both machines, memory flat, and for every rung it recommends the measured saving.
 
+## A-63 (orchestrator ruling, post-merge) Ground-motion constants live in `ground_common`
+
+TA-38 first put `ground_turn_rate_dps` (40), `ground_reverse_speed_mps` (3), `ground_reverse_hold_s` (0.5) and `ground_slope_speed_loss` (0.6) in `rules.json`. R0 B.1 keeps `rules.json` to world constants and R0 C2-11 reads ground-motion constants from `GroundUnitDef` / common blocks, so the Opus review of #44 asked for a move. Ruling (orchestrator; the Architect may revisit): the four fields form a top-level `ground_common` object in `ground_units.json`, mirroring `flight_common` in `ships.json`, loaded as `GroundCommonDef` (`ContentSet.ground_common`, `WorldDefs.ground_common`); `rules.json`, `rules.schema.json` and `RulesDef` are unchanged. The values are TA-38's (`ground_turn_rate_dps` is a tuning value the owner may retune). Also recorded: GroundMotion lets a unit standing on terrain steeper than `max_slope_deg` climb out (speed factor floored at `1 - ground_slope_speed_loss`), a deviation from the strict block of 03 s5.3 (`sim/ground/MODULE.md`).
+
 ## Register and impact
 
 | Item | Entry |

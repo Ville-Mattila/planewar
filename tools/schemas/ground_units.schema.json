@@ -8,6 +8,43 @@
     "_doc": {
       "$ref": "#/$defs/doc"
     },
+    "ground_common": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "A-63: constants shared by every ground unit, mirroring ships.json flight_common (R0 C2-11). Read by sim GroundMotion.",
+      "properties": {
+        "ground_turn_rate_dps": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 360,
+          "$comment": "03 s5.3: heading rate at full yaw stick, degrees per second (tuning value)"
+        },
+        "ground_reverse_speed_mps": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10,
+          "$comment": "R0 C2-09: reverse speed (3 m/s) once BRAKE has been held ground_reverse_hold_s"
+        },
+        "ground_reverse_hold_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "$comment": "R0 C2-09: BRAKE held this long (0.5 s) turns stop into reverse"
+        },
+        "ground_slope_speed_loss": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "02 s3 / R0 C2-11: speed x (1 - loss x slope_deg / max_slope_deg); 0.6 canonical"
+        }
+      },
+      "required": [
+        "ground_reverse_hold_s",
+        "ground_reverse_speed_mps",
+        "ground_slope_speed_loss",
+        "ground_turn_rate_dps"
+      ]
+    },
     "ground_units": {
       "type": "array",
       "items": {
@@ -16,6 +53,7 @@
     }
   },
   "required": [
+    "ground_common",
     "ground_units"
   ],
   "$defs": {

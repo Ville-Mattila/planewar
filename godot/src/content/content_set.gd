@@ -4,6 +4,7 @@ class_name ContentSet extends RefCounted
 
 var rules: RulesDef = null
 var flight_common: FlightCommonDef = null
+var ground_common: GroundCommonDef = null
 var ships: Array[ShipDef] = []
 var ground_units: Array[GroundUnitDef] = []
 var structures: Array[StructureDef] = []  ## structures.json then towers.json

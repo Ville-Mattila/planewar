@@ -150,8 +150,9 @@ func test_bomb_kill_is_outright_whatever_the_hp() -> void:
 
 func test_bomb_hits_ground_units_within_20m_for_400() -> void:
 	var w: SimWorld = CombatTestKit.world()
-	var in_range: int = CombatTestKit.spawn(w, &"siege_crawler", 0, 0, _at(0.0, 26.5))   # radius 7: gap 19.5
-	var out: int = CombatTestKit.spawn(w, &"siege_crawler", 0, 0, _at(0.0, -27.5))        # gap 20.5
+	# GroundMotion (TA-38) snaps a crawler to datum + radius 7, so the gaps are set from that altitude.
+	var in_range: int = CombatTestKit.spawn(w, &"siege_crawler", 0, 0, _at(7.0, _east_for_gap(7.0, 7.0, 19.5)))
+	var out: int = CombatTestKit.spawn(w, &"siege_crawler", 0, 0, _at(7.0, -_east_for_gap(7.0, 7.0, 20.5)))
 	var _b: int = _bomb(w, 0.0)
 	var ev: Array[SimEvent] = _step(w)
 	var hits: Array[SimEvent] = CombatTestKit.of_kind(ev, SimEvent.Kind.HIT)
@@ -296,8 +297,8 @@ func test_flak_hits_every_enemy_ship_within_25m_and_nothing_on_the_ground() -> v
 
 func test_siege_shell_blast_hits_ground_and_structures_inside_12m() -> void:
 	var w: SimWorld = CombatTestKit.world()
-	var near: int = CombatTestKit.spawn(w, &"siege_crawler", 0, 0, _at(0.0, 18.0))     # gap 11
-	var out: int = CombatTestKit.spawn(w, &"siege_crawler", 0, 0, _at(0.0, -20.5))     # gap 13.5
+	var near: int = CombatTestKit.spawn(w, &"siege_crawler", 0, 0, _at(7.0, _east_for_gap(7.0, 7.0, 11.0)))     # gap 11
+	var out: int = CombatTestKit.spawn(w, &"siege_crawler", 0, 0, _at(7.0, -_east_for_gap(7.0, 7.0, 13.5)))    # gap 13.5
 	var _s: int = CombatTestKit.shot(w, &"siege_shell", &"siege_gun", _at(0.5), 1, 1, 0, 2.0)
 	var _ev: Array[SimEvent] = _step(w)
 	assert_float(CombatTestKit.hp(w, near)).is_equal(280.0)

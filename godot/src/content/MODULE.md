@@ -29,7 +29,7 @@ const K_SHIP: int; const K_GROUND: int; const K_STRUCTURE: int; const K_WEAPON: 
 func load_all(root: String = DEFS_ROOT) -> Result                   # synchronous; emits loaded(ok); a failure leaves nothing loaded (N3)
 func load_all_async(root: String = DEFS_ROOT) -> void              # same outcome; on web yields a frame between files
 func is_loaded() -> bool
-var rules: RulesDef;              var flight_common: FlightCommonDef
+var rules: RulesDef;              var flight_common: FlightCommonDef;  var ground_common: GroundCommonDef
 var ships: Array[ShipDef];        var ground_units: Array[GroundUnitDef];   var structures: Array[StructureDef]   # structures incl. towers
 var weapons: Array[WeaponDef];    var projectiles: Array[ProjectileDef];    var doctrines: Array[DoctrineDef]
 var economy: EconomyDef;          var match_rules: MatchRulesDef;           var modes: Array[ModeDef]
@@ -71,6 +71,9 @@ static func from_dict(d: Dictionary) -> ShipDef
 class_name FlightCommonDef extends RefCounted   # the top-level flight_common object of ships.json
 var raw: Dictionary; var errors: Array[String]; var unknown: Array[String]
 static func from_dict(d: Dictionary) -> FlightCommonDef
+class_name GroundCommonDef extends RefCounted   # the top-level ground_common object of ground_units.json (A-63): turn rate, reverse speed / hold, slope speed loss
+var raw: Dictionary; var errors: Array[String]; var unknown: Array[String]
+static func from_dict(d: Dictionary) -> GroundCommonDef
 class_name StructureDef extends Def   # structures.json and towers.json
 var tower: Dictionary; var shield: Dictionary; var integrated_shield: Dictionary; var explode: Dictionary
 static func from_dict(d: Dictionary) -> StructureDef

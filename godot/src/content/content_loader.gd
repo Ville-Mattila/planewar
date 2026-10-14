@@ -93,6 +93,16 @@ func _load_world() -> void:
 			_s.warnings.append("ships.json: flight_common: unknown key '%s'" % u)
 	else:
 		_s.errors.append("ships.json: flight_common missing")
+	var gc: Variant = _top("ground_units.json").get("ground_common")
+	if typeof(gc) == TYPE_DICTIONARY:
+		var gcd: Dictionary = gc
+		_s.ground_common = GroundCommonDef.from_dict(gcd)
+		for e: String in _s.ground_common.errors:
+			_s.errors.append("ground_units.json: %s" % e)
+		for u: String in _s.ground_common.unknown:
+			_s.warnings.append("ground_units.json: ground_common: unknown key '%s'" % u)
+	else:
+		_s.errors.append("ground_units.json: ground_common missing")
 	_s.economy = EconomyDef.from_dict(_top("economy.json"))
 	_take(_s.economy, "economy.json")
 	_s.match_rules = MatchRulesDef.from_dict(_top("match_rules.json"))

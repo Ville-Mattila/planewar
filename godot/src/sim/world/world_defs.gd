@@ -8,6 +8,7 @@ const NEUTRAL: int = PlayerTable.SLOTS
 var content: ContentSet
 var rules: RulesDef
 var common: FlightCommonDef
+var ground_common: GroundCommonDef
 var economy: EconomyDef
 var base: ResolvedDefs
 var projectile_radius: PackedFloat32Array = PackedFloat32Array()   ## by ProjectileStore.projectile_def (local index)
@@ -24,6 +25,7 @@ func _init(cs: ContentSet) -> void:
 	content = cs
 	rules = cs.rules
 	common = cs.flight_common
+	ground_common = cs.ground_common
 	economy = cs.economy
 	base = DoctrineResolver.resolve(null, cs.ships, cs.ground_units, cs.structures, cs.weapons, cs.projectiles)
 	ship_count = cs.ships.size()
