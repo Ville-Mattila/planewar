@@ -23,8 +23,9 @@ static func intercept_time(r: Vector3, u: Vector3, speed: float) -> float:
 	if disc < 0.0:
 		return NONE
 	var sq: float = sqrt(disc)
-	var t1: float = (-b - sq) / a
-	var t2: float = (-b + sq) / a
+	var q: float = -(b + sq) if b >= 0.0 else -(b - sq)       # no cancellation: q has the larger magnitude
+	var t1: float = q / a
+	var t2: float = c / q
 	var lo: float = minf(t1, t2)
 	var hi: float = maxf(t1, t2)
 	if lo > 0.0:

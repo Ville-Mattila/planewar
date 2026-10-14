@@ -6,6 +6,7 @@ class_name TargetChooser extends RefCounted
 ## function of state. Budget: 05 s10 think row, one choice point (25 us) per think.
 
 const NONE: int = 0
+const TIE_REL: float = 0.000001
 
 
 ## 05 s6.2: `w * 1 / (1 + dist / falloff)` x attacked x low-hp x under-tower x focus-fire factors.
@@ -56,35 +57,42 @@ static func pick(ids: PackedInt32Array, scores: PackedFloat32Array, n: int, curr
 
 
 ## Dart / Lancer choice point: `cand[0..n)` are ids from `view.ids_near`; only team-visible, living enemies of weighted
-## class within `radius` of `origin` are scored. Fills `ctx.scores` (aligned with the compacted `out`). Returns the pick.
+## class within `radius` of `origin` qualify. The cost is bounded whatever `n` is: one cheap pass (6 `SimView` reads per
+## candidate) keeps the best `p.max_candidates` by the unmodified `w / (1 + dist / falloff)`, then only those are fully
+## scored (`out` and `ctx.scores` must hold that many). `current` is the caller's own target: it counts in
+## `ctx.targeted_by`, so it is excluded from the focus-fire count of that candidate. Returns the pick.
 static func choose_ship(view: SimView, team: int, cand: PackedInt32Array, n: int, origin: Vector3, radius: float,
 		current: int, tick: int, ctx: TargetContext, p: TargetParams, out: PackedInt32Array) -> int:
+	assert(out.size() >= p.max_candidates and ctx.scores.size() >= p.max_candidates, "choice-point scratch too small")
 	var k: int = 0
 	var r2: float = radius * radius
 	for i: int in n:
 		var id: int = cand[i]
 		if not view.alive(id) or view.team(id) == team or not view.visible_to(team, id):
 			continue
-		var pos: Vector3 = view.pos(id)
-		var d2: float = origin.distance_squared_to(pos)
-		var def_id: int = view.def_id(id)
-		var w: float = p.weight(def_id, view.cargo(id) > 0.0)
+		var d2: float = origin.distance_squared_to(view.pos(id))
+		var w: float = p.weight(view.def_id(id), view.cargo(id) > 0.0)
 		if d2 > r2 or w <= 0.0:
 			continue
+		k = _keep_best(out, ctx.scores, k, p.max_candidates, id, w / (1.0 + sqrt(d2) / p.falloff_m))
+	for j: int in k:
+		var id: int = out[j]
+		var pos: Vector3 = view.pos(id)
+		var def_id: int = view.def_id(id)
 		var under: bool = p.under_tower_penalty < 1.0 and ctx.under_tower(pos, def_id, view.terrain_height(pos))
-		ctx.scores[k] = score_ship(w, sqrt(d2), view.hp01(id), ctx.attacked_recently(id, tick), under,
-			ctx.targeted_by[EntityId.slot(id)], p)
-		out[k] = id
-		k += 1
+		ctx.scores[j] = score_ship(p.weight(def_id, view.cargo(id) > 0.0), origin.distance_to(pos), view.hp01(id),
+			ctx.attacked_recently(id, tick), under, _others(ctx, id, current), p)
 	return pick(out, ctx.scores, k, current, p.switch_margin)
 
 
 ## Tower choice point: eligible = visible enemy inside the envelope and range (`TowerEnvelope.eligible`); `aim` is the
-## turret's current unit direction, `slew_s` = angle to the target / turret rate. `guarded` (0 = no GUARD order) doubles
-## attackers of that structure (the caller marks them with `ctx.mark_attacker`).
+## turret's current unit direction, `slew_s` = angle to the target / turret rate. Bounded like `choose_ship`: the best
+## `p.max_candidates` by priority weight are scored. `guarded` (0 = no GUARD order) doubles attackers of that structure
+## (the caller marks them with `ctx.mark_attacker`). `current` is excluded from its own crowd count.
 static func choose_tower(view: SimView, team: int, tower_pos: Vector3, aim: Vector3, env: TowerEnvelope,
 		range_m: float, cand: PackedInt32Array, n: int, current: int, tick: int, ctx: TargetContext, p: TargetParams,
 		guarded: int, out: PackedInt32Array) -> int:
+	assert(out.size() >= p.max_candidates and ctx.scores.size() >= p.max_candidates, "choice-point scratch too small")
 	var k: int = 0
 	for i: int in n:
 		var id: int = cand[i]
@@ -95,10 +103,34 @@ static func choose_tower(view: SimView, team: int, tower_pos: Vector3, aim: Vect
 		var base: float = env.base_weight(def_id, view.cargo(id) > 0.0)
 		if base <= 0.0 or not env.eligible(tower_pos, pos, def_id, range_m, view.terrain_height(pos)):
 			continue
+		k = _keep_best(out, ctx.scores, k, p.max_candidates, id, base)
+	for j: int in k:
+		var id: int = out[j]
+		var pos: Vector3 = view.pos(id)
 		var slew: float = aim.angle_to((pos - tower_pos).normalized()) / env.turn_rad_s if env.turn_rad_s > 0.0 else 0.0
 		var attacking: bool = ctx.attacked_recently(id, tick)
-		ctx.scores[k] = score_tower(base, attacking, view.hp01(id), ctx.targeted_by[EntityId.slot(id)],
-			guarded != 0 and attacking, slew, p)
-		out[k] = id
-		k += 1
+		ctx.scores[j] = score_tower(env.base_weight(view.def_id(id), view.cargo(id) > 0.0), attacking, view.hp01(id),
+			_others(ctx, id, current), guarded != 0 and attacking, slew, p)
 	return pick(out, ctx.scores, k, current, p.tower_switch_margin)
+
+
+# Friendly units targeting `id` other than the chooser itself (which is counted when `id` is its current target).
+static func _others(ctx: TargetContext, id: int, current: int) -> int:
+	return ctx.targeted_by[EntityId.slot(id)] - (1 if id == current else 0)
+
+
+# Insertion into the top-`cap` list ordered by descending pre-score; an equal score goes behind the earlier candidate.
+static func _keep_best(ids: PackedInt32Array, sc: PackedFloat32Array, k: int, cap: int, id: int, u: float) -> int:
+	var at: int = k
+	var lim: float = u * (1.0 - TIE_REL)           # scores are float32: values equal to float32 precision tie
+	while at > 0 and sc[at - 1] < lim:
+		at -= 1
+	if at >= cap:
+		return k
+	var last: int = mini(k, cap - 1)
+	for j: int in range(last, at, -1):
+		ids[j] = ids[j - 1]
+		sc[j] = sc[j - 1]
+	ids[at] = id
+	sc[at] = u
+	return mini(k + 1, cap)

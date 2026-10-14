@@ -24,6 +24,7 @@ var tower_attack_radius_m: float = 600.0
 var tower_hp_gain: float = 0.5             ## (1 + gain * (1 - hp01))
 var tower_crowd_mult: float = 0.7          ## more than `tower_crowd_count` friendly towers already target it
 var tower_crowd_count: int = 2
+var max_candidates: int = 8                ## 05 s10: full scoring for at most this many (cost bound; `out`/scratch must hold it)
 var guard_mult: float = 2.0                ## GUARD order: attackers of the guarded structure
 var rank_weights: PackedFloat32Array = PackedFloat32Array()   ## tower base weights by priority rank
 var weights: Dictionary = {}               ## class name (StringName) -> weight
@@ -84,6 +85,7 @@ func _optional(d: Dictionary) -> void:
 	tower_crowd_mult = num(d, "tower_crowd_mult", tower_crowd_mult)
 	tower_crowd_count = int(num(d, "tower_crowd_count", float(tower_crowd_count)))
 	guard_mult = num(d, "guard_mult", guard_mult)
+	max_candidates = maxi(int(num(d, "max_candidates", float(max_candidates))), 1)
 	var rw: Array = DEFAULT_RANK_WEIGHTS
 	var v: Variant = d.get("tower_rank_weights")
 	if v is Array:

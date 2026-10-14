@@ -6,6 +6,8 @@ extends GdUnitTestSuite
 const R: float = Sphere.PLANET_RADIUS
 const ME: int = 0
 const FOE: int = 1
+const THINK_ROW_US: float = 25.0   # 05 s10 "Think slice" per-item budget (6 probes, 1 neighbour query, 1 choice point)
+const CI_TOLERANCE: float = 3.0
 
 var _c: ContentSet
 var _p: TargetParams
@@ -15,31 +17,57 @@ var _out: PackedInt32Array = PackedInt32Array()
 
 
 class FakeView extends SimView:
-	var rows: Dictionary = {}        ## id -> [pos, def_id, team, hp01, cargo, visible]
+	## Typed arrays by slot so the view costs what a SimView read costs (an array index), not a Dictionary lookup.
+	var _pos: PackedVector3Array = PackedVector3Array()
+	var _def: PackedInt32Array = PackedInt32Array()
+	var _team: PackedInt32Array = PackedInt32Array()
+	var _hp: PackedFloat32Array = PackedFloat32Array()
+	var _cargo: PackedFloat32Array = PackedFloat32Array()
+	var _vis: PackedByteArray = PackedByteArray()
+	var _live: PackedByteArray = PackedByteArray()
+	var reads: int = 0
 
-	func put(id: int, pos: Vector3, def_id: int, team: int = 1, hp: float = 1.0, cargo_: float = 0.0, vis: bool = true) -> void:
-		rows[id] = [pos, def_id, team, hp, cargo_, vis]
+	func _init() -> void:
+		var _r: Array[int] = [_pos.resize(128), _def.resize(128), _team.resize(128), _hp.resize(128), _cargo.resize(128),
+			_vis.resize(128), _live.resize(128)]
+
+	func put(id: int, pos_: Vector3, def_id_: int, team_: int = 1, hp: float = 1.0, cargo_: float = 0.0, vis: bool = true) -> void:
+		var s: int = EntityId.slot(id)
+		_pos[s] = pos_
+		_def[s] = def_id_
+		_team[s] = team_
+		_hp[s] = hp
+		_cargo[s] = cargo_
+		_vis[s] = 1 if vis else 0
+		_live[s] = 1
 
 	func alive(id: int) -> bool:
-		return rows.has(id)
+		reads += 1
+		return _live[EntityId.slot(id)] != 0
 
 	func pos(id: int) -> Vector3:
-		return (rows[id] as Array)[0]
+		reads += 1
+		return _pos[EntityId.slot(id)]
 
 	func def_id(id: int) -> int:
-		return (rows[id] as Array)[1]
+		reads += 1
+		return _def[EntityId.slot(id)]
 
 	func team(id: int) -> int:
-		return (rows[id] as Array)[2]
+		reads += 1
+		return _team[EntityId.slot(id)]
 
 	func hp01(id: int) -> float:
-		return (rows[id] as Array)[3]
+		reads += 1
+		return _hp[EntityId.slot(id)]
 
 	func cargo(id: int) -> float:
-		return (rows[id] as Array)[4]
+		reads += 1
+		return _cargo[EntityId.slot(id)]
 
 	func visible_to(_t: int, id: int) -> bool:
-		return (rows[id] as Array)[5]
+		reads += 1
+		return _vis[EntityId.slot(id)] != 0
 
 	func terrain_height(_d: Vector3) -> float:
 		return 0.0
@@ -276,18 +304,61 @@ func test_tower_hysteresis_and_slew_time() -> void:
 # endregion
 
 
-func test_deterministic_and_cheap() -> void:
+func _fill(count: int) -> Array[int]:
 	var ids: Array[int] = []
-	for i: int in 24:
+	for i: int in count:
 		var d: StringName = [&"dart", &"bomber", &"lancer", &"scout"][i % 4]
-		_view.put(_id(i + 1), _at(200.0 + 20.0 * float(i), 40.0 * float(i)), _def(d), FOE, 0.3 + 0.03 * float(i))
+		_view.put(_id(i + 1), _at(200.0 + 20.0 * float(i), 40.0 * float(i)), _def(d), FOE, 0.3 + 0.01 * float(i))
 		ids.append(_id(i + 1))
+	return ids
+
+
+func test_deterministic() -> void:
+	var ids: Array[int] = _fill(24)
 	var first: int = _choose(ids, 0)
 	for i: int in 20:
 		assert_int(_choose(ids, 0)).is_equal(first)
+
+
+func test_candidate_cap_keeps_the_best_by_base_score() -> void:
+	# 40 candidates, cap 8: only the 8 best by w / (1 + d / falloff) are fully scored; the bomber nearest wins.
+	var ids: Array[int] = _fill(40)
+	var got: int = _choose(ids, 0)
+	assert_int(got).is_equal(_id(2))                  # i = 1 is the closest bomber (weight 1.0)
+	assert_int(_out[0]).is_equal(_id(2))              # `out` keeps the kept set in base-score order
+	# Reads are bounded: the cheap pass reads <= 6 per candidate, the full pass <= 6 per kept candidate.
+	_view.reads = 0
+	var _r: int = _choose(ids, 0)
+	assert_int(_view.reads).is_less_equal(6 * 40 + 6 * 8)
+
+
+func test_chooser_is_not_counted_in_the_focus_fire_of_its_own_target() -> void:
+	_view.put(_id(1), _at(300.0, 500.0), _def(&"dart"))
+	_view.put(_id(2), _at(300.0, -500.0), _def(&"dart"))
+	_ctx.add_targeter(_id(1))                         # this ship targets id 1 and is counted
+	_ctx.add_targeter(_id(1))                         # one other friendly too: 1 other < focus_count 2
+	# Others on id 1 = 1: no x 0.5, so 1 keeps the pick (the earlier tie); counting itself it would be 2 and lose.
+	assert_int(_choose([_id(1), _id(2)], _id(1))).is_equal(_id(1))
+	_ctx.add_targeter(_id(1))                         # now 2 others: halved, the margin does not hold it
+	assert_int(_choose([_id(1), _id(2)], _id(1))).is_equal(_id(2))
+
+
+func test_cost_of_one_choice_point_at_the_budget_row() -> void:
+	# 05 s10 think row: 25 us per think holding 6 probes, a neighbour query and ONE choice point; the chooser is allowed
+	# that whole row at N = max_candidates = 8 with a 3x CI tolerance (a shared runner, GDScript debug build).
+	var ids: Array[int] = _fill(8)
+	var first: int = _choose(ids, 0)
 	var t0: int = Time.get_ticks_usec()
 	for i: int in 200:
 		var _r: int = _choose(ids, first)
 	var us: float = float(Time.get_ticks_usec() - t0) / 200.0
-	print("choose_ship over 24 candidates: %.1f us" % us)
-	assert_float(us).is_less(500.0)
+	print("choose_ship at N=8: %.1f us" % us)
+	assert_float(us).is_less(THINK_ROW_US * CI_TOLERANCE)
+	# Bounded whatever n: 64 candidates cost less than 4x the N=8 call (cheap pass only) and never full-score more than 8.
+	var many: Array[int] = _fill(64)
+	t0 = Time.get_ticks_usec()
+	for i: int in 200:
+		var _r: int = _choose(many, first)
+	var us64: float = float(Time.get_ticks_usec() - t0) / 200.0
+	print("choose_ship at n=64 (cap 8): %.1f us" % us64)
+	assert_float(us64).is_less(THINK_ROW_US * CI_TOLERANCE * 4.0)
