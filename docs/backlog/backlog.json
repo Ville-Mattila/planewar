@@ -1854,8 +1854,11 @@
       " R0 B.5",
       " 05 AI-09"
     ],
-    "status": "todo",
-    "acceptance_append": "; in L4 TRANSITION the law never commands AGL below landing.hover_agl_m (vz_cmd >= 0 under the floor) and a C_TERRAIN contact during L4-L6 counts as a failed landing in SC-04 (R0 B.12 A-70)"
+    "status": "done",
+    "acceptance_append": "; in L4 TRANSITION the law never commands AGL below landing.hover_agl_m (vz_cmd >= 0 under the floor) and a C_TERRAIN contact during L4-L6 counts as a failed landing in SC-04 (R0 B.12 A-70)",
+    "merged": "2026-10-14",
+    "pr": "public#50",
+    "note": "0 scrapes / 0 aborts with hover_agl floor (A-70); scenarios run on test-only LandingWorld until GD-15 docking; act 7-16 us vs 6 us budget; damping_only scenarios crash in approach (AI-06); signatures differ from 05 (recorded in steer MODULE.md); landing/rtb keys need content (AI-19)"
   },
   {
     "id": "AI-10",
