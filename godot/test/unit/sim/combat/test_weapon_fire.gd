@@ -157,6 +157,7 @@ func _bursts(shots: PackedInt32Array, split: int) -> Array[PackedInt32Array]:
 
 func test_tower_fires_5_round_bursts_every_1_2_s() -> void:
 	var w: SimWorld = CombatTestKit.world()
+	CombatTestKit.power(w, 1, 1)
 	var gun: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0))
 	FireTestKit.hook(w).hold(gun, FIRE1)
 	var t0: int = w.tick()
@@ -175,6 +176,7 @@ func test_tower_fires_5_round_bursts_every_1_2_s() -> void:
 
 func test_unsupplied_tower_fires_at_half_rate() -> void:
 	var w: SimWorld = CombatTestKit.world()
+	CombatTestKit.power(w, 1, 1)
 	var fed: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0))
 	var cut: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0, 0.0, 300.0))
 	FireTestKit.combat(w).fire.unsupplied[EntityId.slot(cut)] = 1
@@ -201,6 +203,7 @@ func test_unsupplied_tower_fires_at_half_rate() -> void:
 
 func test_flak_battery_fires_a_two_shell_salvo_per_reload() -> void:
 	var w: SimWorld = CombatTestKit.world()
+	CombatTestKit.power(w, 1, 1)
 	var flak: int = CombatTestKit.spawn(w, &"flak_battery", 1, 1, _at(0.0))
 	FireTestKit.hook(w).hold(flak, FIRE1)
 	var shots: PackedInt32Array = FireTestKit.shot_ticks(w, flak, 61)
@@ -270,6 +273,7 @@ func test_lock_restarts_when_the_target_leaves_the_cone() -> void:
 
 func test_missile_tower_salvo_after_one_second_of_lock() -> void:
 	var w: SimWorld = CombatTestKit.world()
+	CombatTestKit.power(w, 1, 1)
 	var mt: int = CombatTestKit.spawn(w, &"missile_tower", 1, 1, _at(0.0))
 	var _tgt: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(300.0, 400.0))
 	FireTestKit.hook(w).hold(mt, FIRE1)

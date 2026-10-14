@@ -28,6 +28,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	_validator = validator
 	build = Build.new(defs, store, players, terrain, rules)
 	economy = Economy.new(store, players, defs, rules.tick_hz, events, build)
+	economy.sun_period_s = rules.sun_period_s
 	construction = Construction.new(store, players, defs, events, economy, build)
 	construction.applier = applier
 	production = Production.new(store, players, defs, rules, events, economy, applier)
@@ -67,6 +68,7 @@ func begin_tick(t: int) -> void:
 
 ## Step 10 (the economy row): pools and power, construction, production.
 func step(t: int, dt: float) -> void:
+	economy.set_clock(t)
 	economy.step()
 	construction.step(t, dt)
 	production.step(t, dt)
