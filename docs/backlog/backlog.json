@@ -976,7 +976,10 @@
       " R0 C2-23",
       " 03 TA-37"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#34",
+    "note": "vision row p95 0.6-0.85 ms (dev box); needs rules.json vision_hz; 02 owner: structures under construction/unpowered still sense; ~400 sensors/tick at S-SIM-1 scale vs 03 estimate ~70"
   },
   {
     "id": "TA-38",
