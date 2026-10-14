@@ -23,6 +23,10 @@ var request_ttl_s: int = 10               ## 05 C10 / C17 hand-over request life
 var override_echo_s: int = 10             ## 05 s3.4 OVERRIDDEN echo window
 var shooter_grace_ticks: int = 10         ## 03 s6.1 shooter skipped for this many ticks
 var path_heuristic_pct: int = 25          ## 03 s3.6 A* heuristic inflation
+var ground_turn_rate_dps: float = 40.0     ## 03 s5.3 GroundMotion: heading rate at full yaw stick
+var ground_reverse_speed_mps: float = 3.0 ## R0 C2-09: reverse speed after BRAKE held
+var ground_reverse_hold_s: float = 0.5    ## R0 C2-09
+var ground_slope_speed_loss: float = 0.6  ## 02 s3: speed x (1 - loss x slope_deg / max_slope_deg)
 var rung_1_think_period_ticks: int = 15   ## cut_ladder (03 s4.3), rung ordinal = sim_budget_profile entry
 var rung_2_vision_hz: int = 5
 var rung_3_projectile_cap: int = 1400
@@ -32,7 +36,7 @@ var rung_6_unit_cap: int = 60
 var rung_8_path_expansions_per_tick: int = 60
 
 const SPEC: Dictionary = {
-	"f": "gravity ceiling_soft_m ceiling_hard_m",
+	"f": "gravity ceiling_soft_m ceiling_hard_m ground_turn_rate_dps ground_reverse_speed_mps ground_reverse_hold_s ground_slope_speed_loss",
 	"i": "tick_hz path_expansions_per_tick command_rate_per_s command_burst uplink_margin_m request_ttl_s override_echo_s shooter_grace_ticks path_heuristic_pct",
 	"n": "lift_model",
 	"p": "sim_budget_profile",

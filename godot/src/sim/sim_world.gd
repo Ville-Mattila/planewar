@@ -1,12 +1,11 @@
 class_name SimWorld extends RefCounted
 ## The tick driver (03 s3.5, s4.1; R0 B.5 tick order). Content is injected at `_init` (no autoload in the sim);
-## `load_map` builds every system for one match. `step()` runs, in order: 1 queued commands (+ disconnect
-## releases), 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-50), 4 assist
-## substitution (AI-10), 5 kinematics (DOCKED ships skipped, A-41; terrain contacts to Collision), 6 projectiles,
-## 7 spatial rebuild, 8 collision, 9 weapon fire, damage from the contacts and fuses (Combat, GD-08 / GD-36), deferred deaths,
-## 10 match timers (Economy, Production, Build, Docking and scoring land later), 11 vision (sim/vision/), 12 the caller
-## drains events. Systems not yet built are named in their step and cost nothing. Helpers: `sim/world/`; control
-## transitions: `sim/control/` (05 s2, AI-02).
+## `load_map` builds every system for one match. `step()` runs, in order: 1 queued commands (+ disconnect releases),
+## 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-50), 4 assist
+## substitution (AI-10), 5 kinematics (ships: DOCKED skipped, A-41, terrain contacts to Collision; ground: GroundMotion,
+## TA-38), 6 projectiles, 7 spatial rebuild, 8 collision, 9 weapon fire, damage from the contacts and fuses (Combat),
+## deferred deaths, 10 match timers (Economy, Production, Build, Docking and scoring land later), 11 vision, 12 the
+## caller drains events. Helpers: `sim/world/`; control transitions: `sim/control/` (05 s2, AI-02).
 
 const _MAPS_ROOT: String = "res://content/maps/"
 const _MAGIC: int = 0x57535750   ## "PWSW" little-endian
@@ -39,6 +38,7 @@ var _intake: CommandIntake = null
 var _motion: ProjectileMotion = null
 var _combat: Combat = null
 var _ships: ShipMotion = null
+var _ground: GroundMotion = null
 var _profiler: TickProfiler = TickProfiler.new()
 var _view: LocalSimView = null
 var _sink: SimSink = null
@@ -140,6 +140,7 @@ func step() -> void:
 	_assist_substitution()                                   # 4
 	_profiler.lap(TickProfiler.ROW_AI)
 	_ships.step(t, _dt)                                      # 5 (DOCKED skipped, A-41)
+	_ground.step(t, _dt)                                     # 5: GroundMotion (TA-38)
 	_profiler.lap(TickProfiler.ROW_KINEMATICS)
 	_motion.step(t, _dt)                                     # 6
 	_profiler.lap(TickProfiler.ROW_PROJECTILES)
@@ -322,6 +323,7 @@ func _wire(rules: MatchRules) -> void:
 	_profiler.enabled = rules.profile_enabled
 	_pathing = Pathing.from_rules(_defs.rules)
 	_pathing.set_terrain(_terrain)
+	_ground = GroundMotion.new(_store, _inputs, _defs, _terrain, _pathing)
 	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state, _pathing)
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
 	vision = Vision.new(_store, _defs, rules.tick_hz)
@@ -383,8 +385,7 @@ func _step_combat(t: int) -> void:
 
 
 # Step 10 match timers (02 s12.1): CORE_EXPOSURE once at core_exposure_s; at hard_end_s every possession is released
-# (05 C16) and MATCH_END fires (winner by surviving structure value is Economy's, GD-20). Core shield, caps and
-# scoring timers join here.
+# (05 C16) and MATCH_END fires (winner by surviving structure value is Economy's, GD-20). Shield, caps, scoring join here.
 func _step_match(t: int) -> void:
 	if _state.ended():
 		return

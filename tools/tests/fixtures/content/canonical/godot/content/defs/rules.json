@@ -20,6 +20,10 @@
  "override_echo_s": 10,
  "shooter_grace_ticks": 10,
  "path_heuristic_pct": 25,
+ "ground_turn_rate_dps": 40,
+ "ground_reverse_speed_mps": 3,
+ "ground_reverse_hold_s": 0.5,
+ "ground_slope_speed_loss": 0.6,
  "cut_ladder": {
   "rung_1_think_period_ticks": 15,
   "rung_2_vision_hz": 5,
