@@ -24,7 +24,7 @@ R0 B.5 signatures; "(03)" marks symbols 03 s15.4 adds. Anything not listed is pr
 class_name SimWorld extends RefCounted                                       # _init(content: ContentSet): defs injected, no autoload in the sim (TA-18)
 func load_map(map: MapDef, seed: int, rules: MatchRules) -> Result            # rules carries mode, caps profile, sim_budget_profile
 func add_player(slot: int, team: int, doctrine: StringName, kind: int) -> void   # kind: PlayerKind ordinal (Open items)
-func remove_player(slot: int) -> void                                        # disconnect: sim flags; the AI hook's caretaker takes over (05)
+func remove_player(slot: int) -> void;  func admin_release(slot: int) -> void   # disconnect (05 C12) / admin (C18), applied in the next step 1
 func set_ai_hook(hook: SimAiHook) -> void                                    # sim_ai attaches here; sim never imports sim_ai
 func apply_command(cmd: Command) -> CommandResult
 func step() -> void                                                          # one tick in the tick order below
@@ -296,5 +296,5 @@ Recipes (SimEvent kind, order kind, AlertKind / Command.Kind / CommandResult.Cod
   takes ring 2 above it); pad plane = structure `pos` / `up`; TA-19 sizes pad `radius`; `Collision.shooter_grace_ticks` needs a def field.
 - TA-18 type corrections for the Architect: `deserialize(content: ContentSet)` (`ContentDB` has no `class_name`), `arc() -> MatchArc.Arc`; `kind: int`
   + PlayerTable.KIND_*: a global `PlayerKind` trips D1 on net's `Protocol.PlayerKind` (needs net: rename, or needs tools: D1 skips local enums).
-- TA-18 `needs content:` def fields and the interim stand-ins (ControlMachine transitions, step-9 frees, validated-only kinds): `sim/world/MODULE.md`.
+- TA-18 `needs content:` def fields and the interim stand-ins (step-9 frees, validated-only kinds): `sim/world/MODULE.md`; control transitions: `sim/control/MODULE.md` (AI-02).
 - Owners: TA-11 store, TA-12 kinematics, TA-14 collision, TA-18 tick driver, TA-21 serialize format, TA-22 S-SIM-1, TA-37 vision, TA-38 ground; 05: steer/orders/control.

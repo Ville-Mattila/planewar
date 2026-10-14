@@ -22,7 +22,7 @@ func drive(id: int, input: PilotInput) -> bool:
 	var s: int = EntityId.slot(id)
 	if s >= InputSlots.ENTITY_SLOTS or not _store.alive(id):
 		return false
-	if _store.control_state[s] == CommandApplier.CS_POSSESSED:
+	if _store.control_state[s] == ControlMachine.State.POSSESSED:
 		return false
 	_inputs.set_entity(s, input)
 	return true
