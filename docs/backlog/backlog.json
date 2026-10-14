@@ -1792,8 +1792,10 @@
       "05 s5.4",
       " 05 AI-07"
     ],
-    "status": "todo",
-    "note": "SC-09/SC-10 moved to AI-05 (need FlightController + Dart brain); combined probe() single pass ruled by orchestrator (05 s5.3 budget 6 samples/think)"
+    "status": "done",
+    "note": "SC-09/SC-10 moved to AI-05 (need FlightController + Dart brain); combined probe() single pass ruled by orchestrator (05 s5.3 budget 6 samples/think)",
+    "merged": "2026-10-14",
+    "pr": "public#40"
   },
   {
     "id": "AI-08",
