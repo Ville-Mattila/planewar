@@ -33,11 +33,11 @@ func _init(store: EntityStore, inputs: InputSlots, defs: WorldDefs, terrain: Ter
 	_defs = defs
 	_terrain = terrain
 	_pathing = pathing
-	var r: RulesDef = defs.rules
-	_turn_rad = deg_to_rad(r.ground_turn_rate_dps)
-	_rev_speed = r.ground_reverse_speed_mps
-	_rev_hold = r.ground_reverse_hold_s
-	_loss = r.ground_slope_speed_loss
+	var c: GroundCommonDef = defs.ground_common
+	_turn_rad = deg_to_rad(c.ground_turn_rate_dps)
+	_rev_speed = c.ground_reverse_speed_mps
+	_rev_hold = c.ground_reverse_hold_s
+	_loss = c.ground_slope_speed_loss
 
 
 ## The 02 slope rule: 1 - loss x slope_deg / max_slope_deg, never below 0; a unit with no slope limit is never slowed.
@@ -97,6 +97,8 @@ func _resnap_due(s: int) -> bool:
 ## Signed speed in m/s for this tick (before the can-enter test): thrust fraction, BRAKE stop, reverse after the hold.
 func _speed(g: GroundUnitDef, thrust: float, braking: bool, held: float, dt: float, slope: float, cargo: float) -> float:
 	var factor: float = speed_factor(slope, g.max_slope_deg, _loss)
+	if slope > g.max_slope_deg:
+		factor = maxf(factor, 1.0 - _loss)   # climb-out: ground beyond the limit never stalls the unit (G2)
 	if braking:
 		return -minf(_rev_speed, g.ground_speed) * factor if held >= _rev_hold - dt * 0.5 else 0.0
 	var top: float = g.ground_speed_loaded if cargo > 0.0 and g.ground_speed_loaded > 0.0 else g.ground_speed

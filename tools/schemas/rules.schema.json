@@ -101,30 +101,6 @@
       "maximum": 100,
       "$comment": "03 s3.6 / TA-20 REPORT s3: A* heuristic inflation in percent; 25 measured (0 = exact A*); Pathing.set_heuristic_pct until TA-49"
     },
-    "ground_turn_rate_dps": {
-      "type": "number",
-      "exclusiveMinimum": 0,
-      "maximum": 360,
-      "$comment": "TA-38 / 03 s5.3: ground unit heading rate at full yaw stick, degrees per second (tuning value)"
-    },
-    "ground_reverse_speed_mps": {
-      "type": "number",
-      "exclusiveMinimum": 0,
-      "maximum": 10,
-      "$comment": "R0 C2-09: a ground unit reverses at this speed (3 m/s) once BRAKE has been held ground_reverse_hold_s"
-    },
-    "ground_reverse_hold_s": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 5,
-      "$comment": "R0 C2-09: BRAKE held this long (0.5 s) turns stop into reverse"
-    },
-    "ground_slope_speed_loss": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1,
-      "$comment": "02 s3 / R0 C2-11: ground speed x (1 - loss x slope_deg / max_slope_deg); 0.6 canonical"
-    },
     "cut_ladder": {
       "type": "object",
       "additionalProperties": false,
@@ -191,10 +167,6 @@
     "debug_commands",
     "friendly_fire",
     "gravity",
-    "ground_reverse_hold_s",
-    "ground_reverse_speed_mps",
-    "ground_slope_speed_loss",
-    "ground_turn_rate_dps",
     "lift_model",
     "override_echo_s",
     "path_expansions_per_tick",

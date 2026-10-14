@@ -1,5 +1,11 @@
 {
-  "_doc": "R0 B.1 ground_units.json: GroundUnitDef[] (owner 02). Values from 02 s3 table and R0 B.1 ground_units row. Slope speed rule (02 s3): speed * (1 - 0.6 * slope_deg / max_slope_deg). Fields shown as '-' in 02 s3 are omitted (default 0 / null). Mesh paths per 07 s10 (gnd_<id>).",
+  "_doc": "R0 B.1 ground_units.json: GroundUnitDef[] (owner 02). Values from 02 s3 table and R0 B.1 ground_units row. ground_common (A-63, mirrors flight_common): ground_turn_rate_dps 40 (tuning value, owner may retune), ground_reverse_speed_mps 3 and ground_reverse_hold_s 0.5 (R0 C2-09: BRAKE = stop, reverse at <= 3 m/s after 0.5 s held), ground_slope_speed_loss 0.6. Slope speed rule (02 s3): speed * (1 - 0.6 * slope_deg / max_slope_deg). Fields shown as '-' in 02 s3 are omitted (default 0 / null). Mesh paths per 07 s10 (gnd_<id>).",
+  "ground_common": {
+    "ground_turn_rate_dps": 40,
+    "ground_reverse_speed_mps": 3,
+    "ground_reverse_hold_s": 0.5,
+    "ground_slope_speed_loss": 0.6
+  },
   "ground_units": [
     {
       "id": "harvester",

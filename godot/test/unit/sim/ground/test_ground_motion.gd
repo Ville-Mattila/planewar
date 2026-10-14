@@ -12,7 +12,7 @@ var _defs: WorldDefs
 var _store: EntityStore
 var _inputs: InputSlots
 var _gm: GroundMotion
-var _rules: RulesDef
+var _rules: GroundCommonDef
 
 
 ## A terrain whose baked slope is a constant, or `steep` beyond the wall at dir.y > WALL_Y (flat otherwise).
@@ -27,7 +27,7 @@ class SlopeTerrain extends Terrain:
 
 func _rig(terrain: Terrain, pathing: Pathing = null) -> void:
 	_defs = WorldDefs.new(WorldTestKit.content())
-	_rules = _defs.rules
+	_rules = _defs.ground_common
 	_store = EntityStore.new()
 	_inputs = InputSlots.new()
 	_gm = GroundMotion.new(_store, _inputs, _defs, terrain, pathing)
@@ -123,6 +123,19 @@ func test_a_unit_on_too_steep_ground_can_always_climb_out() -> void:
 	_run(30)
 	assert_float(_store.pos[s].normalized().y).is_less(0.05)
 	assert_vector(_store.vel[s]).is_not_equal(Vector3.ZERO)
+
+
+func test_climb_out_works_even_where_the_02_factor_is_zero() -> void:
+	var tt: SlopeTerrain = SlopeTerrain.new()
+	tt.steep = 60.0     # beyond max_slope_deg / loss (41.7 degrees): the plain 02 factor is 0
+	tt.slope = 5.0
+	_rig(tt)
+	var g: GroundUnitDef = _def(&"harvester")
+	assert_float(GroundMotion.speed_factor(60.0, g.max_slope_deg, _rules.ground_slope_speed_loss)).is_equal(0.0)
+	var s: int = _spawn(&"harvester", Vector3(1, 0.05, 0), -_east())
+	_drive(s, 1.0, 0.0)
+	_run(30)
+	assert_float(_store.pos[s].normalized().y).is_less(0.05)
 
 
 func test_impassable_path_weight_blocks_but_the_cell_a_unit_stands_on_does_not() -> void:

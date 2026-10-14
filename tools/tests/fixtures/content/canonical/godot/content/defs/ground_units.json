@@ -1,4 +1,10 @@
 {
+ "ground_common": {
+   "ground_turn_rate_dps": 40,
+   "ground_reverse_speed_mps": 3,
+   "ground_reverse_hold_s": 0.5,
+   "ground_slope_speed_loss": 0.6
+ },
  "ground_units": [
   {
    "id": "harvester",

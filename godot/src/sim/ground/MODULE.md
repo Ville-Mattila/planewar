@@ -26,8 +26,8 @@ const RESNAP_TICKS: int                                                      # 8
 static func speed_factor(slope_deg: float, max_slope_deg: float, loss: float) -> float   # max(0, 1 - loss x slope_deg / max_slope_deg); 1 when max_slope_deg <= 0
 ```
 
-Constants come from `rules.json` (`ground_turn_rate_dps` 40, `ground_reverse_speed_mps` 3, `ground_reverse_hold_s` 0.5,
-`ground_slope_speed_loss` 0.6) and `ground_units.json` (`ground_speed`, `ground_speed_loaded`, `max_slope_deg`, `bounding_radius`).
+Constants come from the `ground_common` block of `ground_units.json` (A-63, like `flight_common`: `ground_turn_rate_dps` 40,
+`ground_reverse_speed_mps` 3, `ground_reverse_hold_s` 0.5, `ground_slope_speed_loss` 0.6; `GroundCommonDef`) and `ground_units.json` (`ground_speed`, `ground_speed_loaded`, `max_slope_deg`, `bounding_radius`).
 
 ## Per-unit state and input meaning
 
@@ -44,6 +44,11 @@ Constants come from `rules.json` (`ground_turn_rate_dps` 40, `ground_reverse_spe
   where the unit stands; a step is refused when the slope there exceeds `max_slope_deg` and is steeper than where the unit
   stands (so a unit on ground that is too steep, e.g. after a Build change, can always leave), or when the path cell it would
   enter has weight 0 / 255 and is not the cell it stands in.
+
+**Deviation from 03 s5.3 (climb-out):** the doc blocks motion onto terrain steeper than `max_slope_deg`; here a unit already on such
+ground may still step to ground that is no steeper, and while it stands on slope > `max_slope_deg` its speed factor is floored at
+`1 - ground_slope_speed_loss` (0.4), because the plain 02 factor reaches 0 at `max_slope_deg / loss` and the unit would be stuck.
+The 02 formula is exact everywhere the unit stands within its limit (`speed_factor` itself is unfloored).
 
 ## Invariants
 
@@ -91,4 +96,4 @@ the baseline; total tick mean 52.7 / 52.2 / 43.5 ms). A moving unit costs about 
 ## How to add X (recipes for the cheapest tier)
 
 - **A ground unit kind:** add it to `ground_units.json` with `ground_speed`, `max_slope_deg`, `bounding_radius`; no code changes.
-- **Retune turning or reverse:** edit the `rules.json` fields above (and the schema bound if it falls outside).
+- **Retune turning or reverse:** edit the `ground_common` fields above (and the schema bound if it falls outside).
