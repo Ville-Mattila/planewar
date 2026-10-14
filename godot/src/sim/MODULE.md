@@ -91,7 +91,7 @@ func can_place(player: int, def_id: int, cell: int, rotation: int) -> Build.Reje
 func place(player: int, def_id: int, cell: int, rotation: int) -> int
 func footprint_cells(def_id: int, cell: int, rotation: int) -> PackedInt32Array      # (03) crosses cube edges via neighbour_cell
 
-class_name Pathing extends RefCounted
+class_name Pathing extends RefCounted                                        # lives in sim/pathing/ (TA-20): full API in sim/pathing/MODULE.md
 func request(from: Vector3, to: Vector3, mask: int) -> int                   # ticket
 func result(ticket: int) -> PackedVector3Array                               # empty while pending; path grid version stamped
 func set_weight(cell: int, w: int) -> void;  func weight(cell: int) -> int
