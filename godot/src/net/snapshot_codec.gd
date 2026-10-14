@@ -1,10 +1,10 @@
 class_name SnapshotCodec extends RefCounted
-## Server half of the SNAPSHOT codec (04 s3.4-s3.5, R0 C1-02, C1-18). prepare_tick(frame) quantises every
-## entity once per tick into the shared cache (packed arrays indexed by roster index == sim slot) and the
-## per-team visible lists; encode() then does per-client work only: gap ids, FULL / A-DELTA / B-DELTA / C-BLIP
-## records against that client's acked baseline (gravity-aware dead reckoning), the 15-byte pilot block and
-## splitting at 1,200 B into <= 4 indexed packets (A-36). Every record is applied to the client's mirror frame through BaselineFrame, the same
-## calls SnapshotDecoder makes, so server and client baselines stay identical. No allocation per entity.
+## Server half of the SNAPSHOT codec (04 s3.4-s3.5, R0 C1-02, C1-18). prepare_tick(frame) quantises every entity once
+## per tick into the shared cache (packed arrays indexed by roster index == sim slot) and the per-team visible lists;
+## encode() does per-client work only: gap ids, FULL / A-DELTA / B-DELTA / C-BLIP records against that client's acked
+## baseline (gravity-aware dead reckoning), the 15-byte pilot block, splitting at 1,200 B into <= 4 indexed packets
+## (A-36). Every record goes to the client's mirror frame through the BaselineFrame calls SnapshotDecoder makes, so
+## both baselines stay identical. FULL and C-BLIP bytes come from SnapshotByteCache (A-40). No allocation per entity.
 
 const HEADER_BYTES: int = 10
 const MAX_PACKET_BYTES: int = Protocol.MAX_UNRELIABLE_BYTES
@@ -36,13 +36,12 @@ var gravity: float = 0.0
 var dt: float = 0.0
 var prepare_count: int = 0
 var cache_tick: int = -1
-## Packets per tick per client (1..MAX_PACKETS_PER_TICK). Records past the limit are deferred: not in the mirror,
-## re-planned on a later tick. Default 4 (A-36): a split tick carries its packet index, so the client acks it
-## once complete and it is a baseline like any other.
+## Packets per tick per client (1..MAX_PACKETS_PER_TICK); records past it are deferred (not in the mirror, re-planned
+## later). Default 4 (A-36): a split tick carries packet indices, so once complete and acked it is a baseline.
 var max_packets: int = MAX_PACKETS_PER_TICK
 var deferred: int = 0                       # records deferred by the packet cap in the last encode()
-# Cumulative record counters (tests, perf notes, the NET-09 governor).
-var n_full: int = 0
+var cache_bytes: bool = true                # false: the pre-NET-49 FULL / C-BLIP path (same bytes, more cost)
+var n_full: int = 0                         # cumulative record counters (tests, perf notes, NET-09 governor)
 var n_delta: int = 0
 var n_blip: int = 0
 var n_pos_small: int = 0
@@ -60,11 +59,14 @@ var c_ai: PackedByteArray = PackedByteArray()
 var c_team: PackedByteArray = PackedByteArray()
 var c_grav: PackedByteArray = PackedByteArray()
 var c_blip: PackedInt32Array = PackedInt32Array()        # lazy
-## Coarse orientation and blip are only needed for B / C records, so they are computed on first use in a tick
-## (still once per tick per entity, shared by every client): the stamps say which ticks they are valid for.
+## B / C only: built on first use in a tick (once per entity, shared by every client); stamps = valid tick.
 var _coarse_tick: PackedInt32Array = PackedInt32Array()
 var _blip_tick: PackedInt32Array = PackedInt32Array()
 var _row: PackedInt32Array = PackedInt32Array()          # entity row in _frame
+var _bc: SnapshotByteCache = SnapshotByteCache.new()    # FULL / C-BLIP bytes per entity per tick (A-40)
+var _enc_id: int = 0
+var _force: PackedInt32Array = PackedInt32Array()        # == _enc_id: rolling-refresh FULL in this encode
+var _c_list: PackedInt32Array = PackedInt32Array()
 var _frame: SnapshotFrame = null
 var _vis: PackedInt32Array = PackedInt32Array()          # TEAM_MAX x CAPACITY
 var _vis_n: PackedInt32Array = PackedInt32Array()
@@ -91,6 +93,8 @@ func _init(gravity_mps2: float, tick_hz: int) -> void:
 	var _ct: int = _coarse_tick.resize(CAPACITY)
 	var _bt: int = _blip_tick.resize(CAPACITY)
 	var _rw: int = _row.resize(CAPACITY)
+	var _fr: int = _force.resize(CAPACITY)
+	_force.fill(0)
 	_coarse_tick.fill(-1)
 	_blip_tick.fill(-1)
 	var _a: int = c_pos.resize(CAPACITY)
@@ -176,14 +180,16 @@ func team_visible(team: int) -> PackedInt32Array:
 	return r
 
 
-## Encodes tick `tick` for one client: tier lists `a`, `b`, `c` (roster indices; sorted here), `pilot` (null =
-## none). Appends <= MAX_PACKETS_PER_TICK packets of <= 1,200 B to `out` and builds the client's mirror frame
-## in `store`. Returns the packet count (0 when prepare_tick was not called for `tick`).
+## Encodes tick `tick` for one client: tier lists `a`, `b`, `c` (roster indices; sorted here), `pilot` (null = none),
+## `refresh` = rolling-refresh indices of the client's C set (04 s4.3, chosen by NET-07), each a FULL in section C.
+## Appends <= MAX_PACKETS_PER_TICK packets of <= 1,200 B to `out` and builds the client's mirror frame in `store`.
+## Returns the packet count (0 when prepare_tick was not called for `tick`).
 func encode(store: BaselineStore, tick: int, a: PackedInt32Array, b: PackedInt32Array, c: PackedInt32Array,
-		pilot: PilotBlock, out: Array[PackedByteArray]) -> int:
+		pilot: PilotBlock, out: Array[PackedByteArray], refresh: PackedInt32Array = PackedInt32Array()) -> int:
 	if tick != cache_tick or tick <= 0:
 		return 0
 	_tick = tick
+	_enc_id += 1
 	deferred = 0
 	var base_tick: int = store.base_for(tick)
 	var base: BaselineFrame = store.frame_at(base_tick)
@@ -192,7 +198,7 @@ func encode(store: BaselineStore, tick: int, a: PackedInt32Array, b: PackedInt32
 	_capped = false
 	_encode_tier(a, Tier.A, base, frame, store.team)
 	_encode_tier(b, Tier.B, base, frame, store.team)
-	_encode_tier(c, Tier.C, base, frame, store.team)
+	_encode_tier(_with_refresh(c, refresh), Tier.C, base, frame, store.team)
 	frame.usable = true                     # A-36: the client acks only complete ticks
 	return _w.finish()
 
@@ -215,8 +221,22 @@ func _encode_tier(list: PackedInt32Array, tier: int, base: BaselineFrame, frame:
 		_count()
 
 
+## `c` plus the refresh indices (marked in _force for this encode); `c` itself when there are none.
+func _with_refresh(c: PackedInt32Array, refresh: PackedInt32Array) -> PackedInt32Array:
+	if refresh.is_empty():
+		return c
+	_c_list = c.duplicate()
+	for s: int in refresh:
+		if s >= 0 and s < CAPACITY and _force[s] != _enc_id:
+			_force[s] = _enc_id
+			if not c.has(s):
+				var _p: bool = _c_list.push_back(s)
+	return _c_list
+
+
 func _plan(s: int, tier: int, base: BaselineFrame, own: bool) -> bool:
-	if base == null or base.present[s] == 0 or Codec.pos_cell(base.pos[s]) != Codec.pos_cell(c_pos[s]):
+	if base == null or base.present[s] == 0 or Codec.pos_cell(base.pos[s]) != Codec.pos_cell(c_pos[s]) \
+			or _force[s] == _enc_id:
 		return _plan_full(s, own)
 	if tier == Tier.C:
 		if blip_of(s) == base.blip[s]:
@@ -311,8 +331,13 @@ func _count() -> void:
 
 func _apply(frame: BaselineFrame, s: int, tier: int, own: bool) -> void:
 	var ai_tag: int = c_ai[s] if own else -1
-	if _k_kind == Kind.FULL:
+	if _k_kind == Kind.FULL and cache_bytes:
+		_bc.full(s, cache_tick, c_pos[s], c_ori[s], c_vel[s], c_hp[s] | (c_flags[s] << 8) | (c_ai[s] << 16))
+		frame.set_full_cached(s, _tick, c_pos[s], c_ori[s], _bc.oc[s], c_fine[s], c_hp[s], c_flags[s], ai_tag)
+	elif _k_kind == Kind.FULL:
 		frame.set_full(s, _tick, c_pos[s], c_ori[s], c_vel[s], c_hp[s], c_flags[s], ai_tag)
+	elif _k_kind == Kind.BLIP and cache_bytes:
+		frame.set_blip_at(s, _tick, c_blip[s], _bc.blip_pos(s, cache_tick, c_pos[s], c_blip[s]))
 	elif _k_kind == Kind.BLIP:
 		frame.set_blip(s, _tick, c_blip[s])
 	else:
@@ -321,7 +346,9 @@ func _apply(frame: BaselineFrame, s: int, tier: int, own: bool) -> void:
 
 
 func _write_body(s: int, tier: int, own: bool) -> void:
-	if _k_kind == Kind.FULL:
+	if _k_kind == Kind.FULL and cache_bytes:
+		_w.put_full_words(_bc.w0[s], _bc.w1[s], _bc.w2[s], own)
+	elif _k_kind == Kind.FULL:
 		_w.put_full(c_pos[s], c_ori[s], c_vel[s], c_hp[s], c_flags[s], c_ai[s] if own else -1)
 	elif _k_kind == Kind.BLIP:
 		_w.put_u24(c_blip[s])

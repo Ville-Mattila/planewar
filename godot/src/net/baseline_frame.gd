@@ -88,6 +88,23 @@ func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: in
 	etick[i] = t
 
 
+## set_full with the values it derives passed in (SnapshotCodec's per-tick cache, A-40): `ori_c_bits` =
+## coarse_of_full(ori_bits), `fine_vel` = DeadReckon.fine_from_bits(vel bits). Same state as set_full.
+func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int, fine_vel: int, hp_b: int,
+		flag_b: int, ai_tag: int) -> void:
+	present[i] = 1
+	pos[i] = pos_q
+	ori[i] = ori_bits & 0xFFFFFFFF
+	ori_c[i] = ori_c_bits
+	vel[i] = fine_vel
+	hp[i] = hp_b & 0xFF
+	flags[i] = flag_b & 0xFF
+	if ai_tag >= 0:
+		ai[i] = ai_tag & 0xFF
+	blip[i] = DeadReckon.BLIP_UNKNOWN
+	etick[i] = t
+
+
 ## A- or B-DELTA record: `pos_q` / `fine_vel` are the reconstructed values (dead reckoning + residual; the
 ## sent velocity or DeadReckon.dr_fine when VEL is absent); optional groups by `mask` (SnapshotCodec.MASK_*).
 func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: int, ori_bits: int, hp_b: int,
@@ -116,6 +133,14 @@ func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: in
 ## C-BLIP record: position becomes the blip's bucket centre in the stored cell, velocity zero.
 func set_blip(i: int, t: int, blip_bits: int) -> void:
 	pos[i] = DeadReckon.blip_pos(Codec.pos_cell(pos[i]), blip_bits)
+	vel[i] = 0
+	blip[i] = blip_bits
+	etick[i] = t
+
+
+## set_blip with the bucket position passed in: `pos_q` = DeadReckon.blip_pos(cell of pos[i], blip_bits).
+func set_blip_at(i: int, t: int, blip_bits: int, pos_q: int) -> void:
+	pos[i] = pos_q
 	vel[i] = 0
 	blip[i] = blip_bits
 	etick[i] = t

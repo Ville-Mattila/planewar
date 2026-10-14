@@ -121,6 +121,18 @@ func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int) 
 		_at += 1
 
 
+## FULL body from SnapshotCodec's per-tick byte cache (A-40): w0 = bytes 0-7, w1 = bytes 8-15, w2 = hp |
+## flags << 8 | ai_tag << 16; the ai_tag byte only when `own`. Same bytes as put_full.
+func put_full_words(w0: int, w1: int, w2: int, own: bool) -> void:
+	_buf.encode_s64(_at, w0)
+	_buf.encode_s64(_at + 8, w1)
+	_buf.encode_u16(_at + 16, w2 & 0xFFFF)
+	_at += 18
+	if own:
+		_buf[_at] = (w2 >> 16) & 0xFF
+		_at += 1
+
+
 ## DELTA body in mask-bit order; `res` is the wire residual.
 func put_delta(mask: int, res: Vector3i, ori: int, tier_b: bool, vel: int, hp: int, flags: int, ai_tag: int) -> void:
 	_buf[_at] = mask

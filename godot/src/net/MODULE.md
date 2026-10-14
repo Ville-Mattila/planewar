@@ -12,7 +12,7 @@ once a wire has shipped (R0 B.9 A-23, B.10 A-36); `gen_module_api.py --check` mu
 | May depend on | `core`, `content`; named `sim` types only: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain` (`tools/deps.json`) |
 | Must never touch | Nodes in codec/protocol code, `server/` (feature lane), `platform/`, `presentation`, `ui`; no `Thread` and no `WorkerThreadPool` (web is single-threaded, 03 s11); WebSocket only on web in v1.0 (WebRTC is v1.1, S-NET-2) |
 | Autoloads used | `Log` (never in per-entity loops) |
-| Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `SnapshotCodec` and its baselines (NET-06, NET-48 packet index), `Transport`/`LocalTransport`/`FaultModel` (NET-11) landed. Everything else is planned per 04 s19. |
+| Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `SnapshotCodec` and its baselines (NET-06, NET-48 packet index, NET-49 byte cache), `Transport`/`LocalTransport`/`FaultModel` (NET-11) landed. Everything else is planned per 04 s19. |
 
 ## Public API
 
@@ -143,21 +143,24 @@ const GAP_MAX: int; const GAP_ESCAPE: int; const FULL_BODY_BYTES: int; const SMA
 const MASK_POS_SMALL: int; const MASK_POS_LARGE: int; const MASK_ORI: int; const MASK_VEL: int; const MASK_HP: int; const MASK_FLAGS: int; const MASK_CELL_CHANGED: int; const MASK_FULL: int
 enum Tier { A, B, C }
 enum Kind { NONE, FULL, DELTA, BLIP }
-var gravity: float;  var dt: float;  var prepare_count: int;  var cache_tick: int;  var max_packets: int;  var deferred: int
+var gravity: float;  var dt: float;  var prepare_count: int;  var cache_tick: int;  var max_packets: int;  var deferred: int;  var cache_bytes: bool   # false = pre-NET-49 FULL/C-BLIP path, same bytes
 var n_full: int;  var n_delta: int;  var n_blip: int;  var n_pos_small: int;  var n_pos_large: int   # cumulative record counters
 var c_tick: PackedInt32Array;  var c_pos: PackedInt64Array;  var c_ori: PackedInt64Array;  var c_coarse: PackedInt32Array;  var c_vel: PackedInt32Array;  var c_fine: PackedInt64Array
 var c_hp: PackedByteArray;  var c_flags: PackedByteArray;  var c_ai: PackedByteArray;  var c_team: PackedByteArray;  var c_grav: PackedByteArray;  var c_blip: PackedInt32Array
 func _init(gravity_mps2: float, tick_hz: int) -> void;  func prepare_tick(frame: SnapshotFrame) -> void   # once per tick, before any encode
 func coarse_of(s: int) -> int;  func blip_of(s: int) -> int;  func team_visible(team: int) -> PackedInt32Array   # lazy per tick; C candidates
-func encode(store: BaselineStore, tick: int, a: PackedInt32Array, b: PackedInt32Array, c: PackedInt32Array, pilot: PilotBlock, out: Array[PackedByteArray]) -> int
+func encode(store: BaselineStore, tick: int, a: PackedInt32Array, b: PackedInt32Array, c: PackedInt32Array, pilot: PilotBlock, out: Array[PackedByteArray], refresh: PackedInt32Array = PackedInt32Array()) -> int   # refresh: FULLs in C (04 s4.3)
 static func pos_mask(res: Vector3i) -> int;  static func wire_residual(mask: int, res: Vector3i) -> Vector3i;  static func applied_residual(mask: int, res: Vector3i) -> Vector3i
 static func delta_body_bytes(mask: int, tier_b: bool, own: bool) -> int
 
 class_name SnapshotWriter extends RefCounted          # net/snapshot_writer.gd: packet assembly for encode()
 var packets: int;  func start(tick: int, base_tick: int, pilot: PilotBlock, out: Array[PackedByteArray], limit: int) -> void
 func place(s: int, tier: int, body: int) -> bool;  func finish() -> int;  func put_u24(v: int) -> void
-func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int) -> void
+func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int) -> void;  func put_full_words(w0: int, w1: int, w2: int, own: bool) -> void
 func put_delta(mask: int, res: Vector3i, ori: int, tier_b: bool, vel: int, hp: int, flags: int, ai_tag: int) -> void
+
+class_name SnapshotByteCache extends RefCounted       # net/snapshot_byte_cache.gd: client-independent FULL / C-BLIP bytes per tick (A-40)
+const CAPACITY: int;  var w0: PackedInt64Array;  var w1: PackedInt64Array;  var w2: PackedInt32Array;  var oc: PackedInt32Array;  func full(s: int, tick: int, pos_q: int, ori_bits: int, vel_bits: int, hp_flags_ai: int) -> void;  func blip_pos(s: int, tick: int, pos_q: int, blip: int) -> int
 
 class_name SnapshotDecoder extends RefCounted         # net/snapshot_decoder.gd: validate the whole packet, then apply
 enum Status { OK, MALFORMED, STALE, NO_BASELINE, MISSING_ROSTER }
@@ -173,8 +176,8 @@ class_name BaselineFrame extends RefCounted           # net/baseline_frame.gd: w
 const CAPACITY: int; const ORI_UNKNOWN: int
 var tick: int;  var base_tick: int;  var usable: bool;  var present: PackedByteArray;  var pos: PackedInt64Array;  var ori: PackedInt64Array;  var ori_c: PackedInt32Array
 var vel: PackedInt64Array;  var hp: PackedByteArray;  var flags: PackedByteArray;  var ai: PackedByteArray;  var blip: PackedInt32Array;  var etick: PackedInt32Array
-func clear(t: int) -> void;  func copy_from(src: BaselineFrame, t: int) -> void;  func set_blip(i: int, t: int, blip_bits: int) -> void
-func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void
+func clear(t: int) -> void;  func copy_from(src: BaselineFrame, t: int) -> void;  func set_blip(i: int, t: int, blip_bits: int) -> void;  func set_blip_at(i: int, t: int, blip_bits: int, pos_q: int) -> void
+func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void;  func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int, fine_vel: int, hp_b: int, flag_b: int, ai_tag: int) -> void
 func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: int, ori_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void
 static func coarse_of_full(ori_bits: int) -> int;  func same_state(other: BaselineFrame) -> bool;  func state_hash() -> int
 
@@ -275,21 +278,18 @@ The wire catalogue and enums above. No def files are read by `Protocol`; `rules.
 
 ## Performance budget
 
-Bandwidth: 04 s4.6 (24 KB/s typical, 30 KB/s cap per client, 01 s8.3). CPU: the 03 s4.2 "events + interest +
-encode + replay" row (R0 B.7) covers `prepare_tick` and per-client encoding; `Protocol` lookups are O(1). NET-06
-measured (400 entities, desktop, p50): prepare_tick 1.26 ms, encode 1.1-1.2 ms (~3 us per record, every entity every
-tick) and decode 0.53 ms per client; at the 04 s4.1 schedule 8 clients extrapolate to ~5.8 ms, over the row. R0 B.10 A-40:
-the row stays; NET-49 caches FULL / C-BLIP bytes once per tick; NET-08 measures on the pinned runner; A/B deltas are per client.
+Bandwidth: 04 s4.6 (24 KB/s typical, 30 KB/s cap per client, 01 s8.3). CPU: the 03 s4.2 "events + interest + encode +
+replay" row (R0 B.7, 4.0 ms p95, 8 clients) covers `prepare_tick` and per-client encoding; `Protocol` lookups are O(1).
+NET-49 canonical bench (A-40: 940 entities, 8 clients, 04 s4.1 schedule + 3 refresh FULLs, desktop p50): prepare 2.8 ms
++ encode sum 6.8-6.9 ms = 9.6-9.8 ms, over the row; the FULL / C-BLIP cache saves 0-2 % (a FULL is mostly one client's
+per tick). A/B deltas stay per client. NET-08 measures the row on the pinned runner; over-budget branch: A-40 OWNER.
 
 ## Test entry points
 
-`test/unit/net/test_protocol.gd` (NET-01 catalogue vs 04 s2.1/s2.3, enum ordinals, PROTOCOL_VERSION); `test/unit/net/test_codec_roundtrip.gd` (NET-02 codec_roundtrip_test: 10,000 points, cell corners, A-23 envelope, A-24 flags, quaternions, velocity, hp, sizes); `test/net/test_codec_full_records.gd`; `test/perf/bench_codec.gd` (BENCH_CODEC).
-NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example, masks, dead reckoning, blip, pilot block, A-24), `test_snapshot_malformed.gd` (20,000 mutations; NET-48 index rules), `test/net/test_snapshot_delta.gd` (3,000 ticks, random splits), `test_snapshot_budget.gd` (splitting, lost middle packet never acked, bandwidth, determinism); `test/perf/bench_snapshot.gd` (BENCH_SNAPSHOT); helper `test/net/snap_rig.gd`.
+`test/unit/net/test_protocol.gd` (NET-01 catalogue vs 04 s2.1/s2.3, enum ordinals, PROTOCOL_VERSION); `test/unit/net/test_codec_roundtrip.gd` (NET-02 codec_roundtrip_test: 10,000 points, cell corners, A-23 envelope, A-24 flags, quaternions, velocity, hp, sizes); `test/net/test_codec_full_records.gd`; `test/perf/bench_codec.gd` (BENCH_CODEC). Planned: interest benchmarks (NET-08), fuzz_test.gd (NET-23).
+NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example, masks, dead reckoning, blip, pilot block, A-24), `test_snapshot_malformed.gd` (20,000 mutations; NET-48 index rules), `test/net/test_snapshot_delta.gd` (3,000 ticks, random splits), `test_snapshot_budget.gd` (splitting, lost middle packet never acked, bandwidth, determinism, NET-49 cache bytes identical, rolling refresh); `test/perf/bench_snapshot.gd` (BENCH_SNAPSHOT canonical + all_tiers, `--history`); helper `test/net/snap_rig.gd`.
 NET-03: `test/unit/net/test_pilot_wire.gd` (all byte values round trip, reserved bytes, V-INP shape, 20,000 mutations), `test_input_buffer.gd` (window, duplicates, stale epoch, strikes, 10-tick decay then one bridge, hand-off, determinism), `test/net/test_input_link.gd` (LocalTransport: BAD preset recovers single/double loss, triple loss drops one tick, silence bridge once, slow client, determinism).
-`godot/test/unit/net/test_roster.gd` + `godot/test/net/test_roster_sync.gd` (NET-05: add/remove with every reason, meta/remove round trips and sizes, malformed rejected, held record applied after meta, timeout at exactly 30 ticks with one REQUEST_KEYFRAME, re-add in the hold window, determinism, LocalTransport pair).
-`godot/test/unit/net/test_transport_local.gd` (NET-11: channel ordering/reliability, determinism per seed, burst, stall, bandwidth, close, stats).
-`godot/test/net/test_fault_presets.gd` (NET-11: loss/latency/reorder/dup statistics per preset over 6,000 packets, MOBILE_SWITCH, TAB_STALL).
-Planned: interest benchmarks (NET-08), fuzz_test.gd (NET-23).
+`godot/test/unit/net/test_roster.gd` + `godot/test/net/test_roster_sync.gd` (NET-05: add/remove with every reason, meta/remove round trips and sizes, malformed rejected, held record applied after meta, timeout at exactly 30 ticks with one REQUEST_KEYFRAME, re-add in the hold window, determinism, LocalTransport pair); `godot/test/unit/net/test_transport_local.gd` (NET-11: channel ordering/reliability, determinism per seed, burst, stall, bandwidth, close, stats); `godot/test/net/test_fault_presets.gd` (NET-11: loss/latency/reorder/dup statistics per preset over 6,000 packets, MOBILE_SWITCH, TAB_STALL).
 
 ## How to add X
 
@@ -297,4 +297,4 @@ Planned: interest benchmarks (NET-08), fuzz_test.gd (NET-23).
 
 ## Open items
 
-NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 + perf note and NET-03's questions: closed by R0 B.10 A-36..A-40, A-44..A-46 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 and the silence rule (keep BOOST / BRAKE, drop FLIP / DOCK / RELEASE / FIRE1/2; 10 ticks, NQ10 closed) are ratified as written above. A-36 landed in NET-48 (`PROTOCOL_VERSION` stays 1, OWNER). Pending code: NET-49 (A-40 FULL / C-BLIP byte cache, canonical-schedule 8-client bench row); sim lane: `PilotInput`'s `to_bytes` comment (A-46; the wire form is `PilotWire`).
+NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 + perf note and NET-03's questions: closed by R0 B.10 A-36..A-40, A-44..A-46 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 and the silence rule (keep BOOST / BRAKE, drop FLIP / DOCK / RELEASE / FIRE1/2; 10 ticks, NQ10 closed) are ratified as written above. A-36 landed in NET-48 (`PROTOCOL_VERSION` stays 1, OWNER), A-40 in NET-49 (`encode(refresh)` is the primitive NET-07 fills). Pending: sim lane `PilotInput`'s `to_bytes` comment (A-46; the wire form is `PilotWire`).

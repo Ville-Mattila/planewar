@@ -221,3 +221,42 @@ func test_tier_b_flag_mapping_on_the_wire() -> void:
 			assert_int(Codec.coarse_spare(Codec.read_u24(out[0], 13))).is_equal(Codec.flags_to_spare(all_bits))
 	assert_int(dec.current().flags[9]).is_equal(all_bits & ~Codec.FLAG_BRAKING)
 	assert_bool(dec.current().same_state(store.frame_at(3))).is_true()
+
+
+## NET-49 (A-40): the byte cache reproduces put_full / set_full / set_blip exactly, own team and other team.
+func test_byte_cache_matches_uncached_records() -> void:
+	var bc: SnapshotByteCache = SnapshotByteCache.new()
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 40
+	var w_plain: SnapshotWriter = SnapshotWriter.new()
+	var w_cache: SnapshotWriter = SnapshotWriter.new()
+	var fa: BaselineFrame = BaselineFrame.new()
+	var fb: BaselineFrame = BaselineFrame.new()
+	for n: int in 200:
+		var s: int = n % 7
+		var q: int = Codec.pack_pos(rng.randi_range(0, Codec.CELL_COUNT - 1), rng.randi_range(0, 0xFFFF),
+				rng.randi_range(0, 0xFFFF), rng.randi_range(0, 0xFFFF))
+		var ori: int = rng.randi() & 0xFFFFFFFF
+		var vel: int = rng.randi() & 0xFFFFFF
+		var hp: int = rng.randi_range(0, 255)
+		var fl: int = rng.randi_range(0, 255)
+		var ai: int = rng.randi_range(0, 255)
+		var own: bool = n % 2 == 0
+		bc.full(s, n + 1, q, ori, vel, hp | (fl << 8) | (ai << 16))
+		var plain: Array[PackedByteArray] = []
+		var cached: Array[PackedByteArray] = []
+		w_plain.start(n + 1, 0, null, plain, 1)
+		w_cache.start(n + 1, 0, null, cached, 1)
+		var _p1: bool = w_plain.place(s, SnapshotCodec.Tier.C, SnapshotCodec.FULL_BODY_BYTES + 1)
+		var _p2: bool = w_cache.place(s, SnapshotCodec.Tier.C, SnapshotCodec.FULL_BODY_BYTES + 1)
+		w_plain.put_full(q, ori, vel, hp, fl, ai if own else -1)
+		w_cache.put_full_words(bc.w0[s], bc.w1[s], bc.w2[s], own)
+		var _f1: int = w_plain.finish()
+		var _f2: int = w_cache.finish()
+		assert_array(Array(cached[0])).is_equal(Array(plain[0]))
+		fa.set_full(s, n, q, ori, vel, hp, fl, ai if own else -1)
+		fb.set_full_cached(s, n, q, ori, bc.oc[s], DeadReckon.fine_from_bits(vel), hp, fl, ai if own else -1)
+		var blip: int = rng.randi() & 0xFFFFFF
+		fa.set_blip(s + 7, n, blip)
+		fb.set_blip_at(s + 7, n, blip, bc.blip_pos(s + 7, n + 1, fb.pos[s + 7], blip))
+		assert_bool(fa.same_state(fb)).is_true()
