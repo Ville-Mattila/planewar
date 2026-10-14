@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "cradle",
+  "display_key": "map.cradle.name",
+  "seed": 91027,
+  "radius_m": 6000,
+  "face_resolution": 1024,
+  "relief": {"min_m": -500, "max_m": 700},
+  "symmetry": {"rotational": 8, "wedge_start_deg": 22.5},
+  "base_noise": {"octaves": 5, "freq_per_circumference": 6, "amp_m": 90},
+  "regions": [
+    {"kind": "mare", "lat": 0, "lon": 45, "radius_m": 3100, "floor_m": -320, "edge_m": 900},
+    {"kind": "mare", "lat": 0, "lon": 22.5, "radius_m": 1800, "floor_m": -300, "edge_m": 700},
+    {"kind": "mare", "lat": 82, "lon": 45, "radius_m": 3000, "floor_m": -200, "edge_m": 900},
+    {"kind": "mare", "lat": -82, "lon": 45, "radius_m": 3000, "floor_m": -200, "edge_m": 900},
+    {"kind": "highland", "lat": 42, "lon": 45, "radius_m": 1100, "height_m": 300, "edge_m": 900},
+    {"kind": "highland", "lat": -42, "lon": 45, "radius_m": 1100, "height_m": 300, "edge_m": 900}
+  ],
+  "craters": {
+    "explicit": [
+      {"lat": 30, "lon": 45, "diam_m": 2400, "depth_m": 280, "rim_m": 220},
+      {"lat": -26, "lon": 33, "diam_m": 1400, "depth_m": 200, "rim_m": 150},
+      {"lat": 24, "lon": 58, "diam_m": 1000, "depth_m": 160, "rim_m": 120}
+    ],
+    "scatter": {"per_wedge": 60, "diam_m": [60, 600], "power": 2.2, "seed_offset": 1}
+  },
+  "rilles": [{"path": [[10, 30], [22, 45], [28, 60]], "width_m": 160, "depth_m": 70}],
+  "slots": {"count": 8, "lon0_deg": 22.5, "spacing_deg": 45, "flatten_radius_m": 300, "flatten_edge_m": 150, "flatten_slope_deg": 5, "facing_deg": 0},
+  "poles": {"noon_plateau_radius_m": 1000, "noon_plateau_height_m": 150, "midnight_ice_ring": true},
+  "boulder_fields": [
+    {"lat": -5, "lon": 40, "radius_m": 800, "density": 0.4},
+    {"lat": 12, "lon": 55, "radius_m": 700, "density": 0.3}
+  ],
+  "biome_rules": "default",
+  "resources": {
+    "slot_features": [
+      {"id": "home_field_a", "kind": "ore_field", "bearing_deg": 90, "distance_m": 1100, "capacity": 6000, "regen_per_s": 2.0, "radius_m": 150, "max_miners": 4},
+      {"id": "home_field_b", "kind": "ore_field", "bearing_deg": 270, "distance_m": 1300, "capacity": 6000, "regen_per_s": 2.0, "radius_m": 150, "max_miners": 4},
+      {"id": "home_trap", "kind": "cold_trap", "bearing_deg": 180, "distance_m": 1700, "capacity": 2000, "rate_per_s": 0.8, "radius_m": 100}
+    ],
+    "ring_features": [
+      {"id": "contested", "kind": "ore_field", "lat_deg": 2, "lon_offset_deg": 22.5, "capacity": 10000, "regen_per_s": 3.0, "radius_m": 200, "max_miners": 6},
+      {"id": "mid_trap", "kind": "cold_trap", "lat_deg": -45, "lon_offset_deg": 22.5, "capacity": 6000, "rate_per_s": 1.5, "radius_m": 150}
+    ],
+    "pole_features": [
+      {"id": "midnight_n", "kind": "cold_trap", "pole": "midnight", "bearing_deg": 0, "distance_m": 400, "capacity": 5000, "rate_per_s": 0.75, "radius_m": 100},
+      {"id": "midnight_e", "kind": "cold_trap", "pole": "midnight", "bearing_deg": 90, "distance_m": 400, "capacity": 5000, "rate_per_s": 0.75, "radius_m": 100},
+      {"id": "midnight_s", "kind": "cold_trap", "pole": "midnight", "bearing_deg": 180, "distance_m": 400, "capacity": 5000, "rate_per_s": 0.75, "radius_m": 100},
+      {"id": "midnight_w", "kind": "cold_trap", "pole": "midnight", "bearing_deg": 270, "distance_m": 400, "capacity": 5000, "rate_per_s": 0.75, "radius_m": 100}
+    ],
+    "unused_slot_yield": 0.5
+  },
+  "notes": "Cradle: balanced ranked-default map, broad equatorial maria, few large craters, highlands beyond 30 degrees (07 s9.4). Terrain blocks by ART-28; the resources block is a placeholder copy of the 02 s9.2 values that GD-22 replaces."
+}
