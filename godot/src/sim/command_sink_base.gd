@@ -18,3 +18,10 @@ func drive(_id: int, _input: PilotInput) -> bool:
 ## Writes the replicated `ai_tag` u8 of a live entity.
 func set_ai_tag(_id: int, _tag: int) -> void:
 	pass
+
+
+## The world's Pathing (R0 B.11 A-55): `sim_ai`'s only route to request / status / result / release. A request is a
+## write (it queues work that step 3b advances under the tick budget), hence the sink and not the read-only SimView.
+## The base has none (null).
+func pathing() -> Pathing:
+	return null

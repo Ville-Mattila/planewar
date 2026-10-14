@@ -6,12 +6,12 @@ extends Node
 ##             same-job A/B of ab_perf.py (7 rounds x 2 sides, 10 noise repeats) stays inside its job timeout;
 ##   --full  : S-SIM-1 scale on s_world1 (400 ships, 200 ground, 480 structures, 120 wrecks = 1,200 entities,
 ##             2,000 projectiles), the scale every perf note cites (03 s4.2 rows); --flat drops the map.
-## Prints PERF_ROW lines (p50/p95/p99/max ms per 03 s4.4 row, rows 1-13) and one PERF_TICK line (whole step,
+## Prints PERF_ROW lines (p50/p95/p99/max/mean ms per 03 s4.4 row, rows 1-13) and one PERF_TICK line (whole step,
 ## microseconds; the line ab_perf.py parses). A tree without perf_tick_world.gd (an A/B base older than TA-18)
 ## falls back to the S-CI-1 SoakWorldStub so the harness still prints PERF_TICK.
 
 ## Bump when the measured scope changes; ab_perf.py skips (does not fail) an A/B whose fingerprints differ.
-const HARNESS_VERSION: int = 1
+const HARNESS_VERSION: int = 2   ## 2: TA-50 row-3b path load
 const WARMUP_TICKS: int = 300
 const STEP_DT: float = 1.0 / 30.0
 const WORLD_SCRIPT: String = "res://test/perf/perf_tick_world.gd"
@@ -79,8 +79,14 @@ func _run_sim(ticks: int, full: bool, flat: bool) -> void:
 	for r: int in range(1, ROW_NAMES.size()):
 		var a: PackedFloat32Array = rows.slice(r * ticks, (r + 1) * ticks)
 		a.sort()
-		print("PERF_ROW row=%s p50_ms=%.3f p95_ms=%.3f p99_ms=%.3f max_ms=%.3f" % [ROW_NAMES[r], a[ticks / 2],
-			a[int(float(ticks) * 0.95)], a[int(float(ticks) * 0.99)], a[ticks - 1]])
+		var sum: float = 0.0
+		for v: float in a:
+			sum += v
+		print("PERF_ROW row=%s p50_ms=%.3f p95_ms=%.3f p99_ms=%.3f max_ms=%.3f mean_ms=%.3f" % [ROW_NAMES[r], a[ticks / 2],
+			a[int(float(ticks) * 0.95)], a[int(float(ticks) * 0.99)], a[ticks - 1], sum / float(ticks)])
+	var pl: Variant = pw.path_load
+	print("PERF_PATH units=%d requests=%d cache_hit=%.3f no_path=%d" % [pl.units, pl.requests,
+		float(pl.cache_hits) / maxf(1.0, float(pl.requests)), pl.no_path])
 	_print_tick(samples, total, ticks)
 
 

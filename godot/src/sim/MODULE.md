@@ -13,7 +13,7 @@ change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, no signals, no `Thread` (D2, D3) |
 | Public types other lanes may name (D1) | `input`: `PilotInput`. `ui`: `SimView`, `SimEvent`, `Command`, `CommandResult`, `PilotInput`, `AlertKind`, `OrderSpec`, `LandingGrade`, read-only `Terrain`. `campaign`: commands, events, `SimView`, `CommandSinkBase`. `net`: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain` (read) |
 | Autoloads used | None: content arrives as a `ContentSet` (`SimWorld._init`, TA-18; `ContentDB` builds the same set); `Log` allowed |
-| Status | API frozen with CONTRACT-0 (2026-10-10); amendments 01 (R0 B.8, same day) appended `ProjectileState`, `TeamStateView`, `PlayerStateView`; amendments 02 (R0 B.9, 2026-10-13) appended the `step_projectile` `out` parameter, `brake_fade_mps` and the projectile 0-tick quarantine; TA-18 (2026-10-14) implemented the tick driver and appended `SimSink`, `LocalSimView`, hook / store state bytes, `MatchRules.from_defs`; amendments 04 (R0 B.11, 2026-10-14) ratified TA-18's three type corrections (A-49), dropped the planned `PlayerKind` holder (A-50) and appended `CommandSinkBase.pathing()` (A-55, TA-50) and `SimView.read_poses` (A-56, TA-51 landed); internals open until S-SIM-1 (TA-22) |
+| Status | API frozen with CONTRACT-0 (2026-10-10); amendments 01 (R0 B.8, same day) appended `ProjectileState`, `TeamStateView`, `PlayerStateView`; amendments 02 (R0 B.9, 2026-10-13) appended the `step_projectile` `out` parameter, `brake_fade_mps` and the projectile 0-tick quarantine; TA-18 (2026-10-14) implemented the tick driver and appended `SimSink`, `LocalSimView`, hook / store state bytes, `MatchRules.from_defs`; amendments 04 (R0 B.11, 2026-10-14) ratified TA-18's three type corrections (A-49), dropped the planned `PlayerKind` holder (A-50) and appended `CommandSinkBase.pathing()` (A-55, TA-50) and `SimView.read_poses` (A-56, TA-51 landed; A-55 wired by TA-50); internals open until S-SIM-1 (TA-22) |
 
 ## Public API
 
@@ -45,7 +45,7 @@ func serialize() -> PackedByteArray;  func deserialize(bytes: PackedByteArray) -
 class_name CommandSinkBase extends RefCounted                                # abstract; SimWorld passes its implementation to on_tick; campaign's MissionRuntime receives one
 func submit(cmd: Command) -> CommandResult
 func drive(id: int, input: PilotInput) -> bool                               # writes the input slot; false if POSSESSED or dead
-func pathing() -> Pathing                                                    # [planned: TA-50] R0 B.11 A-55: sim_ai's only route to request / result / release (a write path, so sink not view)
+func pathing() -> Pathing                                                    # (TA-50) R0 B.11 A-55: sim_ai's only route to request / result / release (a write path, so sink not view); base: null
 func set_ai_tag(id: int, tag: int) -> void;  class_name SimSink extends CommandSinkBase   # (TA-18) the sim's sink: apply_command's intake; drive refuses POSSESSED / dead (S11)
 
 class_name Command extends RefCounted
@@ -92,7 +92,7 @@ func can_place(player: int, def_id: int, cell: int, rotation: int) -> Build.Reje
 func place(player: int, def_id: int, cell: int, rotation: int) -> int
 func footprint_cells(def_id: int, cell: int, rotation: int) -> PackedInt32Array      # (03) crosses cube edges via neighbour_cell
 
-class_name Pathing extends RefCounted                                        # lives in sim/pathing/ (TA-20): full API in sim/pathing/MODULE.md
+class_name Pathing extends PathTickets                                       # lives in sim/pathing/ (TA-20, wired TA-50: step 3b, S4): full API in sim/pathing/MODULE.md
 func request(from: Vector3, to: Vector3, mask: int) -> int                   # ticket
 func result(ticket: int) -> PackedVector3Array                               # empty while pending; path grid version stamped
 func set_weight(cell: int, w: int) -> void;  func weight(cell: int) -> int
@@ -283,9 +283,9 @@ TA-12/48: `godot/test/unit/sim/test_kinematics.gd` (lift law, test_slug_hits_coa
 TA-18: `godot/test/unit/sim/test_sim_world.gd` (S1, S3, S5, S11, hook, profile, steps 5-10), `godot/test/unit/sim/test_command_validator.gd`
 (S10, S12), `godot/test/unit/sim/test_serialize.gd` (S4, determinism), `godot/test/unit/sim/test_enums.gd` (S14), `godot/test/unit/sim/test_local_sim_view.gd`,
 `godot/test/unit/sim/test_match_rules.gd`, `godot/test/unit/sim/test_command_payload.gd`, `godot/test/sim/test_tick_scenario.gd` (100-tick event sequence), `godot/test/perf/perf_tick_world.gd`.
+TA-50: `godot/test/sim/test_path_scenario.gd` (step 3b, `pathing()` via `godot/test/unit/sim/path_brain_stub.gd`), S4 with pending tickets in `test_serialize.gd`, `godot/test/perf/perf_path_load.gd` (row 3b).
 
-Planned (plain text until on disk, D10): test_build.gd (cross-edge footprints), test_landing.gd, test_pathing.gd; godot/test/sim/scenarios/*.json
-(Outpost presence, victory, Core shield, caps); godot/test/contract/test_sim_view_contract.gd.
+Planned (plain text until on disk, D10): test_build.gd (cross-edge footprints), test_landing.gd; godot/test/sim/scenarios/*.json (Outpost presence, victory, Core shield, caps); godot/test/contract/test_sim_view_contract.gd.
 
 ## How to add X
 
@@ -294,6 +294,6 @@ Recipes (SimEvent kind, order kind, AlertKind / Command.Kind / CommandResult.Cod
 ## Open items
 
 - R0 B.8-B.11 applied (A-1/3/7/8, A-11..14, A-20/21 with TA-43/44/45/48, A-41/42/46/47, A-49..A-56; `docs/reviews/R0-amendments-04.md`). Pending code:
-  TA-49 landed (A-51 fields read, A-53 approach column); TA-50 wires `Pathing` (step 3b, `pathing()`, S4).
+  TA-49 landed (A-51 fields read, A-53 approach column); TA-50 wired `Pathing` (step 3b, `pathing()`, S4; sim/pathing/MODULE.md).
 - Interim stand-ins (step-9 frees, validated-only kinds): `sim/world/MODULE.md`; control transitions: `sim/control/MODULE.md` (AI-02, A-61).
 - Owners: TA-11 store, TA-12 kinematics, TA-14 collision, TA-18 tick driver, TA-21 serialize format, TA-22 S-SIM-1, TA-37 vision, TA-38 ground; 05: steer/orders/control.

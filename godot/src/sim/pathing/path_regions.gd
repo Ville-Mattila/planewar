@@ -16,6 +16,8 @@ const OVERFLOW: int = MAX_REG - 1
 const MASK_SLOTS: int = PathSearch.MASK_SLOTS
 const BUILD_COST: int = 40                  ## expansion units charged per cluster label build (S-NAV-1 calibration)
 const LINK_COST: int = 20                   ## expansion units charged per cluster link build (S-NAV-1 calibration)
+const _REGION_STATE: PackedStringArray = ["builds", "overflows", "orphans", "_slot_mask", "_slot_next", "_cver", "_ever",
+	"_lab_ver", "_edge_ver", "_nreg"]
 
 var grid: PathLabel
 var builds: int = 0                         ## label + link builds so far
@@ -33,6 +35,9 @@ var _adj: PackedByteArray = PackedByteArray()       ## MASK_SLOTS * REGIONS * 8
 var _rdir: PackedVector3Array = PackedVector3Array()   ## MASK_SLOTS * REGIONS, sum of cell centre dirs
 var _rw: PackedFloat32Array = PackedFloat32Array()     ## MASK_SLOTS * REGIONS, mean weight
 var _nbr8: PackedInt32Array = PackedInt32Array()    ## link_cluster argument scratch
+var _rev: int = 0                                   ## bumped by every _adj / _rdir / _rw write; keys the S4 blocks
+var _blob_rev: int = -1
+var _blobs: PackedByteArray = PackedByteArray()     ## compressed _adj, _rdir, _rw, concatenated as written
 
 
 func _init(g: PathLabel) -> void:
@@ -132,6 +137,7 @@ func ensure_labels(sl: int, c: int) -> int:
 		_rdir[sl * REGIONS + c * MAX_REG + k] = grid.reg_dir(k)
 		_rw[sl * REGIONS + c * MAX_REG + k] = grid.reg_weight(k)
 	_lab_ver[sl * CLUSTERS + c] = _cver[c]
+	_rev += 1
 	return BUILD_COST
 
 
@@ -150,5 +156,43 @@ func ensure_links(sl: int, c: int) -> int:
 	for i: int in MAX_REG * 8:
 		_adj[base + i] = grid.adj_out(i)
 	_edge_ver[sl * CLUSTERS + c] = _ever[c]
+	_rev += 1
 	builds += 1
 	return cost + LINK_COST
+
+
+## S4 (TA-50): build versions and counters as they are, the region data (_adj, _rdir, _rw) zstd-compressed and
+## cached until the next build. The labels are PathSearch's (grid.write_state).
+func write_state(buf: StreamPeerBuffer) -> void:
+	StateIO.put_props(buf, self, _REGION_STATE)
+	if _blob_rev != _rev:
+		var b: StreamPeerBuffer = StreamPeerBuffer.new()
+		PathGrid.put_z(b, _adj)
+		PathGrid.put_z(b, _rdir.to_byte_array())
+		PathGrid.put_z(b, _rw.to_byte_array())
+		_blobs = b.data_array
+		_blob_rev = _rev
+	buf.put_var(_blobs)
+
+
+## Inverse of write_state; false on malformed bytes.
+func read_state(buf: StreamPeerBuffer) -> bool:
+	if not StateIO.get_props(buf, self, _REGION_STATE) or _slot_mask.size() != MASK_SLOTS or _cver.size() != CLUSTERS:
+		return false
+	if _ever.size() != CLUSTERS or _lab_ver.size() != MASK_SLOTS * CLUSTERS or _edge_ver.size() != MASK_SLOTS * CLUSTERS:
+		return false
+	var bv: Variant = buf.get_var()
+	if typeof(bv) != TYPE_PACKED_BYTE_ARRAY or _nreg.size() != MASK_SLOTS * CLUSTERS:
+		return false
+	var b: StreamPeerBuffer = StreamPeerBuffer.new()
+	b.data_array = bv
+	var adj: PackedByteArray = PathGrid.get_z(b, MASK_SLOTS * REGIONS * 8)
+	var rdir: PackedByteArray = PathGrid.get_z(b, MASK_SLOTS * REGIONS * 12)
+	var rw: PackedByteArray = PathGrid.get_z(b, MASK_SLOTS * REGIONS * 4)
+	if adj.is_empty() or rdir.is_empty() or rw.is_empty():
+		return false
+	_adj = adj
+	_rdir = rdir.to_vector3_array()
+	_rw = rw.to_float32_array()
+	_rev += 1
+	return true

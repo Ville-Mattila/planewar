@@ -6,6 +6,7 @@ class_name PathCache extends RefCounted
 
 const ENTRIES: int = 512                   ## 03 s3.2 path_cache row
 const STRIDE: int = 128                    ## longest cached route in cells (longer routes are not cached)
+const _CACHE_STATE: PackedStringArray = ["_clock", "_key", "_used", "length", "start_cell", "faces", "vsum"]
 
 var cells: PackedInt32Array = PackedInt32Array()   ## ENTRIES * STRIDE
 var length: PackedInt32Array = PackedInt32Array()
@@ -103,3 +104,36 @@ func clear() -> void:
 	length.fill(0)
 	_used.fill(0)
 	_clock = 0
+
+
+## S4 (TA-50): LRU clock and per-entry arrays as they are, then each entry's cells (length[e] of them) back to back.
+func write_state(buf: StreamPeerBuffer) -> void:
+	StateIO.put_props(buf, self, _CACHE_STATE)
+	var all: PackedInt32Array = PackedInt32Array()
+	for e: int in ENTRIES:
+		all.append_array(cells.slice(e * STRIDE, e * STRIDE + length[e]))
+	buf.put_var(all)
+
+
+## Inverse of write_state (the key index is rebuilt from _key); false on malformed bytes.
+func read_state(buf: StreamPeerBuffer) -> bool:
+	if not StateIO.get_props(buf, self, _CACHE_STATE) or _key.size() != ENTRIES or _used.size() != ENTRIES:
+		return false
+	if length.size() != ENTRIES or start_cell.size() != ENTRIES or faces.size() != ENTRIES or vsum.size() != ENTRIES:
+		return false
+	var v: Variant = buf.get_var()
+	if typeof(v) != TYPE_PACKED_INT32_ARRAY:
+		return false
+	var all: PackedInt32Array = v
+	var at: int = 0
+	_index.clear()
+	for e: int in ENTRIES:
+		var n: int = length[e]
+		if n < 0 or n > STRIDE or at + n > all.size():
+			return false
+		for k: int in n:
+			cells[e * STRIDE + k] = all[at + k]
+		at += n
+		if _key[e] >= 0:
+			_index[_key[e]] = e
+	return at == all.size()

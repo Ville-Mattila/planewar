@@ -1,7 +1,7 @@
 class_name SimWorld extends RefCounted
 ## The tick driver (03 s3.5, s4.1; R0 B.5 tick order). Content is injected at `_init` (no autoload in the sim);
 ## `load_map` builds every system for one match. `step()` runs, in order: 1 queued commands (+ disconnect
-## releases), 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-20), 4 assist
+## releases), 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-50), 4 assist
 ## substitution (AI-10), 5 kinematics (DOCKED ships skipped, A-41; terrain contacts to Collision), 6 projectiles,
 ## 7 spatial rebuild, 8 collision, 9 damage from the contacts (Combat, GD-08) and the deferred deaths,
 ## 10 match timers (Economy, Production, Build, Docking and scoring land later), 11 vision (TA-37), 12 the caller
@@ -10,7 +10,7 @@ class_name SimWorld extends RefCounted
 
 const _MAPS_ROOT: String = "res://content/maps/"
 const _MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const _FORMAT: int = 2
+const _FORMAT: int = 3
 const _RULES_STATE: PackedStringArray = ["mode", "caps_profile", "sim_budget_profile", "core_exposure_s", "hard_end_s",
 	"debug_commands", "profile_enabled", "friendly_fire", "adjutant_allowed", "sun_period_s", "ranked", "tick_hz"]
 const _CAPS_STATE: PackedStringArray = ["id", "units", "structures", "projectiles", "wrecks", "slots"]
@@ -42,6 +42,8 @@ var _profiler: TickProfiler = TickProfiler.new()
 var _view: LocalSimView = null
 var _sink: SimSink = null
 var _hook: SimAiHook = null
+var _pathing: Pathing = null           ## step 3b; sim_ai reaches it only through CommandSinkBase.pathing() (A-55)
+var _restoring: bool = false           ## deserialize: the region graphs come from the bytes, load_map skips prepare
 var _match_seed: int = 0
 var _map_id: StringName = &""
 var _dt: float = 0.0
@@ -62,6 +64,9 @@ func load_map(map: MapDef, _seed: int, rules: MatchRules) -> Result:
 		var err: Error = _terrain.load_map(_MAPS_ROOT + String(_map_id))
 		if err != OK:
 			return Result.failure(err, "SimWorld: map %s failed to load" % _map_id)
+		err = _load_pathing(_MAPS_ROOT + String(_map_id))
+		if err != OK:
+			return Result.failure(err, "SimWorld: path grid of %s failed to load" % _map_id)
 	collision.configure(_defs.projectile_radius, _defs.pad_radius_by_def, _defs.common, rules.tick_hz)
 	_match_seed = _seed
 	rng = Rng.new(_seed)
@@ -127,7 +132,9 @@ func step() -> void:
 	if _hook != null:
 		_hook.on_tick(t, _view, _sink)
 	_profiler.lap(TickProfiler.ROW_AI)
-	_profiler.lap(TickProfiler.ROW_PATHING)                  # 3b: Pathing.advance() (TA-20)
+	_pathing.expansions_per_tick = path_expansions_per_tick()   # 3b: cut rung 8 reaches the budget (TA-49)
+	var _units: int = _pathing.advance()
+	_profiler.lap(TickProfiler.ROW_PATHING)
 	_assist_substitution()                                   # 4
 	_profiler.lap(TickProfiler.ROW_AI)
 	_ships.step(t, _dt)                                      # 5 (DOCKED skipped, A-41)
@@ -159,7 +166,7 @@ func drain_events() -> Array[SimEvent]:
 
 
 ## The whole match state (S4) in a fixed order: header, rules, clock, players, input slots, rate buckets, pending
-## commands, entity and projectile stores, Collision's per-slot state, orders, then the AI hook's opaque bytes.
+## commands, entity and projectile stores, Collision's per-slot state, orders, pathing, then the AI hook's bytes.
 ## Events are not included: the caller drains them every tick (step 12).
 func serialize() -> PackedByteArray:
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
@@ -180,6 +187,7 @@ func serialize() -> PackedByteArray:
 	_proj.write_state(buf)
 	StateIO.put_props(buf, collision, _COLLISION_STATE)
 	buf.put_var(OrderQueueCodec.serialize(_orders))
+	_pathing.write_state(buf)
 	buf.put_var(_hook.serialize() if _hook != null else PackedByteArray())
 	return buf.data_array
 
@@ -192,6 +200,7 @@ static func deserialize(bytes: PackedByteArray, content: ContentSet, hook: SimAi
 	if bytes.size() < 8 or buf.get_32() != _MAGIC or buf.get_32() != _FORMAT:
 		return null
 	var w: SimWorld = SimWorld.new(content)
+	w._restoring = true
 	var seed_v: int = buf.get_64()
 	var rng_v: Variant = buf.get_var()
 	var map_v: Variant = buf.get_var()
@@ -290,8 +299,10 @@ func _wire(rules: MatchRules) -> void:
 	_combat = Combat.new(_store, _proj, collision, spatial, _defs, rules, _events, _applier)
 	_ships = ShipMotion.new(_store, _inputs, _defs, collision, _terrain)
 	_profiler.enabled = rules.profile_enabled
-	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state)
-	_sink = SimSink.new(_intake, _store, _inputs)
+	_pathing = Pathing.from_rules(_defs.rules)
+	_pathing.set_terrain(_terrain)
+	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state, _pathing)
+	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
 
 
 func _read_state(buf: StreamPeerBuffer) -> bool:
@@ -307,13 +318,29 @@ func _read_state(buf: StreamPeerBuffer) -> bool:
 	if typeof(ov) != TYPE_PACKED_BYTE_ARRAY:
 		return false
 	var ob: PackedByteArray = ov
-	if not OrderQueueCodec.deserialize(_orders, ob):
+	if not OrderQueueCodec.deserialize(_orders, ob) or not _pathing.read_state(buf):
 		return false
 	for p: int in PlayerTable.SLOTS:
 		if _players.is_active(p):
 			var _ok: bool = _defs.resolve(p, StringName(_players.doctrine[p]))
 	_events.tick = _state.tick
 	return true
+
+
+# Map load (A-55): baked weights; region graphs for each distinct ground-unit slope mask (at most MASK_SLOTS, in
+# def order) unless deserialize brings them. The flat datum keeps weight 1 everywhere and builds graphs lazily.
+func _load_pathing(map_dir: String) -> Error:
+	var err: Error = _pathing.load_weights(map_dir)
+	if err != OK or _restoring:
+		return err
+	var masks: PackedInt32Array = PackedInt32Array()
+	for g: GroundUnitDef in _defs.content.ground_units:
+		var m: int = Pathing.mask_for(g.max_slope_deg)
+		if m > 0 and not masks.has(m) and masks.size() < PathSearch.MASK_SLOTS:
+			var _a: bool = masks.push_back(m)
+	for m: int in masks:
+		_pathing.prepare(m)
+	return OK
 
 
 # Step 4 (R0 B.5): Assist.auto_dock() / Assist.link_bridge() (sim/steer, AI-10, AI-08) overwrite the input slots
