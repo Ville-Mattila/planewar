@@ -24,6 +24,8 @@ var _cores: PackedInt32Array = PackedInt32Array()        ## per player slot, fin
 var _acc: PackedFloat64Array = PackedFloat64Array()      ## per player slot, trickle in Ore-ticks (Ore x tick_hz) not yet credited
 var _low: PackedByteArray = PackedByteArray()            ## per team, 1 while LOW_POWER is active
 var _full: PackedByteArray = PackedByteArray()           ## per team, bit0 Ore / bit1 Ice STORAGE_FULL already reported
+var _supply: PackedFloat32Array = PackedFloat32Array()   ## refresh scratch per team
+var _demand: PackedFloat32Array = PackedFloat32Array()
 var _n_struct: int = -1
 var _dirty: bool = true
 var _core_def: int = -1
@@ -38,7 +40,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, hz: int, e
 	_hz = hz
 	_econ = defs.economy if defs.economy != null else EconomyDef.new()
 	var e: int = _power.resize(PlayerTable.TEAMS) | _cap_ore.resize(PlayerTable.TEAMS) | _cap_ice.resize(PlayerTable.TEAMS)
-	e |= _cores.resize(PlayerTable.SLOTS) | _acc.resize(PlayerTable.SLOTS) | _low.resize(PlayerTable.TEAMS) | _full.resize(PlayerTable.TEAMS)
+	e |= _supply.resize(PlayerTable.TEAMS) | _demand.resize(PlayerTable.TEAMS) | _cores.resize(PlayerTable.SLOTS) | _acc.resize(PlayerTable.SLOTS) | _low.resize(PlayerTable.TEAMS) | _full.resize(PlayerTable.TEAMS)
 	assert(e == OK)
 	_power.fill(1.0)
 	_cap_ore.fill(0)
@@ -185,11 +187,8 @@ func _refresh() -> void:
 	_cap_ore.fill(0)
 	_cap_ice.fill(0)
 	_cores.fill(0)
-	var supply: PackedFloat32Array = PackedFloat32Array()
-	var demand: PackedFloat32Array = PackedFloat32Array()
-	var _r: int = supply.resize(PlayerTable.TEAMS) | demand.resize(PlayerTable.TEAMS)
-	supply.fill(0.0)
-	demand.fill(0.0)
+	_supply.fill(0.0)
+	_demand.fill(0.0)
 	for s: int in _store.structures:
 		var o: int = _store.owner[s]
 		var tm: int = _store.team[s]
@@ -203,12 +202,12 @@ func _refresh() -> void:
 		var pw: float = sd.power
 		if sd.solar:
 			pw *= solar_factor(_store.up[s], Vector3.BACK, false, _econ.solar_band_deg, _econ.solar_plateau_mult)
-		supply[tm] += maxf(pw, 0.0)
-		demand[tm] += maxf(-pw, 0.0)
+		_supply[tm] += maxf(pw, 0.0)
+		_demand[tm] += maxf(-pw, 0.0)
 		if _store.def_id[s] == _core_def and o < PlayerTable.SLOTS:
 			_cores[o] += 1
 	for tm: int in PlayerTable.TEAMS:
-		_power[tm] = 1.0 if demand[tm] <= 0.0 else minf(supply[tm] / demand[tm], 1.0)
+		_power[tm] = 1.0 if _demand[tm] <= 0.0 else minf(_supply[tm] / _demand[tm], 1.0)
 		_report_power(tm)
 
 

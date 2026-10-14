@@ -69,7 +69,7 @@ func is_site(s: int) -> bool:
 
 ## Progress 0..1 of site `s` (0 while queued).
 func progress01(s: int) -> float:
-	var sd: StructureDef = _defs.base.structure(_store.def_id[s])
+	var sd: StructureDef = _defs.resolved(_store.owner[s]).structure(_store.def_id[s])
 	if state[s] != State.ASSEMBLING or sd == null or sd.build_time_s <= 0.0:
 		return 0.0
 	return clampf(_store.timer_a[s] / sd.build_time_s, 0.0, 1.0)
@@ -124,8 +124,8 @@ func step(_t: int, dt: float) -> void:
 
 # True when the site finished this tick.
 func _advance(s: int, dt: float) -> bool:
-	var sd: StructureDef = _defs.base.structure(_store.def_id[s])
 	var o: int = _store.owner[s]
+	var sd: StructureDef = _defs.resolved(o).structure(_store.def_id[s])
 	var before: float = maxf(_cfg.site_hp_fraction, progress01(s))
 	_store.timer_a[s] += dt
 	var p: float = progress01(s)
@@ -180,7 +180,7 @@ func _try_start(s: int, p: int) -> bool:
 	paid_ore[s] = c.x
 	paid_ice[s] = c.y
 	_store.timer_a[s] = 0.0
-	var _b: SimEvent = _events.emit(SimEvent.Kind.BUILD_STARTED, _store.id_of(s), _store.def_id[s], _store.pos[s], 0.0, _store.team[s])
+	var _b: SimEvent = _events.emit(SimEvent.Kind.BUILD_STARTED, _store.id_of(s), _store.def_id[s], _store.pos[s], 0.0, _store.team[s], p)
 	return true
 
 

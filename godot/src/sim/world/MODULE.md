@@ -26,7 +26,7 @@ func submit(cmd: Command) -> CommandResult;  func apply_all(tick: int) -> void
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name CommandValidator extends RefCounted                               # S10 rate + state rules, S12
 const RATE_PER_S: int; const BURST: int; const QUEUE_MAX: int;  var order_rules: OrderRules
-var build: Build; var production: Production; var economy: Economy; var last_reject: int   # (TA-19) set by EconomyHub: BUILD -> can_place (REJECTED_PLACEMENT + reject), PRODUCE -> team factory, queue room, REJECTED_LOCKED, S12 by queuer
+var build: Build; var production: Production; var last_reject: int   # (TA-19) set by EconomyHub: BUILD -> can_place (REJECTED_PLACEMENT + reject), PRODUCE -> team factory, queue room, REJECTED_LOCKED, S12 by queuer
 func validate(cmd: Command, tick: int, ended: bool, queued: int) -> CommandResult   # rate (bucket charged), phase, then check()
 func check(cmd: Command) -> int                                              # pure state rules; CommandResult.Code; re-run in step 1
 func begin_tick() -> void;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool

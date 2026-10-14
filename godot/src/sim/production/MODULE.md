@@ -17,7 +17,7 @@ contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check` must p
 
 ```gdscript
 class_name Production extends RefCounted
-const NO_ITEM: int                                                           # -1
+const NO_ITEM: int;  const CAP_UNITS: int                                    # -1; 0 (CAP_REACHED `b`)
 func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: MatchRules, events: SimEvents, economy: Economy, applier: CommandApplier)
 func queue_max() -> int;  func length(factory: int) -> int;  func queuer(factory: int, i: int) -> int   # factory = entity slot; queuer -1 when there is no item i
 func queue_of(factory: int) -> PackedInt32Array;  func progress01(factory: int) -> float               # unit def_ids head first; head progress
@@ -35,7 +35,7 @@ Queue items are `[factory_slot * queue_max + i]`; head progress is the factory's
 - P1 (S13) A queue never holds more than `queue_max` items: `enqueue` refuses a batch that would pass it, the validator rejects it with `REJECTED_CAP`, step 1 re-checks.
 - P2 Cost is paid when an item starts (`Economy.try_pay`); until then the head waits with one WAITING_FOR_ORE / ICE / SPEND_LOCKED alert per wait. PRODUCE is rejected `REJECTED_LOCKED` while the early share lock would forbid the batch (R0 C3-08).
 - P3 Speed is `max(production_min_speed, power_ratio(team))`; the unit appears when progress reaches `build_time_s` of the queuer's resolved def, owned by the queuer (doctrine and caps are theirs).
-- P4 A head that would exceed `caps.units` for its queuer (at start or at completion) blocks the queue: one CAP_REACHED event (`a` = player, `b` = unit def, team -1) and one ALERT PRODUCTION_BLOCKED_CAP per block; nothing is paid while blocked at start.
+- P4 A head that would exceed `caps.units` for its queuer (at start or at completion) blocks the queue: one CAP_REACHED event (`a` = player, `b` = `CAP_UNITS` 0, team -1; 04 s3.6 cap kind) and one ALERT PRODUCTION_BLOCKED_CAP per block; nothing is paid while blocked at start.
 - P5 (S12) Cancel rights follow the queuer: `queuer(factory, i)` is the owner, a teammate may cancel when that player is disconnected, eliminated or a bot. Cancelling item 0 after its start refunds `cancel_refund_assembly` of the payment; unpaid items refund nothing; the spent-Ore ledger falls with the refund.
 - P6 A destroyed factory drops its queue without refund (`forget`, from `EconomyHub.on_death`).
 

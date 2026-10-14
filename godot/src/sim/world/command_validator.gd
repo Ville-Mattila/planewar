@@ -16,7 +16,6 @@ const _STATE: PackedStringArray = ["_tokens", "_last", "_claimed"]
 var order_rules: OrderRules = null                    ## null: every ORDER is REJECTED_INVALID_ORDER
 var build: Build = null                               ## set by EconomyHub: BUILD runs `can_place`, PRODUCE the early share lock
 var production: Production = null                     ## set by EconomyHub: queue room, item owners (S12, S13)
-var economy: Economy = null                           ## set by EconomyHub (reserved for pool reads)
 var last_reject: int = 0                              ## `Build.Reject` of the last `check` that returned REJECTED_PLACEMENT
 
 var _store: EntityStore

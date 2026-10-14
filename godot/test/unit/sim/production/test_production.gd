@@ -95,7 +95,7 @@ func test_cap_reached_blocks_the_head_until_a_slot_frees() -> void:
 		if ev.kind == SimEvent.Kind.CAP_REACHED:
 			e = ev
 	assert_int(e.a).is_equal(0)
-	assert_int(e.b).is_equal(K.def(&"dart"))
+	assert_int(e.b).is_equal(Production.CAP_UNITS)                      # 04 s3.6: b is the cap kind, not a def
 	assert_bool(K.ore(w) >= ore0).is_true()                             # nothing was paid while blocked
 	assert_int(w.view().production_queue(yard).size()).is_equal(1)
 	var unit: int = w.store().id_of(w.store().ships[0])

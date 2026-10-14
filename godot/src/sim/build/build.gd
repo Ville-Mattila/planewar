@@ -134,7 +134,7 @@ func stamp(player: int, def_id: int, cell: int, rotation: int, finished: bool) -
 
 ## Frees the footprint of structure slot `s` (death or cancelled site); the entity itself is the caller's.
 func release_site(s: int) -> void:
-	var sd: StructureDef = _defs.base.structure(_store.def_id[s])
+	var sd: StructureDef = _defs.resolved(_store.owner[s]).structure(_store.def_id[s])
 	if sd != null and sd.footprint.size() == 2 and _store.anchor_cell[s] >= 0:
 		grid.release(_fp.cells(_store.anchor_cell[s], sd.footprint[0], sd.footprint[1], rot[s]))
 

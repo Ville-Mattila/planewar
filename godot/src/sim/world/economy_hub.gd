@@ -33,7 +33,6 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	production = Production.new(store, players, defs, rules, events, economy, applier)
 	validator.build = build
 	validator.production = production
-	validator.economy = economy
 
 
 ## True for the command kinds step 1 routes here instead of `CommandApplier`.
@@ -83,13 +82,15 @@ func on_death(s: int) -> void:
 	production.forget(s)
 	economy.mark_dirty()
 	if finished:
-		var _e: SimEvent = _events.emit(SimEvent.Kind.STRUCTURE_LOST, _store.id_of(s), _store.def_id[s], _store.pos[s], 0.0, _store.team[s])
+		# 04 s3.6: structure, def u16 (extra[0..1] LE), killer
+		var e: SimEvent = _events.emit(SimEvent.Kind.STRUCTURE_LOST, _store.id_of(s), _store.attacker[s], _store.pos[s], 0.0, _store.team[s])
+		e.extra = PackedByteArray([_store.def_id[s] & 0xFF, (_store.def_id[s] >> 8) & 0xFF])
 
 
 ## C2-14 (02 s8.1): `economy.start_kit` for `slot` around `centre` (a direction from the planet centre): the Core there,
 ## the Refinery `start_refinery_dist_m` toward `toward` (Home Field A), the Shipyard `start_adjacent_dist_m` beside the
 ## Core, the Vehicle Bay beside the Refinery, the Harvester next to the Refinery. All finished, all pre-built (they count
-## against `max_per_player`). False when a structure does not fit (occupied or off the grid); then nothing is promised.
+## against `max_per_player`). False when a structure cannot be created (entity store full or a def without footprint); occupancy is not checked, the kit is laid out on a clear site.
 func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3, tick: int) -> bool:
 	var eco: EconomyDef = _defs.economy
 	if eco == null or not _players.is_active(slot):

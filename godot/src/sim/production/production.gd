@@ -9,6 +9,7 @@ class_name Production extends RefCounted
 ## Queue arrays are per entity slot of the factory, `queue_max` items each; progress lives in the factory's `timer_a`.
 
 const NO_ITEM: int = -1
+const CAP_UNITS: int = 0       ## CAP_REACHED `b` (04 s3.6 cap kind: 0 units, 1 structures, 2 projectiles)
 const _FLAG_CAP: int = 1       ## CAP_REACHED already reported for this block
 const _FLAG_WAIT: int = 2      ## "waiting" alert already raised for this wait
 const _STATE: PackedStringArray = ["q_def", "q_player", "q_len", "started", "paid_ore", "paid_ice", "_flags", "_total"]
@@ -176,7 +177,7 @@ func _run(s: int, t: int, dt: float) -> void:
 
 func _start(s: int, player: int, unit: int, t: int) -> bool:
 	if _at_cap(player, t):
-		_block(s, player, unit)
+		_block(s, player)
 		return false
 	var c: Vector2i = _defs.cost(player, unit)
 	var r: Economy.Pay = _econ.try_pay(player, c.x, c.y)
@@ -198,13 +199,13 @@ func _start(s: int, player: int, unit: int, t: int) -> bool:
 
 func _finish(s: int, player: int, unit: int, t: int) -> void:
 	if _at_cap(player, t):
-		_block(s, player, unit)
+		_block(s, player)
 		return
 	var dir: Vector3 = _store.up[s] if _defs.entity_kind(unit) == EntityStore.K_SHIP else _store.fwd[s]
 	var at: Vector3 = _store.pos[s] + dir * _store.radius[s]
 	var u: int = _applier.spawn(unit, player, _players.team[player], at, Vector3.ZERO, _store.fwd[s], t)
 	if u < 0:
-		_block(s, player, unit)
+		_block(s, player)
 		return
 	_units[player] += 1
 	_pop_head(s)
@@ -224,10 +225,10 @@ func _pop_head(s: int) -> void:
 	_reset_head(s)
 
 
-func _block(s: int, player: int, unit: int) -> void:
+func _block(s: int, player: int) -> void:
 	if (_flags[s] & _FLAG_CAP) == 0:
 		_flags[s] |= _FLAG_CAP
-		var _c: SimEvent = _events.emit(SimEvent.Kind.CAP_REACHED, player, unit, _store.pos[s], 0.0, -1)
+		var _c: SimEvent = _events.emit(SimEvent.Kind.CAP_REACHED, player, CAP_UNITS, _store.pos[s], 0.0, -1)
 		var _a: SimEvent = _events.emit(SimEvent.Kind.ALERT, AlertKind.Kind.PRODUCTION_BLOCKED_CAP, _store.id_of(s),
 			_store.pos[s], 0.0, _store.team[s], player)
 

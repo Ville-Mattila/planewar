@@ -99,7 +99,7 @@ func _debug_spawn(cmd: Command, tick: int) -> void:
 	var s: int = spawn(d, b.decode_u8(2), b.decode_u8(3), CommandPayload.v3_at(b, 4), CommandPayload.v3_at(b, 28),
 		CommandPayload.v3_at(b, 52), tick)
 	if s < 0:
-		var _e: SimEvent = _events.emit(SimEvent.Kind.CAP_REACHED, cmd.player, d, Vector3.ZERO, 0.0, -1)
+		var _e: SimEvent = _events.emit(SimEvent.Kind.CAP_REACHED, cmd.player, Production.CAP_UNITS, Vector3.ZERO, 0.0, -1)
 
 
 ## Allocates and fills one entity of `def_id` (flip and boost ready, full HP / fuel / ammo); SPAWN event. -1 when
