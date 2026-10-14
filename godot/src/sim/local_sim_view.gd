@@ -4,8 +4,7 @@ class_name LocalSimView extends SimView
 ## `pending_order` refill one reused `OrderSpec` each, `team_state` / `player_state` one reused view per slot.
 ## Accessors whose system has not landed return the `SimView` default: service / pad queue (Docking GD-15),
 ## production (Production), field_remaining (Economy), scores and landing grade (sim/scoring); path_grid_version: TA-50.
-## `visible_to` / `visible_ids` read `visible_mask` (Vision, sim/vision/: bit t as of team t's last staggered pass) plus the
-## own team, which is always visible.
+## `visible_to` / `visible_ids`: `visible_mask` bit t (Vision, sim/vision/, team t's last staggered pass) or the own team.
 ## basis(id) = Basis(right, up, -fwd) with right = fwd x up (Godot's -Z forward).
 
 var _store: EntityStore
