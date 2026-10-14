@@ -1915,7 +1915,10 @@
       " R0 C1-03",
       " 05 AI-12"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-15",
+    "pr": "public#51",
+    "note": "choose_* N=8 ~43 us vs 25 us think row on desktop debug (A-62 measure-first; use every other think or N<=4 until architect revisits); predict_impact fine mode ~2 m/100 us, far mode 5.2 m; rank weights need content"
   },
   {
     "id": "UX-01",
