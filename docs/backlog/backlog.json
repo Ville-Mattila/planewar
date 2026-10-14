@@ -1088,7 +1088,9 @@
       " R0 O-4",
       " 02 GD-11"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#49"
   },
   {
     "id": "GD-13",
