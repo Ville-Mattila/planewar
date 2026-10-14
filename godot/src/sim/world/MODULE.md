@@ -7,12 +7,12 @@ first, same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lin
 
 | Field | Value |
 |---|---|
-| Responsibility | Step 1 command intake and application (validation S10 / S12, the pending queue, interim control transitions), step 5 ship motion, step 6 projectile motion, the per-row profiler, the player / team side tables, input slots, match clock, events array, injected defs, state bytes for S4. Not a public surface: other lanes reach all of it through `SimWorld`, `SimView` and `CommandSinkBase` (sim/MODULE.md). |
+| Responsibility | Step 1 command intake and application (validation S10 / S12, the pending queue; control transitions are `sim/control/`'s), step 5 ship motion, step 6 projectile motion, the per-row profiler, the player / team side tables, input slots, match clock, events array, injected defs, state bytes for S4. Not a public surface: other lanes reach all of it through `SimWorld`, `SimView` and `CommandSinkBase` (sim/MODULE.md). |
 | Lane owner tier | Opus (sim lane); Sonnet for recipes against this file |
 | May depend on | `core`, `content`, `sim` (R0 B.4: inside the sim module) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads (D2, D3) |
 | Autoloads used | None |
-| Status | implemented (TA-18, 2026-10-14). `CommandApplier`'s control transitions and ORDER intake are interim until AI-02 / AI-15; the S4 byte format is interim until TA-21 |
+| Status | implemented (TA-18, 2026-10-14). AI-02 (2026-10-14) moved the control transitions and ORDER intake to `ControlMachine` (`sim/control/MODULE.md`); the S4 byte format is interim until TA-21 |
 
 ## Public API
 
@@ -29,14 +29,10 @@ const RATE_PER_S: int; const BURST: int; const QUEUE_MAX: int;  var order_rules:
 func validate(cmd: Command, tick: int, ended: bool, queued: int) -> CommandResult   # rate (bucket charged), phase, then check()
 func check(cmd: Command) -> int                                              # pure state rules; CommandResult.Code; re-run in step 1
 func begin_tick() -> void;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
-class_name CommandApplier extends RefCounted                                 # step 1 + interim ControlMachine (05 C6, C9, C11, C12, C15, C16)
-const CS_AUTO: int; const CS_ORDERED: int; const CS_POSSESSED: int; const OV_NONE: int; const OV_SAFETY: int; const OV_RECOVER_CEILING: int; const OV_LINK_BRIDGE: int
-const RR_PLAYER: int; const RR_DEATH: int; const RR_CEILING: int; const RR_HANDOVER: int; const RR_DISCONNECT: int; const RR_MATCH: int; const RR_INVALID: int; const RR_ADMIN: int
+class_name CommandApplier extends RefCounted                                 # step 1: control kinds and ORDER to ControlMachine, the rest here
 const DEATH_CAUSE_DEBUG: int;  var dying: PackedInt32Array
-func store_pilot(cmd: Command) -> void;  func apply(cmd: Command, tick: int) -> void
-func possess(p: int, s: int) -> void;  func release_player(p: int, reason: int) -> void;  func release_disconnected() -> void
-func release_all(reason: int) -> void;  func ceiling_check(ceiling_r: float) -> void
-func kill(s: int) -> void;  func resolve_deaths(tick: int) -> void
+func store_pilot(cmd: Command) -> void;  func apply(cmd: Command, tick: int) -> void   # store_pilot also flags the input fresh (05 C13)
+func kill(s: int) -> void;  func resolve_deaths(tick: int) -> void          # resolve_deaths: ControlMachine.on_death (C15), then DEATH
 func spawn(def_id: int, owner: int, team: int, p: Vector3, v: Vector3, fwd_in: Vector3, tick: int) -> int   # slot or -1; SPAWN event
 class_name CommandPayload                                                    # sim form of Command.payload (04 s2.5 order; f64 positions / pilot axes)
 const ORDER_MAX_IDS: int; const ORDER_MAX_POINTS: int; const PILOT_BYTES: int; const DEBUG_SPAWN_BYTES: int; const DEBUG_SET_BYTES: int
@@ -94,15 +90,15 @@ static func put_props(buf: StreamPeerBuffer, o: Object, names: PackedStringArray
 - W3: `SimEvents.emit` stamps the tick `SimWorld.step()` set before step 1; nothing outside `step()` emits (S5).
 - W4: `ShipMotion` and `ProjectileMotion` allocate nothing per entity: one `ShipState`, one `PilotInput`, one `ProjectileState` scratch; each SoA array is copied at most once per tick (copy-on-write of the local handle).
 - W5: every class holding state has `write_state` / `read_state`; `SimWorld.serialize` writes them in a fixed order and `deserialize(serialize())` reproduces each byte for byte (S4).
-- W6: Control state, overlay and `ReleaseReason` constants equal sim/MODULE.md's Enumerations (test_enums.gd) until `ControlMachine` (AI-02) owns them.
+- W6: Control state, overlay and `ReleaseReason` are `ControlMachine`'s enums (AI-02, sim/control/MODULE.md CM1); nothing here redefines them.
 
 ## Data owned
 
-`PlayerTable` (players, team pools), `InputSlots`, `MatchState`, the token buckets and POSSESS claims, the pending command queue, the deferred death list (empty between ticks), the profiler rows, the event list. Nothing on disk.
+`PlayerTable` (players, team pools), `InputSlots`, `MatchState`, the token buckets and same-intake POSSESS claims, the pending command queue, the deferred death list (empty between ticks), the profiler rows, the event list. Nothing on disk.
 
 ## Events emitted / consumed
 
-`CommandApplier`: SPAWN, DEATH, POSSESSED, RELEASED (`extra[0]` = `ReleaseReason`), CEILING_RELEASE, ALERT (PENDING_ORDER), CAP_REACHED. `SimWorld` step 10: CORE_EXPOSURE, MATCH_END. Consumes every `Command.Kind`.
+`CommandApplier`: SPAWN, DEATH, CAP_REACHED; the control events (POSSESSED, RELEASED, ...) are `ControlMachine`'s (sim/control/MODULE.md). `SimWorld` step 10: CORE_EXPOSURE, MATCH_END. Consumes every `Command.Kind`.
 
 ## Performance budget
 
@@ -120,7 +116,7 @@ static func put_props(buf: StreamPeerBuffer, o: Object, names: PackedStringArray
 
 ## Open items
 
-- `needs content:` (ADR-09; named consts until the fields exist): `rules.json` command rate 10/s and burst 30 (04 s11.3); the uplink guard (05 C6r 1,950 m = `ceiling_hard_m` - 50); `match_rules.json` arc divisors 6 and 2 (01 s3.3 Open 0-5 / Expand 5-15 of 30 min); cut rungs 3 (projectile cap 1,400), 4 and 6 (03 s4.3) as data; `shooter_grace_ticks` (03 s6.1).
-- Interim, replaced by their owners: possession, release, ceiling, disconnect and match-end transitions plus ORDER intake (AI-02 `ControlMachine`, AI-15); step-9 frees of projectiles with a HIT / GROUND contact and DEBUG deaths (GD-08, GD-36 Combat); BUILD, PRODUCE, CANCEL_*, SET_RALLY, TOGGLE_AUTO_REPLENISH, REQUEST_POSSESS, HANDOVER and SURRENDER are validated and accepted but applied by TA-19, GD-17, AI-02, GD-20; CANCEL_PRODUCE treats the factory owner as the queuer until GD-17 records per-item queuers.
+- `needs content:` (ADR-09; named consts until the fields exist): `rules.json` command rate 10/s and burst 30 (04 s11.3); the uplink margin moved to `ControlMachine.UPLINK_MARGIN_M`; `match_rules.json` arc divisors 6 and 2 (01 s3.3 Open 0-5 / Expand 5-15 of 30 min); cut rungs 3 (projectile cap 1,400), 4 and 6 (03 s4.3) as data; `shooter_grace_ticks` (03 s6.1).
+- Interim, replaced by their owners: ORDER ghost-age / visibility checks (AI-15); step-9 frees of projectiles with a HIT / GROUND contact and DEBUG deaths (GD-08, GD-36 Combat); BUILD, PRODUCE, CANCEL_*, SET_RALLY, TOGGLE_AUTO_REPLENISH and SURRENDER are validated and accepted but applied by TA-19, GD-17, GD-20; CANCEL_PRODUCE treats the factory owner as the queuer until GD-17 records per-item queuers.
 - TA-21 compacts the S4 format (live slots only, ~150 KB at 1,200 entities) into `sim/serialize.gd`; today every slot is written (486 KB at 1,200 entities + 2,000 projectiles; serialize 2.2 ms, deserialize 35 ms incl. map load).
 - Assist substitution (step 4) and `Pathing.advance` (3b) are empty until AI-10 and TA-20; rows 3b, 8b, 11 and 12 read 0.

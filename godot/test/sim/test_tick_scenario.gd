@@ -2,7 +2,8 @@ extends GdUnitTestSuite
 ## Scenario layer (TA-18 acceptance): a scripted 100-tick match through SimWorld.step() in the R0 B.5 order yields
 ## exactly the expected event sequence: spawns, possession hand-offs (05 C6 / C9), a refused cross-team possess,
 ## a deferred death, a pending order on a possessed ship (C7), Core Exposure, a disconnect release (C12) and the
-## hard end releasing every possession (C16) before MATCH_END; commands after the end get REJECTED_PHASE.
+## hard end releasing every possession (C16) before MATCH_END; commands after the end get REJECTED_PHASE. A pilot
+## silent for 10 ticks after possessing gets ALERT(LINK_WEAK) on the 11th (05 C13, AI-02); alerts carry the pilot slot.
 ## Commands are queued before the step that applies them, so "at t" means step t's events.
 
 const EXPOSURE_S: float = 2.0
@@ -32,15 +33,17 @@ func test_scripted_100_ticks_event_sequence() -> void:
 	var expected: Array = [
 		[1, K.SPAWN, a, -1], [1, K.SPAWN, b, -1], [1, K.SPAWN, c, -1],
 		[5, K.POSSESSED, a, -1],
-		[20, K.RELEASED, a, CommandApplier.RR_PLAYER], [20, K.POSSESSED, b, -1],
-		[40, K.RELEASED, b, CommandApplier.RR_PLAYER],
+		[20, K.RELEASED, a, ControlMachine.ReleaseReason.PLAYER], [20, K.POSSESSED, b, -1],
+		[31, K.ALERT, AlertKind.Kind.LINK_WEAK, 0],
+		[40, K.RELEASED, b, ControlMachine.ReleaseReason.PLAYER],
 		[45, K.POSSESSED, c, -1],
 		[50, K.DEATH, a, CommandApplier.DEATH_CAUSE_DEBUG],
-		[55, K.ALERT, AlertKind.Kind.PENDING_ORDER, -1],
+		[55, K.ALERT, AlertKind.Kind.PENDING_ORDER, 1],
+		[56, K.ALERT, AlertKind.Kind.LINK_WEAK, 1],
 		[60, K.CORE_EXPOSURE, 0, -1],
-		[71, K.RELEASED, c, CommandApplier.RR_DISCONNECT],
+		[71, K.RELEASED, c, ControlMachine.ReleaseReason.DISCONNECT],
 		[80, K.POSSESSED, b, -1],
-		[90, K.RELEASED, b, CommandApplier.RR_MATCH], [90, K.MATCH_END, -1, -1],
+		[90, K.RELEASED, b, ControlMachine.ReleaseReason.MATCH], [90, K.MATCH_END, -1, -1],
 	]
 	assert_array(got).is_equal(expected)
 	# the AI hook ran every tick; drive() was refused exactly while C was possessed (ticks 45..70)

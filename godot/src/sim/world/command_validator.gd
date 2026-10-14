@@ -10,8 +10,6 @@ const RATE_PER_S: int = 10
 const BURST: int = 30
 ## sim/MODULE.md "Data owned": pending command queue <= 256 per tick; overflow rejects with REJECTED_RATE.
 const QUEUE_MAX: int = 256
-## 05 C6r REJECTED_UPLINK at altitude >= 1,950 m = ceiling_hard_m - 50 m. needs content: a rules.json field.
-const _UPLINK_MARGIN_M: int = 50
 const _STATE: PackedStringArray = ["_tokens", "_last", "_claimed"]
 
 var order_rules: OrderRules = null                    ## null: every ORDER is REJECTED_INVALID_ORDER
@@ -20,20 +18,20 @@ var _store: EntityStore
 var _players: PlayerTable
 var _defs: WorldDefs
 var _rules: MatchRules
+var _control: ControlMachine
 var _tokens: PackedInt32Array = PackedInt32Array()   ## per player, in 1 / tick_hz commands
 var _last: PackedInt32Array = PackedInt32Array()     ## tick of the last refill
 var _claimed: PackedInt32Array = PackedInt32Array()  ## POSSESS targets accepted since the last step 1
 var _spec: OrderSpec = OrderSpec.new()
 var _ids: PackedInt32Array = PackedInt32Array()
-var _uplink_alt: float = 0.0
 
 
-func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: MatchRules) -> void:
+func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: MatchRules, control: ControlMachine) -> void:
 	_store = store
 	_players = players
 	_defs = defs
 	_rules = rules
-	_uplink_alt = defs.rules.ceiling_hard_m - float(_UPLINK_MARGIN_M)
+	_control = control
 	var e: int = _tokens.resize(PlayerTable.SLOTS) | _last.resize(PlayerTable.SLOTS)
 	assert(e == OK)
 	_tokens.fill(BURST * rules.tick_hz)
@@ -82,14 +80,11 @@ func check(cmd: Command) -> int:
 		Command.Kind.SET_RALLY, Command.Kind.TOGGLE_AUTO_REPLENISH:
 			return _check_own_structure(cmd)
 		Command.Kind.POSSESS:
-			return _check_possess(p, cmd.target)
+			return _control.check_possess(p, cmd.target, _claimed.has(cmd.target))
 		Command.Kind.RELEASE:
-			var cur: int = _players.possessed[p]
-			if cur == 0 or not _store.alive(cur):
-				return CommandResult.Code.REJECTED_DEAD
-			return CommandResult.Code.ACCEPTED if cmd.target == 0 or cmd.target == cur else CommandResult.Code.REJECTED_NOT_OWNER
+			return _control.check_release(p, cmd.target)
 		Command.Kind.REQUEST_POSSESS, Command.Kind.HANDOVER:
-			return _check_request(cmd)
+			return _control.check_request(cmd)
 		Command.Kind.PILOT_INPUT:
 			return CommandResult.Code.ACCEPTED if cmd.payload.size() == CommandPayload.PILOT_BYTES else CommandResult.Code.REJECTED_MALFORMED
 		Command.Kind.SURRENDER:
@@ -147,6 +142,8 @@ func _check_order(cmd: Command) -> int:
 		var v: OrderRules.Verdict = order_rules.validate(_spec, _store.def_id[s], true)
 		if v != OrderRules.Verdict.OK:
 			return CommandResult.Code.REJECTED_MALFORMED if OrderRules.malformed(v) else CommandResult.Code.REJECTED_INVALID_ORDER
+		if not _control.orders.room(s, _spec.flags):
+			return CommandResult.Code.REJECTED_CAP                               # 05 C3 guard: queue < 8
 	if _spec.target != 0 and not _store.alive(_spec.target):
 		return CommandResult.Code.REJECTED_INVALID_ORDER
 	return CommandResult.Code.ACCEPTED
@@ -211,38 +208,6 @@ func _check_own_structure(cmd: Command) -> int:
 	if _store.kind[s] != EntityStore.K_STRUCTURE:
 		return CommandResult.Code.REJECTED_MALFORMED
 	return CommandResult.Code.ACCEPTED if _store.owner[s] == cmd.player else CommandResult.Code.REJECTED_NOT_OWNER
-
-
-## 05 C6 / C6r guards, in its order.
-func _check_possess(p: int, t: int) -> int:
-	if not _store.alive(t) or EntityId.is_wreck(t):
-		return CommandResult.Code.REJECTED_DEAD
-	var s: int = EntityId.slot(t)
-	if _store.team[s] != _players.team[p]:
-		return CommandResult.Code.REJECTED_NOT_OWNER
-	if (_store.flags[s] & EntityStore.F_POSSESSABLE) == 0 or (_store.flags[s] & EntityStore.F_BUILDING) != 0:
-		return CommandResult.Code.REJECTED_NOT_POSSESSABLE
-	if _store.possessor[s] != EntityStore.NONE_U8 or _claimed.has(t):
-		return CommandResult.Code.REJECTED_ALREADY_POSSESSED
-	if _store.pos[s].length() - Sphere.PLANET_RADIUS >= _uplink_alt:
-		return CommandResult.Code.REJECTED_UPLINK
-	return CommandResult.Code.ACCEPTED
-
-
-func _check_request(cmd: Command) -> int:
-	var t: int = cmd.target
-	if not _store.alive(t) or EntityId.is_wreck(t):
-		return CommandResult.Code.REJECTED_DEAD
-	var s: int = EntityId.slot(t)
-	if _store.team[s] != _players.team[cmd.player]:
-		return CommandResult.Code.REJECTED_NOT_OWNER
-	var who: int = _store.possessor[s]
-	if cmd.kind == Command.Kind.REQUEST_POSSESS:
-		return CommandResult.Code.ACCEPTED if who != EntityStore.NONE_U8 and who != cmd.player else CommandResult.Code.REJECTED_MALFORMED
-	var to: int = CommandPayload.u8_at(cmd, 0)
-	if who != cmd.player:
-		return CommandResult.Code.REJECTED_NOT_OWNER
-	return CommandResult.Code.ACCEPTED if _players.is_active(to) and _players.team[to] == _players.team[cmd.player] else CommandResult.Code.REJECTED_MALFORMED
 
 
 func _check_adjutant(cmd: Command) -> int:

@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## S14 (TA-18): the ordinals in sim/MODULE.md "Enumerations" (R0 B.3, append-only) equal the GDScript enums, for
-## every enumeration the sim defines so far. The bullet format "label ...: 0 NAME, 1 NAME" is part of the contract
+## every enumeration the sim defines so far (control state, overlay and `ReleaseReason`: `ControlMachine`, AI-02). The bullet format "label ...: 0 NAME, 1 NAME" is part of the contract
 ## (R0 B.9 A-21); pairs are read in sequence, so prose numbers inside a bullet are ignored.
 
 const SIM_MODULE: String = "res://src/sim/MODULE.md"
@@ -39,14 +39,6 @@ func _check(label: String, enum_dict: Dictionary) -> void:
 		assert_int(int(enum_dict.get(doc[i], -1))).override_failure_message("%s %s" % [label, doc[i]]).is_equal(i)
 
 
-func _consts(prefix: String, names: PackedStringArray) -> Dictionary:
-	var d: Dictionary = {}
-	var cmap: Dictionary = (load("res://src/sim/world/command_applier.gd") as Script).get_script_constant_map()
-	for n: String in names:
-		d[n] = cmap[prefix + n]
-	return d
-
-
 func test_sim_event_kind() -> void:
 	_check("`SimEvent.Kind` (", SimEvent.Kind)
 
@@ -73,8 +65,8 @@ func test_phase_arc_player_kind() -> void:
 	_check("`PlayerKind`:", {"HUMAN": PlayerTable.KIND_HUMAN, "BOT": PlayerTable.KIND_BOT, "OPEN": PlayerTable.KIND_OPEN})
 
 
-func test_control_state_overlay_release_reason_mirrors() -> void:
-	_check("Control state (", _consts("CS_", _doc_names("Control state (")))
-	_check("AI overlay (", _consts("OV_", _doc_names("AI overlay (")))
-	_check("`ReleaseReason`:", _consts("RR_", _doc_names("`ReleaseReason`:")))
+func test_control_state_overlay_release_reason() -> void:
+	_check("Control state (", ControlMachine.State)
+	_check("AI overlay (", ControlMachine.Overlay)
+	_check("`ReleaseReason`:", ControlMachine.ReleaseReason)
 	assert_int(_doc_names("`ReleaseReason`:").size()).is_equal(8)

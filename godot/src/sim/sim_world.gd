@@ -1,15 +1,16 @@
 class_name SimWorld extends RefCounted
 ## The tick driver (03 s3.5, s4.1; R0 B.5 tick order). Content is injected at `_init` (no autoload in the sim);
 ## `load_map` builds every system for one match. `step()` runs, in order: 1 queued commands (+ disconnect
-## releases), 2 human inputs into input slots, 3 ceiling check + AI hook, 3b pathing (TA-20), 4 assist
+## releases), 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-20), 4 assist
 ## substitution (AI-10), 5 kinematics (DOCKED ships skipped, A-41; terrain contacts to Collision), 6 projectiles,
 ## 7 spatial rebuild, 8 collision, 9 deferred deaths and projectile contacts (Combat GD-08 / GD-36 add damage),
 ## 10 match timers (Economy, Production, Build, Docking and scoring land later), 11 vision (TA-37), 12 the caller
-## drains events. Systems not yet built are named in their step and cost nothing. Helpers: `sim/world/`.
+## drains events. Systems not yet built are named in their step and cost nothing. Helpers: `sim/world/`; control
+## transitions: `sim/control/` (05 s2, AI-02).
 
 const _MAPS_ROOT: String = "res://content/maps/"
 const _MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const _FORMAT: int = 1
+const _FORMAT: int = 2
 const _RULES_STATE: PackedStringArray = ["mode", "caps_profile", "sim_budget_profile", "core_exposure_s", "hard_end_s",
 	"debug_commands", "profile_enabled", "friendly_fire", "adjutant_allowed", "sun_period_s", "ranked", "tick_hz"]
 const _CAPS_STATE: PackedStringArray = ["id", "units", "structures", "projectiles", "wrecks", "slots"]
@@ -32,6 +33,7 @@ var _events: SimEvents = SimEvents.new()
 var _state: MatchState = MatchState.new()
 var _validator: CommandValidator = null
 var _applier: CommandApplier = null
+var _control: ControlMachine = null
 var _intake: CommandIntake = null
 var _motion: ProjectileMotion = null
 var _ships: ShipMotion = null
@@ -42,7 +44,6 @@ var _hook: SimAiHook = null
 var _match_seed: int = 0
 var _map_id: StringName = &""
 var _dt: float = 0.0
-var _ceiling_r: float = 0.0
 
 
 func _init(content: ContentSet) -> void:
@@ -90,6 +91,12 @@ func remove_player(slot: int) -> void:
 		_players.disconnect_tick[slot] = _state.tick
 
 
+## Admin action (05 C18): `slot`'s possession ends with RELEASED(reason=ADMIN) in step 1 of the next tick.
+func admin_release(slot: int) -> void:
+	if _control != null:
+		_control.admin_release(slot)
+
+
 func set_ai_hook(hook: SimAiHook) -> void:
 	_hook = hook
 
@@ -112,10 +119,10 @@ func step() -> void:
 	_events.tick = t
 	_profiler.begin()
 	_intake.apply_all(t)                                     # 1
-	_applier.release_disconnected()
-	_step_inputs()                                           # 2
+	_control.step_releases()                                 # 1: C12 disconnect, C18 admin
+	_control.step_inputs(t)                                  # 2: C13 / C14
 	_profiler.lap(TickProfiler.ROW_COMMANDS)
-	_applier.ceiling_check(_ceiling_r)                       # 3: ControlMachine control check, then the hook
+	_control.control_check()                                 # 3: C11, C18, C17, then the hook
 	if _hook != null:
 		_hook.on_tick(t, _view, _sink)
 	_profiler.lap(TickProfiler.ROW_AI)
@@ -167,6 +174,7 @@ func serialize() -> PackedByteArray:
 	_inputs.write_state(buf)
 	_validator.write_state(buf)
 	_intake.write_state(buf)
+	_control.write_state(buf)
 	_store.write_state(buf)
 	_proj.write_state(buf)
 	StateIO.put_props(buf, collision, _COLLISION_STATE)
@@ -243,7 +251,6 @@ func _wire(rules: MatchRules) -> void:
 	if rules.caps == null:
 		rules.caps = CapsDef.new()
 	_dt = 1.0 / float(rules.tick_hz)
-	_ceiling_r = Sphere.PLANET_RADIUS + _defs.rules.ceiling_hard_m
 	_store = EntityStore.new()
 	_proj = ProjectileStore.new(rules.caps.projectiles if rules.caps.projectiles > 0 else ProjectileStore.SLOT_COUNT)
 	_terrain = Terrain.new()
@@ -255,13 +262,15 @@ func _wire(rules: MatchRules) -> void:
 	_inputs = InputSlots.new()
 	_events = SimEvents.new()
 	_state = MatchState.new()
-	_validator = CommandValidator.new(_store, _players, _defs, rules)
+	_control = ControlMachine.new(_store, _orders, _players, _inputs, _events, _defs.rules.ceiling_hard_m, rules.tick_hz)
+	_validator = CommandValidator.new(_store, _players, _defs, rules, _control)
 	var c: ContentSet = _defs.content
 	if c.order_rules != null:
 		_validator.order_rules = OrderRules.from_def(c.order_rules)
 		_validator.order_rules.bind(c.ships, c.ground_units, c.structures)
 		_orders.limit = _validator.order_rules.queue_max
-	_applier = CommandApplier.new(_store, _orders, _players, _inputs, _events, _defs, _validator)
+		_control.orders.rules = _validator.order_rules
+	_applier = CommandApplier.new(_store, _orders, _players, _inputs, _events, _defs, _validator, _control)
 	_intake = CommandIntake.new(_validator, _applier, _state)
 	_motion = ProjectileMotion.new(_store, _proj, _defs)
 	_ships = ShipMotion.new(_store, _inputs, _defs, collision, _terrain)
@@ -273,7 +282,9 @@ func _wire(rules: MatchRules) -> void:
 func _read_state(buf: StreamPeerBuffer) -> bool:
 	if not (_state.read_state(buf) and _players.read_state(buf) and _inputs.read_state(buf)):
 		return false
-	if not (_validator.read_state(buf) and _intake.read_state(buf) and _store.read_state(buf) and _proj.read_state(buf)):
+	if not (_validator.read_state(buf) and _intake.read_state(buf) and _control.read_state(buf)):
+		return false
+	if not (_store.read_state(buf) and _proj.read_state(buf)):
 		return false
 	if not StateIO.get_props(buf, collision, _COLLISION_STATE):
 		return false
@@ -288,14 +299,6 @@ func _read_state(buf: StreamPeerBuffer) -> bool:
 			var _ok: bool = _defs.resolve(p, StringName(_players.doctrine[p]))
 	_events.tick = _state.tick
 	return true
-
-
-# Step 2: each possessing player's stored PilotInput becomes its entity's input for this tick.
-func _step_inputs() -> void:
-	for p: int in PlayerTable.SLOTS:
-		var id: int = _players.possessed[p]
-		if id != 0 and _store.alive(id) and EntityId.slot(id) < InputSlots.ENTITY_SLOTS:
-			_inputs.copy_player_to_entity(p, EntityId.slot(id))
 
 
 # Step 4 (R0 B.5): Assist.auto_dock() / Assist.link_bridge() (sim/steer, AI-10, AI-08) overwrite the input slots
@@ -328,5 +331,5 @@ func _step_match(t: int) -> void:
 		var _e: SimEvent = _events.emit(SimEvent.Kind.CORE_EXPOSURE, 0, 0, Vector3.ZERO, clock, -1)
 	if ph == MatchRules.Phase.ENDED:
 		_state.ended_tick = t
-		_applier.release_all(CommandApplier.RR_MATCH)
+		_control.release_all(ControlMachine.ReleaseReason.MATCH)
 		var _m: SimEvent = _events.emit(SimEvent.Kind.MATCH_END, _state.winner_team, 0, Vector3.ZERO, clock, -1)

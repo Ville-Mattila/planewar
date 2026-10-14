@@ -23,7 +23,7 @@ func test_s1_apply_command_queues_and_step1_applies() -> void:
 	assert_int(w.view().possessor(id)).is_equal(-1)
 	w.step()
 	assert_int(w.view().possessor(id)).is_equal(0)
-	assert_int(w.view().control_state(id)).is_equal(CommandApplier.CS_POSSESSED)
+	assert_int(w.view().control_state(id)).is_equal(ControlMachine.State.POSSESSED)
 
 
 func test_s1_pilot_input_is_stored_at_once_and_flown() -> void:
@@ -60,7 +60,7 @@ func test_s3_view_reads_are_stable_until_step_and_reuse_objects() -> void:
 	assert_object(v.order_head(id)).is_same(h)
 	assert_int(h.kind).is_equal(OrderSpec.Kind.MOVE)
 	assert_int(v.order_issuer(id)).is_equal(0)
-	assert_int(v.control_state(id)).is_equal(CommandApplier.CS_ORDERED)
+	assert_int(v.control_state(id)).is_equal(ControlMachine.State.ORDERED)
 
 
 func test_s5_every_event_has_the_tick_of_its_step() -> void:
@@ -249,7 +249,7 @@ func test_debug_kill_is_deferred_to_step9_with_release_first() -> void:
 	w.step()
 	var ev: Array[SimEvent] = w.drain_events()
 	assert_array(Array(WorldTestKit.kinds(ev))).is_equal([SimEvent.Kind.RELEASED, SimEvent.Kind.DEATH])
-	assert_int(ev[0].extra[0]).is_equal(CommandApplier.RR_DEATH)
+	assert_int(ev[0].extra[0]).is_equal(ControlMachine.ReleaseReason.DEATH)
 	assert_bool(w.store().alive(id)).is_false()
 	assert_int(w.view().player_state(0).possessed).is_equal(0)
 
@@ -266,7 +266,7 @@ func test_disconnect_releases_in_the_next_step1() -> void:
 	w.step()
 	var ev: Array[SimEvent] = w.drain_events()
 	assert_int(ev[0].kind).is_equal(SimEvent.Kind.RELEASED)
-	assert_int(ev[0].extra[0]).is_equal(CommandApplier.RR_DISCONNECT)
+	assert_int(ev[0].extra[0]).is_equal(ControlMachine.ReleaseReason.DISCONNECT)
 	assert_int(w.view().possessor(id)).is_equal(-1)
 
 
@@ -281,7 +281,7 @@ func test_ceiling_releases_a_possessed_ship() -> void:
 	w.step()
 	var ev: Array[SimEvent] = w.drain_events()
 	assert_array(Array(WorldTestKit.kinds(ev))).is_equal([SimEvent.Kind.RELEASED, SimEvent.Kind.CEILING_RELEASE])
-	assert_int(w.store().overlay[EntityId.slot(id)]).is_equal(CommandApplier.OV_RECOVER_CEILING)
+	assert_int(w.store().overlay[EntityId.slot(id)]).is_equal(ControlMachine.Overlay.RECOVER_CEILING)
 
 
 func test_match_timers_fire_once_and_end_rejects_commands() -> void:
