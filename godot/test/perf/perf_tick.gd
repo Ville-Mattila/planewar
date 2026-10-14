@@ -1,11 +1,13 @@
 class_name PerfTick
 extends Node
 ## SimWorld.step() benchmark with the 03 s4.4 per-row split (TA-18). Scenario: perf_tick_world.gd.
-## godot --headless --path godot res://test/perf/perf_tick.tscn -- [--ticks=3600] [--full] [--flat]
+## godot --headless --path godot res://test/perf/perf_tick.tscn -- [--ticks=3600] [--full] [--flat] [--profile=N]
 ##   default : A/B scale (flat datum, 24 ships, 8 ground, 16 structures, 4 wrecks, 60 projectiles) so the
 ##             same-job A/B of ab_perf.py (7 rounds x 2 sides, 10 noise repeats) stays inside its job timeout;
 ##   --full  : S-SIM-1 scale on s_world1 (400 ships, 200 ground, 480 structures, 120 wrecks = 1,200 entities,
-##             2,000 projectiles), the scale every perf note cites (03 s4.2 rows); --flat drops the map.
+##             2,000 projectiles), the scale every perf note cites (03 s4.2 rows); --flat drops the map;
+##   --profile=N: SimWorld.set_budget_profile(N) (cut rungs 1..N; 1 = vision at 10 Hz, the rate of the 03 s4.2 vision
+##             row); default: rules.json sim_budget_profile [1, 2] (vision 5 Hz).
 ## Prints PERF_ROW lines (p50/p95/p99/max/mean ms per 03 s4.4 row, rows 1-13) and one PERF_TICK line (whole step,
 ## microseconds; the line ab_perf.py parses). A tree without perf_tick_world.gd (an A/B base older than TA-18)
 ## falls back to the S-CI-1 SoakWorldStub so the harness still prints PERF_TICK.
@@ -24,6 +26,7 @@ func _ready() -> void:
 	var full: bool = false
 	var flat: bool = false
 	var stub: bool = false
+	var profile: int = -1
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--ticks="):
 			ticks = int(arg.substr(8))
@@ -33,14 +36,16 @@ func _ready() -> void:
 			flat = true
 		elif arg == "--stub":
 			stub = true
+		elif arg.begins_with("--profile="):
+			profile = int(arg.substr(10))
 	if ResourceLoader.exists(WORLD_SCRIPT) and not stub:
-		_run_sim(ticks, full, flat)
+		_run_sim(ticks, full, flat, profile)
 	else:
 		_run_stub(ticks)
 	get_tree().quit(0)
 
 
-func _run_sim(ticks: int, full: bool, flat: bool) -> void:
+func _run_sim(ticks: int, full: bool, flat: bool, profile: int) -> void:
 	var script: GDScript = load(WORLD_SCRIPT)
 	var map_id: StringName = &"" if flat or not full else &"s_world1_r6000"
 	var pw: Variant
@@ -49,6 +54,8 @@ func _run_sim(ticks: int, full: bool, flat: bool) -> void:
 	else:
 		pw = script.new(24, 8, 16, 4, 60, map_id)
 	var w: Variant = pw.world
+	if profile >= 0:
+		w.set_budget_profile(profile)
 	for _i: int in WARMUP_TICKS:
 		w.step()
 		w.drain_events()
@@ -74,8 +81,9 @@ func _run_sim(ticks: int, full: bool, flat: bool) -> void:
 	var st: Variant = w.store()
 	print("PERF_FINGERPRINT harness=%d world=sim scale=%s map=%s rows=%d" % [HARNESS_VERSION,
 		"full" if full else "ab", map_id if map_id != &"" else "flat", ROW_NAMES.size()])
-	print("PERF_SCENE scale=%s map=%s ticks=%d entities=%d ships=%d projectiles_mean=%d" % ["full" if full else "ab",
-		map_id if map_id != &"" else "flat", ticks, st.live_count(), st.ships.size(), live_p / ticks])
+	print("PERF_SCENE scale=%s map=%s ticks=%d entities=%d ships=%d projectiles_mean=%d profile=%s" % ["full" if full else "ab",
+		map_id if map_id != &"" else "flat", ticks, st.live_count(), st.ships.size(), live_p / ticks,
+		str(profile) if profile >= 0 else "default"])
 	for r: int in range(1, ROW_NAMES.size()):
 		var a: PackedFloat32Array = rows.slice(r * ticks, (r + 1) * ticks)
 		a.sort()

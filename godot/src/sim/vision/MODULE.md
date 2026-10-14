@@ -39,7 +39,7 @@ class_name InterestGrid extends RefCounted                                   # 3
 const N: int; const CELLS: int; const TEAMS: int; const GROUPS: int; const NEUTRAL_GROUP: int; const STRIDE: int   # 8, 384, 8, 9, 8, 1536
 var bucket_start: PackedInt32Array; var bucket_count: PackedInt32Array; var items: PackedInt32Array   # bucket = cell * GROUPS + team group; store slots
 var cell_n: PackedInt32Array; var touched: PackedInt32Array; var touched_n: int   # entities per cell; non-empty cells this tick
-var centre: PackedVector3Array; var cone: PackedFloat64Array                 # per cell: unit centre, angular circumradius + 1 m margin
+var centre: PackedVector3Array; var cone: PackedFloat64Array; var cone_cos: PackedFloat64Array; var cone_sin: PackedFloat64Array   # per cell: unit centre, circumradius + 1 m
 var near_start: PackedInt32Array; var near_cell: PackedInt32Array; var near_gap: PackedFloat32Array; var reach_m: float
 var cell_start: PackedInt32Array; var cell_count: PackedInt32Array; var ids: PackedInt32Array; var list_size: PackedInt32Array   # the lists (layout below)
 static func interest_of_hash(hash_cell: int) -> int                          # GRID_HASH cell -> GRID_INTEREST cell (V8)
@@ -55,9 +55,9 @@ func scan(t: int, grid: InterestGrid, pos: PackedVector3Array, out: PackedInt32A
 
 **Two outputs, one result; keep both stable.** (1) `visible_mask` bit t (own team implied): NET-08 as merged (#32) reads
 it through `SimView.visible_to` (the NET-15 adapter fills `SnapshotFrame.visible_mask`) and buckets cells itself. (2) The
-per-team interest lists, the same bits grouped per cell once per pass (R0 C1-02), for net to read instead of re-bucketing. `SimWorld.interest_start()`, `interest_count()`, `interest_ids()` return
-`InterestGrid.cell_start`, `cell_count`, `ids` (shared, not copied; read-only and valid until the next `step()`, S3). For
-team t in 0..7 and interest cell c = `Sphere.cell_of(p, Sphere.GRID_INTEREST)` (face * 64 + row * 8 + col, 0..383), with
+per-team interest lists, the same bits grouped per cell once per pass (R0 C1-02), for net to read instead of re-bucketing:
+`SimWorld.interest_start()`, `interest_count()`, `interest_ids()` return `InterestGrid.cell_start`, `cell_count`, `ids`
+(shared, not copied; read-only and valid until the next `step()`, S3). For team t in 0..7 and interest cell c = `Sphere.cell_of(p, Sphere.GRID_INTEREST)` (face * 64 + row * 8 + col, 0..383), with
 `i = t * 384 + c` and `n = interest_count()[i]`, t's ids in c are `interest_ids()[interest_start()[i] + k]` for k in [0, n);
 `interest_start()[i]` is meaningful only when `n > 0`. Every entry is an `EntityId` (main or wreck range; projectiles are
 never listed) carrying bit t at t's last pass: t's own entities and the other teams' and neutral entities t sees. Team t's
@@ -85,6 +85,9 @@ After `SimWorld.deserialize` the lists are rebuilt from the mask with current ce
   dependence): two identical worlds agree tick by tick, and S4 holds with Vision live (`rebuild_lists` changes no bit).
 - V7: no Dictionary, no per-entity allocation on the tick path; one key slice per pass (`SensorGroups.gather`).
 - V8: `InterestGrid.interest_of_hash(Spatial.cell_of(p)) == Sphere.cell_of(p, Sphere.GRID_INTEREST)`.
+- V9 (precondition): a structure never changes position after its spawn. `InterestGrid.index` caches the structures'
+  buckets until `EntityStore.structures` or any `team` byte changes; a future system that moves a structure re-keys it
+  (changes the list) or extends that check.
 
 ## Data owned
 
@@ -101,8 +104,9 @@ None. (Alerts that need vision, e.g. BOMBERS_DETECTED, read `visible_mask` in th
 
 03 s4.2 row 11 "Vision": <= 1.1 ms p95 at S-SIM-1 scale (1,200 entities, 2,000 projectiles), `perf_tick.gd --full`
 vision row; `perf_vision.gd` splits the index and one team's pass. Cost: index O(entities) once per tick; per pass
-O(team sensors + candidates in covered cells x covering groups + the sensors inside the bounds). TA-37 measured (dev box,
-10 Hz, 3 or 2 passes per tick): row p50 0.57 ms, p95 0.92 ms, p99 1.05 ms; the default profile [1, 2] halves the passes.
+O(team sensors + candidates in covered cells x covering groups + the sensors inside the bounds). TA-37 measured on the
+dev box (`perf_tick.gd --full`, 1,800 ticks): default profile [1, 2] (5 Hz) p50 0.46 / p95 0.74 / p99 0.96 ms;
+`--profile=1` (10 Hz, 3 or 2 passes per tick) p50 0.80 / p95 1.01 / p99 1.26 ms. A loaded box reads up to ~1.5x.
 
 ## Test entry points
 

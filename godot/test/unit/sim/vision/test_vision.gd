@@ -105,6 +105,24 @@ func test_wrecks_do_not_sense_own_and_neutral_bits() -> void:
 	assert_int(w.store().visible_mask[EntityId.slot(relay)] & 0xFE).is_equal(0)
 
 
+## V9: the index caches structures until the structures list or a team byte changes; a captured (re-teamed) Relay
+## Station senses and reveals for its new team on the next pass, and loses its old group.
+func test_captured_structure_rebuckets() -> void:
+	var w: SimWorld = VisionTestKit.world()
+	var relay: int = VisionTestKit.put(w, &"relay_station", -1, VisionTestKit.at(1.0))
+	var enemy: int = VisionTestKit.put(w, &"harvester", 1, VisionTestKit.at(1.0, 1000.0))   # occluded, inside reveal
+	VisionTestKit.sense(w)
+	assert_bool(VisionTestKit.visible(w, 0, enemy)).is_false()
+	assert_bool(VisionTestKit.visible(w, 0, relay)).is_false()
+	w.store().team[EntityId.slot(relay)] = 0
+	w.store().owner[EntityId.slot(relay)] = 0
+	VisionTestKit.sense(w)
+	assert_bool(VisionTestKit.visible(w, 0, enemy)).is_true()
+	assert_bool(VisionTestKit.visible(w, 0, relay)).is_true()
+	var cell: int = Sphere.cell_of(w.store().pos[EntityId.slot(relay)], Sphere.GRID_INTEREST)
+	assert_bool(w.vision.ids_in_cell(0, cell).has(relay)).is_true()
+
+
 func test_bit_clears_when_target_leaves_range() -> void:
 	var w: SimWorld = VisionTestKit.world()
 	var _dart: int = VisionTestKit.put(w, &"dart", 0, VisionTestKit.at(500.0))

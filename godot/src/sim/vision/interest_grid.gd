@@ -35,6 +35,8 @@ var touched_n: int = 0
 ## Cell geometry (shared): unit centre direction and angular circumradius (+ margin) per cell.
 var centre: PackedVector3Array = PackedVector3Array()
 var cone: PackedFloat64Array = PackedFloat64Array()
+var cone_cos: PackedFloat64Array = PackedFloat64Array()  ## cos / sin of `cone`
+var cone_sin: PackedFloat64Array = PackedFloat64Array()
 ## Near-cell table: cells near cell c are near_cell[near_start[c] .. near_start[c + 1]), near_gap ascending.
 var near_start: PackedInt32Array = PackedInt32Array()
 var near_cell: PackedInt32Array = PackedInt32Array()
@@ -55,10 +57,19 @@ var _sc_n: PackedInt32Array = PackedInt32Array()       ## per cell: seen slots (
 var _sc_start: PackedInt32Array = PackedInt32Array()
 var _sorted: PackedInt32Array = PackedInt32Array()
 var _seen_cell: PackedInt32Array = PackedInt32Array()
+var _s_list: PackedInt32Array = PackedInt32Array()     ## structures cache: the live list and team bytes it was built
+var _s_team: PackedByteArray = PackedByteArray()        ## from; bucket counts, cell counts and non-empty cells
+var _s_bc: PackedInt32Array = PackedInt32Array()
+var _s_cn: PackedInt32Array = PackedInt32Array()
+var _s_touched: PackedInt32Array = PackedInt32Array()
+var _s_touched_n: int = 0
+var _s_valid: bool = false
 
 static var _g_hmap: PackedInt32Array = PackedInt32Array()
 static var _g_centre: PackedVector3Array = PackedVector3Array()
 static var _g_cone: PackedFloat64Array = PackedFloat64Array()
+static var _g_cone_cos: PackedFloat64Array = PackedFloat64Array()
+static var _g_cone_sin: PackedFloat64Array = PackedFloat64Array()
 static var _cache_reach: float = -1.0
 static var _cache_start: PackedInt32Array = PackedInt32Array()
 static var _cache_cell: PackedInt32Array = PackedInt32Array()
@@ -72,8 +83,11 @@ func _init() -> void:
 	e |= cell_start.resize(TEAMS * CELLS) | cell_count.resize(TEAMS * CELLS) | ids.resize(TEAMS * STRIDE)
 	e |= list_size.resize(TEAMS) | _list_cells.resize(TEAMS * CELLS) | _list_cells_n.resize(TEAMS)
 	e |= _sc_start.resize(CELLS) | _sorted.resize(STRIDE) | _seen_cell.resize(STRIDE)
+	e |= _s_bc.resize(nb) | _s_cn.resize(CELLS) | _s_touched.resize(CELLS)
 	assert(e == OK)
 	bucket_count.fill(0)
+	_s_bc.fill(0)
+	_s_cn.fill(0)
 	cell_n.fill(0)
 	cell_count.fill(0)
 	cell_start.fill(0)
@@ -85,6 +99,8 @@ func _init() -> void:
 	_hmap = _g_hmap
 	centre = _g_centre
 	cone = _g_cone
+	cone_cos = _g_cone_cos
+	cone_sin = _g_cone_sin
 
 
 ## The interest cell (GRID_INTEREST id) of a GRID_HASH cell id.
@@ -104,29 +120,42 @@ func ensure_reach(reach: float) -> void:
 	reach_m = _cache_reach
 
 
-## Rebuilds the bucket index from the store's live lists and `hash_cell` (valid after step 7).
+## Rebuilds the bucket index from the store's live lists and `hash_cell` (valid after step 7). Structures never move,
+## so their bucket keys and counts are cached and recounted only when the structures list or any team byte changed
+## (native compares); ships, ground units and wrecks are counted every call. Same result as counting everything.
 func index(store: EntityStore) -> void:
+	if not _s_valid or store.structures != _s_list or store.team != _s_team:
+		_count_structures(store)
+	var bc: PackedInt32Array = bucket_count     # sole owners while writing (no copy-on-write), restored below
+	var cn: PackedInt32Array = cell_n
+	var tch: PackedInt32Array = touched
+	var key: PackedInt32Array = _key
+	bucket_count = PackedInt32Array()
+	cell_n = PackedInt32Array()
+	touched = PackedInt32Array()
+	_key = PackedInt32Array()
 	for k: int in touched_n:
-		var c: int = touched[k]
-		cell_n[c] = 0
+		var c: int = tch[k]
+		cn[c] = 0
 		for g: int in GROUPS:
-			bucket_count[c * GROUPS + g] = 0
-	touched_n = 0
-	_count(store, store.structures)
-	_count(store, store.ships)
-	_count(store, store.ground)
-	_count(store, store.wrecks)
-	var run: int = 0
-	for k: int in touched_n:
-		var b0: int = touched[k] * GROUPS
+			bc[c * GROUPS + g] = 0
+	for k: int in _s_touched_n:
+		var c: int = _s_touched[k]
+		tch[k] = c
+		cn[c] = _s_cn[c]
 		for g: int in GROUPS:
-			bucket_start[b0 + g] = run
-			_fill[b0 + g] = run
-			run += bucket_count[b0 + g]
-	_scatter(store.structures)
-	_scatter(store.ships)
-	_scatter(store.ground)
-	_scatter(store.wrecks)
+			bc[c * GROUPS + g] = _s_bc[c * GROUPS + g]
+	var hc: PackedInt32Array = store.hash_cell
+	var tm: PackedByteArray = store.team
+	var n: int = _count(store.ships, hc, tm, key, cn, bc, tch, _s_touched_n)
+	n = _count(store.ground, hc, tm, key, cn, bc, tch, n)
+	n = _count(store.wrecks, hc, tm, key, cn, bc, tch, n)
+	touched_n = n
+	bucket_count = bc
+	cell_n = cn
+	touched = tch
+	_scatter_all(store, key)
+	_key = key
 
 
 ## Team `t`'s new list and bit t: the old list's bits are cleared, then the `seen_n` distinct slots of `seen` and,
@@ -187,26 +216,80 @@ func seen_from_mask(t: int, store: EntityStore, out: PackedInt32Array) -> int:
 	return n
 
 
-func _count(store: EntityStore, list: PackedInt32Array) -> void:
-	var hc: PackedInt32Array = store.hash_cell
-	var tm: PackedByteArray = store.team
+func _count(list: PackedInt32Array, hc: PackedInt32Array, tm: PackedByteArray, key: PackedInt32Array,
+		cn: PackedInt32Array, bc: PackedInt32Array, tch: PackedInt32Array, n0: int) -> int:
 	var hmap: PackedInt32Array = _hmap
+	var n: int = n0
 	for s: int in list:
 		var c: int = hmap[hc[s]]
-		var b: int = c * GROUPS + mini(tm[s], NEUTRAL_GROUP)
-		_key[s] = b
-		if cell_n[c] == 0:
-			touched[touched_n] = c
-			touched_n += 1
-		cell_n[c] += 1
-		bucket_count[b] += 1
+		var g: int = tm[s]
+		if g > NEUTRAL_GROUP:
+			g = NEUTRAL_GROUP
+		var b: int = c * GROUPS + g
+		key[s] = b
+		if cn[c] == 0:
+			tch[n] = c
+			n += 1
+		cn[c] += 1
+		bc[b] += 1
+	return n
 
 
-func _scatter(list: PackedInt32Array) -> void:
+# The structures cache: keys into _key (kept between calls: dynamic slots never overwrite a live structure's key),
+# per-bucket and per-cell counts, the non-empty cells.
+func _count_structures(store: EntityStore) -> void:
+	for k: int in _s_touched_n:
+		var c: int = _s_touched[k]
+		_s_cn[c] = 0
+		for g: int in GROUPS:
+			_s_bc[c * GROUPS + g] = 0
+	var key: PackedInt32Array = _key
+	var cn: PackedInt32Array = _s_cn
+	var bc: PackedInt32Array = _s_bc
+	var tch: PackedInt32Array = _s_touched
+	_key = PackedInt32Array()
+	_s_cn = PackedInt32Array()
+	_s_bc = PackedInt32Array()
+	_s_touched = PackedInt32Array()
+	_s_touched_n = _count(store.structures, store.hash_cell, store.team, key, cn, bc, tch, 0)
+	_key = key
+	_s_cn = cn
+	_s_bc = bc
+	_s_touched = tch
+	_s_list = store.structures.duplicate()
+	_s_team = store.team.duplicate()
+	_s_valid = true
+
+
+# Prefix sums over the touched cells' buckets, then every live slot into `items` at its bucket.
+func _scatter_all(store: EntityStore, key: PackedInt32Array) -> void:
+	var bs: PackedInt32Array = bucket_start
+	var fl: PackedInt32Array = _fill
+	var it: PackedInt32Array = items
+	bucket_start = PackedInt32Array()
+	_fill = PackedInt32Array()
+	items = PackedInt32Array()
+	var run: int = 0
+	for k: int in touched_n:
+		var b0: int = touched[k] * GROUPS
+		for g: int in GROUPS:
+			bs[b0 + g] = run
+			fl[b0 + g] = run
+			run += bucket_count[b0 + g]
+	_scatter(store.structures, key, fl, it)
+	_scatter(store.ships, key, fl, it)
+	_scatter(store.ground, key, fl, it)
+	_scatter(store.wrecks, key, fl, it)
+	bucket_start = bs
+	_fill = fl
+	items = it
+
+
+func _scatter(list: PackedInt32Array, key: PackedInt32Array, fl: PackedInt32Array, it: PackedInt32Array) -> void:
 	for s: int in list:
-		var b: int = _key[s]
-		items[_fill[b]] = s
-		_fill[b] += 1
+		var b: int = key[s]
+		it[fl[b]] = s
+		fl[b] += 1
 
 
 # Counting sort of the seen slots by interest cell into _sorted; _sc_n / _sc_start per cell (touched cells only).
@@ -245,6 +328,14 @@ static func _build_geometry() -> void:
 		cone_a[c] = acos(clampf(cc, -1.0, 1.0)) + _CONE_EPS
 	_g_centre = c3
 	_g_cone = cone_a
+	var cc_a: PackedFloat64Array = PackedFloat64Array()
+	var cs_a: PackedFloat64Array = PackedFloat64Array()
+	var _c: int = cc_a.resize(CELLS) | cs_a.resize(CELLS)
+	for c: int in CELLS:
+		cc_a[c] = cos(cone_a[c])
+		cs_a[c] = sin(cone_a[c])
+	_g_cone_cos = cc_a
+	_g_cone_sin = cs_a
 	_g_hmap = hmap
 
 
