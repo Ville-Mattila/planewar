@@ -26,6 +26,7 @@ var indices: PackedInt32Array = PackedInt32Array()     ## shared by every chunk
 var last_heights: PackedFloat64Array = PackedFloat64Array()   ## 33 x 33 vertex heights of the last build
 var last_h_min: float = 0.0
 var last_h_max: float = 0.0
+var flatten: FlattenSites = FlattenSites.new()          ## cosmetic footprint flattening (03 s7.6), empty by default
 var _tan: PackedFloat64Array = PackedFloat64Array()    ## per depth: g = -1 .. segs + 1 at _tan_off[depth] + g + 1
 var _tan_off: PackedInt32Array = PackedInt32Array()
 var _n: int = 0
@@ -144,6 +145,7 @@ func _sample_ring(node: ChunkNode) -> void:
 	_read_window(node.face)
 	var fr: Basis = Sphere.face_frame(node.face)
 	var o: int = _tan_off[node.depth] + 1
+	var flat_n: int = flatten.select_for(node)
 	var x0: int = node.gx(0) - 1
 	var y0: int = node.gy(0) - 1
 	var nc: int = _cols.size()
@@ -165,6 +167,8 @@ func _sample_ring(node: ChunkNode) -> void:
 				h = Sphere.RELIEF_MIN + lerpf(h0, h1, fy) * _relief_scale
 			elif _n > 0:
 				h = terrain.height_at(d)
+			if flat_n > 0:
+				h = flatten.apply(d, h)
 			_ring_h[i] = h
 			_ring_p[i] = d * (Sphere.PLANET_RADIUS + h)
 
@@ -224,7 +228,7 @@ func _fill_grid(node: ChunkNode, verts: PackedVector3Array, normals: PackedVecto
 			uvs[vi] = Vector2(float(node.gx(a)) * inv_segs, float(node.gy(b)) * inv_segs)
 			custom[vi * 4] = clampi(int((h - Sphere.RELIEF_MIN) * inv_range * 255.0 + 0.5), 0, 255)
 			custom[vi * 4 + 1] = clampi(int(acos(clampf(nrm.dot(d), -1.0, 1.0)) / (PI * 0.5) * 255.0 + 0.5), 0, 255)
-			custom[vi * 4 + 2] = 0
+			custom[vi * 4 + 2] = node.face              # cube face: the shader reads the biome per pixel (TA-24)
 			custom[vi * 4 + 3] = 0
 
 

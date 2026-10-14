@@ -189,6 +189,18 @@
           "maximum": 33,
           "$comment": "03 s13 chunk build ms cap: 2.0 / 3.0 / 4.0"
         },
+        "chunk_starvation_frames": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "$comment": "03 s7.4 / R0 C1-06 starvation rule: one forced chunk build after this many frames without a build (2 on every tier)"
+        },
+        "chunk_pool_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "$comment": "03 s7.3 / s11 pooled MeshInstance3D + ArrayMesh pairs allocated at load (~72 KB each): 150 / 220 / 300; must exceed visible_chunks_cap by the merge-grace headroom (TA-24)"
+        },
         "detail_displacement_m": {
           "type": "number",
           "minimum": 0,

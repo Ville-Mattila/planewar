@@ -5,7 +5,7 @@ extends Node3D
 ##   --view=sphere|pole|samples_day|samples_terminator|samples_night   (default sphere)
 ##   --instanced      team/state through unit_lit_instanced (instance uniforms) instead of per-team materials
 ##   --frames=N       quit after N frames (default 20)      --shot=<png>  save the last frame
-## `pole` also prints LOOKDEV_MEASURE lines: night mare at the Midnight Pole (moon_surface and unit_lit plates)
+## `pole` also prints LOOKDEV_MEASURE lines: night mare at the Midnight Pole (moon_terrain and unit_lit plates)
 ## against the 07 s1.5 target, and the 8 team-glow tiles against their 07 s2.2 hex (exact at rgb.r = 1).
 
 const TEAM_HEX: PackedStringArray = ["#E1A633", "#4C64ED", "#3BFAB2", "#17840E", "#B1369D", "#E9A1FD", "#D6F72C", "#F06867"]
@@ -118,17 +118,17 @@ func _single_swatch(m: ArrayMesh, cell: int) -> ArrayMesh:
 	return out
 
 
-## Midnight Pole measurement plates: moon_surface (no CUSTOM0 -> pure mare mid) left, unit_lit with the
+## Midnight Pole measurement plates: moon_terrain (measure material: ramp value 0.5, no detail -> pure mare mid) left, unit_lit with the
 ## biome_mare_mid swatch right, a row of 8 team-glow tiles and 8 team-paint tiles in front.
 func _build_pole() -> void:
 	var pole: Vector3 = -Sphere.POLE_AXIS
 	var base: Transform3D = LookdevMeshes.site(pole, 0.0)
 	var moon_plate: MeshInstance3D = MeshInstance3D.new()
 	moon_plate.mesh = LookdevMeshes.plate(40.0, LookdevMeshes.MARE_MID)
-	moon_plate.material_override = MoonLight.moon_material()
+	moon_plate.material_override = MoonTerrain.measure_material()
 	moon_plate.transform = base.translated_local(Vector3(-22.0, 0.0, -12.0))
 	add_child(moon_plate)
-	_probe("mare_moon_surface", moon_plate.transform.origin, Color("#404552"))
+	_probe("mare_moon_terrain", moon_plate.transform.origin, Color("#404552"))
 	var unit_plate: MeshInstance3D = _unit(LookdevMeshes.plate(40.0, LookdevMeshes.MARE_MID), 0, base.translated_local(Vector3(22.0, 0.0, -12.0)))
 	_probe("mare_unit_lit", unit_plate.transform.origin, Color("#404552"))
 	for t: int in TEAM_HEX.size():

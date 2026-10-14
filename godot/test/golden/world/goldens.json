@@ -1,5 +1,5 @@
 {
-  "_doc": "World golden scene list (presentation lane; ART-01 look-dev entries). Each entry renders one PNG at 1280x720 on the Compatibility renderer: run `godot --path godot --rendering-driver opengl3 <scene> -- <args> --shot=<out.png>`; entries with measure=true also print LOOKDEV_MEASURE / LOOKDEV_NIGHT_TARGET lines that must stay inside `tolerance` (fraction). Images are not committed (CLAUDE.md); TA-35 adds the nightly runner and the perceptual compare keyed by adapter string. device status: pc = rendered locally, xvfb_llvmpipe = needs the ci lane to loop this list in nightly.yml golden-screenshots, android_mid / web_mobile = PENDING HUMAN (HUM-06 devices). Source: docs/spikes/ART-01/REPORT.md.",
+  "_doc": "World golden scene list (presentation lane; ART-01 look-dev entries, TA-24 terrain and Z-plan entries). Each entry renders one PNG at 1280x720 on the Compatibility renderer: run `godot --path godot --rendering-driver opengl3 <scene> -- <args> --shot=<out.png>`; entries with measure=true also print LOOKDEV_MEASURE / LOOKDEV_NIGHT_TARGET lines that must stay inside `tolerance` (fraction). Images are not committed (CLAUDE.md); TA-35 adds the nightly runner and the perceptual compare keyed by adapter string. device status: pc = rendered locally, xvfb_llvmpipe = needs the ci lane to loop this list in nightly.yml golden-screenshots, android_mid / web_mobile = PENDING HUMAN (HUM-06 devices). Source: docs/spikes/ART-01/REPORT.md. TA-24: entries with measure=\"flicker\" are the 03 s7.7 z-fighting harness (z_scene.tscn): they print Z_POSE / Z_RESULT lines and exit non-zero when flicker_max_pct > 2.0 (a deliberate coplanar pair, --control, must exceed it: 16.5 % measured); the tier is selected with --tier=low|medium|high.",
   "devices": {
     "pc": "done locally 2026-10-14: NVIDIA RTX 5070 Laptop, GL 3.3 (opengl3) and ANGLE D3D11 (opengl3_angle)",
     "xvfb_llvmpipe": "PENDING ci: nightly golden job renders only test/golden/shot_main.tscn",
@@ -20,12 +20,21 @@
     {"id": "art01_samples_night", "scene": "res://test/golden/world/lookdev_shot.tscn", "args": ["--view=samples_night"], "measure": true, "tolerance": 0.10,
      "checks": "earthshine-lit night, team glows readable"},
     {"id": "art01_planet_orbit", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=0", "--alt=9000", "--pitch=-89", "--frames=300", "--hud=0"], "measure": false,
-     "checks": "moon_surface on the TA-23 renderer: day side, terminator, earthshine night, rim from orbit"},
+     "checks": "moon_terrain (biome ramp, crater detail) on the TA-23 renderer: day side, terminator, earthshine night, rim from orbit"},
     {"id": "art01_planet_day", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=40", "--alt=150", "--pitch=-10", "--frames=300", "--hud=0"], "measure": false,
      "checks": "day side at Chase height, no rim wash at the horizon"},
     {"id": "art01_planet_terminator", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=4", "--alt=400", "--pitch=-25", "--yaw=90", "--frames=300", "--hud=0"], "measure": false,
      "checks": "terminator band"},
     {"id": "art01_planet_night", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=-55", "--alt=400", "--pitch=-25", "--frames=300", "--hud=0"], "measure": false,
-     "checks": "earthshine night side"}
+     "checks": "earthshine night side"},
+    {"id": "ta24_planet_orbit_sky", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=0", "--alt=9000", "--pitch=-89", "--frames=300", "--hud=0"], "measure": false, "checks": "moon_terrain from orbit under sky_moon: biome patches (ore field ochre, cold trap blue), terminator, limb"},
+    {"id": "ta24_earth_at_minus_z", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=-30", "--alt=100", "--yaw=-90", "--pitch=25", "--frames=120", "--hud=0", "--earth-probe"], "measure": true, "tolerance": 0.5, "checks": "EARTH_PROBE: Earth disc centroid within 0.5 degree of the projection of -Z (measured 0.21), a 6 degree disc"},
+    {"id": "ta24_chase_craters", "scene": "res://scenes/presentation/planet/planet_demo.tscn", "args": ["--lat=40", "--alt=40", "--pitch=-30", "--frames=300", "--hud=0"], "measure": false, "checks": "Chase height: faceted flat shading, crater albedo darkening inside the tier detail range, no hole"},
+    {"id": "ta24_z1", "scene": "res://test/golden/world/z_scene.tscn", "args": ["--z=1", "--poses=6"], "measure": "flicker", "tolerance": 2.0, "checks": "Z1 flat mare, 20 structures in a Core cluster, Chase 60 m orbit; flicker_max_pct <= 2.0"},
+    {"id": "ta24_z2", "scene": "res://test/golden/world/z_scene.tscn", "args": ["--z=2", "--poses=6"], "measure": "flicker", "tolerance": 2.0, "checks": "Z2 Tactical 300 / 1,000 / 2,500 m over the cluster, foundation skirts clean; flicker_max_pct <= 2.0"},
+    {"id": "ta24_z3", "scene": "res://test/golden/world/z_scene.tscn", "args": ["--z=3", "--poses=6"], "measure": "flicker", "tolerance": 2.0, "checks": "Z3 crater rim skim at 20 m, depth-6 chunks beside coarser ones, no crack; flicker_max_pct <= 2.0"},
+    {"id": "ta24_z4", "scene": "res://test/golden/world/z_scene.tscn", "args": ["--z=4", "--poses=6"], "measure": "flicker", "tolerance": 2.0, "checks": "Z4 terminator at Commander 8,000 m: clean limb, no sparkle on depth 0-1 chunks; flicker_max_pct <= 2.0"},
+    {"id": "ta24_z5", "scene": "res://test/golden/world/z_scene.tscn", "args": ["--z=5", "--poses=6"], "measure": "flicker", "tolerance": 2.0, "checks": "Z5 landing approach 10 m to 0.3 m over a pad, ship never clipped; flicker_max_pct <= 2.0"},
+    {"id": "ta24_z8", "scene": "res://test/golden/world/z_scene.tscn", "args": ["--z=8", "--poses=6"], "measure": "flicker", "tolerance": 2.0, "checks": "Z8 cluster straddling the equatorial cube edge (faces 0 / 2), Chase 60 m and Tactical 1,000 m; flicker_max_pct <= 2.0"}
   ]
 }

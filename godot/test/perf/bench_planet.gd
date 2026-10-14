@@ -56,8 +56,41 @@ func _bench_tier(terrain: Terrain, cfg: PlanetTierConfig, frames: int) -> void:
 	r.setup(terrain, cfg)
 	print("BENCH_PLANET tier=%s prebuild_chunks=%d prebuild_ms=%.1f" % [cfg.tier_id, r.prebuilt, float(Time.get_ticks_usec() - t0) * 0.001])
 	_bench_depths(r, cfg)
+	_bench_flatten(r, terrain)
 	_boost_path(r, cfg, frames)
 	root.free()
+
+
+## TA-24: mesher arrays at the deepest depth with no sites, and with 20 footprint sites inside the chunk
+## (the Z1 cluster): the cost of the flatten override per build.
+func _bench_flatten(r: PlanetRenderer, terrain: Terrain) -> void:
+	var c: Vector3 = Sphere.from_lat_lon(0.1, 0.5, 1.0)
+	var fuv: Vector3 = Sphere.dir_to_face_uv(c)
+	var depth: int = r.config.max_depth
+	var side: int = 1 << depth
+	var node: ChunkNode = ChunkNode.make(int(fuv.x), depth, mini(int(fuv.y * float(side)), side - 1), mini(int(fuv.z * float(side)), side - 1), -50.0, 50.0)
+	var empty: FlattenSites = r.mesher.flatten
+	var none_ms: float = _time_arrays(r.mesher, node, 32)
+	var f: FlattenSites = FlattenSites.new()
+	var pos: PackedVector3Array = PackedVector3Array()
+	var rad: PackedFloat32Array = PackedFloat32Array()
+	var frame: Basis = Sphere.tangent_frame(c)
+	for k: int in 20:
+		var d: Vector3 = (c + (frame.x * float(k % 5) + frame.y * floorf(float(k) / 5.0)) * (30.0 / Sphere.PLANET_RADIUS)).normalized()
+		var _a: bool = pos.push_back(d * Sphere.PLANET_RADIUS)
+		_a = rad.push_back(18.0)
+	f.set_sites(terrain, pos, rad)
+	r.mesher.flatten = f
+	var with_ms: float = _time_arrays(r.mesher, node, 32)
+	r.mesher.flatten = empty
+	print("BENCH_PLANET_FLATTEN depth=%d arrays_ms_no_sites=%.3f arrays_ms_20_sites=%.3f" % [depth, none_ms, with_ms])
+
+
+func _time_arrays(m: ChunkMesher, node: ChunkNode, n: int) -> float:
+	var t0: int = Time.get_ticks_usec()
+	for i: int in n:
+		var _a: Array = m.build_arrays(node)
+	return float(Time.get_ticks_usec() - t0) * 0.001 / float(n)
 
 
 func _bench_depths(r: PlanetRenderer, cfg: PlanetTierConfig) -> void:

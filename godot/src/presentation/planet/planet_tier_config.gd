@@ -8,6 +8,7 @@ const DEFAULT_STARVATION_FRAMES: int = 2    ## R0 C1-06: one forced build after 
 const DEFAULT_MERGE_HYSTERESIS: float = 0.5 ## 03 s7.2: merge at d > (K + 0.5) * edge
 const DEFAULT_MERGE_GRACE_S: float = 1.0    ## 03 s7.4: merged children return to the pool after 1 s
 const DEFAULT_POOL_SIZE: int = 220          ## 03 s7.3: MeshInstance3D + ArrayMesh pairs allocated at load
+const DEFAULT_DETAIL_RANGE_M: float = 500.0 ## 03 s13 detail displacement range (MEDIUM)
 
 var tier_id: StringName = &"high"
 var split_k: float = 2.5
@@ -19,6 +20,7 @@ var starvation_frames: int = DEFAULT_STARVATION_FRAMES
 var merge_hysteresis: float = DEFAULT_MERGE_HYSTERESIS
 var merge_grace_s: float = DEFAULT_MERGE_GRACE_S
 var pool_size: int = DEFAULT_POOL_SIZE
+var detail_range_m: float = DEFAULT_DETAIL_RANGE_M   ## moon_terrain vertex detail fades to 0 here (`detail_displacement_m`)
 
 
 ## From one parsed `quality_tiers.json` entry (a `QualityTierDef.raw` or the JSON dictionary itself).
@@ -34,6 +36,7 @@ static func from_dict(d: Dictionary) -> PlanetTierConfig:
 	c.merge_hysteresis = _f(d, "chunk_merge_hysteresis", c.merge_hysteresis)
 	c.merge_grace_s = _f(d, "chunk_merge_grace_s", c.merge_grace_s)
 	c.pool_size = int(_f(d, "chunk_pool_size", float(c.pool_size)))
+	c.detail_range_m = _f(d, "detail_displacement_m", c.detail_range_m)
 	return c
 
 

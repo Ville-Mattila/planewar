@@ -6,6 +6,7 @@ class_name PlanetView extends RefCounted
 var position: Vector3 = Vector3.ZERO
 var forward: Vector3 = Vector3.FORWARD
 var frustum: Array[Plane] = []               ## empty = no frustum test (everything passes)
+var near_m: float = 0.0                        ## camera near plane in metres (ViewState.near); 0 = unknown
 
 
 static func make(p_position: Vector3, p_forward: Vector3, p_frustum: Array[Plane]) -> PlanetView:
@@ -17,7 +18,9 @@ static func make(p_position: Vector3, p_forward: Vector3, p_frustum: Array[Plane
 
 
 static func from_camera(cam: Camera3D) -> PlanetView:
-	return make(cam.global_position, -cam.global_basis.z, cam.get_frustum())
+	var v: PlanetView = make(cam.global_position, -cam.global_basis.z, cam.get_frustum())
+	v.near_m = cam.near
+	return v
 
 
 ## The six planes of a symmetric perspective frustum (camera looks along -basis.z of `xf`), outward normals.
