@@ -959,7 +959,10 @@
       " R0 C2-07",
       " 03 TA-21"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#43",
+    "note": "format 6, SHA-256 body hash, staged apply; 184 KB packed at full scale (target ~150, ADR-10 ~200); content hash in header still missing (needs core/content); Build state joins when Economy wires it"
   },
   {
     "id": "TA-37",
