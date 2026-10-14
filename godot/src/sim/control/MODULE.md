@@ -96,9 +96,10 @@ measure 15.5 µs per tick with 8 possessed ships (20,000-tick loop, owner's mach
 
 ## Open items
 
-- `needs content:` `rules.json` fields for the 10 s request TTL, the 10 s OVERRIDDEN echo window and the 50 m uplink margin (ADR-09).
-- Callers still to land: AI-15 / brains call `ControlOrders.complete_head` / `fail_head` (C4, C5); Economy / GD-20 calls
-  `release_team` when a team loses its last Core (C16); NET-19 maps `RELEASED` / `HANDOVER` to 04 messages and decides whether the
-  server feeds `InputBuffer`'s decayed inputs or lets the sim's C13 run (both use 10 ticks); AI-08 executes the overlays.
+- `rules.json` `request_ttl_s` 10, `override_echo_s` 10 and `uplink_margin_m` 50 exist (R0 B.11 A-51); **TA-49** reads them in `_init`
+  and `REQUEST_TTL_S` / `ECHO_WINDOW_S` / `UPLINK_MARGIN_M` become the documented defaults (no symbol removed). Contract ratified as built (A-61).
+- Callers still to land (named in their acceptance by A-61): AI-15 / brains call `ControlOrders.complete_head` / `fail_head` (C4, C5);
+  Economy / GD-20 calls `release_team` when a team loses its last Core (C16); NET-19 maps `RELEASED` / `HANDOVER` to 04 messages and is
+  the one owner of the C13 decay (server `InputBuffer` or sim C13, never both; both use 10 ticks); AI-08 executes the overlays.
 - The PilotInput RELEASE bit (04 s5.4 "INPUT with RELEASE bit") is not acted on by the sim; the client turns it into `Command.release`.
 - Bots are not refused POSSESS by the sim (05 s1 decision 11 is a `sim_ai` rule); a spectator is an open slot or a lost team.

@@ -12,7 +12,7 @@ TA-26, ART-03). A change to "Public API" or "Invariants" is a contract change: c
 | May depend on | `core`, `content`; named sim types `SimView`, `SimEvent`, `Terrain`; net `NetSimView` (`tools/deps.json`) |
 | Must never touch | the sim beyond `SimView` reads; `net`; `camera`; `ui`; no autoloads; no threads; no hard-coded 6,000 or 8,192 |
 | Autoloads used | none |
-| Status | implemented (TA-26 entity views, pools, VfxRouter; ART-03 `UnitMaterialCache`); placeholder meshes and effect looks |
+| Status | implemented (TA-26 entity views, pools, VfxRouter; ART-03 `UnitMaterialCache`); placeholder meshes and effect looks. Scope confirmed as the contract for `presentation/**` except `planet/` by R0 B.11 A-57 (`docs/reviews/R0-amendments-04.md`); the shader library under `presentation/shaders/` is this lane's, `planet/shaders/` the planet's |
 
 ## Public API
 
@@ -255,7 +255,13 @@ Consumes drained `SimEvent`s through `VfxRouter.drain`. Emits nothing.
 
 ## Performance budget
 
-Entity sync 2.4 ms at 800 views PC-mid, 0.8 ms on 200 + far pools (03 s10.2); pools 1.0 ms. Measured with `scenes/presentation/entities/entity_demo.tscn` (see the TA-26 PR).
+Entity sync 2.4 ms at 800 views PC-mid, 0.8 ms on 200 + far pools (03 s10.2); pools 1.0 ms. Measured with `scenes/presentation/entities/entity_demo.tscn` (TA-26, dev laptop with the planet drawn): 800 views sync p50 1.1 ms between ticks, **p95 7.7 ms on tick frames** (the once-per-tick `SimView` read through per-id `pos` / `basis`). The row does not move; TA-52 switches `sync` to `SimView.read_poses` (R0 B.11 A-56, TA-51) and re-measures; the next lever is staggering the tick read across two frames.
+
+## Open items
+
+- A-56: `sync` reads poses per id; `SimView.read_poses(ids, pos, rot)` (sim, TA-51) replaces the two calls per view, TA-52 consumes it.
+- A-58 / HUM-06: `instance uniform` on Adreno / WebGL2 unmeasured; `UnitMaterialCache` is the chosen fallback (07 s4.3), `unit_lit_instanced.gdshader` kept for a v1.x switch. `ml_encode` cost on Android-mid: `planet/MODULE.md` Open items.
+- `vfx_prewarm.json` is not created yet (07); `VfxPrewarm.load_list` falls back to `VfxCatalog`. Real meshes: ART-04 / ART-05; effect looks: ART-13.
 
 ## Test entry points
 

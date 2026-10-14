@@ -5,12 +5,28 @@
  "ceiling_hard_m": 2000,
  "tick_hz": 30,
  "lift_model": "speed_scaled",
- "path_expansions_per_tick": 2000,
+ "path_expansions_per_tick": 120,
  "sim_budget_profile": [
   1,
   2
  ],
  "friendly_fire": false,
  "debug_commands": false,
- "profile_enabled": false
+ "profile_enabled": false,
+ "command_rate_per_s": 10,
+ "command_burst": 30,
+ "uplink_margin_m": 50,
+ "request_ttl_s": 10,
+ "override_echo_s": 10,
+ "shooter_grace_ticks": 10,
+ "path_heuristic_pct": 25,
+ "cut_ladder": {
+  "rung_1_think_period_ticks": 15,
+  "rung_2_vision_hz": 5,
+  "rung_3_projectile_cap": 1400,
+  "rung_4_ship_pairs_tier_a_only": true,
+  "rung_5_tier_b_hz": 10,
+  "rung_6_unit_cap": 60,
+  "rung_8_path_expansions_per_tick": 60
+ }
 }

@@ -255,6 +255,8 @@ chunks inside the tier's detail range only; the pool holds 150 / 220 / 300 pairs
 - `EntityViewPool` (TA-26) calls `set_flatten_sites` with the full structure list on BUILD_STARTED / STRUCTURE_LOST.
 - ART-03 / TA-24: `ml_encode` costs two pows + two Newton steps per output; measure on Android-mid (HUM-06) and
   fall back to one Newton step or a 256-entry LUT if fill-bound.
-- TA-25: variant B, three radii, device numbers; confirm `chunk_pool_size` 150 / 220 / 300 and `detail_displacement_m`
-  on Android-mid and web (the 3-layer vertex detail and the 32-site loop are the new vertex cost).
+- TA-25: variant B, three radii, device numbers; confirm `chunk_pool_size` 150 / 220 / 300 (now the 03 s7.3 text, R0 B.11 A-59)
+  and `detail_displacement_m` on Android-mid and web (the 3-layer vertex detail and the 32-site loop are the new vertex cost).
+- R0 B.11 A-59 closed TA-23 / TA-24's doc items: 03 s7.5 `theta_up` reads 0.61 rad (`HorizonCull.theta_up()`), `Terrain.biome_face`
+  is a ratified sim append (no `biome_texel`), `sky_moon.gdshader` is interim until ART-15, `detail_displacement_m = 0` is the per-tier fallback.
 - `ViewState` (06) will hand `PlanetView` over; until then `PlanetView.from_camera`.

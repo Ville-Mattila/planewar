@@ -9,7 +9,7 @@ of each file is recorded here.
 | `02/2-4-ship-notes-01.json` | `docs/02-game-design.md` | 164 | 2.4 Ship notes | yes |
 | `02/7-doctrines-defs-doctrines-json-02.json` | `docs/02-game-design.md` | 415 | 7. Doctrines (`defs/doctrines.json`) | yes |
 | `02/16-3-mission-data-godot-content-campaign-mnn-id-json-03.json` | `docs/02-game-design.md` | 1001 | 16.3 Mission data (`godot/content/campaign/mNN_<id>.json`) | yes |
-| `03/8-1-recipe-json-schema-tools-schemas-map-recipe-schema-json-01.json` | `docs/03-technical-architecture.md` | 998 | 8.1 Recipe JSON schema (`tools/schemas/map_recipe.schema.json`, owned by 03; R0 B.2) | yes |
+| `03/8-1-recipe-json-schema-tools-schemas-map-recipe-schema-json-01.json` | `docs/03-technical-architecture.md` | 999 | 8.1 Recipe JSON schema (`tools/schemas/map_recipe.schema.json`, owned by 03; R0 B.2) | yes |
 | `05/4-4-parameter-set-in-json-01.json` | `docs/05-ai-autonomy-and-control.md` | 377 | 4.4 Parameter set in JSON | yes |
 | `05/7-3-opening-books-per-doctrine-data-02.json` | `docs/05-ai-autonomy-and-control.md` | 707 | 7.3 Opening books per doctrine (data) | yes |
 | `07/9-1-recipe-structure-01.json` | `docs/07-art-audio-content.md` | 614 | 9.1 Recipe structure | yes |
