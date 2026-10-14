@@ -7,12 +7,12 @@ reviewed for both the `sim_ai` and the `net` lane.
 
 | Field | Value |
 |---|---|
-| Responsibility | Pure functions of their arguments that turn state into controls or probes: `FlightController` (05 s5.2, guidance target -> `PilotInput`) with its `FlightGains`, `TerrainProbe` (05 s5.3, time to impact, worst clearance, lift) and `LandingController` (05 s5.5, tail-down L1-L6, aborts, go-around, bearing). `Assist` lands here with AI-08 / AI-10. |
+| Responsibility | Pure functions of their arguments that turn state into controls or probes: `FlightController` (05 s5.2, guidance target -> `PilotInput`) with its `FlightGains`, `TerrainProbe` (05 s5.3, time to impact, worst clearance, lift), `LandingController` (05 s5.5, tail-down L1-L6, aborts, go-around, bearing) and `Assist` (R0 B.5 step 4 substitution: `link_bridge`, AI-08; driven by `AssistStep`) with its `BridgeParams`. `Assist.auto_dock` lands with AI-10. |
 | Lane owner tier | Opus reviews (05 lane writes it; Sonnet may implement against this file) |
 | May depend on | `core`, `content`, `sim` (`Terrain`, `Kinematics`, `PilotInput`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, RNG, autoloads, member state (S8) |
 | Autoloads used | None |
-| Status | `TerrainProbe` (AI-07), `FlightController` + `FlightGains` (AI-05), `LandingController` + structs (AI-09, 2026-10-14); assist planned |
+| Status | `TerrainProbe` (AI-07), `FlightController` + `FlightGains` (AI-05), `LandingController` + structs (AI-09, 2026-10-14), `Assist.link_bridge` + `BridgeParams` + `AssistStep` (AI-08, 2026-10-14); auto-dock planned |
 
 ## Public API
 
@@ -45,6 +45,25 @@ var worst_dir: Vector3; var lift_mps: float                                  # u
 class_name TerrainProbe extends RefCounted                                   # 05 s5.3, static only
 static func probe(terrain: Terrain, p: Vector3, v: Vector3, probe_params: ProbeParams, h_req: float, out: ProbeResult) -> void   # ONE pass, 6 samples
 static func sample_clearance(terrain: Terrain, p: Vector3, v: Vector3, gravity: float, t: float) -> float   # 1 sample: the 1.0 s act-time re-check
+static func drop_free_lift(r: ProbeResult, probe_params: ProbeParams, h_req: float, speed: float) -> float   # (AI-08) R0 B.12 A-69 lift from a filled result
+
+class_name BridgeParams extends RefCounted                                   # AI-08: LINK_BRIDGE / SAFETY law parameters per ship class, read-only
+const KEYS: PackedStringArray                                                # required top-level autopilot keys (+ the `flight` block)
+var gains: FlightGains; var probe: ProbeParams; var pull_up_tti_s: float     # safety_pull_up_tti_s (05 s2.4: 2.0 s)
+var ship: ShipDef; var rules: RulesDef                                       # base class def + world rules: the trim feed-forward's lift law
+static func from_autopilot(ap: Dictionary, def: ShipDef, rules_def: RulesDef, tick_hz: int) -> BridgeParams   # null on a missing key
+static func table(content: ContentSet, rules_def: RulesDef, tick_hz: int) -> Array[BridgeParams]   # by local ship index; null: no autopilot def
+static func autopilot_raw(content: ContentSet, id: StringName) -> Dictionary # AutopilotDef.raw of `id`, {} when absent
+
+class_name Assist extends RefCounted                                         # R0 B.5 step 4 substitution, static only; SimWorld and net Prediction
+static func link_bridge(b: Basis, p: Vector3, v: Vector3, terrain: Terrain, bp: BridgeParams, probe: ProbeResult, out: PilotInput) -> void
+static func link_bridge_ground(out: PilotInput) -> void                      # ground unit: stop (thrust 0, no BRAKE: no reverse)
+static func pull_up(b: Basis, up_local: Vector3, g: FlightGains, out: PilotInput) -> void   # 05 s5.3 PULL_UP: nose to local up, thrust 1, buttons 0
+static func hold_velocity(b: Basis, v: Vector3, lift_mps: float, up_local: Vector3, g: FlightGains, lead: float, out: PilotInput) -> void   # v_cmd = v + up * lift, pitch integrator = lead
+static func trim_lead(v: Vector3, up_local: Vector3, bp: BridgeParams) -> float   # steady nose lead: sin = g_perp / (u k_up_effective), <= integ_max
+
+class_name AssistStep extends RefCounted                                     # SimWorld step 4 driver, static only (A-73: SimWorld composes)
+static func run(store: EntityStore, players: PlayerTable, inputs: InputSlots, terrain: Terrain, bridge: Array[BridgeParams], probe: ProbeResult, scratch: PilotInput) -> void
 ```
 
 ```gdscript
@@ -81,6 +100,21 @@ var v_cruise: float; var ground_h: float; var lift_mps: float; var tti_s: float
 class_name PadSnapshot extends RefCounted                                    # reused input scratch
 var p: Vector3; var n: Vector3; var radius_m: float; var valid: bool; var busy: bool; var threat: bool
 ```
+**Assist (AI-08).** `link_bridge` is LINK_BRIDGE (05 C10 hand-over until the new pilot's first input, C13 from the 11th
+silent tick, A-44 / A-45; R0 C2-08): one `TerrainProbe.probe` pass with h_req = `required_clearance(|v|)` into the caller's
+`probe` scratch, then `pull_up` when TTI < `pull_up_tti_s`, else `hold_velocity(v, drop_free_lift, trim_lead)`. Stateless
+(no hysteresis): the probe runs every tick. **Contract impact:** 05 s2.4 says "hold velocity"; a stateless hold with zero
+integrators carries no angle-of-attack trim and sags under gravity (a 15 s cradle stall hit terrain in 7-14 % of starts
+per class, still 1 % with the A-69 lift alone), so the hold gets the 05 s5.3 / A-69 lift (v_cmd.radial = v_r + lift) and
+the steady nose lead fed forward from the lift law (`trim_lead`, no new def key): 0 contacts (`test_long_bridge_*`).
+`TerrainProbe.drop_free_lift` (append) is A-69 for every lift caller; the worst sample is the ballistic one (`probe`
+unchanged). `SimWorld` step 4 calls `AssistStep.run` (one line, A-73): every possessed entity under LINK_BRIDGE, ships
+with a `BridgeParams` entry (not DOCKED / LANDED) fly `link_bridge`, ground units get `link_bridge_ground`, structures keep
+the decayed input. Findings for AI-06 / S-FLIGHT-1: 05 s5.3's PULL_UP (nose to local up) kills the lift (k_up_effective
+falls with forward speed), so dives steeper than 30 degrees below ~250 m AGL can still meet the ground; a nose lead of
+40-50 degrees off the velocity removed those contacts in a trial (not adopted: 05 law kept). `BridgeParams` comes from the
+class's autopilot def; **needs content (AI-19):** `autopilots.json` with the `flight`, probe and `safety_*` keys (fixture
+`test/sim/ai/ai08_autopilots.json`); until then every table entry is null and step 4 leaves the decayed input in place.
 
 **FlightController.** `b` is the basis as `SimView.basis(id)` returns it (x right, y up, z = -forward), `v` the world velocity,
 `up_local` the unit radial; no body rates are needed (SimView has none). `track_velocity` points the nose at the velocity
@@ -135,6 +169,15 @@ and a per-candidate threat penalty array (no `ThreatSampler` exists yet); `shoul
 
 ## Invariants
 
+- AS1: `Assist` is static and reads only its arguments (S8): no member or static `var`, RNG, clock, Node or autoload; the
+  only writes are `out` and the `probe` scratch, so `net` Prediction reproduces the server's step 4 bit for bit
+  (`test_source_has_no_state`, `test_pure_and_deterministic`, `test_sc25_input_starvation_bridge`).
+- AS2: `link_bridge` clears every button (FIRE, FLIP, DOCK, RELEASE, BOOST; BRAKE only as `track_velocity` sets it); a
+  pull-up writes thrust 1 (`test_pulls_up_below_the_threshold`, `test_holds_velocity_when_clear`).
+- AS3: On cradle, every ship class under the bridge alone has no terrain contact for 2 s (the 10-tick A-45 window and on)
+  from 100 random starts at 150-600 m AGL, 0-30 degree dives, v_cruise, and for 15 s from 0-10 degree descents
+  (`test_bridge_window_no_terrain_contact_on_cradle`, `test_long_bridge_no_terrain_contact_on_cradle`).
+
 - FC1: `FlightController` is static and reads only its arguments: no member or static `var`, no RNG, clock, Node or autoload
   (S8, 03 s5.6). Identical arguments give identical outputs; 3,000 closed-loop ticks of two ships replay bit-identically
   (`test_pure_and_deterministic`, `test_source_has_no_state`).
@@ -172,6 +215,9 @@ and a per-candidate threat penalty array (no `ThreatSampler` exists yet); `shoul
 
 ## Performance budget
 
+AI-08 (`test_overlays_perf.gd`, best of 6, owner's desktop): `Assist.link_bridge` 6.9-7.9 us/call (6 height samples +
+`track_velocity`); step 4 runs it at most once per player slot (<= 8 per tick, <= 65 us), outside the AI hook's budget row.
+
 05 s10 "act" row: one `track_velocity` or `track_thrust_vector` per AI ship per tick, no allocation (Vector3 / float locals,
 writes into the caller's `PilotInput`); budget 6 us per ship. Measured by `test_perf_cost_per_call` (best of 6 batches, owner's
 desktop, 4.7.2, shared with other jobs): track_velocity 5.7-7.8 us/call, track_thrust_vector 2.0-2.5 us/call. At the top of
@@ -195,7 +241,9 @@ interface, purity, perf); `godot/test/sim/ai/test_auto_dock_landing.gd` (TA-30 s
 (closed forms on flat and sloped synthetic terrain, ridge, cradle crater rims against an independent Quaternion path, lift,
 cost, purity); `godot/test/unit/sim/steer/test_landing_controller.gd` (transitions, aborts, bearing, L4-L6 law, purity,
 perf); `godot/test/sim/ai/test_landing_dock_sets.gd` (L4-L6 from the TA-30 dock sets, every class, both lift models);
-`godot/test/sim/ai/test_sc_landing.gd` (SC-02..SC-08 through `LandingPilot` on `LandingWorld`).
+`godot/test/sim/ai/test_sc_landing.gd` (SC-02..SC-08 through `LandingPilot` on `LandingWorld`);
+`godot/test/unit/sim/steer/test_assist.gd` (AS1-AS3, BridgeParams parse); `godot/test/sim/ai/test_sc_overlays.gd` (SC-22, SC-25
+through `SimWorld` step 4).
 
 ## How to add X (recipes for the cheapest tier)
 
