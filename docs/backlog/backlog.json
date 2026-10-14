@@ -1387,7 +1387,10 @@
       " R0 C2-31",
       " 03 TA-24"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#16",
+    "note": "biome as texture (Terrain.biome_face, sim-lane accessor added); interim sky_moon.gdshader for ART-15 to restyle; Xvfb run in nightly TA-35 and device costs (HUM-06) unmeasured; detail_displacement_m=0 is the per-tier fallback"
   },
   {
     "id": "TA-25",
@@ -6534,7 +6537,7 @@
     "status": "done",
     "merged": "2026-10-13",
     "pr": 48,
-    "note": "decided: is_projectile stays open-ended; the store validates (R0 B.10 A-42)"
+    "note": "A-48 erratum applied: 11-bit generation (public #18)"
   },
   {
     "id": "TA-47",
