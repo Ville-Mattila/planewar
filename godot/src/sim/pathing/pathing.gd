@@ -78,21 +78,9 @@ func _init(expansions: int) -> void:
 
 ## Loads the six baked `face<f>.path.u8` faces of `map_dir`, each SHA-256 checked against meta.json (as Terrain).
 func load_weights(map_dir: String) -> Error:
-	var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string(map_dir.path_join("meta.json")))
-	if not (meta is Dictionary):
-		return ERR_FILE_CANT_READ
-	var m: Dictionary = meta
-	var outputs: Dictionary = m.get("outputs", {})
-	var all: PackedByteArray = PackedByteArray()
-	for f: int in PathGrid.FACES:
-		var file: String = "face%d.path.u8" % f
-		var bytes: PackedByteArray = FileAccess.get_file_as_bytes(map_dir.path_join(file))
-		var ctx: HashingContext = HashingContext.new()
-		var _s: Error = ctx.start(HashingContext.HASH_SHA256)
-		_s = ctx.update(bytes)
-		if bytes.size() != PathGrid.N * PathGrid.N or ctx.finish().hex_encode() != str(outputs.get(file, "")):
-			return ERR_FILE_CORRUPT
-		all.append_array(bytes)
+	var all: PackedByteArray = PathGrid.read_faces(map_dir)
+	if all.is_empty():
+		return ERR_FILE_CORRUPT
 	return OK if set_weights(all) else ERR_INVALID_DATA
 
 
@@ -211,7 +199,7 @@ func release(ticket: int) -> void:
 		_t_gen[sl] = (_t_gen[sl] + 1) & 0xFFFFF
 
 
-func pending() -> int:
+func pending() -> int:  # queued tickets
 	return _qn
 
 
@@ -311,7 +299,12 @@ func _start_job(sl: int) -> int:
 		_finish(sl, ST_NO_PATH, 0)
 		return units
 	var near: bool = grid.center_dir(s).angle_to(grid.center_dir(g)) <= float(hier_min_cells) * PI * 0.5 / float(PathGrid.N)
-	if r_s < 0 or r_s == r_g or near:
+	if r_s == r_g:                                   # same region: a route exists inside it and its neighbours
+		units += clusters.ensure_links(rs, r_s >> 3)
+		clusters.mark_region(r_s, rs)
+		grid.begin(s, g, lq, true)
+		_phase = _PH_CORRIDOR
+	elif r_s < 0 or near:
 		grid.begin(s, g, lq, false)
 		_phase = _PH_FULL
 	else:

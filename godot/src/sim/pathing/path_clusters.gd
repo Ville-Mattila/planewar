@@ -90,6 +90,18 @@ func mark_corridor() -> void:
 		r = _par[r]
 
 
+## Stamps region `r` and every region adjacent to it (same-region queries) in slot `sl`.
+func mark_region(r: int, sl: int) -> void:
+	grid.new_corridor(sl)
+	grid.add_corridor(r)
+	var base: int = (sl * REGIONS + r) * 8
+	for k: int in 8:
+		var bits: int = _adj[base + k]
+		for rb: int in MAX_REG:
+			if ((bits >> rb) & 1) != 0:
+				grid.add_corridor(_nbr[(r >> 3) * 8 + k] * MAX_REG + rb)
+
+
 ## Stamps every region of the cluster of `cell` and of its 8 neighbours (splice searches) in slot `sl`.
 func mark_around(cell: int, sl: int) -> int:
 	grid.new_corridor(sl)

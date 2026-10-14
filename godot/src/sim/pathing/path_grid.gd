@@ -68,6 +68,27 @@ func set_weights(bytes: PackedByteArray) -> bool:
 	return true
 
 
+## The six `face<f>.path.u8` files of `map_dir` concatenated, each SHA-256 checked against meta.json; empty on any
+## missing file, size or hash mismatch (a corrupt map on one peer would desync routes).
+static func read_faces(map_dir: String) -> PackedByteArray:
+	var all: PackedByteArray = PackedByteArray()
+	var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string(map_dir.path_join("meta.json")))
+	if not (meta is Dictionary):
+		return all
+	var m: Dictionary = meta
+	var outputs: Dictionary = m.get("outputs", {})
+	for f: int in FACES:
+		var file: String = "face%d.path.u8" % f
+		var bytes: PackedByteArray = FileAccess.get_file_as_bytes(map_dir.path_join(file))
+		var ctx: HashingContext = HashingContext.new()
+		var _s: Error = ctx.start(HashingContext.HASH_SHA256)
+		_s = ctx.update(bytes)
+		if bytes.size() != N * N or ctx.finish().hex_encode() != str(outputs.get(file, "")):
+			return PackedByteArray()
+		all.append_array(bytes)
+	return all
+
+
 ## Slope source; drops every memoised slope.
 func set_terrain(t: Terrain) -> void:
 	terrain = t

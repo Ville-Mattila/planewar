@@ -42,6 +42,7 @@ const W_BLOCKED: int; const W_ZERO: int; const SLOPE_UNKNOWN: int; const SLOPE_N
 var weights: PackedByteArray; var slope_q: PackedByteArray; var face_version: PackedInt32Array; var nb: PackedInt32Array
 var terrain: Terrain; var arc_u: PackedFloat32Array; var arc_d: PackedFloat32Array
 func set_weights(bytes: PackedByteArray) -> bool;  func set_terrain(t: Terrain) -> void;  func version_of(face: int) -> int
+static func read_faces(map_dir: String) -> PackedByteArray
 func center_dir(cell: int) -> Vector3;  static func cell_of(p: Vector3) -> int;  static func cluster_of(cell: int) -> int
 func passable(cell: int, limit_q: int) -> bool;  func neighbours(cell: int) -> void;  func sample_slope(cell: int) -> int
 func override_slope(cell: int, slope_deg: int) -> void;  static func limit_q_of(mask: int) -> int
@@ -74,7 +75,8 @@ func ensure_labels(sl: int, c: int) -> int;  func ensure_links(sl: int, c: int) 
 class_name PathClusters extends PathRegions                                  # resumable region A*, corridor stamping
 var heuristic_pct: int; var state: int; var start: int; var goal: int; var slot: int
 func begin(from_r: int, to_r: int, to_dir: Vector3, sl: int) -> void;  func run(budget: int) -> int
-func mark_corridor() -> void;  func mark_around(cell: int, sl: int) -> int;  func route() -> PackedInt32Array
+func mark_corridor() -> void;  func mark_region(r: int, sl: int) -> void;  func mark_around(cell: int, sl: int) -> int
+func route() -> PackedInt32Array
 
 class_name PathCache extends RefCounted                                      # (start cluster, goal cell, mask) -> cells, LRU
 const ENTRIES: int; const STRIDE: int
