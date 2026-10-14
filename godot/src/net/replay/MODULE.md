@@ -21,7 +21,7 @@ class_name ReplayFormat                                          # constants + g
 const MAGIC: PackedByteArray; const END_MAGIC: PackedByteArray; const FRAME_HEADER_BYTES: int; const FOOTER_BYTES: int
 const HASH_BYTES: int; const ID_BYTES: int; const SNAPSHOT_EVERY: int; const KEYFRAME_TICKS: int; const CHUNK_ENTITIES: int
 const INPUT_SUMMARY_TICKS: int; const INPUT_ENTRY_BYTES: int; const REPLAY_TEAM: int; const FILE_CAP: int; const FLUSH_BYTES: int
-enum FrameType { KEYFRAME = 1, DELTA = 2, EVENTS = 3, CHAT = 4, INPUT_SUMMARY = 5 }                       # append-only
+enum FrameType { KEYFRAME = 1, DELTA = 2, EVENTS = 3, CHAT = 4, INPUT_SUMMARY = 5 }                       # append-only; PROJECTILES = 6 appended by NET-51 (R0 B.12 A-77)
 enum Status { OK, RECOVERED, BAD_MAGIC, UNSUPPORTED_VERSION, CORRUPT, IO_ERROR }                           # append-only
 static func read_str8(buf: PackedByteArray, at: int, out: PackedStringArray) -> int                       # end offset or -1; text in out[0]
 static func gzip(raw: PackedByteArray) -> PackedByteArray;  static func gunzip(data: PackedByteArray, ok: PackedByteArray) -> PackedByteArray
@@ -153,10 +153,9 @@ compressed, <= 20 MB per 30 min, ADR-10). Measured numbers: the NET-25 PR perf n
 
 ## Open items
 
-- PROJECTILE_BATCH shots are not recorded (04 s13.1 lists no frame type for them): a replay shows hits, deaths and bombs
-  (events) but not straight-line shots. Append `FrameType.PROJECTILES = 6` when the presentation needs them (Architect).
-- Size: on the synthetic canonical scene (940 entities, all movers circling) the file is ~34 KB/s gzip, 61 MB per 30 min, over
-  the 20 MB target (ratio 1.3; random orientation and position residuals do not compress). The 04 s13.1 fallback (5 Hz for
-  tier-C-class entities) is not implemented; `perf/replay_size` on a real recorded match decides (follow-up).
+- R0 B.12 A-77: `FrameType.PROJECTILES = 6` (that tick's unfiltered PROJECTILE_BATCH messages in the packet container) is
+  **NET-51**; `PROTOCOL_VERSION` stays 1 until the first player-facing wire. Size: the synthetic all-movers scene measured
+  ~34 KB/s gzip, 61 MB per 30 min (ratio 1.3); ADR-10's 20 MB target stands; **NET-52** builds the 04 s13.1 tier-C 5 Hz option
+  (default off) and a `bench_replay` size row; S-SIM-1 (TA-22) records the canonical run's size and PM-01 decides.
 - `needs server:` call the writer from `ServerSession` (NET-15); `needs sim:` `SimEvent` convention as in `net/events/MODULE.md`.
 - `needs ClientSession (NET-17):` reset baselines on `keyframe_started`; accept `ReplayTransport` in place of a network transport.

@@ -205,6 +205,12 @@
         "pad_roofed": {
           "type": "boolean"
         },
+        "structure_bomb_mult": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "02 s4.3 rule 3: bomb damage multiplier on this structure; absent = 1.0; Hangar 0.25 (R0 B.12 A-66; Blast.bomb_mult reads it, TA-56)"
+        },
         "launch_pad": {
           "type": "boolean",
           "$comment": "optional, default false. true = a launch-only socket (Shipyard, 02 s5.1 / s2.3): produced ships spawn DOCKED on it and LAUNCH per R0 B.5; it never accepts a landing and never services, so pads must be 0 (validate_content). R0 B.9 A-19"

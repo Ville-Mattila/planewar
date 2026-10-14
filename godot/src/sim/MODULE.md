@@ -40,13 +40,14 @@ func store() -> EntityStore;  func projectiles() -> ProjectileStore;  var rng: R
 var vision: Vision;  func interest_start() -> PackedInt32Array;  func interest_count() -> PackedInt32Array;  func interest_ids() -> PackedInt32Array
     # store / projectiles (03): net encoder and tests only, presentation uses view(); rng = S7's one RNG; spatial / collision (TA-18), vision (TA-37): read-only; interest_* = the per-team interest-cell lists of 03 s3.6, layout in sim/vision/MODULE.md (S3: shared, valid until the next step)
 
-class_name SimSerialize                                                      # TA-21: the S4 byte form; file = magic, FORMAT, raw size (u32), SHA-256 of the raw body, zstd body (~185 KB at 1,200 entities + 2,000 projectiles)
-enum Status { OK, TOO_SHORT, BAD_MAGIC, OLD_FORMAT, NEWER_FORMAT }           # append-only; no migration: a world is read only by the FORMAT that wrote it
+class_name SimSerialize                                                      # TA-21: the S4 byte form; file = magic, FORMAT, raw size (u32), SHA-256 of the raw body, zstd body (~185 KB at 1,200 entities + 2,000 projectiles); TA-58 appends the 32 B ContentSet.content_hash to the header (FORMAT 8, R0 B.12 A-72)
+enum Status { OK, TOO_SHORT, BAD_MAGIC, OLD_FORMAT, NEWER_FORMAT }           # append-only; no migration: a world is read only by the FORMAT that wrote it; CONTENT_MISMATCH appended by TA-58 (A-72)
 static func check(bytes: PackedByteArray) -> Status;  static func write(w: SimWorld) -> PackedByteArray;  static func read(bytes: PackedByteArray, content: ContentSet, hook: SimAiHook) -> SimWorld
 static func write_raw(w: SimWorld, marks: PackedInt32Array = PackedInt32Array()) -> PackedByteArray;  static func pack(raw: PackedByteArray) -> PackedByteArray;  static func unpack(bytes: PackedByteArray) -> PackedByteArray;  static func size_report(w: SimWorld) -> PackedInt32Array   # unpack: empty when refused; report: raw bytes per SECTIONS entry (+ consts FORMAT, MAGIC, HEADER_BYTES, MAX_RAW_BYTES, SECTIONS)
 
 class_name SimAiHook extends RefCounted                                      # abstract; sim_ai's AiDriver implements it (05 s1.3)
 func on_tick(tick: int, view: SimView, sink: CommandSinkBase) -> void        # tick-order step 3
+func on_event(ev: SimEvent) -> void                                          # [planned: TA-57] base no-op; SimWorld forwards the previous tick's drained events before on_tick (R0 B.12 A-71)
 func serialize() -> PackedByteArray;  func deserialize(bytes: PackedByteArray) -> void   # (TA-18) the opaque bytes of S4 (05 AiDriver names)
 class_name CommandSinkBase extends RefCounted                                # abstract; SimWorld passes its implementation to on_tick; campaign's MissionRuntime receives one
 func submit(cmd: Command) -> CommandResult
@@ -294,6 +295,6 @@ Recipes (SimEvent kind, order kind, AlertKind / Command.Kind / CommandResult.Cod
 
 ## Open items
 
-- R0 B.8-B.11 applied (A-1/3/7/8, A-11..14, A-20/21 with TA-43/44/45/48, A-41/42/46/47, A-49..A-56; `docs/reviews/R0-amendments-04.md`). Pending code:
-  TA-49 landed (A-51 fields read, A-53 approach column); TA-50 wired `Pathing` (step 3b, `pathing()`, S4; sim/pathing/MODULE.md).
+- R0 B.8-B.12 applied (A-1/3/7/8, A-11..14, A-20/21 with TA-43/44/45/48, A-41/42/46/47, A-49..A-56, A-64..A-79; `docs/reviews/R0-amendments-05.md`). Pending code:
+  TA-56 (A-66 fields, A-76 sites do not sense), TA-57 (`SimAiHook.on_event` forward), TA-58 (header content hash, FORMAT 8); `REJECTED_PREREQ` 15 (A-79, TA-19 PR #47); A-73: extract before adding to a file >= 360 lines.
 - Interim stand-ins (step-9 frees, validated-only kinds): `sim/world/MODULE.md`; control transitions: `sim/control/MODULE.md` (AI-02, A-61). Owners: TA-11 store, TA-12 kinematics, TA-14 collision, TA-18 tick driver, TA-21 serialize format, TA-22 S-SIM-1, TA-37 vision, TA-38 ground; 05: steer/orders/control.

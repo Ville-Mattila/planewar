@@ -20,6 +20,7 @@
  "override_echo_s": 10,
  "shooter_grace_ticks": 10,
  "path_heuristic_pct": 25,
+ "vision_hz": 10,
  "cut_ladder": {
   "rung_1_think_period_ticks": 15,
   "rung_2_vision_hz": 5,

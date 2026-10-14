@@ -17,6 +17,7 @@
  "solar_plateau_mult": 1.5,
  "solar_plateau_radius_m": 1000,
  "tower_offline_ratio": 0.5,
+ "unsupplied_rate_mult": 0.5,
  "production_min_speed": 0.2,
  "pipe_radius_m": 500,
  "refinery_docks": 2,

@@ -170,6 +170,5 @@ split into a second static class (e.g. `SphereCells`) before crossing it.
   `SLOT_COUNT` from it. `is_projectile` stays open-ended (`slot >= PROJECTILE_SLOT_MIN`, 03 s3.1; R0 B.10 A-42,
   `docs/reviews/R0-amendments-03.md`): it classifies the range, the store validates the index and generation, and no
   allocator mints a slot at or above `PROJECTILE_SLOT_END`. Decoders validate ids against the store, not the predicate.
-- TA-46 erratum (A-48, `docs/reviews/R0-amendments-03.md`; awaiting Architect/owner confirmation): generation narrowed
-  from 12 to 11 bits so ids never set bit 31 and survive `PackedInt32Array` storage; 03 s3.1 "bits 20-31 ... wraps
-  4095 -> 1" reads "bits 20-30 (bit 31 zero) ... wraps 2047 -> 1" once confirmed.
+- TA-46 erratum A-48, **ratified** by the Architect as R0 B.12 A-64 (`docs/reviews/R0-amendments-05.md`): generation is
+  11 bits (bits 20-30, bit 31 zero, wraps 2047 -> 1) so ids survive `PackedInt32Array` storage; 03 s3.1 reads so.

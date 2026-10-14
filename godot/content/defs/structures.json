@@ -177,6 +177,7 @@
       "pads": 1,
       "pad_radius_m": 10,
       "pad_roofed": true,
+      "structure_bomb_mult": 0.25,
       "max_per_player": 8,
       "upgrade_from": "pad",
       "upgrade_cost_ore": 75,

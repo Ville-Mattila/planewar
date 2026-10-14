@@ -470,12 +470,12 @@ Side tables that are not SoA because they are sparse or variable length. Packed 
 | `owner`, `team` | PackedByteArray x2 | 2 | kill credit, friendly-fire mask |
 | `flags` | PackedByteArray | 1 | ALIVE, ARMED (after `ProjectileDef.arm_s`, bomb 0.5 s), GUIDED |
 | `shooter` | PackedInt32Array | 4 | EntityId (ignored in self-collision for 10 ticks) |
-| `target` | PackedInt32Array | 4 | rocket lock target or 0 |
-| `ttl` | PackedFloat32Array | 4 | seconds to live (`lifetime_s`, or time to burst for timed fuses) |
+| `target` | PackedInt32Array | 4 | rocket lock target or 0; for a timed fuse (flak) the burst tick (R0 B.12 A-74) |
+| `ttl` | PackedFloat32Array | 4 | seconds to live (`lifetime_s`); always the lifetime, so `lifetime_s - ttl` is the arming age (A-74) |
 | `hash_cell` | PackedInt32Array | 4 | |
 | **Total** | | **62** | 62 x 2,048 = 127 KB |
 
-Flak shells carry a timed fuse: `ttl` is set to the time to the predicted intercept point and the burst (`blast_radius_m`) is resolved in `Combat` when `ttl <= 0`, independent of hitting anything. The SL-5 canister, when built, adds an `hp` array to this store (`ProjectileDef.hp` 30); nothing else in the layout changes.
+Flak shells carry a timed fuse: at spawn `target` holds the burst tick (closest approach to the ship nearest the boresight plus `ProjectileDef.fuse_delay_s`, clamped to [`arm_s`, lifetime - 1 tick]; end of life when no ship is in the cone) and `Combat` resolves the burst (`blast_radius_m`) on that tick, independent of hitting anything; `ttl` keeps counting the lifetime (R0 B.12 A-74, GD-36 as built). The SL-5 canister, when built, adds an `hp` array to this store (`ProjectileDef.hp` 30); nothing else in the layout changes.
 
 ### 3.4 Component sets per entity kind
 
@@ -566,10 +566,10 @@ Budget is **p95 per tick** (R0 B.7, from C1 Section 3). The honest sum is **26.5
 | 6 Projectiles | projectiles | 2,000 | 2.5 | ~1.2 us | straight `p += v*dt` for slugs/flak/rail (no transport); bombs and siege shells CF + g; rockets guided (<= 100 live). TA-12 2.0-2.3 ms, TA-18 --full 3.3 ms (dev laptop) |
 | 7 Spatial rebuild | entities + projectiles | 3,200 | 1.2 | 0.35 us | counting sort into flat arrays (R0 C1-19). TA-14 1.51 ms at 1,200 dense, TA-18 --full 3.8 ms (dev laptop) |
 | 8 Collision incl. 8b projectile vs terrain | projectiles x neighbours, ships | 2,000 sweeps x ~4 candidates; 600 ship-terrain; ~300 ship pairs | 5.0 | 0.4 us per candidate, 2 us per terrain sample | 8b prefilter: `if (len(p) - R) > RELIEF_MAX + radius: skip`, so only near-ground projectiles sample `height_at` (8b <= 0.5 ms inside the 5.0). TA-14 8.0 ms at 1,200 dense, TA-18 --full 9.7 ms (dev laptop); rung 4 is the data lever |
-| 9 Combat | hits, firing entities | ~60 hits, ~150 firing | 1.2 | 8 us per hit, 4 us per fire | includes wreck creation (GD-36 weapon fire) |
+| 9 Combat | hits, firing entities | ~60 hits, ~150 firing | 1.2 | 8 us per hit, 4 us per fire | includes wreck creation (GD-36 weapon fire). GD-36 `perf_tick --full` (heavy bench, dev laptop): p95 **1.98 ms** (advisory, A-62; candidate rung 3) |
 | 10 Economy/Production/Build/scoring | structures, teams | 480 structures | 0.8 | 1.5 us | most structures are passive; only timers advance |
-| 11 Vision | sensors x candidates | ~70 sensors/tick x ~40 candidates at 10 Hz | 1.1 | 0.3 us per pair | rung 2 halves it |
-| 12 Events + interest + encode + replay | clients x interest set | per 04 s4.1 | 4.0 | 04 owns | `SnapshotCodec.prepare_tick(view)` quantises every visible entity **once per tick** into packed arrays (cell, e/n/u, quat_s3 full + coarse, vel i8, hp, flags); tier C sets per team; per-client work = gap + integer residual against the baseline; the replay writer reads the same cache. NET-06 measured (desktop p50, 400 entities): `prepare_tick` 1.24-1.26 ms, encode ~3 us per record (1.1-1.2 ms per client when every entity is encoded every tick), decode 0.53 ms; at the 04 s4.1 schedule (~190 records per client per tick) the 8-client extrapolation is ~5.8 ms, over this row. The row stays until the pinned runner measures it (4.4, R0 C1-11); NET-49 adds the client-independent FULL / C-BLIP byte cache and the canonical-schedule bench first, NET-08 is the gate, and the over-budget branch is PM-01's with the S-SIM-1 REPORT (R0 B.10 A-40: rung 5, re-split from rows measured under, or a tier-A cap of 32) |
+| 11 Vision | sensors x candidates | ~400 sensors per pass (every structure has `sensor_radius`; the v1.0 "~70" counted ships only, R0 B.12 A-76) x ~40 candidates at 10 Hz | 1.1 | 0.3 us per pair | rung 2 halves it. TA-37 (dev box): p95 0.62-0.85 ms at 5 Hz, 0.84-0.85 ms at 10 Hz; sites (`F_BUILDING`) do not sense (A-76) |
+| 12 Events + interest + encode + replay | clients x interest set | per 04 s4.1 | 4.0 | 04 owns | `SnapshotCodec.prepare_tick(view)` quantises every visible entity **once per tick** into packed arrays (cell, e/n/u, quat_s3 full + coarse, vel i8, hp, flags); tier C sets per team; per-client work = gap + integer residual against the baseline; the replay writer reads the same cache. NET-06 measured (desktop p50, 400 entities): `prepare_tick` 1.24-1.26 ms, encode ~3 us per record (1.1-1.2 ms per client when every entity is encoded every tick), decode 0.53 ms; at the 04 s4.1 schedule (~190 records per client per tick) the 8-client extrapolation is ~5.8 ms, over this row. The row stays until the pinned runner measures it (4.4, R0 C1-11); NET-49 adds the client-independent FULL / C-BLIP byte cache and the canonical-schedule bench first, NET-08 is the gate, and the over-budget branch is PM-01's with the S-SIM-1 REPORT (R0 B.10 A-40: rung 5, re-split from rows measured under, or a tier-A cap of 32). NET-25: the replay writer costs ~1.4 ms/tick at NET-49 speed on the canonical scene (advisory, A-62) |
 | **Total** | | | **26.5** | | **~24.2 with the default profile [1, 2]**. Dev-box sum of the rows measured so far (TA-18 --full total **27.6 ms** p95 without AI, vision, economy or the net row; NET-49 9.7 ms and NET-10 4.3 ms for row 12 at desktop p50) is advisory: no row moves before S-SIM-1 on the pinned runner (4.4; the consolidated proposal and the owner's options are R0 B.11 A-62) |
 
 Reserved rows (C1-13): 08 shortlist features add no cost until built; each SL design carries a "Performance" line at standard caps that is added here when its seed is scheduled (SL-1 landing grade lives in step 10 at < 0.05 ms; SL-2 wing orders in step 3 inside 05's governor; SL-3 chatter is client-side; SL-5 canisters in steps 6/8 at <= 20 live, est. < 0.1 ms). If a reserved row pushes the nominal p95 above 25 ms, the feature waits for a measured saving elsewhere.
@@ -1188,14 +1188,14 @@ Initial download = wasm + js + `core.pck` <= **20 MB Brotli** (01 s8.2; the gate
 | Engine baseline (Compatibility, no window on server) | 60 MB | 180 MB | 150 MB | 200 MB |
 | Sim state (3.2, 3.3) incl. side tables | 8 MB | 8 MB (offline) | 8 MB | 8 MB |
 | Terrain faces + slope + build grid (6.3) | 31 MB | 30 MB | 30 MB | 24 MB (no slopes) |
-| Path weights, pathing scratch, route cache | 2 MB (S-NAV-1 measured **8.8 MB**: 4.5 MB search arrays, 0.8 MB labels, 0.6 MB region graph, 0.6 MB tickets, 0.5 MB arc tables; TA-50 brings it to ~6 MB and the row is re-baselined there, R0 B.11 A-55) | 2 MB (offline; as server) | 2 MB (as server) | 2 MB (as server) |
+| Path weights, pathing scratch, route cache | **6 MB** (TA-50 measured 5.67 MB after merged tag / parent, u8 tags and dropped arc tables; S-NAV-1 had 8.8 MB; re-baselined R0 B.12 A-78) | 6 MB (offline; as server) | 6 MB (as server) | 6 MB (as server) |
 | Snapshot buffers, per-tick quantisation cache, replay writer | 20 MB (8 clients x 2 s ring + baselines) | 4 MB | 4 MB | 4 MB |
 | Chunk pool (220 chunks CPU arrays + GPU) + per-depth direction table | 0 | 34 MB | 22 MB (150 chunks) | 22 MB |
 | Unit/structure meshes, 256^2 atlas, VFX, far pools | 0 (stripped) | 110 MB | 80 MB | 80 MB |
 | Audio: decoded SFX <= 5 MB + music stream buffers (07 s8.3) | 0 | 15 MB | 15 MB | **15 MB** (R0 C1-16) |
 | UI, fonts, locale | 5 MB | 40 MB | 30 MB | 30 MB |
 | GDScript objects, Dictionaries, headroom | 60 MB | 100 MB | 80 MB | 100 MB |
-| **Total** | **~190 MB (budget 512)** | **~525 MB (budget 2 GB)** | **~420 MB (budget 1 GB)** | **~485 MB (budget 1 GB)** |
+| **Total** | **~194 MB (budget 512)** | **~525 MB (budget 2 GB)** | **~420 MB (budget 1 GB)** | **~485 MB (budget 1 GB)** |
 
 Web-mobile (budget 800 MB) follows the mobile column plus the wasm baseline: ~470 MB. The wasm heap starts at **`INITIAL_MEMORY` = 256 MB with growth allowed to 1 GB** (R0 C1-20): a smaller up-front reservation boots on low-RAM Android Chrome; S-WEB-1 records boot success on a 3 GB-RAM Android device. Nightly perf records `OS.get_static_memory_usage()` and `Performance.RENDER_*` counters per platform.
 
@@ -1233,6 +1233,7 @@ Rules: a perf PR states before/after p95 from `perf_tick.gd` (the same-job A/B o
 9. Functions on hot paths <= 40 lines so the profiler attributes time usefully.
 10. Measure before cutting: every optimisation PR cites a `perf_tick.gd` delta.
 11. Never mutate packed arrays stored inside an `Array` or `Dictionary` (Godot 4 packed arrays are copy-on-write values: `dict[k].append(x)` changes a copy); keep them as typed member variables (R0 C1-19).
+12. `SimWorld` is a composer: one call per tick-order step, state and rules in subsystem classes. A task that needs lines in a `sim` file at or above **360 lines** first extracts a cohesive part into its own file (lane-internal `class_name`, documented in the owning `sim/<subsystem>/MODULE.md`, no public symbol moved or renamed) in a separate commit of the same PR; D7's 400 is the hard stop (R0 B.12 A-73; the `EconomyHub` of TA-19 is the model).
 
 ### 12.3 Clock and hitch policy
 
@@ -1614,7 +1615,7 @@ static func set_adjutant(player: int, enabled: bool, profile: int, toggles: int)
 class_name CommandResult extends RefCounted
 enum Code { ACCEPTED, REJECTED_DEAD, REJECTED_NOT_OWNER, REJECTED_NOT_POSSESSABLE, REJECTED_ALREADY_POSSESSED,
             REJECTED_NO_RIGHTS, REJECTED_CAP, REJECTED_COST, REJECTED_PLACEMENT, REJECTED_RATE, REJECTED_MALFORMED,
-            REJECTED_INVALID_ORDER, REJECTED_UPLINK, REJECTED_PHASE, REJECTED_LOCKED }     # 0-14 frozen (B.3)
+            REJECTED_INVALID_ORDER, REJECTED_UPLINK, REJECTED_PHASE, REJECTED_LOCKED }     # 0-14 frozen (B.3); 15 REJECTED_PREREQ appended for PRODUCE with an unmet tech requirement (R0 B.12 A-79, TA-19 PR #47)
 var code: Code; var reject: int                                              # reject = Build.Reject when code == REJECTED_PLACEMENT
 
 class_name PilotInput extends RefCounted
@@ -1899,3 +1900,4 @@ Every register row applied (R0 = `docs/reviews/R0-resolution-register.md`) and t
 | R0 B.9 A-8..A-22 (CONTRACT-0 amendments 02, 2026-10-13) | 2.6, 2.8, 3.1, 5.1, 5.2, 5.3, 9.2, 13, 15.3, 15.4, TA-10, TA-11 | flat `EDGE_NEIGHBOUR` (stride 3) and the C3 round trip; `is_occluded_by_datum` endpoint semantics; projectile range quarantines 0 ticks (owner); `flight_common.brake_fade_mps`; `step_projectile(..., out)`; sequential flip (half roll, half loop) with the end-state invariant, phase order OWNER; `launch_pad`, `pause_scope`, `caps_web_mobile` in 9.2; `quality_tiers.json` + schema to TA-47; `ContentDB` gains `wing`, `callsigns`, `barks`, `supply_canister`, `missions` and N8; subsystem `MODULE.md` rule for `sim/` |
 | R0 B.10 A-40..A-42, A-46, A-47 (CONTRACT-0 amendments 03, 2026-10-13) | 3.1, 4.1, 4.2, 6.2, 8.4, 15.4 | `is_projectile` open-ended, the store validates; rule 9: step 5 skips DOCKED ships (idle burn is flight-only); row 12 notes carry NET-06's measured encode cost and the A-40 plan (budget unchanged, NET-49 cache + canonical bench, NET-08 gate, PM-01 branch); `Terrain.load_map` (not `load`); `sim/MODULE.md` cap: recipes move to 15.4 when the next sim task needs the lines (A-47) |
 | R0 B.11 A-49..A-62 (CONTRACT-0 amendments 04, 2026-10-14) | 2.7, 3.6, 4.2, 4.3, 6.1, 7.3, 7.5, 11.3, 14.1 | Hash ring coverage ~94 / ~188 m (TA-14 proof) in 2.7, 3.6 and 6.1; `rules.shooter_grace_ticks`; pad approach column exempt from RAM (A-53); path grid as built: 0 and 255 both impassable, metre cost with the inflated great-circle heuristic (`path_heuristic_pct` 25), regions per cluster instead of portals, `path_expansions_per_tick` 120, `AStar3D` rejected, `CommandSinkBase.pathing()` for `sim_ai`; 4.2 rows 3b / 5 / 6 / 7 / 8 carry the dev-box measurements as advisory notes and the total row points at A-62; 4.3 rungs as `cut_ladder` data and rung 8 appended; 7.3 pool per tier (150 / 220 / 300); 7.5 `theta_up` 0.61 rad; 11.3 pathing memory measured 8.8 MB -> ~6 MB after TA-50; 14.1 S-SIM-1 REPORT table and fail paths incl. rung 8 |
+| R0 B.12 A-64, A-73..A-79 (CONTRACT-0 amendments 05, 2026-10-14) | 3.3, 4.2, 11.3, 12.2, 15.4 | A-48 (11-bit generation) ratified; 3.3 `ttl` always the lifetime and the flak burst tick in `target`; 4.2 rows 9 / 11 / 12 carry GD-36, TA-37 and NET-25 dev-box notes and the ~400-sensor count; 11.3 pathing row 6 MB (TA-50 5.67 measured); 12.2 rule 12: extraction before adding to a `sim` file >= 360 lines; 15.4 `REJECTED_PREREQ` (15) appended for PRODUCE tech |

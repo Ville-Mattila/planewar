@@ -227,13 +227,14 @@ All *(anchor)* except the 01-fixed values: Dart gun 6-14 at 10 rounds/s with 400
 
 1. **Gun hit:** `dmg = rng.range_i(damage_min, damage_max)`, then `* structure_mult` vs structures or `* ground_mult` vs ground units, then `round()`, minimum 1. Doctrine factors are already folded into the resolved `damage_min`/`damage_max` (Section 7), never applied twice. Rolls happen on the server only (ADR-07).
 2. **Bomb vs ships:** any ship whose bounding sphere is within 15 m of a bomb detonation, or that the bomb touches after arming, is destroyed outright (01 s3.1.3). A ship docked in a **Hangar** is immune to bombs (and, for Bulwark, to rockets).
-3. **Bomb vs everything else:** ground units within 20 m take 400; structures whose footprint edge is within 20 m take `400 * structure_bomb_mult` (1.0 for all structures except the Hangar, 0.25).
+3. **Bomb vs everything else:** ground units within 20 m take 400; structures whose footprint edge is within 20 m take `400 * structure_bomb_mult` (`structures.json`, absent = 1.0; the Hangar carries 0.25). A bomb that reaches the ground detonates whether or not it is armed; `arm_s` governs contact with ships (rule 2) only (R0 B.12 A-75).
 4. **Rockets:** 40 to the target hit by the proximity burst; no splash to others. Rocket locks follow Section 4.4.
 5. **Flak:** 30 to every enemy ship within 25 m of the burst. Flak never targets ground units or structures.
 6. **Shield domes** (Section 5.2) **and the Core's integrated shield** (Section 5.1): a projectile with `shield_absorbed: true` that enters an enemy dome from outside is destroyed if the dome's current charge >= its damage (charge -= damage). If the charge is lower, the projectile passes through unchanged and the dome collapses to 0 for 10 s. Ships pass through domes freely; projectiles fired from inside a dome are never absorbed by it.
 7. **Ramming:** ship-ship contact destroys both (01). Ship-structure contact destroys the ship and deals its remaining HP to the structure.
 8. **No friendly fire** from weapons. Ramming, terrain and Reactor explosions (100 m, 200 damage, everyone) ignore teams.
 9. **Damage feedback:** every gun hit emits a `HIT` event with the rolled value; presentation scales sparks by value and smoke by `hp01` thresholds 0.75 / 0.5 / 0.25 (readable state without health bars, 01 s3.1.3).
+10. **Siege shells:** a shell deals its weapon damage (120) once to every enemy entity within `blast_radius_m` (12 m), ships included, and to structures whose footprint edge is within `blast_radius_structure_m`; a direct hit is the same damage, never twice (R0 B.12 A-75).
 
 ```gdscript
 # src/sim/combat.gd
@@ -440,7 +441,7 @@ The economy is C&C's three-link loop (gatherer -> depot -> stockpile) plus power
 | Starting Ore per player (summed into the team stockpile) | 800 *(anchor)* | `start_ore` |
 | Starting Ice per player | 300 *(anchor)* | `start_ice` |
 | Core trickle (a floor income that survives losing every Harvester) | 1.0 Ore/s *(anchor)* | `core_trickle_ore_per_s` |
-| Starting entities | Core; Refinery at the recipe's `start_refinery` position (toward Home Field A, 500 m from the Core); Shipyard adjacent to the Core with its launch pad; Vehicle Bay beside the Refinery; 1 Harvester already mining Field A. Pre-built structures count against `max_per_player`. A mission may override. | `start_kit` = `["core", "refinery", "shipyard", "vehicle_bay", "harvester"]` |
+| Starting entities | Core; Refinery at the recipe's `start_refinery` position (toward Home Field A, 500 m from the Core; `start_refinery_dist_m` is the fallback when the recipe carries none, R0 B.12 A-79); Shipyard adjacent to the Core with its launch pad; Vehicle Bay beside the Refinery; 1 Harvester already mining Field A. Pre-built structures count against `max_per_player`. A mission may override. | `start_kit` = `["core", "refinery", "shipyard", "vehicle_bay", "harvester"]` |
 | Early share lock (teams of 2+) | 120 s; 800 Ore per player (Section 6.4) | `early_share_lock_s`, `early_share_ore` |
 | Repair cost | 0.1 Ore per HP | `repair_ore_per_hp` |
 | Wreck value / lifetime / pod size | 0.40 of Ore cost / 90 s / max 120 Ore per pod | `wreck_fraction`, `wreck_lifetime_s`, `salvage_pod_max_ore` |
@@ -454,6 +455,11 @@ The economy is C&C's three-link loop (gatherer -> depot -> stockpile) plus power
 | Cancel refunds queued / in assembly | 1.0 / 0.75 | `cancel_refund_queued`, `cancel_refund_assembly` |
 | Self-repair delay | 10 s | `self_repair_delay_s` |
 | Unused-slot yield | 0.5 | `unused_slot_yield` (also in each recipe's `resources` block, Section 9.1) |
+| Unsupplied tower rate (Section 5.4) | 0.5 | `unsupplied_rate_mult` (R0 B.12 A-66) |
+| Placement: max footprint slope (Section 6.2 rule 2) | 15 degrees | `build_max_slope_deg` (R0 B.12 A-79) |
+| Outpost presence / friendly spacing / enemy spacing (Section 6.2 rule 5) | 300 m / 800 m / 1,500 m | `outpost_presence_radius_m`, `outpost_spacing_friendly_m`, `outpost_spacing_enemy_m` (A-79) |
+| Site HP floor during assembly (Section 6.3) | 0.1 of `hp` | `site_hp_fraction` (A-79) |
+| Start kit: Refinery distance when the recipe has no `start_refinery` feature (Section 9.1); Shipyard / Vehicle Bay offset ("adjacent": half footprints plus a 3-cell walkway) | 500 m / 100 m | `start_refinery_dist_m`, `start_adjacent_dist_m` (A-79; a recipe `start_refinery` feature is canonical when present) |
 
 Why a pre-built kit: production exists at 0:00, so the first decisions are *what* to build (Solar, second Harvester, first Dart, a tower) rather than unlocking factories; income flows from the first minute (C&C's start pattern, R1 s2.4); a phone player needs one or two placements in the first minute, not four; and a Dart is in the air by ~0:30 so pilots fly early (01 s3.3). `start_ore` was cut from 1,500 to 800 so the Ore saved on the factories (700) does not become a bank; the opening tempo in Ore is unchanged, only ~35 s faster.
 
@@ -1325,3 +1331,4 @@ Contracts shared with other docs are frozen in R0 Part B (field names B.1, maps 
 | 02 AR-1, AR-2 | Accepted; moved out of Section 19 | 6.2, 19 |
 | R0 B.8 A-1..A-4 (CONTRACT-0 amendments 01) | Weapon and projectile ids are separate namespaces (`bomb` stays); `range_min_m`; `weapon_mount` gains `ground` (siege_gun), Foundry selects `ship` only; typing of the s14 / s15 prose cells and `fill_rating_weight` | 4.1, 7, 14 |
 | R0 B.9 A-13, A-16..A-19 (CONTRACT-0 amendments 02, 2026-10-13) | `flight_common.brake_fade_mps` 10; `modes.json` optional `pause_scope` (coop `listen_host`) and `caps_web_mobile` (skirmish, campaign `lite`); promise locale keys `promise.<id>.audience` / `.human_target`; Shipyard `launch_pad: true`, no service pads | 2.2, 2.3, 5.1, 14 |
+| R0 B.12 A-66, A-75, A-79 (CONTRACT-0 amendments 05, 2026-10-14) | `structure_bomb_mult` is a per-structure field (Hangar 0.25); a bomb reaching the ground detonates unarmed; rule 10: siege shells damage ships inside 12 m; s8.1 lists `unsupplied_rate_mult` and the seven TA-19 placement / start-kit fields, with the recipe `start_refinery` feature canonical over `start_refinery_dist_m` | 4.3, 8.1 |

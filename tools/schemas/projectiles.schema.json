@@ -174,6 +174,12 @@
           "minimum": 0,
           "maximum": 100
         },
+        "fuse_delay_s": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 5,
+          "$comment": "02 s4.2 timed fuse: burst at the predicted intercept + fuse_delay_s (flak_shell 0.3); absent = 0 (R0 B.12 A-66; WeaponFire reads it, TA-56)"
+        },
         "arm_s": {
           "type": "number",
           "minimum": 0,

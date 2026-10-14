@@ -62,7 +62,7 @@ BRAKE bit (set on overspeed by `track_velocity`, cleared by `track_thrust_vector
 lead per radian of path error and `kp_yaw` the yaw pointing gain; `k_guidance` is not read here. Tuned values (fixture
 `test/sim/ai/ai05_params.json`): kp_path 4, ki_path 0.3, integ_max_rad 0.8, integ_band_deg 6, lead_max_deg 80, kp_att 6,
 kp_yaw 6, kp_roll 3, kp_bank 1, bank_threshold_deg 10, bank_max_deg 60, t_trim 0.5, kp_speed 0.05, ki_speed 0.005,
-kp_turn_thrust 2, brake_overspeed_mps 20. **Needs content:** these keys in `autopilots.schema.json` and every `ap_*` (AI-19).
+kp_turn_thrust 2, brake_overspeed_mps 20. R0 B.12 A-67: the keys are in `autopilots.schema.json` (required inside a `flight` object) and 05 s4.4 / s5.2; AI-19 writes every `ap_*`. A-68: the `damping_only` dive figure in FC3 is the accepted acceptance for the A/B variant.
 
 **TerrainProbe.** `p` is the sim position (planet centre origin), `v` the world velocity. The path is constant velocity in the tangent frame carried
 along the great circle (ground speed `s`, angle `s t / |p|`), radius `|p| + v.n0 t - 0.5 g t^2`. The doc's signatures gain the
@@ -124,5 +124,7 @@ cost, purity).
 
 ## Open items
 
-- `ProbeParams.lift_max_frac` / `lift_min_time_s` are in `autopilots.schema.json` (optional); **needs content:** the `autopilots` def file does not exist yet and must carry them (0.6, 0.5).
+- `ProbeParams.lift_max_frac` / `lift_min_time_s` are in `autopilots.schema.json` (optional); AI-19 writes them (0.6, 0.5) into every `ap_*` (R0 B.12 A-67).
 - The structure bounding-sphere probe of 05 s5.4 and the 1.0 s re-sample at act (PULL_UP) are `sim_ai` callers of `TerrainProbe`.
+- A-69 (05 s5.3 erratum): lift callers use the drop-free clearance `c_k + 0.5 g t_k^2` and add the lift to the current radial speed; TTI / PULL_UP keep the ballistic probe. `probe()` is unchanged; AI-13 owns the brain side.
+- A-70 (05 s5.5 erratum): L4 TRANSITION holds AGL >= `landing.hover_agl_m`; a terrain contact in L4-L6 is a failed landing. AI-09 implements it in `LandingController`; `Assist.auto_dock()` (AI-10) inherits it.

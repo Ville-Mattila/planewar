@@ -97,6 +97,7 @@
       "radius_m": 0.5,
       "blast_radius_m": 25,
       "fuse": "timed",
+      "fuse_delay_s": 0.3,
       "fuse_radius_m": 12,
       "arm_s": 0.5,
       "shield_absorbed": false,
