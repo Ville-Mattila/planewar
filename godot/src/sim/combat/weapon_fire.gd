@@ -18,6 +18,7 @@ const _STATE: PackedStringArray = ["lock_target", "lock_time", "unsupplied"]
 var lock_target: PackedInt32Array = PackedInt32Array()   ## per main-range slot: seeker candidate EntityId, 0 = none
 var lock_time: PackedFloat32Array = PackedFloat32Array()   ## per slot: seconds the candidate has been held
 var unsupplied: PackedByteArray = PackedByteArray()        ## per slot: 1 = tower outside the supply network (GD-18 writes)
+var tower_power: PackedFloat32Array = PackedFloat32Array() ## per team tower rate multiplier, 0 = offline (GD-13; SimWorld sets it each tick, not state)
 
 var _store: EntityStore
 var _proj: ProjectileStore
@@ -154,6 +155,10 @@ func _weapon(s: int, wi: int, which: int, held: bool) -> void:
 		target = _seek(s, k, held)
 		trigger = held and target != 0
 	var slow: float = UNSUPPLIED_RATE_MULT if _tower[_did[s]] != 0 and unsupplied[s] != 0 else 1.0
+	if _tower[_did[s]] != 0 and _tm[s] < tower_power.size():
+		slow *= tower_power[_tm[s]]                       # 02 s8.4: x power ratio, offline (0) below tower_offline_ratio
+		if slow <= 0.0:
+			return
 	if _bn[k] > 0 and which == 0:
 		_burst(s, wi, k, trigger, slow)
 		return

@@ -18,6 +18,11 @@ static func world(seed_value: int = 7, rules: MatchRules = null) -> SimWorld:
 	return w
 
 
+## GD-13: a Reactor on the far side of the moon for `owner` / `team` keeps the team at power ratio 1, so its towers are online.
+static func power(w: SimWorld, owner: int, team: int) -> void:
+	var _id: int = WorldTestKit.spawn(w, &"reactor", owner, team, Vector3(-R, 0.0, 0.0))
+
+
 ## Spawns `def` and pins it at `p` at rest (up = radial). Returns the EntityId.
 static func spawn(w: SimWorld, def: StringName, owner: int, team: int, p: Vector3) -> int:
 	var id: int = WorldTestKit.spawn(w, def, owner, team, p)

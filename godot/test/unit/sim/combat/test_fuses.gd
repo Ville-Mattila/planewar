@@ -104,6 +104,7 @@ func test_flak_never_bursts_on_friendly_ships() -> void:
 
 func test_flak_battery_fuses_for_the_closest_approach_plus_delay() -> void:
 	var w: SimWorld = CombatTestKit.world()
+	CombatTestKit.power(w, 1, 1)
 	var flak: int = CombatTestKit.spawn(w, &"flak_battery", 1, 1, _at(0.0))
 	var tgt: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(400.0, 600.0))
 	FireTestKit.hook(w).hold(flak, PilotInput.FIRE1)
@@ -123,6 +124,7 @@ func test_flak_battery_fuses_for_the_closest_approach_plus_delay() -> void:
 
 func test_flak_without_a_target_bursts_at_the_end_of_its_life() -> void:
 	var w: SimWorld = CombatTestKit.world()
+	CombatTestKit.power(w, 1, 1)
 	var flak: int = CombatTestKit.spawn(w, &"flak_battery", 1, 1, _at(0.0))
 	FireTestKit.hook(w).hold(flak, PilotInput.FIRE1)
 	w.step()
