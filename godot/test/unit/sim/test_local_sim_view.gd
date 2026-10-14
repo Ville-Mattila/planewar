@@ -133,3 +133,61 @@ func test_defaults_until_their_systems_land() -> void:
 	assert_vector(v.stockpile_cap(0)).is_equal(Vector2i.ZERO)
 	assert_vector(v.power_balance(0)).is_equal(Vector2(0.0, 10.0))
 	assert_int(v.wrecks().size()).is_equal(0)
+
+
+func test_read_poses_matches_pos_and_basis() -> void:
+	var w: SimWorld = WorldTestKit.world()
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 51
+	var pool: PackedInt32Array = PackedInt32Array()
+	for k: int in 40:
+		var id: int = WorldTestKit.spawn(w, &"dart", 1, 1, WorldTestKit.at(300.0 + float(k), float(k) * 20.0))
+		var s: int = EntityId.slot(id)
+		var up: Vector3 = Vector3(rng.randf_range(-1.0, 1.0), 1.0, rng.randf_range(-1.0, 1.0)).normalized()
+		var fwd: Vector3 = up.cross(Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0), 1.0)).normalized()
+		w.store().up[s] = up
+		w.store().fwd[s] = fwd
+		var _a: bool = pool.push_back(id)
+		var _b: bool = pool.push_back(EntityId.make(s, 99))   # stale generation: dead
+		if k % 4 == 0:
+			var _c: bool = pool.push_back(WorldTestKit.projectile(w, &"rocket", WorldTestKit.at(250.0, float(k)), Vector3(0, 5, 0), 1, 5.0))
+	var _d: bool = pool.push_back(EntityId.make(1500, 1))     # never spawned
+	var v: SimView = w.view()
+	var ids: PackedInt32Array = PackedInt32Array()
+	var _r: int = ids.resize(1000)
+	var alive_expected: int = 0
+	for i: int in 1000:
+		ids[i] = pool[rng.randi_range(0, pool.size() - 1)]
+		alive_expected += 1 if v.alive(ids[i]) else 0
+	var pos: PackedVector3Array = PackedVector3Array()
+	var rot: PackedVector4Array = PackedVector4Array()
+	var _p: int = pos.resize(1000)
+	var _q: int = rot.resize(1000)
+	var n: int = v.read_poses(ids, pos, rot)
+	assert_int(n).is_equal(alive_expected)
+	assert_int(pos.size()).is_equal(1000)
+	assert_int(rot.size()).is_equal(1000)
+	assert_int(alive_expected).is_greater(0)
+	assert_int(alive_expected).is_less(1000)
+	for i: int in 1000:
+		var q: Quaternion = v.basis(ids[i]).get_rotation_quaternion()
+		assert_vector(pos[i]).is_equal(v.pos(ids[i]))
+		assert_float(rot[i].x).is_equal(q.x)
+		assert_float(rot[i].y).is_equal(q.y)
+		assert_float(rot[i].z).is_equal(q.z)
+		assert_float(rot[i].w).is_equal(q.w)
+
+
+func test_read_poses_dead_id_is_zero_and_identity_and_base_default() -> void:
+	var w: SimWorld = WorldTestKit.world()
+	var ids: PackedInt32Array = PackedInt32Array([EntityId.make(5, 3)])
+	var pos: PackedVector3Array = PackedVector3Array([Vector3.ONE])
+	var rot: PackedVector4Array = PackedVector4Array([Vector4.ONE])
+	assert_int(w.view().read_poses(ids, pos, rot)).is_equal(0)
+	assert_vector(pos[0]).is_equal(Vector3.ZERO)
+	assert_bool(rot[0] == Vector4(0.0, 0.0, 0.0, 1.0)).is_true()
+	pos[0] = Vector3.ONE
+	rot[0] = Vector4.ONE
+	assert_int(SimView.new().read_poses(ids, pos, rot)).is_equal(0)
+	assert_vector(pos[0]).is_equal(Vector3.ZERO)
+	assert_bool(rot[0] == Vector4(0.0, 0.0, 0.0, 1.0)).is_true()
