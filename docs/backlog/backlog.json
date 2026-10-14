@@ -1483,7 +1483,9 @@
       " 07 s3.1",
       " 07 ART-14"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#41"
   },
   {
     "id": "ART-15",
