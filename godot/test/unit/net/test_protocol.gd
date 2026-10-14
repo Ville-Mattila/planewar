@@ -169,7 +169,7 @@ func test_catalogue_sizes_cover_field_layouts() -> void:
 		Protocol.ADMIN_NOTICE: 1 + 1 + 1,
 		# MATCH_END without medals: 8 teams, 8 players x 44 B fixed per-player fields.
 		Protocol.MATCH_END: 1 + 1 + 1 + 4 + 32 + 1 + 8 * 4 + 1 + 8 * (1 + 4 + 4 + 2 * 6 + 4 * 3 + 5 * 2 + 1),
-		Protocol.EVENTS: 1 + 4 + 1, Protocol.ENTITY_META: 1 + 1 + 25, Protocol.KEYFRAME: 1 + 2 + 4 + 1 + 2 + 1280 * 20,
+		Protocol.EVENTS: 1 + 4 + 1, Protocol.ENTITY_META: 1 + 1 + 25, Protocol.KEYFRAME: 1 + 2 + 4 + 1 + 2 + Roster.CAPACITY * 20,
 		Protocol.TEAM_DETAIL: 1 + 4 + 1 + 6, Protocol.PROJECTILE_BATCH: 1 + 4 + 1 + 7, Protocol.SNAPSHOT: 10 + 15,
 	}
 	for id: int in at_most:

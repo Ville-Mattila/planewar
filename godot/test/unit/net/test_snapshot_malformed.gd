@@ -125,7 +125,7 @@ func test_record_faults() -> void:
 	var idx: PackedByteArray = PackedByteArray([0, 0, 0])
 	idx[0] = 0xFF
 	idx.encode_u16(1, 2000)
-	var esc2: PackedByteArray                                           # 0xFF + u16 index 2000 (>= 1,280) = _header(31, 0, Protocol.SNAP_HAS_A | Protocol.SNAP_LAST)
+	var esc2: PackedByteArray                                           # 0xFF + u16 index 2000 (>= 1,536) = _header(31, 0, Protocol.SNAP_HAS_A | Protocol.SNAP_LAST)
 	esc2.append_array(PackedByteArray([1]))
 	esc2.append_array(idx)
 	esc2.append_array(PackedByteArray([SnapshotCodec.MASK_FULL]))
