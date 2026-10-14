@@ -335,6 +335,14 @@ def run_defs(val: Validator, rep: Report, root: Path, stems: set[str]) -> None:
         if isinstance(data, dict) and data.get("id") != path.parent.name:
             rep.add(f"{rel}:/id", f"id '{data.get('id')}' must equal the directory name '{path.parent.name}'")
         check_recipe_ids(rep, rel, data)
+    ramps = root / "godot/content/biome_ramps.json"
+    if ramps.is_file():   # ART-14: source of moon_ramp.png, 8 biomes with unique ids 0-7
+        data = load_json(ramps, rep, "godot/content/biome_ramps.json")
+        if data is not None:
+            validate(val, rep, "godot/content/biome_ramps.json", data, "biome_ramps")
+            ids = [b.get("id") for b in data.get("biomes", []) if isinstance(b, dict)]
+            if sorted(ids) != list(range(8)):
+                rep.add("godot/content/biome_ramps.json:/biomes", "ids must be exactly 0-7, once each")
 
 
 def run_examples(val: Validator, rep: Report, root: Path, stems: set[str]) -> None:

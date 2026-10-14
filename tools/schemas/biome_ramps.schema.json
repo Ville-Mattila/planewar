@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "biome_ramps.schema.json",
+  "title": "BiomeRamps (godot/content/biome_ramps.json)",
+  "$comment": "07 s2.1 / s3.1 (ART-14). Source of moon_ramp.png (tools/moonbake/ramp.py): row = biome id 0-7 (8-15 reserved, magenta), column = ramp value through the low / mid / high stops. Ids are append-only (R0 B.3).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {"type": "string", "minLength": 1},
+    "biomes": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "integer", "minimum": 0, "maximum": 7},
+          "name": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+          "low": {"$ref": "#/$defs/hex"},
+          "mid": {"$ref": "#/$defs/hex"},
+          "high": {"$ref": "#/$defs/hex"}
+        },
+        "required": ["id", "name", "low", "mid", "high"]
+      }
+    }
+  },
+  "required": ["_doc", "biomes"],
+  "$defs": {
+    "hex": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"}
+  }
+}

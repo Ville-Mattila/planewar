@@ -1,0 +1,13 @@
+{
+  "_doc": "Biome ramps, docs/07 s2.1 (ART-14). Each biome has a 3-stop ramp (low / mid / high) sampled by the per-pixel ramp value of 07 s3.1; tools/moonbake/ramp.py bakes this file into godot/assets/textures/moon_ramp.png (64 columns = ramp value, 16 rows = biome id; ids 8-15 reserved, magenta). Stops are sRGB albedo as authored in 07 s2.1; the moon_light include decodes them, so rendered colours follow 07 s1.5 (night = albedo x (0.30, 0.36, 0.55)). Ids are append-only. Change a stop here, then run `python -I tools/moonbake ramp` and update the ledger sha256.",
+  "biomes": [
+    {"id": 0, "name": "mare", "low": "#30343F", "mid": "#404552", "high": "#51576A"},
+    {"id": 1, "name": "highland", "low": "#7A7770", "mid": "#959189", "high": "#B1ACA1"},
+    {"id": 2, "name": "crater_floor", "low": "#2A2C34", "mid": "#353840", "high": "#43474F"},
+    {"id": 3, "name": "rim_ejecta", "low": "#A8A396", "mid": "#C0BBAE", "high": "#D6D1C4"},
+    {"id": 4, "name": "cold_trap", "low": "#34485E", "mid": "#5B7C9E", "high": "#B5D8EC"},
+    {"id": 5, "name": "ore_field", "low": "#6B5B3F", "mid": "#8D7648", "high": "#AA9158"},
+    {"id": 6, "name": "solar_plateau", "low": "#B9B5AA", "mid": "#D0CCC0", "high": "#E3DFD2"},
+    {"id": 7, "name": "rille_floor", "low": "#22242B", "mid": "#2C2F37", "high": "#373B44"}
+  ]
+}

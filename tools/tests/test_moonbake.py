@@ -310,6 +310,18 @@ class RampAndPng(unittest.TestCase):
             self.assertEqual(tuple(img[0, 63, :3]), (255, 255, 255))
             self.assertEqual(data, ramp.build_ramp(out, j))
 
+    def test_biome_ramps_json_is_the_07_palette(self) -> None:
+        """ART-14: godot/content/biome_ramps.json holds exactly the 07 s2.1 stops (the builder's fallback table)."""
+        loaded = ramp.load_ramps(REPO / "godot/content/biome_ramps.json")
+        fallback = ramp.load_ramps(Path("/nonexistent/biome_ramps.json"))
+        self.assertEqual(loaded, fallback)
+        self.assertEqual(sorted(loaded), list(range(8)))
+        doc = (REPO / "docs/07-art-audio-and-content.md")
+        if doc.is_file():
+            text = doc.read_text(encoding="utf-8")
+            for i, name, lo, mid, hi in ramp.DEFAULT_BIOMES:
+                self.assertIn(f"| {i} | `{name}` | `{lo}` | `{mid}` | `{hi}` |", text)
+
     def test_committed_ramp_is_fresh(self) -> None:
         p = REPO / "godot/assets/textures/moon_ramp.png"
         gates.require_blobs(p)

@@ -114,6 +114,7 @@ const SHADER_PATH: String; const RAMP_PATH: String; const MAX_SITES: int; const 
 static func base_material() -> ShaderMaterial                      # ramp + 1 x 1 mare biome array (no map)
 static func make_material(terrain: Terrain, cfg: PlanetTierConfig) -> ShaderMaterial
 static func measure_material() -> ShaderMaterial                   # mare mid, no detail: measurement plates
+static func measure_material_biome(biome_id: int) -> ShaderMaterial # biome `biome_id` at its mid stop, no detail (ART-14 plates)
 static func biome_images(terrain: Terrain) -> Array[Image]
 static func biome_array(terrain: Terrain) -> Texture2DArray
 static func flat_biome_array(id: int) -> Texture2DArray
@@ -190,7 +191,9 @@ func build_ms_percentile(p: float) -> float
   shader displacement is <= 1.2 m (3 layers 0.6 / 0.4 / 0.2 m, mean zero), 0 on skirts and beyond the tier's
   `detail_displacement_m`, and <= 0.6 m inside a footprint (FOOTPRINT_KEEP 0.5). `MoonDetail` mirrors the shader's
   constants (`test_moon_terrain.gd`). Biome id is read per pixel from an R8 Texture2DArray of the baked faces
-  (`Terrain.biome_face`), custom.b = cube face; the result equals `Terrain.biome_at`.
+  (`Terrain.biome_face`), custom.b = cube face; the ids equal `Terrain.biome_at`. ART-14: the colour is blended over
+  the 4 texels around the pixel with a noise-warped smoothstep (ramp rows are never blended as ids), so patch edges are
+  soft; interior pixels (4 equal ids) take one ramp fetch. Ramp stops live in `content/biome_ramps.json` (07 s2.1).
 - P11 (TA-24): The Earth is a 6 degree disc exactly at -Z and the sun disc 2 degrees at `sun_dir` (`SkyMoon`).
 - P9: Every spatial material includes `src/presentation/shaders/moon_light.gdshaderinc` and works in linear light:
   inputs through `ml_to_linear`, ALBEDO / EMISSION through `ml_encode` (Godot 4.7.2 Compatibility decodes them with
@@ -236,6 +239,7 @@ chunks inside the tier's detail range only; the pool holds 150 / 220 / 300 pairs
 - `godot/test/golden/world/z_scene.tscn` (Z1-Z5 and Z8 harness, `Z_RESULT` flicker metric, `--control` negative control; Xvfb + llvmpipe)
 - `godot/test/unit/presentation/planet/test_moon_light.gd` (include == CPU mirror, 07 hex derivation, night target, atlas import)
 - `godot/test/perf/bench_instance_uniforms.gd` (instance-uniform capacity and cost; windowed)
+- `godot/test/unit/presentation/planet/test_color_delta_e.gd` (CIEDE2000 vs Sharma pairs; ramp stops within dE00 of 07 s2.1 hex)
 - Goldens: `godot/test/golden/world/goldens.json` (look-dev scene `lookdev_shot.tscn` with `LOOKDEV_MEASURE` probes; TA-24 terrain, Earth probe and Z entries)
 - Demo: `godot/scenes/presentation/planet/planet_demo.tscn` (free camera; `--autofly`, `--lod`, `--frames`, `--shot`,
   `--lat/--lon/--yaw`, `--sun=<deg>`, `--sky=0`, `--earth-probe`, `--hud=0`)

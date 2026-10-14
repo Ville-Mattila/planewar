@@ -2,7 +2,7 @@
 // g = slope01 (angle / 90 deg), b = cube face 0..5 / 255 (the biome id is read per pixel from the baked u8 face),
 // a = 255 on skirt vertices. UV = the vertex's (u, v) on its face. Chunks sit at the origin with identity transforms.
 // Lit by moon_light.gdshaderinc; every colour goes through ml_to_linear / ml_encode (ART-01 REPORT s3).
-//   biome id   biome_faces: Texture2DArray R8, nearest, texelFetch at round(uv * (n - 1)); equals Terrain.biome_at
+//   biome id   biome_faces: Texture2DArray R8, nearest texelFetch; the colour is blended over the 4 texels around the pixel (ART-14)
 //   ramp       moon_ramp.png, 64 x 16 RGBA8: row = biome id, column = ramp value (07 s2.1)
 //   ramp value v = 0.55 fbm(pos 0.015) + 0.30 (1 - slope01) + 0.15 cell(pos 0.12)
 //   craters    one jittered crater per cell at 40 / 15 / 6 m, mean-zero bowl + rim profile, vertex displacement
@@ -24,6 +24,7 @@ const float DETAIL_AMP_6 = 0.2;       // sum 1.2 (07 s3.1)
 const float FOOTPRINT_KEEP = 0.5;     // 1.2 m x 0.5 = 0.6 m inside footprints (R0 C2-31)
 const float FOOTPRINT_OUTER = 1.5;
 const float DARKEN_BOWL = 0.22;       // albedo darkening at a full bowl
+const float EDGE_WARP = 0.9;          // biome edge noise warp in texels (ART-14)
 const int MAX_SITES = 32;
 
 uniform sampler2D ramp : filter_linear, repeat_disable;
@@ -95,6 +96,14 @@ float footprint_scale(vec3 p) {
 	return s;
 }
 
+float texid(ivec2 t, ivec2 hi, int layer) {
+	return floor(texelFetch(biome_faces, ivec3(clamp(t, ivec2(0), hi), layer), 0).r * 255.0 + 0.5);
+}
+
+vec3 ramp_rgb(float id, float v) {
+	return texture(ramp, vec2((v * 63.0 + 0.5) / 64.0, (id + 0.5) / 16.0)).rgb;
+}
+
 void vertex() {
 	vec3 wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	float not_skirt = 1.0 - step(0.5, CUSTOM0.a);
@@ -119,17 +128,38 @@ void fragment() {
 	vec3 fn = normalize(cross(dFdx(VERTEX), dFdy(VERTEX)));
 	NORMAL = dot(fn, VIEW) < 0.0 ? -fn : fn;
 
-	ivec3 sz = textureSize(biome_faces, 0);
-	ivec2 tx = clamp(ivec2(v_uv * float(sz.x - 1) + 0.5), ivec2(0), ivec2(sz.x - 1));
-	float id = floor(texelFetch(biome_faces, ivec3(tx, int(v_face + 0.5)), 0).r * 255.0 + 0.5);
-
 	vec3 pos = v_world;
 	float v = 0.55 * fbm3(pos * 0.015) + 0.30 * (1.0 - v_slope) + 0.15 * hash13(floor(pos * 0.12));
 	if (ramp_v_override >= 0.0) {
 		v = ramp_v_override;
 	}
 	v = clamp(v, 0.0, 1.0);
-	vec3 albedo = ml_to_linear(texture(ramp, vec2((v * 63.0 + 0.5) / 64.0, (id + 0.5) / 16.0)).rgb);
+	// ART-14: the baked ids stay nearest (rows are not ordered), but the COLOUR is blended across the four
+	// neighbouring texels with a noise-warped smoothstep weight, so patch edges are soft and ragged instead of
+	// 9 m stair-steps. Away from edges (all four ids equal) it is one ramp fetch and equals Terrain.biome_at.
+	ivec3 sz = textureSize(biome_faces, 0);
+	int layer = int(v_face + 0.5);
+	vec2 fp = v_uv * float(sz.x - 1) + (vec2(vnoise(pos * 0.35), vnoise(pos * 0.35 + 17.0)) - 0.5) * EDGE_WARP;
+	ivec2 i0 = ivec2(floor(fp));
+	vec2 f = fp - vec2(i0);
+	f = f * f * (3.0 - 2.0 * f);
+	ivec2 hi = ivec2(sz.x - 1);
+	float id00 = texid(i0, hi, layer);
+	float id10 = texid(i0 + ivec2(1, 0), hi, layer);
+	float id01 = texid(i0 + ivec2(0, 1), hi, layer);
+	float id11 = texid(i0 + ivec2(1, 1), hi, layer);
+	float id = id00;
+	vec3 albedo;
+	if (id10 == id00 && id01 == id00 && id11 == id00) {
+		albedo = ml_to_linear(ramp_rgb(id00, v));
+	} else {
+		vec3 c00 = ml_to_linear(ramp_rgb(id00, v));
+		vec3 c10 = ml_to_linear(ramp_rgb(id10, v));
+		vec3 c01 = ml_to_linear(ramp_rgb(id01, v));
+		vec3 c11 = ml_to_linear(ramp_rgb(id11, v));
+		albedo = mix(mix(c00, c10, f.x), mix(c01, c11, f.x), f.y);
+		id = f.y < 0.5 ? (f.x < 0.5 ? id00 : id10) : (f.x < 0.5 ? id01 : id11);
+	}
 
 	// cold_trap (4): sparse static frost speckle; solar_plateau (6): faint tile grid (07 s2.1, s3.1)
 	float cold = step(3.5, id) * step(id, 4.5);
