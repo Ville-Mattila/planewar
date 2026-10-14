@@ -43,6 +43,8 @@ var target: PackedInt32Array   ## ROCKET: lock target EntityId; FLAK: timed-fuse
 var ttl: PackedFloat32Array
 var hash_cell: PackedInt32Array
 
+const _SLOT_ARRAYS: int = 14   ## the first 14 names of _STATE are the per-slot arrays
+
 ## Live local indices, ascending. Read-only for callers.
 var live: PackedInt32Array = PackedInt32Array()
 var live_cap: int = SLOT_COUNT
@@ -183,7 +185,27 @@ func write_state(buf: StreamPeerBuffer) -> void:
 
 ## Replaces the whole pool from `write_state` bytes; false on a type or size mismatch.
 func read_state(buf: StreamPeerBuffer) -> bool:
-	return StateIO.get_props(buf, self, _STATE) and generation.size() == SLOT_COUNT and _free.size() == SLOT_COUNT
+	return StateIO.get_props(buf, self, _STATE) and _state_ok()
+
+
+# Range checks of a restored pool: array sizes, counters, free and quarantined indices, the live list.
+func _state_ok() -> bool:
+	var n: int = SLOT_COUNT
+	if not StateIO.sizes_ok(self, _STATE.slice(0, _SLOT_ARRAYS), n) or not StateIO.sizes_ok(self, ["_free", "_q_slot", "_q_tick"], n):
+		return false
+	if _free_n < 0 or _q_n < 0 or _free_n + _q_n > n or _q_head < 0 or _q_head >= n or live_cap < 0 or live_cap > n:
+		return false
+	if not StateIO.ints_in(_free, _free_n, 0, n - 1) or live.size() > n:
+		return false
+	for i: int in _q_n:
+		if _q_slot[(_q_head + i) % n] < 0 or _q_slot[(_q_head + i) % n] >= n:
+			return false
+	var prev: int = -1
+	for i: int in live:
+		if i <= prev or i >= n or (flags[i] & F_ALIVE) == 0 or kind[i] > CANISTER:
+			return false
+		prev = i
+	return true
 
 
 func _release_due(tick: int) -> void:

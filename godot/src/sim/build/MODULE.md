@@ -24,9 +24,11 @@ func place(player: int, def_id: int, cell: int, rotation: int) -> int        # s
 func footprint_cells(def_id: int, cell: int, rotation: int) -> PackedInt32Array      # (03) crosses cube edges via neighbour_cell
 func _init(defs: WorldDefs, store: EntityStore, players: PlayerTable, terrain: Terrain, rules: MatchRules, grid_n: int = Sphere.GRID_BUILD)
 func set_clock(tick: int) -> void                                            # early share lock reads it
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # (TA-21) S4: ledgers, clock, grid flags; SimWorld adds the section when it owns a Build
 var grid: BuildGrid;  var spent_ore: PackedInt32Array;  var delivered_ore: PackedInt32Array   # per player slot; Economy writes the two ledgers
 const MAX_SLOPE_DEG: float;  const PRESENCE_RADIUS: float;  const MIN_SPACING_FRIENDLY: float;  const MIN_SPACING_ENEMY: float   # needs content: rules.json fields
 class_name BuildGrid extends RefCounted                                      # 6 x n x n flag bytes + lazy slope bytes (0.5 degree steps)
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # (TA-21) the flag bytes; the slope cache refills from Terrain
 const OCCUPIED: int;  const NODE: int;  const COLD_TRAP: int
 func cell_count() -> int;  func flags_of(cell: int) -> int;  func occupy(cells: PackedInt32Array) -> void;  func release(cells: PackedInt32Array) -> void
 func mark_node(cell: int, cold_trap: bool) -> void;  func slope_deg(cell: int) -> float;  func set_slope_deg(cell: int, deg: float) -> void

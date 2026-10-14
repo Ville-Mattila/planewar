@@ -31,14 +31,19 @@ func step() -> void                                                          # o
 func tick() -> int
 func view() -> SimView                                                       # LocalSimView
 func drain_events() -> Array[SimEvent]
-func serialize() -> PackedByteArray                                          # includes the AI hook's opaque bytes
-static func deserialize(bytes: PackedByteArray, content: ContentSet, hook: SimAiHook) -> SimWorld   # null on malformed bytes
+func serialize() -> PackedByteArray                                          # SimSerialize.write: zstd file incl. the AI hook's opaque bytes
+static func deserialize(bytes: PackedByteArray, content: ContentSet, hook: SimAiHook) -> SimWorld   # null on refused / corrupt / malformed bytes (SimSerialize.check names why)
 func profile() -> PackedFloat32Array                                         # 14 rows of 03 s4.4 for the last tick
 func set_budget_profile(level: int) -> void;  func path_expansions_per_tick() -> int   # cut rungs 1..level (<= 8) of 03 s4.3; rung 3 caps live projectiles, 8 lowers the path budget (TA-49; TA-50 hands the value to Pathing)
 func terrain() -> Terrain                                                    # read-only sampler shared with presentation
 func store() -> EntityStore;  func projectiles() -> ProjectileStore;  var rng: Rng;  var spatial: Spatial;  var collision: Collision
 var vision: Vision;  func interest_start() -> PackedInt32Array;  func interest_count() -> PackedInt32Array;  func interest_ids() -> PackedInt32Array
     # store / projectiles (03): net encoder and tests only, presentation uses view(); rng = S7's one RNG; spatial / collision (TA-18), vision (TA-37): read-only; interest_* = the per-team interest-cell lists of 03 s3.6, layout in sim/vision/MODULE.md (S3: shared, valid until the next step)
+
+class_name SimSerialize                                                      # TA-21: the S4 byte form; file = magic, FORMAT, raw size (u32), SHA-256 of the raw body, zstd body (~185 KB at 1,200 entities + 2,000 projectiles)
+enum Status { OK, TOO_SHORT, BAD_MAGIC, OLD_FORMAT, NEWER_FORMAT }           # append-only; no migration: a world is read only by the FORMAT that wrote it
+static func check(bytes: PackedByteArray) -> Status;  static func write(w: SimWorld) -> PackedByteArray;  static func read(bytes: PackedByteArray, content: ContentSet, hook: SimAiHook) -> SimWorld
+static func write_raw(w: SimWorld, marks: PackedInt32Array = PackedInt32Array()) -> PackedByteArray;  static func pack(raw: PackedByteArray) -> PackedByteArray;  static func unpack(bytes: PackedByteArray) -> PackedByteArray;  static func size_report(w: SimWorld) -> PackedInt32Array   # unpack: empty when refused; report: raw bytes per SECTIONS entry (+ consts FORMAT, MAGIC, HEADER_BYTES, MAX_RAW_BYTES, SECTIONS)
 
 class_name SimAiHook extends RefCounted                                      # abstract; sim_ai's AiDriver implements it (05 s1.3)
 func on_tick(tick: int, view: SimView, sink: CommandSinkBase) -> void        # tick-order step 3
@@ -239,7 +244,7 @@ default +) over the first `flip_duration_s / 2`, then a half loop; ends upright,
 - S1: `step()` mutates state only through systems in the tick order; `apply_command` queues, never mutates (commands apply in step 1 of the next `step()`), except `PILOT_INPUT`, which is stored into the per-player input slot.
 - S2: `EntityId`s are never reused within 64 ticks of free (units, structures, wrecks). Projectile slots are exempt (0-tick quarantine, owner 2026-10-13, R0 B.9 A-20): a freed projectile slot may be re-allocated the same tick; the generation bump keeps every projectile `EntityId` unique, and 04 keys projectile entities by the full id.
 - S3: `view()` reads are valid until the next `step()`; it never allocates on read except list getters.
-- S4: `serialize()` then `deserialize()` then `step()` equals `step()` on the original byte for byte (same machine) for 1,000 random ticks; `serialize()` appends the AI hook's opaque bytes and `deserialize` hands them back to the hook.
+- S4: `serialize()` then `deserialize()` then `step()` equals `step()` on the original byte for byte (same machine) for 1,000 random ticks; `serialize()` appends the AI hook's opaque bytes and `deserialize` hands them back to the hook. Every stateful subsystem is in the bytes (stores, players, inputs, rate buckets, pending commands, control, Collision, Combat fire, orders, pathing, vision clocks, RNG, tick). `deserialize` returns null, touching neither the hook nor any caller state, for another `FORMAT`, bad magic, truncation, a SHA-256 mismatch (any flipped byte), an implausible declared size, trailing bytes, or a state out of range (array sizes, counters, live lists, indices, `tick_hz` > 0); the hook gets its bytes only after every check passed. After load `interest_*` are re-bucketed at load-time positions (`visible_mask` is exact), so they can differ from the original for up to one vision period. Build state has `write_state` but joins when SimWorld owns a `Build`.
 - S5: every `SimEvent` has `tick == tick()` of the step that produced it.
 - S6: no float literal other than 0.0, 0.5, 1.0, 2.0, -1.0 appears in `src/sim/**` (D6); every sim constant lives in a def (ADR-09).
 - S7: the only RNG is `SimWorld.rng` and its forks.
@@ -278,11 +283,9 @@ TA-12/48: `godot/test/unit/sim/test_kinematics.gd` (lift law, test_slug_hits_coa
 (S8), `godot/test/unit/sim/test_kinematics_flip_fuel.gd`, `godot/test/sim/test_flight.gd`, `godot/test/perf/perf_kinematics.gd`. TA-14:
 `godot/test/unit/sim/test_spatial.gd` (S16), `godot/test/unit/sim/test_collision.gd` (S17), `godot/test/sim/test_collision_sweeps.gd`, `godot/test/perf/perf_collision.gd`.
 TA-18: `godot/test/unit/sim/test_sim_world.gd` (S1, S3, S5, S11, hook, profile, steps 5-10), `godot/test/unit/sim/test_command_validator.gd`
-(S10, S12), `godot/test/unit/sim/test_serialize.gd` (S4, determinism), `godot/test/unit/sim/test_enums.gd` (S14), `godot/test/unit/sim/test_local_sim_view.gd`,
+(S10, S12), `godot/test/unit/sim/test_serialize.gd` + `test_serialize_all.gd` (S4 over all subsystems, version refusal, size, determinism; TA-21), `godot/test/perf/bench_serialize.tscn`, `godot/test/unit/sim/test_enums.gd` (S14), `godot/test/unit/sim/test_local_sim_view.gd`,
 `godot/test/unit/sim/test_match_rules.gd`, `godot/test/unit/sim/test_command_payload.gd`, `godot/test/sim/test_tick_scenario.gd` (100-tick event sequence), `godot/test/perf/perf_tick_world.gd`.
-TA-50: `godot/test/sim/test_path_scenario.gd` (step 3b, `pathing()` via `godot/test/unit/sim/path_brain_stub.gd`), S4 with pending tickets in `test_serialize.gd`, `godot/test/perf/perf_path_load.gd` (row 3b).
-
-TA-37: `godot/test/unit/sim/vision/test_vision.gd`, `godot/test/unit/sim/vision/test_vision_lists.gd`, `godot/test/perf/perf_vision.gd` (sim/vision/MODULE.md V1-V9).
+TA-50: `godot/test/sim/test_path_scenario.gd` (step 3b, `pathing()` via `godot/test/unit/sim/path_brain_stub.gd`), S4 with pending tickets in `test_serialize.gd`, `godot/test/perf/perf_path_load.gd` (row 3b). TA-37: `godot/test/unit/sim/vision/test_vision.gd`, `godot/test/unit/sim/vision/test_vision_lists.gd`, `godot/test/perf/perf_vision.gd` (sim/vision/MODULE.md V1-V9).
 GD-36: `test_projectile_store.gd` (`spawn`); weapon fire and fuse tests are listed by the combat subsystem contract. Planned (plain text until on disk, D10): test_build.gd (cross-edge footprints), test_landing.gd; godot/test/sim/scenarios/*.json (Outpost presence, victory, Core shield, caps); godot/test/contract/test_sim_view_contract.gd.
 
 ## How to add X

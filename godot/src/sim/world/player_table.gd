@@ -70,4 +70,8 @@ func write_state(buf: StreamPeerBuffer) -> void:
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
-	return StateIO.get_props(buf, self, _STATE) and active.size() == SLOTS and team_ore.size() == TEAMS
+	if not StateIO.get_props(buf, self, _STATE):
+		return false
+	if not StateIO.sizes_ok(self, _STATE.slice(0, _STATE.size() - 2), SLOTS) or not StateIO.sizes_ok(self, ["team_ore", "team_ice"], TEAMS):
+		return false
+	return StateIO.ints_in(team, SLOTS, -1, TEAMS - 1)

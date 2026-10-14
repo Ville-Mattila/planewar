@@ -113,7 +113,7 @@ func write_state(buf: StreamPeerBuffer) -> void:
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
-	return StateIO.get_props(buf, self, _STATE) and _tokens.size() == PlayerTable.SLOTS
+	return StateIO.get_props(buf, self, _STATE) and _tokens.size() == PlayerTable.SLOTS and _last.size() == PlayerTable.SLOTS
 
 
 func _take_token(p: int, tick: int) -> bool:

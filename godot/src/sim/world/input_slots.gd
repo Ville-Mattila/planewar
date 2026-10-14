@@ -86,4 +86,6 @@ func write_state(buf: StreamPeerBuffer) -> void:
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
-	return StateIO.get_props(buf, self, _STATE) and e_thrust.size() == ENTITY_SLOTS and p_thrust.size() == PlayerTable.SLOTS
+	if not StateIO.get_props(buf, self, _STATE):
+		return false
+	return StateIO.sizes_ok(self, _STATE.slice(0, 5), ENTITY_SLOTS) and StateIO.sizes_ok(self, _STATE.slice(5), PlayerTable.SLOTS)

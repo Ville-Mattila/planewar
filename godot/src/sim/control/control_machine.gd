@@ -333,7 +333,7 @@ func write_state(buf: StreamPeerBuffer) -> void:
 func read_state(buf: StreamPeerBuffer) -> bool:
 	if not StateIO.get_props(buf, self, _STATE):
 		return false
-	return _request_from.size() == InputSlots.ENTITY_SLOTS and _silent.size() == PlayerTable.SLOTS
+	return StateIO.sizes_ok(self, ["_request_from", "_request_tick"], InputSlots.ENTITY_SLOTS) 		and StateIO.sizes_ok(self, ["_last_input", "_silent", "_fresh", "_admin"], PlayerTable.SLOTS) 		and StateIO.sizes_ok(self, ["_team_out"], PlayerTable.TEAMS)
 
 
 # --- private -------------------------------------------------------------------------------------------------------

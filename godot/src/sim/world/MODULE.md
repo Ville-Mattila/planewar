@@ -81,6 +81,7 @@ static func tech_available(store: EntityStore, defs: WorldDefs, team: int, def_i
 static func count_owned(store: EntityStore, player: int, live: PackedInt32Array) -> int
 class_name StateIO                                                           # S4 bytes: named properties via put_var / get_var, type-checked
 static func put_props(buf: StreamPeerBuffer, o: Object, names: PackedStringArray) -> void;  static func get_props(buf: StreamPeerBuffer, o: Object, names: PackedStringArray) -> bool
+static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: PackedStringArray, n: int) -> bool;  static func ints_in(v: PackedInt32Array, count: int, lo: int, hi: int) -> bool   # (TA-21) range checks of restored state
 ```
 
 ## Invariants

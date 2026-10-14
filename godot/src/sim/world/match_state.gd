@@ -19,4 +19,4 @@ func write_state(buf: StreamPeerBuffer) -> void:
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
-	return StateIO.get_props(buf, self, _STATE)
+	return StateIO.get_props(buf, self, _STATE) and tick >= 0 and exposure_tick >= -1 and ended_tick >= -1 and winner_team >= -1 and winner_team < PlayerTable.TEAMS
