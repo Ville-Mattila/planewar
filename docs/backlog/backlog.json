@@ -3097,7 +3097,10 @@
       " R0 C1-03",
       " 06 UX-17"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#7",
+    "note": "impact ring hidden above ~512 m release (8 s horizon); demo screenshot overlaps ladder label (layout of the demo only)"
   },
   {
     "id": "UX-18",
