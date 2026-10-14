@@ -1,6 +1,6 @@
 class_name EntityDemo
 extends Node3D
-## TA-26 demo: a LocalSimView over a PerfTickWorld (ships, ground units and structures around the eight bases of
+## TA-26 demo: a LocalSimView over an EntityDemoWorld (ships, ground units and structures around the eight bases of
 ## the s_world1_r6000 moon) drawn by EntityViewPool on the TA-24 planet renderer. Not shipped (export filters
 ## exclude scenes/presentation/**; it borrows the perf scenario from test/perf).
 ## User args after `--`: `--tier=low|medium|high`, `--n=<entities>` (default 400), `--cam=chase|base|wide`
@@ -9,7 +9,7 @@ extends Node3D
 ## sync budget case; combine with `--headless`).
 
 const TIERS: String = "res://content/defs/quality_tiers.json"
-const MAP: StringName = &"s_world1_r6000"
+const DRIVER: String = "res://scenes/presentation/entities/entity_demo_world.gd"   # loaded at runtime: keeps the sim out of the scene compile
 const SHIP_FRACTION: float = 0.6
 const GROUND_FRACTION: float = 0.15
 const CHASE_BACK_M: float = 45.0
@@ -30,7 +30,8 @@ var hud: bool = true
 var no_vsync: bool = false
 var all_views: bool = false
 
-var world: PerfTickWorld
+var world: RefCounted
+var terrain: Terrain
 var sim_view: SimView
 var pool: EntityViewPool
 var renderer: PlanetRenderer
@@ -54,21 +55,24 @@ func _ready() -> void:
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	var n_ships: int = roundi(float(n_entities) * SHIP_FRACTION)
 	var n_ground: int = roundi(float(n_entities) * GROUND_FRACTION)
-	world = PerfTickWorld.new(n_ships, n_ground, n_entities - n_ships - n_ground, 0, 0, MAP)
-	sim_view = world.world.view()
-	_reveal_all()
+	var driver: GDScript = load(DRIVER)
+	world = driver.new()
+	world.call("build", n_ships, n_ground, n_entities - n_ships - n_ground)
+	sim_view = world.call("view")
+	terrain = world.call("terrain")
 	_setup_world()
 	renderer = PlanetRenderer.new()
 	add_child(renderer)
-	renderer.setup(world.world.terrain(), PlanetTierConfig.from_dict(_cfg))
+	renderer.setup(terrain, PlanetTierConfig.from_dict(_cfg))
 	renderer.camera = cam
 	pool = EntityViewPool.new()
 	add_child(pool)
-	pool.setup(EntityViewConfig.from_dict(_cfg), EntityClassTable.from_content(WorldTestKit.content()), UnitMaterialCache.new())
+	var content: ContentSet = world.call("content")
+	pool.setup(EntityViewConfig.from_dict(_cfg), EntityClassTable.from_content(content), UnitMaterialCache.new())
 	pool.px_per_m = float(get_viewport().get_visible_rect().size.y) / (2.0 * tan(deg_to_rad(FOV_DEG) * 0.5))
 	if all_views:
 		pool.px_per_m = ALL_VIEWS_PX_PER_M
-	_hero = world.world.store().id_of(world.ships[0])
+	_hero = world.call("hero_id")
 	_read_hero()
 	_prev_p = _cur_p
 	_prev_q = _cur_q
@@ -104,13 +108,6 @@ func _parse_args() -> void:
 			_cfg = e
 
 
-func _reveal_all() -> void:
-	var st: EntityStore = world.world.store()
-	for live: PackedInt32Array in [st.ships, st.ground, st.structures, st.wrecks]:
-		for s: int in live:
-			st.visible_mask[s] = 0xFF
-
-
 func _setup_world() -> void:
 	MoonLight.ensure_globals()
 	var sun: DirectionalLight3D = MoonLight.make_sun()
@@ -133,7 +130,7 @@ func _read_hero() -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	world.world.step()
+	world.call("step")
 	_prev_p = _cur_p
 	_prev_q = _cur_q
 	_read_hero()
@@ -166,10 +163,11 @@ func _place_camera(hero_p: Vector3, hero_b: Basis) -> void:
 	var up: Vector3 = hero_p.normalized()
 	match cam_mode:
 		"base":
-			var base: Vector3 = world.world.store().pos[world.world.store().structures[0]].normalized()
+			var base_world: Vector3 = world.call("base_pos")
+			var base: Vector3 = base_world.normalized()
 			var f: Basis = Sphere.tangent_frame(base * Sphere.PLANET_RADIUS)
 			var p: Vector3 = (base + (-f.x) * (BASE_BACK_M / Sphere.PLANET_RADIUS)).normalized()
-			cam.global_position = p * (Sphere.PLANET_RADIUS + world.world.terrain().height_at(p) + BASE_ALT_M)
+			cam.global_position = p * (Sphere.PLANET_RADIUS + terrain.height_at(p) + BASE_ALT_M)
 			cam.global_basis = Basis.looking_at((base * (Sphere.PLANET_RADIUS + BASE_ALT_M) - cam.global_position).normalized(), p)
 		"wide":
 			var p: Vector3 = hero_p.normalized()
