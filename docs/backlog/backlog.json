@@ -562,10 +562,10 @@
       " R0 C3-03",
       " 03 TA-30"
     ],
-    "status": "review",
+    "status": "done",
     "merged": "2026-10-13",
     "pr": 37,
-    "note": "automated criteria pass; human tester criteria PENDING (TESTER_PROTOCOL.md); web build https://planewar-play.vercel.app/"
+    "note": "automated criteria pass; human tester criteria PENDING (TESTER_PROTOCOL.md); web build https://planewar-play.vercel.app/ | code merged; human tester gate (S-FLIGHT-1 novices/raw mouse) still PENDING HUMAN, tracked for PM-01; status done so dependent code tasks can start"
   },
   {
     "id": "HUM-07",
