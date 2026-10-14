@@ -364,9 +364,9 @@ All at R = 6,000 m unless R-independent. Directions to 6 decimals.
 ### 3.1 EntityId and slot allocation (`core/entity_id.gd`, `sim/entity_store.gd`)
 
 ```
-EntityId (int, 32 bits used) = slot (bits 0-19) | generation (bits 20-31)
+EntityId (int, 31 bits used) = slot (bits 0-19) | generation (bits 20-30); bit 31 stays 0 (A-48)
 slot 0 is reserved: EntityId 0 == NULL_ID
-generation starts at 1 and wraps 4095 -> 1 (never 0, so a live id is never 0)
+generation starts at 1 and wraps 2047 -> 1 (never 0, so a live id is never 0; 11 bits keep ids positive in PackedInt32Array, A-48)
 ```
 
 Slot ranges are fixed per store so a slot number alone tells the kind of store:

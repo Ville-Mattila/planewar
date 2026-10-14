@@ -266,5 +266,5 @@ always 0)" and "wraps 4095 -> 1" -> "wraps 2047 -> 1"; a B.10 row A-48 in the re
 
 | Role | Name | Date | Verdict |
 |---|---|---|---|
-| Architect | | | pending (TA-46 erratum) |
+| Orchestrator (Opus) | 2026-10-14 | applied A-48 to 03 s3.1 and the B.10 register on TA-46's evidence; Architect may revisit |
 | Owner | | | pending |
