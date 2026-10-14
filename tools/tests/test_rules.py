@@ -44,6 +44,22 @@ class D1Layering(RepoCase):
         self.write("godot/src/sim/a.gd", 'class_name A\nextends RefCounted\n# ServerSession\nvar s := "Hud"\n')
         self.assertClean()
 
+    def test_pass_qualified_member_is_not_a_type_reference(self) -> None:
+        self.write("godot/src/sim/p.gd", "class_name SimOnlyThing\nextends RefCounted\n")
+        self.write("godot/src/core/q.gd", "class_name Q\nextends RefCounted\nconst K := 1\n")
+        self.write("godot/src/net/c.gd", "class_name C\nextends RefCounted\nvar k := Q.SimOnlyThing\n")
+        self.assertClean()
+
+    def test_fail_qualified_head_still_checked(self) -> None:
+        self.write("godot/src/net/n.gd", "class_name NetThing\nextends RefCounted\n")
+        self.write("godot/src/core/a.gd", "class_name A\nextends RefCounted\nvar k := NetThing.X\n")
+        self.assertHas("D1", "core/a.gd")
+
+    def test_fail_bare_sim_only_class_in_net(self) -> None:
+        self.write("godot/src/sim/p.gd", "class_name SimOnlyThing\nextends RefCounted\n")
+        self.write("godot/src/net/c.gd", "class_name C\nextends RefCounted\nvar k: SimOnlyThing\n")
+        self.assertHas("D1", "net/c.gd")
+
     def test_fail_scene_script_path(self) -> None:
         self.write("godot/scenes/presentation/x.tscn", '[ext_resource type="Script" path="res://src/ui/hud.gd" id="1"]\n')
         self.assertHas("D1", "x.tscn")
