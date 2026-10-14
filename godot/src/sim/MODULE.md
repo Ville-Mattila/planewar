@@ -1,10 +1,9 @@
 # sim - MODULE.md
 
-Contract for `godot/src/sim/**`. Committed by CONTRACT-0 from R0 Part B (B.3 enumerations, B.4 deps, B.5 motion, tick
-order, signatures) and 03 s15.4; supersedes 01 s9.4's signature-level listing. A change to "Public API", "Enumerations"
-or "Invariants" is a contract change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check` (TA-27)
-must pass; <= 300 lines (ADR-14). Subsystems with their own lane (`sim/steer/`, `sim/orders/`, `sim/control/`, `sim/scoring/`)
-open `godot/src/sim/<subsystem>/MODULE.md` from the template with their first code and are listed here by name (R0 B.9 A-21).
+Contract for `godot/src/sim/**`. Committed by CONTRACT-0 from R0 Part B (B.3 enumerations, B.4 deps, B.5 motion, tick order,
+signatures) and 03 s15.4; supersedes 01 s9.4's signatures. A change to "Public API", "Enumerations" or "Invariants" is a contract
+change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines (ADR-14). Subsystems
+(`sim/steer/`, `sim/orders/`, `sim/control/`, `sim/scoring/`, `sim/world/` = TA-18's tick-driver helpers) keep their own `MODULE.md` (R0 B.9 A-21).
 
 | Field | Value |
 |---|---|
@@ -13,18 +12,18 @@ open `godot/src/sim/<subsystem>/MODULE.md` from the template with their first co
 | May depend on | `core`, `content` (R0 B.4, `tools/deps.json`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, no signals, no `Thread` (D2, D3) |
 | Public types other lanes may name (D1) | `input`: `PilotInput`. `ui`: `SimView`, `SimEvent`, `Command`, `CommandResult`, `PilotInput`, `AlertKind`, `OrderSpec`, `LandingGrade`, read-only `Terrain`. `campaign`: commands, events, `SimView`, `CommandSinkBase`. `net`: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain` (read) |
-| Autoloads used | `ContentDB` (read at `load_map` into local references; never afterwards), `Log` |
-| Status | API frozen with CONTRACT-0 (2026-10-10); amendments 01 (R0 B.8, same day) appended `ProjectileState`, `TeamStateView`, `PlayerStateView`; amendments 02 (R0 B.9, 2026-10-13) appended the `step_projectile` `out` parameter, `brake_fade_mps` and the projectile 0-tick quarantine; internals open until S-SIM-1 (TA-22) |
+| Autoloads used | None: content arrives as a `ContentSet` (`SimWorld._init`, TA-18; `ContentDB` builds the same set); `Log` allowed |
+| Status | API frozen with CONTRACT-0 (2026-10-10); amendments 01 (R0 B.8, same day) appended `ProjectileState`, `TeamStateView`, `PlayerStateView`; amendments 02 (R0 B.9, 2026-10-13) appended the `step_projectile` `out` parameter, `brake_fade_mps` and the projectile 0-tick quarantine; TA-18 (2026-10-14) implemented the tick driver and appended `SimSink`, `LocalSimView`, hook / store state bytes, `MatchRules.from_defs` (three type corrections flagged in Open items); internals open until S-SIM-1 (TA-22) |
 
 ## Public API
 
 R0 B.5 signatures; "(03)" marks symbols 03 s15.4 adds. Anything not listed is private (prefix `_`).
 
 ```gdscript
-# planned: SimWorld, SimAiHook, CommandSinkBase, Command, CommandResult, GroundMotion, Build, Pathing, MatchRules, MatchArc, PlayerKind, SimView, TeamStateView, PlayerStateView, SimEvent, OrderSpec, AlertKind, Assist, LandingGrade
-class_name SimWorld extends RefCounted
+# planned: GroundMotion, Build, Pathing, OrderSpec, Assist, LandingGrade
+class_name SimWorld extends RefCounted                                       # _init(content: ContentSet): defs injected, no autoload in the sim (TA-18)
 func load_map(map: MapDef, seed: int, rules: MatchRules) -> Result            # rules carries mode, caps profile, sim_budget_profile
-func add_player(slot: int, team: int, doctrine: StringName, kind: PlayerKind) -> void
+func add_player(slot: int, team: int, doctrine: StringName, kind: int) -> void   # kind: PlayerKind ordinal (Open items)
 func remove_player(slot: int) -> void                                        # disconnect: sim flags; the AI hook's caretaker takes over (05)
 func set_ai_hook(hook: SimAiHook) -> void                                    # sim_ai attaches here; sim never imports sim_ai
 func apply_command(cmd: Command) -> CommandResult
@@ -33,23 +32,25 @@ func tick() -> int
 func view() -> SimView                                                       # LocalSimView
 func drain_events() -> Array[SimEvent]
 func serialize() -> PackedByteArray                                          # includes the AI hook's opaque bytes
-static func deserialize(bytes: PackedByteArray, content: ContentDB, hook: SimAiHook) -> SimWorld
+static func deserialize(bytes: PackedByteArray, content: ContentSet, hook: SimAiHook) -> SimWorld   # null on malformed bytes
 func profile() -> PackedFloat32Array                                         # 14 rows of 03 s4.4 for the last tick
 func set_budget_profile(level: int) -> void                                  # activate cut rungs 1..level of 03 s4.3 at runtime
 func terrain() -> Terrain                                                    # read-only sampler shared with presentation
-func store() -> EntityStore;  func projectiles() -> ProjectileStore          # (03) net encoder and tests only; presentation uses view()
+func store() -> EntityStore;  func projectiles() -> ProjectileStore;  var rng: Rng;  var spatial: Spatial;  var collision: Collision
+    # store / projectiles (03): net encoder and tests only, presentation uses view(); rng = S7's one RNG; spatial / collision (TA-18): read-only
 
 class_name SimAiHook extends RefCounted                                      # abstract; sim_ai's AiDriver implements it (05 s1.3)
 func on_tick(tick: int, view: SimView, sink: CommandSinkBase) -> void        # tick-order step 3
+func serialize() -> PackedByteArray;  func deserialize(bytes: PackedByteArray) -> void   # (TA-18) the opaque bytes of S4 (05 AiDriver names)
 class_name CommandSinkBase extends RefCounted                                # abstract; SimWorld passes its implementation to on_tick; campaign's MissionRuntime receives one
 func submit(cmd: Command) -> CommandResult
 func drive(id: int, input: PilotInput) -> bool                               # writes the input slot; false if POSSESSED or dead
-func set_ai_tag(id: int, tag: int) -> void
+func set_ai_tag(id: int, tag: int) -> void;  class_name SimSink extends CommandSinkBase   # (TA-18) the sim's sink: apply_command's intake; drive refuses POSSESSED / dead (S11)
 
 class_name Command extends RefCounted
 enum Kind { ORDER, BUILD, CANCEL_BUILD, PRODUCE, CANCEL_PRODUCE, SET_RALLY, POSSESS, RELEASE, REQUEST_POSSESS, HANDOVER,
             PILOT_INPUT, TOGGLE_AUTO_REPLENISH, SURRENDER, SET_ADJUTANT, DEBUG_SPAWN, DEBUG_SET }   # 0-15 frozen; DEBUG_* only when rules.debug_commands
-var tick: int; var player: int; var kind: Kind; var target: int; var payload: PackedByteArray   # payload layouts: 04 s2.5
+var tick: int; var player: int; var kind: Kind; var target: int; var payload: PackedByteArray   # 04 s2.5 order; positions / pilot axes f64 (sim/world/command_payload.gd)
 static func order(player: int, ids: PackedInt32Array, spec: OrderSpec) -> Command                  # (03) builders
 static func build(player: int, def_id: int, cell: int, rotation: int) -> Command
 static func produce(player: int, factory: int, def_id: int, count: int) -> Command
@@ -101,9 +102,10 @@ var mode: StringName; var caps_profile: StringName; var caps: CapsDef; var sim_b
 var core_exposure_s: float; var hard_end_s: float                           # from modes.json per mode (campaign: per mission)
 var debug_commands: bool; var profile_enabled: bool; var friendly_fire: bool; var adjutant_allowed: StringName   # off | economy | full
 var sun_period_s: float; var ranked: bool
-func phase(tick: int) -> Phase;  func arc(tick: int) -> MatchArc
-class_name MatchArc                                                          # enum holder: OPEN, EXPAND, SIEGE, OVERTIME (clock band, 05 uses it)
-class_name PlayerKind                                                        # enum holder: HUMAN, BOT, OPEN
+func phase(tick: int) -> Phase;  func arc(tick: int) -> MatchArc.Arc
+var tick_hz: int;  static func from_defs(mode_def: ModeDef, match_def: MatchRulesDef, rules: RulesDef, profile: StringName) -> MatchRules   # (TA-18)
+class_name MatchArc;  enum Arc { OPEN, EXPAND, SIEGE, OVERTIME }            # enum holder (clock band, 05 uses it)
+class_name PlayerKind                                                        # [planned] enum holder: HUMAN, BOT, OPEN (Open items)
 
 class_name SimView extends RefCounted                                        # LocalSimView (direct arrays) and NetSimView (replicated) implement it
 func alive(id: int) -> bool                                                  # 01 s9.4 accessors from here ...
@@ -138,7 +140,7 @@ func landing_grade_last(id: int) -> int                                      # L
 func team_state(team: int) -> TeamStateView;  func player_state(slot: int) -> PlayerStateView                   # (03) reused per-slot views, refilled on call (S3)
 func terrain_height(dir: Vector3) -> float                                   # (03) convenience over Terrain
 func match_arc() -> int;  func match_phase() -> int;  func match_clock_s() -> float
-# Non-replicated fields on NetSimView return the def default and set the `unknown` bit (04 s5.6). NetSimView adds sample(render_tick: float).
+class_name LocalSimView extends SimView   # (TA-18) SimWorld.view(). NetSimView: non-replicated fields = def default + `unknown` (04 s5.6); sample(render_tick: float)
 
 class_name TeamStateView extends RefCounted                                  # sim/team_state_view.gd (R0 B.8 A-8): read-only view of 03 s3.2 `TeamState`; wire form 04 TEAM_STATE 0x85
 var team: int; var unknown: bool                                             # unknown: NetSimView only, true when no TEAM_STATE for this team (other teams)
@@ -170,18 +172,20 @@ class_name EntityStore extends RefCounted                                    # 0
 func alloc(entity_kind: int, tick: int) -> int;  func free_slot(slot_index: int, tick: int) -> bool   # (TA-11) NULL_ID when the range is full; free = gen bump + clear_slot + quarantine
 func alive(id: int) -> bool;  func id_of(slot_index: int) -> int;  func clear_slot(s: int) -> void;  func live_count() -> int
 func free_count(range_id: int) -> int;  func quarantined_count(range_id: int) -> int   # RANGE_MAIN 1..1279, RANGE_WRECK 1280..1535
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # (TA-18) S4: every array, list, free stack, ring
 var ships: PackedInt32Array; var ground: PackedInt32Array; var structures: PackedInt32Array; var wrecks: PackedInt32Array   # live slots, ascending
 class_name ProjectileStore extends RefCounted                                # 03 s3.3
 func _init(cap_live: int, quarantine_ticks: int = QUARANTINE_TICKS) -> void                 # (TA-11) cap_live = MatchRules.caps.projectiles; index = slot - 4096
 func alloc(projectile_kind: int, tick: int) -> int;  func free_slot(index: int, tick: int) -> bool;  func alive(id: int) -> bool;  func live_count() -> int;  func free_count() -> int;  func quarantined_count() -> int
 func index_of(id: int) -> int;  func id_of(index: int) -> int;  func clear_slot(i: int) -> void;  var live: PackedInt32Array   # live indices, ascending
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # (TA-18) S4, as EntityStore
 class_name Spatial extends RefCounted                                        # sim/spatial.gd (TA-14): counting-sort GRID_HASH hash, _init(store, projectiles)
 func rebuild() -> void;  func ids_near(p: Vector3, radius: float, mask: int) -> PackedInt32Array;  func ids_in_hash_cell(cell: int) -> PackedInt32Array
 static func cell_of(p: Vector3) -> int;  func item_id(item: int) -> int;  func ring_cells(cell: int, k: int) -> int   # (TA-14) = Sphere.cell_of(p, 64); ring k in {1, 2} into var `ring`
     # mask bits 1 << EntityStore.kind (1 STRUCTURE .. 8 WRECK) | 16 PROJECTILE; centre distance <= radius; ring 1 ~94 m, ring 2 ~188 m (proof: spatial.gd)
 class_name Collision extends RefCounted                                      # sim/collision.gd (TA-14), step 8 + 8b; _init(store, projectiles, spatial, terrain)
 func configure(projectile_radius: PackedFloat32Array, pad_radius_by_def: PackedFloat32Array, common: FlightCommonDef, tick_hz: int) -> void
-func report_terrain(slot: int, tick: int, hit_normal_speed: float) -> void;  func step(tick: int) -> void   # step 5 reports ShipState.terrain_hit
+func report_terrain(slot: int, tick: int, hit_normal_speed: float) -> void;  func step(tick: int) -> void   # step 5 reports ShipState.terrain_hit; ep_* / born_* in SimWorld.serialize (S4)
 static func classify_terrain(hit_normal_speed: float, common: FlightCommonDef) -> int;  static func landing_band(v_vert: float, v_hor: float, tilt_deg: float, common: FlightCommonDef) -> int
 static func sweep_sphere(a: Vector3, b: Vector3, c: Vector3, r: float) -> float                 # entry t in [0, 1], -1.0 on a miss
     # Contact records c_kind/c_class/c_a/c_b/c_value/c_point/c_vec[0, contact_count): kind 0 HIT, 1 GROUND, 2 TERRAIN (class 0 SCRAPE,
@@ -254,10 +258,9 @@ default +) over the first `flip_duration_s / 2`, then a half loop; ends upright,
 
 ## Data owned
 
-03 s3.2 and s3.3 arrays and side tables (incl. `orders`, `tether_target`, `scoring`); the loaded `Terrain`; `MatchRules`;
-the `ResolvedDefs` per doctrine; the event array; the pending command queue (<= 256 per tick; overflow rejects with
-`REJECTED_RATE`). Def files read (through `ContentDB` at `load_map`): `rules`, `ships` (+ `flight_common`), `ground_units`,
-`weapons`, `projectiles`, `structures`, `towers`, `doctrines`, `economy`, `match_rules`, `modes`, `order_rules` (schemas: `tools/schemas/`).
+03 s3.2 and s3.3 arrays and side tables (incl. `orders`, `tether_target`, `scoring`); the loaded `Terrain`; `MatchRules`; the `ResolvedDefs` per
+doctrine; the event array; the pending command queue (<= 256 per tick; overflow rejects with `REJECTED_RATE`). Defs read (injected `ContentSet`): `rules`,
+`ships` (+ `flight_common`), `ground_units`, `weapons`, `projectiles`, `structures`, `towers`, `doctrines`, `economy`, `match_rules`, `modes`, `order_rules`.
 
 ## Events emitted / consumed
 
@@ -265,24 +268,23 @@ Emits every `SimEvent.Kind` above (exactly one system per kind). Consumes `Comma
 
 ## Performance budget
 
-R0 B.7 / 03 s4.2 per row (kinematics 3.0, projectiles 2.5, spatial 1.2, collision 5.0, combat 1.2, economy 0.8, vision 1.1 ms
-p95 at 1,200 entities + 2,000 projectiles); perf tick harness on scenario s_sim_1.json (S-SIM-1, TA-22). Pass: p95 <= 25 ms, p99 <= 33 ms per instance, 6 instances on the target SKU.
+R0 B.7 / 03 s4.2 per row (kinematics 3.0, projectiles 2.5, spatial 1.2, collision 5.0, combat 1.2, economy 0.8, vision 1.1 ms p95 at 1,200
+entities + 2,000 projectiles); `perf_tick.gd --full` per row, s_sim_1.json with TA-22. Pass: p95 <= 25 ms, p99 <= 33 ms per instance, 6 per SKU.
 
 ## Test entry points
 
 Existing (checked by check_deps D10): `godot/test/sim/` (scenario layer), `godot/test/perf/perf_tick.gd`,
 `godot/test/unit/sim/test_entity_store.gd` (alloc/free/quarantine, S2), `godot/test/unit/sim/test_projectile_store.gd`,
 `godot/test/soak/`, `tools/tests/test_validate_content.py` (CONTRACT-0: the def schemas the sim reads).
-TA-12: `godot/test/unit/sim/test_kinematics.gd` (lift law, level flight, test_slug_hits_coaltitude_target),
-`godot/test/unit/sim/test_kinematics_purity.gd` (S8), `godot/test/sim/test_flight.gd`, `godot/test/perf/perf_kinematics.gd`;
-TA-48: `godot/test/unit/sim/test_kinematics_flip_fuel.gd` (flip redirect, fuel per mode, empty tank, replay).
-TA-14: `godot/test/unit/sim/test_spatial.gd` (S16, ring coverage), `godot/test/unit/sim/test_collision.gd` (S17, classification,
-pads, rams), `godot/test/sim/test_collision_sweeps.gd` (1,000 slug / rail geometries, determinism), `godot/test/perf/perf_collision.gd`.
+TA-12/48: `godot/test/unit/sim/test_kinematics.gd` (lift law, test_slug_hits_coaltitude_target), `godot/test/unit/sim/test_kinematics_purity.gd`
+(S8), `godot/test/unit/sim/test_kinematics_flip_fuel.gd`, `godot/test/sim/test_flight.gd`, `godot/test/perf/perf_kinematics.gd`. TA-14:
+`godot/test/unit/sim/test_spatial.gd` (S16), `godot/test/unit/sim/test_collision.gd` (S17), `godot/test/sim/test_collision_sweeps.gd`, `godot/test/perf/perf_collision.gd`.
+TA-18: `godot/test/unit/sim/test_sim_world.gd` (S1, S3, S5, S11, hook, profile, steps 5-10), `godot/test/unit/sim/test_command_validator.gd`
+(S10, S12), `godot/test/unit/sim/test_serialize.gd` (S4, determinism), `godot/test/unit/sim/test_enums.gd` (S14), `godot/test/unit/sim/test_local_sim_view.gd`,
+`godot/test/unit/sim/test_match_rules.gd`, `godot/test/unit/sim/test_command_payload.gd`, `godot/test/sim/test_tick_scenario.gd` (100-tick event sequence), `godot/test/perf/perf_tick_world.gd`.
 
-Planned (plain text until on disk, D10; each task adds its file and moves it above): godot/test/unit/sim/test_enums.gd (S14,
-TA-18), test_build.gd (placement incl. cross-edge footprints), test_landing.gd (tail-down rule and grade),
-test_pathing.gd, test_serialize.gd (S4), test_command_validator.gd (S10, S12); godot/test/sim/scenarios/*.json
-(possess/release, build radius and Outpost presence, victory, Core shield and Exposure, caps); godot/test/contract/test_sim_view_contract.gd.
+Planned (plain text until on disk, D10): test_build.gd (cross-edge footprints), test_landing.gd, test_pathing.gd; godot/test/sim/scenarios/*.json
+(Outpost presence, victory, Core shield, caps); godot/test/contract/test_sim_view_contract.gd.
 
 ## How to add X
 
@@ -290,10 +292,9 @@ Recipes (SimEvent kind, order kind, AlertKind / Command.Kind / CommandResult.Cod
 
 ## Open items
 
-- CONTRACT-0 Q1-Q8 (`docs/reviews/R0-amendments-01.md`, R0 B.8): own files for `ShipState` / `ProjectileState` (A-7, A-8); views above (A-8); `CapsDef` is content's; per-file weapon / projectile namespaces (A-1: resolve `WeaponDef.projectile` via `ContentDB.projectile_index`, never `def_index`); A-3 settled 2026-10-13: Foundry's x0.85 applies to `weapon_mount: ship` only.
-- Amendments 02 (`docs/reviews/R0-amendments-02.md`, R0 B.9): A-11 flip form, A-12 `step_projectile` `out`, A-13 `brake_fade_mps`, A-14 fixture rule, A-20 projectile quarantine 0, A-21 subsystem `MODULE.md` rule; code follow-ups TA-43, TA-44, TA-45, TA-48 all done (`Kinematics` takes content's `*Def` types, `sim/fixture/` deleted; A-30/A-31/A-34/A-35 consumers: TA-14, AI-10).
-- Amendments 03 (R0 B.10): A-41 DOCKED ships are not stepped (03 s4.1 rule 9); A-42 `is_projectile` open-ended; A-46, A-47 done (TA-14).
-- TA-14 findings: ring 1 covers ~94 m (3D), not the 139 m of 03 s2.7 / s3.6 / s6.1 (corner edge length, not strip width); `ids_near`
-  picks ring 2 above it. Pad plane = structure `pos` / `up` (GD-15 may add a deck offset); Build (TA-19) must size pad structures' `radius`
-  so the approach column is clear. `Collision.shooter_grace_ticks` (03 s6.1 "10 ticks") needs a def field (`needs content:`).
-- Owners: TA-11 entity store, TA-12 kinematics, TA-14 projectiles, TA-18 tick driver + `LocalSimView` (+ `possessed` live list), TA-22 S-SIM-1, TA-37 vision, TA-38 ground motion; 05 lane `sim/steer/`, `sim/orders/`, `sim/control/`.
+- R0 B.8-B.10 applied (A-1/3/7/8, A-11..14, A-20/21 with TA-43/44/45/48, A-41/42/46/47). TA-14: ring 1 covers ~94 m, not 03's 139 m (`ids_near`
+  takes ring 2 above it); pad plane = structure `pos` / `up`; TA-19 sizes pad `radius`; `Collision.shooter_grace_ticks` needs a def field.
+- TA-18 type corrections for the Architect: `deserialize(content: ContentSet)` (`ContentDB` has no `class_name`), `arc() -> MatchArc.Arc`; `kind: int`
+  + PlayerTable.KIND_*: a global `PlayerKind` trips D1 on net's `Protocol.PlayerKind` (needs net: rename, or needs tools: D1 skips local enums).
+- TA-18 `needs content:` def fields and the interim stand-ins (ControlMachine transitions, step-9 frees, validated-only kinds): `sim/world/MODULE.md`.
+- Owners: TA-11 store, TA-12 kinematics, TA-14 collision, TA-18 tick driver, TA-21 serialize format, TA-22 S-SIM-1, TA-37 vision, TA-38 ground; 05: steer/orders/control.

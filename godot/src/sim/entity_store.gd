@@ -34,6 +34,12 @@ const QUARANTINE_TICKS: int = 64
 const SLOT_COUNT: int = EntityId.WRECK_SLOT_END
 const RANGE_MAIN: int = 0
 const RANGE_WRECK: int = 1
+## Every array, live list, free stack and quarantine ring, in serialization order (S4, TA-18).
+const _STATE: PackedStringArray = ["generation", "def_id", "kind", "flags", "owner", "team", "spawn_tick", "pos", "vel",
+	"fwd", "up", "rates", "radius", "hash_cell", "control_state", "possessor", "order_kind", "hp", "fuel", "ammo", "bombs",
+	"rockets", "cd_primary", "cd_secondary", "boost_time", "flip_time", "last_damage_tick", "attacker", "cargo",
+	"cargo_kind", "link", "timer_a", "timer_b", "ai_tag", "overlay", "visible_mask", "dirty", "anchor_cell", "ships",
+	"ground", "structures", "wrecks", "_free_n", "_q_head", "_q_n", "_q_last", "_free", "_q_slot", "_q_tick"]
 
 var generation: PackedInt32Array
 var def_id: PackedInt32Array
@@ -216,6 +222,16 @@ func quarantined_count(range_id: int) -> int:
 
 func live_count() -> int:
 	return ships.size() + ground.size() + structures.size() + wrecks.size()
+
+
+## Appends the whole store (S4: byte-identical for identical state on one machine) to `buf`.
+func write_state(buf: StreamPeerBuffer) -> void:
+	StateIO.put_props(buf, self, _STATE)
+
+
+## Replaces the whole store from `write_state` bytes; false (store unusable) on a type or size mismatch.
+func read_state(buf: StreamPeerBuffer) -> bool:
+	return StateIO.get_props(buf, self, _STATE) and generation.size() == SLOT_COUNT and anchor_cell.size() == SLOT_COUNT 		and _free.size() == SLOT_COUNT - 1
 
 
 func _clear_tail(s: int) -> void:
