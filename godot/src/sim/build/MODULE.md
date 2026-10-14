@@ -40,7 +40,7 @@ func cells(anchor: int, w: int, h: int, rotation: int) -> PackedInt32Array;  fun
 - B1 `can_place` returns the first failing reason in enum order; unknown / unbuildable def, bad cell or rotation, or unmet team-wide alive prerequisite is PREREQ.
 - B2 A footprint is `w x h` unique cells (fewer only at a cube corner, where one quadrant does not exist); anchor = centre cell (steps back floor(w/2), floor(h/2)).
 - B3 Outpost: no radius rule; needs a friendly, undocked unit within 300 m (NO_PRESENCE), >= 800 m from friendly and >= 1,500 m from enemy Cores / Outposts incl. sites (SPACING). Every other structure needs the centre inside a finished friendly build radius (NO_RADIUS); any footprint centre inside a finished enemy build radius is ENEMY_RADIUS first.
-- B4 NOT_VISIBLE: centre within the sensor radius of a finished friendly entity (3D distance; Vision replaces this in TA-37).
+- B4 NOT_VISIBLE (checked before ENEMY_RADIUS, so fog never leaks enemy structures): centre within the sensor radius of a finished friendly entity (3D distance). Vision (TA-37) is an entity-mask pass with datum occlusion, not a ground-point query, so the stand-in stays.
 - B5 Early share lock: team of >= 2 players, tick < `early_share_lock_s * tick_hz`, `spent_ore + cost_ore > early_share_ore + delivered_ore` is SPEND_LOCKED.
 - B6 Pure given (store, grid, players, clock): no RNG; the only allocation after `_init` is `place`'s entity slot.
 

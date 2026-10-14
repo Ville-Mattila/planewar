@@ -96,7 +96,8 @@ func place(player: int, def_id: int, cell: int, rotation: int) -> int:
 	_store.hp[s] = _defs.hp_max(player, def_id) * SITE_HP_FRACTION
 	_store.flags[s] |= EntityStore.F_BUILDING
 	_store.anchor_cell[s] = cell
-	grid.occupy(_fp.cells(cell, _defs.base.structure(def_id).footprint[0], _defs.base.structure(def_id).footprint[1], rotation))
+	var sd: StructureDef = _defs.resolved(player).structure(def_id)
+	grid.occupy(_fp.cells(cell, sd.footprint[0], sd.footprint[1], rotation))
 	return id
 
 
@@ -114,22 +115,24 @@ func _over_cap(player: int, def_id: int, sd: StructureDef) -> bool:
 
 
 func _check_cells(cells: PackedInt32Array, sd: StructureDef) -> Reject:
-	var node_ok: bool = false
-	var node_hit: bool = false
+	var cold_seen: bool = false
+	var node_bad: bool = false
 	var worst: float = 0.0
 	var occupied: bool = false
 	for c: int in cells:
 		var f: int = grid.flags_of(c)
 		occupied = occupied or (f & BuildGrid.OCCUPIED) != 0
 		if (f & BuildGrid.NODE) != 0:
-			node_hit = true
-			node_ok = node_ok or (sd.on_node == &"cold_trap" and (f & BuildGrid.COLD_TRAP) != 0)
+			if sd.on_node == &"cold_trap" and (f & BuildGrid.COLD_TRAP) != 0:
+				cold_seen = true
+			else:
+				node_bad = true   # any other node cell, e.g. an Ore node under an Ice Extractor (ADR-05)
 		worst = maxf(worst, grid.slope_deg(c))
 	if occupied:
 		return Reject.OCCUPIED
 	if worst > MAX_SLOPE_DEG:
 		return Reject.SLOPE
-	if (sd.on_node != &"" or node_hit) and not node_ok:
+	if node_bad or (sd.on_node != &"" and not cold_seen):
 		return Reject.NODE
 	return Reject.OK
 
@@ -139,6 +142,7 @@ func _check_vision_and_radius(team: int, def_id: int, centre: Vector3) -> Reject
 	var in_radius: bool = false
 	var present: bool = false
 	var spacing: bool = false
+	var enemy_radius: bool = false
 	var is_outpost: bool = def_id == _outpost_def
 	for kind_list: int in 3:
 		var list: PackedInt32Array = _store.structures if kind_list == 0 else (_store.ships if kind_list == 1 else _store.ground)
@@ -156,14 +160,16 @@ func _check_vision_and_radius(team: int, def_id: int, centre: Vector3) -> Reject
 				continue
 			var gc: float = Sphere.great_circle(p, centre)
 			if not mine and built and sd.build_radius > 0.0 and gc <= sd.build_radius:
-				return Reject.ENEMY_RADIUS
+				enemy_radius = true
 			if mine and built and sd.build_radius > 0.0 and gc <= sd.build_radius:
 				in_radius = true
 			if _store.def_id[s] == _core_def or _store.def_id[s] == _outpost_def:
 				if gc < (MIN_SPACING_FRIENDLY if mine else MIN_SPACING_ENEMY):
 					spacing = true
 	if not seen:
-		return Reject.NOT_VISIBLE
+		return Reject.NOT_VISIBLE   # before ENEMY_RADIUS: never reveal enemy structures through fog (02 s6.2 order)
+	if enemy_radius:
+		return Reject.ENEMY_RADIUS
 	if is_outpost:
 		if not present:
 			return Reject.NO_PRESENCE

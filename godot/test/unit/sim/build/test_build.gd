@@ -124,6 +124,19 @@ func test_enemy_radius() -> void:
 	assert_int(_place(&"relay_pylon", 300.0)).is_equal(Build.Reject.ENEMY_RADIUS)
 
 
+func test_not_visible_wins_over_enemy_radius() -> void:
+	var _e: int = _spawn(&"relay_pylon", 1, _dir(3000.0), 0.0)
+	assert_int(_place(&"relay_pylon", 3000.0)).is_equal(Build.Reject.NOT_VISIBLE)
+
+
+func test_ice_extractor_on_cold_trap_rejects_overlapping_ore_node() -> void:
+	var _r: int = _spawn(&"refinery", 0, _dir(100.0), 0.0)
+	var cell: int = _cell(400.0)
+	_b.grid.mark_node(cell, true)
+	_b.grid.mark_node(Sphere.neighbour_cell(cell, N, Sphere.DIR_POS_U), false)
+	assert_int(_b.can_place(0, _def(&"ice_extractor"), cell, 0)).is_equal(Build.Reject.NODE)
+
+
 func test_no_radius() -> void:
 	assert_int(_place(&"relay_pylon", 1000.0)).is_equal(Build.Reject.NO_RADIUS)
 
@@ -185,7 +198,7 @@ func test_footprint_across_face_edge_accepted() -> void:
 func test_footprint_at_cube_corner() -> void:
 	var corner: int = (0 * N + (N - 1)) * N + (N - 1)
 	var cells: PackedInt32Array = _b.footprint_cells(_def(&"solar_array"), corner, 0)
-	assert_int(cells.size()).is_between(12, 16)
+	assert_int(cells.size()).is_equal(15)
 	var faces: Dictionary = {}
 	for c: int in cells:
 		faces[Sphere.cell_face(c, N)] = true
@@ -233,6 +246,9 @@ func test_deterministic() -> void:
 	var b: PackedInt32Array = PackedInt32Array()
 	for m: float in [-300.0, 100.0, 300.0, 450.0, 1000.0, 3000.0]:
 		var _x: bool = a.push_back(_place(&"relay_pylon", m))
+	var first: Build = _b
+	before_test()   # a second, independent store / grid / Build
+	assert_bool(first != _b).is_true()
 	for m: float in [-300.0, 100.0, 300.0, 450.0, 1000.0, 3000.0]:
 		var _y: bool = b.push_back(_place(&"relay_pylon", m))
 	assert_bool(a == b).is_true()
