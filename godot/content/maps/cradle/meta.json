@@ -2,7 +2,7 @@
  "baker_version": "1",
  "face_resolution": 1024,
  "id": "cradle",
- "map_hash": "6f681084163c0e39c3541b8c7e3bd335c08d64d7f59c12b33134056071af4854",
+ "map_hash": "86cdf93c71a59ce1f2604782aad1322bd7b1e0fcc9c731ae364bcb260c9f3a0c",
  "outputs": {
   "face0.biome.u8": "2f0c529b976eb45e034715e167e3cb7480682f0d7df4bc136431ea44148b780b",
   "face0.height.u16": "fdb35161dfc8c42d35cbdeb38d75fa33f3167a31f5723a3e2ad01f8f4c1c69d3",
@@ -28,7 +28,7 @@
   "face5.height.u16": "57bfe7032ef639bd2080e6353686169ea9879abbd8e5a8f01e7e61c32880ded0",
   "face5.path.u8": "29321cb3c5f1f64b9a5832b6f42b465880b5679046f4937e63f56fbe7806f04d",
   "face5.slope.u8": "6a851cee0b71d86b33763c236d1fc9a12975b84afa1631e8d9de1368968dd7dd",
-  "features.json": "9e978b71e3240c76128f3da3a20d77c925807ded988b68f57abc233a52bc4930"
+  "features.json": "c2cc82d836d7720a8bc93d51ddfb733872313559737219d3a0aa234ee70a4122"
  },
  "radius_m": 6000.0,
  "recipe_sha256": "6a7aff4e958925e09639b9a2520cc012bdc323cb2b17c0fbcadd5d8ea01e60df",
