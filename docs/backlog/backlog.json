@@ -1033,8 +1033,10 @@
       "02 s4.3",
       " 02 GD-08"
     ],
-    "status": "todo",
-    "note": "architect: structure_bomb_mult field (ROOF_BOMB_MULT literal, ADR-09); unarmed bomb on ground contact detonates vs dud (arm_s); siege-shell blast hurts ships within 12 m (confirm 02)"
+    "status": "done",
+    "note": "architect: structure_bomb_mult field (ROOF_BOMB_MULT literal, ADR-09); unarmed bomb on ground contact detonates vs dud (arm_s); siege-shell blast hurts ships within 12 m (confirm 02)",
+    "merged": "2026-10-14",
+    "pr": "public#30"
   },
   {
     "id": "GD-36",
@@ -6723,7 +6725,9 @@
       "R0-amendments-04 A-56",
       "03 s10.1"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#29"
   },
   {
     "id": "TA-52",
@@ -6758,7 +6762,9 @@
       "R0-amendments-04 A-50",
       "03 s12.4"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#27"
   },
   {
     "id": "TA-54",
