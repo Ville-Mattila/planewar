@@ -937,7 +937,8 @@
     "status": "done",
     "merged": "2026-10-14",
     "pr": "public#23",
-    "note": "S-NAV-1 partial pass ratified by R0 B.11 A-55 (path_expansions_per_tick 120, rung 8, heuristic 25 %, regions hierarchy, 0/255 impassable, CommandSinkBase.pathing(); wiring TA-50, baked slopes TA-54); status flips when the owner signs the REPORT (HUM-12)"
+    "note": "S-NAV-1 partial pass ratified by R0 B.11 A-55 (path_expansions_per_tick 120, rung 8, heuristic 25 %, regions hierarchy, 0/255 impassable, CommandSinkBase.pathing(); wiring TA-50, baked slopes TA-54); status flips when the owner signs the REPORT (HUM-12)",
+    "owner_gate": "PASS WITH FALLBACK (partial pass accepted by owner 2026-10-14)"
   },
   {
     "id": "TA-21",

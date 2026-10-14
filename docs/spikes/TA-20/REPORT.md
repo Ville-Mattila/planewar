@@ -1,3 +1,5 @@
+**Owner gate decision (2026-10-14): PASS WITH FALLBACK.** Partial pass accepted; budget handled by A-62 option (a).
+
 # TA-20 REPORT: S-NAV-1 time-sliced A* on the 6 x 256^2 path grid
 
 | | |

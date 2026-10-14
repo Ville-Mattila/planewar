@@ -170,3 +170,10 @@ Reading order for a lane engineer: the B.11 table in `docs/reviews/R0-resolution
 |---|---|---|---|
 | Architect | Fable 5.1 | 2026-10-14 | A-49..A-62 decided; A-55 gate signature (default: partial pass, TA-20 done) and A-62 budget options (default: (a), no row moves, pre-registered rung plan) are OWNER items |
 | Owner | | | |
+
+
+## Owner rulings (2026-10-14)
+
+- A-62: option (a), measure first. Budget unchanged; the pre-registered decision tree applies after S-SIM-1.
+- A-55: TA-20 REPORT signed as PASS WITH FALLBACK (partial pass).
+- Backlog patch approved and applied.
