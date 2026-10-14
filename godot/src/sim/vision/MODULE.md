@@ -106,8 +106,9 @@ None. (Alerts that need vision, e.g. BOMBERS_DETECTED, read `visible_mask` in th
 03 s4.2 row 11 "Vision": <= 1.1 ms p95 at S-SIM-1 scale (1,200 entities, 2,000 projectiles), `perf_tick.gd --full`
 vision row; `perf_vision.gd` splits the index and one team's pass. Cost: index O(entities) once per tick; per pass
 O(team sensors + candidates in covered cells x covering groups + the sensors inside the bounds). TA-37 measured on the
-dev box (`perf_tick.gd --full`, 1,800 ticks): default profile [1, 2] (5 Hz) p50 0.46 / p95 0.74 / p99 0.96 ms;
-`--profile=1` (10 Hz, 3 or 2 passes per tick) p50 0.80 / p95 1.01 / p99 1.26 ms. A loaded box reads up to ~1.5x.
+dev box (`perf_tick.gd --full`, 1,800 ticks, two rounds): default profile [1, 2] (5 Hz) p50 0.39-0.45 / p95 0.62-0.81 ms;
+`--profile=1` (10 Hz, 3 or 2 passes per tick) p50 0.70-0.71 / p95 0.84-0.85 ms; `perf_vision.gd`: index p50 114 us, one
+team's pass p50 194 us. A loaded box reads up to ~1.5x; the pinned runner (TA-42) is the gate (03 s4.4).
 
 ## Test entry points
 
