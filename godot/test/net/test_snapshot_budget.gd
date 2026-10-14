@@ -3,7 +3,8 @@ extends GdUnitTestSuite
 ## teleport, 255-record sections), bandwidth at 400 entities against 04 s4.6 (<= 30 KB/s per client at 100 and
 ## 167 ms ack delay incl. 38 B/packet transport overhead), determinism, one prepare_tick per tick for 8 clients,
 ## and the held-record path when ENTITY_META is late (NET-05 RosterSync). NET-48 (A-36): packet index in flags
-## bits 6-7, a split tick is a baseline once acked, a tick missing its middle packet is never acked.
+## bits 6-7, a split tick is a baseline once acked, a tick missing its middle packet is never acked. NET-49
+## (A-40): the FULL / C-BLIP byte cache gives the same bytes and mirrors as the uncached path, rolling refresh.
 
 const OVERHEAD: int = 38                    # UDP 8 + IPv4 20 + ENet 10 (04 s4.6)
 
@@ -225,3 +226,80 @@ func test_late_entity_meta_holds_then_applies() -> void:
 	assert_int(sync.take_ready(ticks, held)).is_equal(1)
 	assert_int(dec.decode(held[0])).is_equal(SnapshotDecoder.Status.OK)
 	assert_bool(dec.current().same_state(store.frame_at(_rig.tick))).is_true()
+
+
+## One run of the canonical schedule (bench_snapshot.canonical_lists) for 3 clients with FULL storms, 3 % loss
+## and 3 / 6 / 10-tick acks. Returns the SHA-256 of every packet plus every client's final mirror hash.
+func _cache_run(cache: bool) -> String:
+	_rig = SnapRig.new()
+	_rig.build(Vector3i(40, 120, 300), Vector3i(24, 50, 120), 4, 21)
+	_rig.codec.cache_bytes = cache
+	var r: PackedInt32Array = PackedInt32Array()
+	var stores: Array[BaselineStore] = []
+	var decs: Array[SnapshotDecoder] = []
+	for k: int in 3:
+		stores.append(BaselineStore.new(k))
+		decs.append(_rig.new_decoder(k))
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 49
+	var acks: Array[Vector3i] = []
+	var ctx: HashingContext = HashingContext.new()
+	var _st: int = ctx.start(HashingContext.HASH_SHA256)
+	for t: int in 240:
+		if t % 70 == 69:
+			_rig.teleport(0.4)
+		_rig.step()
+		for k: int in 3:
+			_rig.canonical_lists(k, _a, _b, _c, r)
+			var out: Array[PackedByteArray] = []
+			var _n: int = _rig.codec.encode(stores[k], _rig.tick, _a, _b, _c, _pilot() if k == 0 else null, out, r)
+			for p: PackedByteArray in out:
+				var _u: int = ctx.update(p)
+				if rng.randf() >= 0.03:
+					assert_int(decs[k].decode(p)).is_equal(SnapshotDecoder.Status.OK)
+			acks.append(Vector3i(_rig.tick + [3, 6, 10][k], k, decs[k].store.complete_tick))
+		while acks.size() > 0 and acks[0].x <= _rig.tick:
+			stores[acks[0].y].ack(acks[0].z)
+			acks.remove_at(0)
+	var tail: String = ""
+	for k: int in 3:
+		tail += ":" + str(stores[k].frame_at(_rig.tick).state_hash())
+		var cur: BaselineFrame = decs[k].store.frame_at(decs[k].store.complete_tick)
+		assert_bool(cur.same_state(stores[k].frame_at(decs[k].store.complete_tick))).is_true()
+	return ctx.finish().hex_encode() + tail
+
+
+func test_byte_cache_identical_bytes_and_mirrors() -> void:
+	var off: String = _cache_run(false)
+	var full_off: int = _rig.codec.n_full
+	var blip_off: int = _rig.codec.n_blip
+	var on: String = _cache_run(true)
+	assert_str(on).is_equal(off)
+	assert_int(_rig.codec.n_full).is_equal(full_off)
+	assert_int(_rig.codec.n_blip).is_equal(blip_off)
+	assert_int(full_off).is_greater(2000)                               # refresh, storms, bombs: FULLs exercised
+	assert_int(blip_off).is_greater(1000)
+
+
+func test_rolling_refresh_sends_full_in_section_c() -> void:
+	_rig.build(Vector3i(0, 0, 20), Vector3i(0, 0, 10), 0, 6)
+	var store: BaselineStore = BaselineStore.new(0)
+	var dec: SnapshotDecoder = _rig.new_decoder(0)
+	for t: int in 20:                                                   # C went out on tick 14
+		_rig.step()
+		var _o: Array[PackedByteArray] = _round(store, dec, 1, null)
+	assert_int(store.frame_at(store.acked_tick).present[9]).is_equal(1)
+	_rig.step()
+	var out: Array[PackedByteArray] = []
+	_rig.lists(1, _a, _b, _c)
+	assert_int(_c.size()).is_equal(0)                                   # C not scheduled this tick
+	var full0: int = _rig.codec.n_full
+	var refresh: PackedInt32Array = PackedInt32Array([9, 17, 9])        # a mover and a structure; a repeat is one record
+	assert_int(_rig.codec.encode(store, _rig.tick, _a, _b, _c, null, out, refresh)).is_equal(1)
+	assert_int(_rig.codec.n_full - full0).is_equal(2)
+	assert_int(out[0][9] & 0x0F).is_equal(Protocol.SNAP_HAS_C)
+	assert_int(out[0][SnapshotCodec.HEADER_BYTES]).is_equal(2)          # section C count
+	assert_int(out[0][SnapshotCodec.HEADER_BYTES + 2]).is_equal(SnapshotCodec.MASK_FULL)
+	assert_int(dec.decode(out[0])).is_equal(SnapshotDecoder.Status.OK)
+	assert_bool(dec.current().same_state(store.frame_at(_rig.tick))).is_true()
+	assert_int(dec.current().etick[9]).is_equal(_rig.tick)

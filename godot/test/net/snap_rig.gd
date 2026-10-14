@@ -11,6 +11,7 @@ const DEF_SHIP: int = 2
 const DEF_BOMB: int = 3
 const G: float = 6.0                         # rules.json gravity
 const HZ: int = 30
+const REFRESH_PER_TICK: int = 3             # ceil(700 / 300) rolling-refresh FULLs per tick (04 s4.3)
 
 var codec: SnapshotCodec = SnapshotCodec.new(G, HZ)
 var frame: SnapshotFrame = SnapshotFrame.new()
@@ -133,6 +134,23 @@ func lists(k: int, out_a: PackedInt32Array, out_b: PackedInt32Array, out_c: Pack
 			var _b: bool = out_b.push_back(i)
 		elif tier[i] == 2 and c_on:
 			var _c: bool = out_c.push_back(i)
+
+
+## Canonical schedule (04 s4.1, R0 B.10 A-40) for client `k` on this tick: A every tick, B on (tick + k) % 2 == 0,
+## C on (tick + k) % 15 == 0, and `r` = REFRESH_PER_TICK rolling-refresh indices round-robin over the C set.
+func canonical_lists(k: int, out_a: PackedInt32Array, out_b: PackedInt32Array, out_c: PackedInt32Array,
+		r: PackedInt32Array) -> void:
+	lists(k, out_a, out_b, out_c)
+	r.clear()
+	var c0: int = -1
+	var cn: int = 0
+	for i: int in frame.count:
+		if tier[i] == 2:
+			c0 = i if c0 < 0 else c0
+			cn += 1
+	for j: int in REFRESH_PER_TICK:
+		if cn > 0:
+			var _r: bool = r.push_back(c0 + (tick * REFRESH_PER_TICK + j + k * 37) % cn)
 
 
 ## A client decoder that shares the rig's roster and gravity table.
