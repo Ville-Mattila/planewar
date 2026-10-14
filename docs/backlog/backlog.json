@@ -1719,7 +1719,9 @@
       " R0 C2-04",
       " 05 AI-03"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#39"
   },
   {
     "id": "AI-04",
