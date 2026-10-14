@@ -247,3 +247,13 @@ func match_phase() -> int:
 
 func match_clock_s() -> float:
 	return 0.0
+
+
+## Bulk pose read (R0 B.11 A-56): `pos[i]`, `rot[i]` = quaternion (x, y, z, w) of `basis(ids[i])`; dead or unknown ids write
+## ZERO and the identity quaternion. The caller pre-sizes both arrays to `ids.size()` (S3). Returns the alive count.
+## Base default: nothing is alive.
+func read_poses(ids: PackedInt32Array, _pos: PackedVector3Array, _rot: PackedVector4Array) -> int:
+	for i: int in ids.size():
+		_pos[i] = Vector3.ZERO
+		_rot[i] = Vector4(0.0, 0.0, 0.0, 1.0)
+	return 0

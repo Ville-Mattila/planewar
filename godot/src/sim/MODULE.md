@@ -13,7 +13,7 @@ change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, no signals, no `Thread` (D2, D3) |
 | Public types other lanes may name (D1) | `input`: `PilotInput`. `ui`: `SimView`, `SimEvent`, `Command`, `CommandResult`, `PilotInput`, `AlertKind`, `OrderSpec`, `LandingGrade`, read-only `Terrain`. `campaign`: commands, events, `SimView`, `CommandSinkBase`. `net`: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain` (read) |
 | Autoloads used | None: content arrives as a `ContentSet` (`SimWorld._init`, TA-18; `ContentDB` builds the same set); `Log` allowed |
-| Status | API frozen with CONTRACT-0 (2026-10-10); amendments 01 (R0 B.8, same day) appended `ProjectileState`, `TeamStateView`, `PlayerStateView`; amendments 02 (R0 B.9, 2026-10-13) appended the `step_projectile` `out` parameter, `brake_fade_mps` and the projectile 0-tick quarantine; TA-18 (2026-10-14) implemented the tick driver and appended `SimSink`, `LocalSimView`, hook / store state bytes, `MatchRules.from_defs`; amendments 04 (R0 B.11, 2026-10-14) ratified TA-18's three type corrections (A-49), dropped the planned `PlayerKind` holder (A-50) and appended `CommandSinkBase.pathing()` (A-55, TA-50) and `SimView.read_poses` (A-56, TA-51) as planned; internals open until S-SIM-1 (TA-22) |
+| Status | API frozen with CONTRACT-0 (2026-10-10); amendments 01 (R0 B.8, same day) appended `ProjectileState`, `TeamStateView`, `PlayerStateView`; amendments 02 (R0 B.9, 2026-10-13) appended the `step_projectile` `out` parameter, `brake_fade_mps` and the projectile 0-tick quarantine; TA-18 (2026-10-14) implemented the tick driver and appended `SimSink`, `LocalSimView`, hook / store state bytes, `MatchRules.from_defs`; amendments 04 (R0 B.11, 2026-10-14) ratified TA-18's three type corrections (A-49), dropped the planned `PlayerKind` holder (A-50) and appended `CommandSinkBase.pathing()` (A-55, TA-50) and `SimView.read_poses` (A-56, TA-51 landed); internals open until S-SIM-1 (TA-22) |
 
 ## Public API
 
@@ -140,7 +140,7 @@ func landing_grade_last(id: int) -> int                                      # L
 func team_state(team: int) -> TeamStateView;  func player_state(slot: int) -> PlayerStateView                   # (03) reused per-slot views, refilled on call (S3)
 func terrain_height(dir: Vector3) -> float                                   # (03) convenience over Terrain
 func match_arc() -> int;  func match_phase() -> int;  func match_clock_s() -> float
-func read_poses(ids: PackedInt32Array, pos: PackedVector3Array, rot: PackedVector4Array) -> int   # [planned: TA-51] R0 B.11 A-56: pos[i], rot[i] = quaternion (x, y, z, w) of basis(ids[i]); dead -> ZERO / identity; caller pre-sizes (S3); returns alive count
+func read_poses(ids: PackedInt32Array, pos: PackedVector3Array, rot: PackedVector4Array) -> int   # R0 B.11 A-56: pos[i], rot[i] = quaternion (x, y, z, w) of basis(ids[i]); dead -> ZERO / identity; caller pre-sizes (S3); returns alive count
 class_name LocalSimView extends SimView   # (TA-18) SimWorld.view(). NetSimView: non-replicated fields = def default + `unknown` (04 s5.6); sample(render_tick: float)
 
 class_name TeamStateView extends RefCounted                                  # sim/team_state_view.gd (R0 B.8 A-8): read-only view of 03 s3.2 `TeamState`; wire form 04 TEAM_STATE 0x85
@@ -295,6 +295,6 @@ Recipes (SimEvent kind, order kind, AlertKind / Command.Kind / CommandResult.Cod
 
 - R0 B.8-B.11 applied (A-1/3/7/8, A-11..14, A-20/21 with TA-43/44/45/48, A-41/42/46/47, A-49..A-56; `docs/reviews/R0-amendments-04.md`). Pending code:
   TA-49 reads the A-51 `rules.json` / `match_rules.json` fields (rate / burst, uplink margin, request TTL, echo, shooter grace, heuristic pct, `cut_ladder`,
-  arc divisors) and adds the A-53 pad approach-column RAM exemption; TA-50 wires `Pathing` (step 3b, `pathing()`, S4); TA-51 adds `read_poses`.
+  arc divisors) and adds the A-53 pad approach-column RAM exemption; TA-50 wires `Pathing` (step 3b, `pathing()`, S4);
 - Interim stand-ins (step-9 frees, validated-only kinds): `sim/world/MODULE.md`; control transitions: `sim/control/MODULE.md` (AI-02, A-61).
 - Owners: TA-11 store, TA-12 kinematics, TA-14 collision, TA-18 tick driver, TA-21 serialize format, TA-22 S-SIM-1, TA-37 vision, TA-38 ground; 05: steer/orders/control.
