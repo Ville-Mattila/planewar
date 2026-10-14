@@ -1,0 +1,1162 @@
+{
+ "boulder_props": [
+  {
+   "density": 0.4,
+   "dir": [
+    0.763129413,
+    0.640341609,
+    -0.087155743
+   ],
+   "radius_m": 800
+  },
+  {
+   "density": 0.4,
+   "dir": [
+    0.086824089,
+    0.992403877,
+    -0.087155743
+   ],
+   "radius_m": 800
+  },
+  {
+   "density": 0.4,
+   "dir": [
+    -0.640341609,
+    0.763129413,
+    -0.087155743
+   ],
+   "radius_m": 800
+  },
+  {
+   "density": 0.4,
+   "dir": [
+    -0.992403877,
+    0.086824089,
+    -0.087155743
+   ],
+   "radius_m": 800
+  },
+  {
+   "density": 0.4,
+   "dir": [
+    -0.763129413,
+    -0.640341609,
+    -0.087155743
+   ],
+   "radius_m": 800
+  },
+  {
+   "density": 0.4,
+   "dir": [
+    -0.086824089,
+    -0.992403877,
+    -0.087155743
+   ],
+   "radius_m": 800
+  },
+  {
+   "density": 0.4,
+   "dir": [
+    0.640341609,
+    -0.763129413,
+    -0.087155743
+   ],
+   "radius_m": 800
+  },
+  {
+   "density": 0.4,
+   "dir": [
+    0.992403877,
+    -0.086824089,
+    -0.087155743
+   ],
+   "radius_m": 800
+  },
+  {
+   "density": 0.3,
+   "dir": [
+    0.561042415,
+    0.801251607,
+    0.207911691
+   ],
+   "radius_m": 700
+  },
+  {
+   "density": 0.3,
+   "dir": [
+    -0.169853548,
+    0.963287341,
+    0.207911691
+   ],
+   "radius_m": 700
+  },
+  {
+   "density": 0.3,
+   "dir": [
+    -0.801251607,
+    0.561042415,
+    0.207911691
+   ],
+   "radius_m": 700
+  },
+  {
+   "density": 0.3,
+   "dir": [
+    -0.963287341,
+    -0.169853548,
+    0.207911691
+   ],
+   "radius_m": 700
+  },
+  {
+   "density": 0.3,
+   "dir": [
+    -0.561042415,
+    -0.801251607,
+    0.207911691
+   ],
+   "radius_m": 700
+  },
+  {
+   "density": 0.3,
+   "dir": [
+    0.169853548,
+    -0.963287341,
+    0.207911691
+   ],
+   "radius_m": 700
+  },
+  {
+   "density": 0.3,
+   "dir": [
+    0.801251607,
+    -0.561042415,
+    0.207911691
+   ],
+   "radius_m": 700
+  },
+  {
+   "density": 0.3,
+   "dir": [
+    0.963287341,
+    0.169853548,
+    0.207911691
+   ],
+   "radius_m": 700
+  }
+ ],
+ "grid": 1024,
+ "named_features": [
+  {
+   "dir": [
+    0.612372436,
+    0.612372436,
+    0.5
+   ],
+   "id": "crater_0_w0",
+   "radius_m": 1200.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.0,
+    0.866025404,
+    0.5
+   ],
+   "id": "crater_0_w1",
+   "radius_m": 1200.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.612372436,
+    0.612372436,
+    0.5
+   ],
+   "id": "crater_0_w2",
+   "radius_m": 1200.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.866025404,
+    0.0,
+    0.5
+   ],
+   "id": "crater_0_w3",
+   "radius_m": 1200.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.612372436,
+    -0.612372436,
+    0.5
+   ],
+   "id": "crater_0_w4",
+   "radius_m": 1200.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.0,
+    -0.866025404,
+    0.5
+   ],
+   "id": "crater_0_w5",
+   "radius_m": 1200.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.612372436,
+    -0.612372436,
+    0.5
+   ],
+   "id": "crater_0_w6",
+   "radius_m": 1200.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.866025404,
+    0.0,
+    0.5
+   ],
+   "id": "crater_0_w7",
+   "radius_m": 1200.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.753792113,
+    0.489518322,
+    -0.438371147
+   ],
+   "id": "crater_1_w0",
+   "radius_m": 700.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.18686979,
+    0.87915324,
+    -0.438371147
+   ],
+   "id": "crater_1_w1",
+   "radius_m": 700.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.489518322,
+    0.753792113,
+    -0.438371147
+   ],
+   "id": "crater_1_w2",
+   "radius_m": 700.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.87915324,
+    0.18686979,
+    -0.438371147
+   ],
+   "id": "crater_1_w3",
+   "radius_m": 700.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.753792113,
+    -0.489518322,
+    -0.438371147
+   ],
+   "id": "crater_1_w4",
+   "radius_m": 700.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.18686979,
+    -0.87915324,
+    -0.438371147
+   ],
+   "id": "crater_1_w5",
+   "radius_m": 700.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.489518322,
+    -0.753792113,
+    -0.438371147
+   ],
+   "id": "crater_1_w6",
+   "radius_m": 700.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.87915324,
+    -0.18686979,
+    -0.438371147
+   ],
+   "id": "crater_1_w7",
+   "radius_m": 700.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.484105337,
+    0.774730486,
+    0.406736643
+   ],
+   "id": "crater_2_w0",
+   "radius_m": 500.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.205503014,
+    0.890131347,
+    0.406736643
+   ],
+   "id": "crater_2_w1",
+   "radius_m": 500.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.774730486,
+    0.484105337,
+    0.406736643
+   ],
+   "id": "crater_2_w2",
+   "radius_m": 500.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.890131347,
+    -0.205503014,
+    0.406736643
+   ],
+   "id": "crater_2_w3",
+   "radius_m": 500.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    -0.484105337,
+    -0.774730486,
+    0.406736643
+   ],
+   "id": "crater_2_w4",
+   "radius_m": 500.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.205503014,
+    -0.890131347,
+    0.406736643
+   ],
+   "id": "crater_2_w5",
+   "radius_m": 500.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.774730486,
+    -0.484105337,
+    0.406736643
+   ],
+   "id": "crater_2_w6",
+   "radius_m": 500.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.890131347,
+    0.205503014,
+    0.406736643
+   ],
+   "id": "crater_2_w7",
+   "radius_m": 500.0,
+   "type": "crater"
+  },
+  {
+   "dir": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "id": "midnight_ice_ring",
+   "radius_m": 800.0,
+   "type": "ice_ring"
+  },
+  {
+   "dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "id": "noon_plateau",
+   "radius_m": 1000,
+   "type": "plateau"
+  }
+ ],
+ "neutral_structures": [],
+ "nodes": [
+  {
+   "capacity": 6000,
+   "cell": 525175,
+   "dir": [
+    0.838630392,
+    0.544700895,
+    0.0
+   ],
+   "id": "home_field_a_s0",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 0
+  },
+  {
+   "capacity": 6000,
+   "cell": 524914,
+   "dir": [
+    0.984546262,
+    0.175124691,
+    0.0
+   ],
+   "id": "home_field_b_s0",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 0
+  },
+  {
+   "capacity": 2000,
+   "cell": 320256,
+   "dir": [
+    0.887043453,
+    0.367425429,
+    -0.279557625
+   ],
+   "id": "home_trap_s0",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.8,
+   "slot": 0
+  },
+  {
+   "capacity": 10000,
+   "cell": 558079,
+   "dir": [
+    0.706676031,
+    0.706676031,
+    0.034899497
+   ],
+   "id": "contested_r0",
+   "kind": "ore_field",
+   "max_miners": 6,
+   "radius_m": 200.0,
+   "regen_per_s": 3.0,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 6178705,
+   "dir": [
+    0.5,
+    0.5,
+    -0.707106781
+   ],
+   "id": "mid_trap_r0",
+   "kind": "cold_trap",
+   "radius_m": 150.0,
+   "rate_per_s": 1.5,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 2761216,
+   "dir": [
+    0.20783954,
+    0.978162934,
+    0.0
+   ],
+   "id": "home_field_a_s1",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 1
+  },
+  {
+   "capacity": 6000,
+   "cell": 3028480,
+   "dir": [
+    0.572347482,
+    0.820011195,
+    0.0
+   ],
+   "id": "home_field_b_s1",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 1
+  },
+  {
+   "capacity": 2000,
+   "cell": 2883896,
+   "dir": [
+    0.367425429,
+    0.887043453,
+    -0.279557625
+   ],
+   "id": "home_trap_s1",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.8,
+   "slot": 1
+  },
+  {
+   "capacity": 10000,
+   "cell": 2621974,
+   "dir": [
+    0.0,
+    0.999390827,
+    0.034899497
+   ],
+   "id": "contested_r1",
+   "kind": "ore_field",
+   "max_miners": 6,
+   "radius_m": 200.0,
+   "regen_per_s": 3.0,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 2621440,
+   "dir": [
+    0.0,
+    0.707106781,
+    -0.707106781
+   ],
+   "id": "mid_trap_r1",
+   "kind": "cold_trap",
+   "radius_m": 150.0,
+   "rate_per_s": 1.5,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 2236928,
+   "dir": [
+    -0.544700895,
+    0.838630392,
+    0.0
+   ],
+   "id": "home_field_a_s2",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 2
+  },
+  {
+   "capacity": 6000,
+   "cell": 2504192,
+   "dir": [
+    -0.175124691,
+    0.984546262,
+    0.0
+   ],
+   "id": "home_field_b_s2",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 2
+  },
+  {
+   "capacity": 2000,
+   "cell": 2359608,
+   "dir": [
+    -0.367425429,
+    0.887043453,
+    -0.279557625
+   ],
+   "id": "home_trap_s2",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.8,
+   "slot": 2
+  },
+  {
+   "capacity": 10000,
+   "cell": 2097696,
+   "dir": [
+    -0.706676031,
+    0.706676031,
+    0.034899497
+   ],
+   "id": "contested_r2",
+   "kind": "ore_field",
+   "max_miners": 6,
+   "radius_m": 200.0,
+   "regen_per_s": 3.0,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 5356433,
+   "dir": [
+    -0.5,
+    0.5,
+    -0.707106781
+   ],
+   "id": "mid_trap_r2",
+   "kind": "cold_trap",
+   "radius_m": 150.0,
+   "rate_per_s": 1.5,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 1712640,
+   "dir": [
+    -0.978162934,
+    0.20783954,
+    0.0
+   ],
+   "id": "home_field_a_s3",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 3
+  },
+  {
+   "capacity": 6000,
+   "cell": 1979904,
+   "dir": [
+    -0.820011195,
+    0.572347482,
+    0.0
+   ],
+   "id": "home_field_b_s3",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 3
+  },
+  {
+   "capacity": 2000,
+   "cell": 1835320,
+   "dir": [
+    -0.887043453,
+    0.367425429,
+    -0.279557625
+   ],
+   "id": "home_trap_s3",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.8,
+   "slot": 3
+  },
+  {
+   "capacity": 10000,
+   "cell": 1573398,
+   "dir": [
+    -0.999390827,
+    0.0,
+    0.034899497
+   ],
+   "id": "contested_r3",
+   "kind": "ore_field",
+   "max_miners": 6,
+   "radius_m": 200.0,
+   "regen_per_s": 3.0,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 1572864,
+   "dir": [
+    -0.707106781,
+    0.0,
+    -0.707106781
+   ],
+   "id": "mid_trap_r3",
+   "kind": "cold_trap",
+   "radius_m": 150.0,
+   "rate_per_s": 1.5,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 1188352,
+   "dir": [
+    -0.838630392,
+    -0.544700895,
+    0.0
+   ],
+   "id": "home_field_a_s4",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 4
+  },
+  {
+   "capacity": 6000,
+   "cell": 1455616,
+   "dir": [
+    -0.984546262,
+    -0.175124691,
+    0.0
+   ],
+   "id": "home_field_b_s4",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 4
+  },
+  {
+   "capacity": 2000,
+   "cell": 1311032,
+   "dir": [
+    -0.887043453,
+    -0.367425429,
+    -0.279557625
+   ],
+   "id": "home_trap_s4",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.8,
+   "slot": 4
+  },
+  {
+   "capacity": 10000,
+   "cell": 1049120,
+   "dir": [
+    -0.706676031,
+    -0.706676031,
+    0.034899497
+   ],
+   "id": "contested_r4",
+   "kind": "ore_field",
+   "max_miners": 6,
+   "radius_m": 200.0,
+   "regen_per_s": 3.0,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 5355630,
+   "dir": [
+    -0.5,
+    -0.5,
+    -0.707106781
+   ],
+   "id": "mid_trap_r4",
+   "kind": "cold_trap",
+   "radius_m": 150.0,
+   "rate_per_s": 1.5,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 3670391,
+   "dir": [
+    -0.20783954,
+    -0.978162934,
+    0.0
+   ],
+   "id": "home_field_a_s5",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 5
+  },
+  {
+   "capacity": 6000,
+   "cell": 3670130,
+   "dir": [
+    -0.572347482,
+    -0.820011195,
+    0.0
+   ],
+   "id": "home_field_b_s5",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 5
+  },
+  {
+   "capacity": 2000,
+   "cell": 3465472,
+   "dir": [
+    -0.367425429,
+    -0.887043453,
+    -0.279557625
+   ],
+   "id": "home_trap_s5",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.8,
+   "slot": 5
+  },
+  {
+   "capacity": 10000,
+   "cell": 3693056,
+   "dir": [
+    0.0,
+    -0.999390827,
+    0.034899497
+   ],
+   "id": "contested_r5",
+   "kind": "ore_field",
+   "max_miners": 6,
+   "radius_m": 200.0,
+   "regen_per_s": 3.0,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 3146240,
+   "dir": [
+    0.0,
+    -0.707106781,
+    -0.707106781
+   ],
+   "id": "mid_trap_r5",
+   "kind": "cold_trap",
+   "radius_m": 150.0,
+   "rate_per_s": 1.5,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 3670903,
+   "dir": [
+    0.544700895,
+    -0.838630392,
+    0.0
+   ],
+   "id": "home_field_a_s6",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 6
+  },
+  {
+   "capacity": 6000,
+   "cell": 3670642,
+   "dir": [
+    0.175124691,
+    -0.984546262,
+    0.0
+   ],
+   "id": "home_field_b_s6",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 6
+  },
+  {
+   "capacity": 2000,
+   "cell": 3465984,
+   "dir": [
+    0.367425429,
+    -0.887043453,
+    -0.279557625
+   ],
+   "id": "home_trap_s6",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.8,
+   "slot": 6
+  },
+  {
+   "capacity": 10000,
+   "cell": 3703807,
+   "dir": [
+    0.706676031,
+    -0.706676031,
+    0.034899497
+   ],
+   "id": "contested_r6",
+   "kind": "ore_field",
+   "max_miners": 6,
+   "radius_m": 200.0,
+   "regen_per_s": 3.0,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 6177902,
+   "dir": [
+    0.5,
+    -0.5,
+    -0.707106781
+   ],
+   "id": "mid_trap_r6",
+   "kind": "cold_trap",
+   "radius_m": 150.0,
+   "rate_per_s": 1.5,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 524663,
+   "dir": [
+    0.978162934,
+    -0.20783954,
+    0.0
+   ],
+   "id": "home_field_a_s7",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 7
+  },
+  {
+   "capacity": 6000,
+   "cell": 524402,
+   "dir": [
+    0.820011195,
+    -0.572347482,
+    0.0
+   ],
+   "id": "home_field_b_s7",
+   "kind": "ore_field",
+   "max_miners": 4,
+   "radius_m": 150.0,
+   "regen_per_s": 2.0,
+   "slot": 7
+  },
+  {
+   "capacity": 2000,
+   "cell": 319744,
+   "dir": [
+    0.887043453,
+    -0.367425429,
+    -0.279557625
+   ],
+   "id": "home_trap_s7",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.8,
+   "slot": 7
+  },
+  {
+   "capacity": 10000,
+   "cell": 547328,
+   "dir": [
+    0.999390827,
+    0.0,
+    0.034899497
+   ],
+   "id": "contested_r7",
+   "kind": "ore_field",
+   "max_miners": 6,
+   "radius_m": 200.0,
+   "regen_per_s": 3.0,
+   "slot": -1
+  },
+  {
+   "capacity": 6000,
+   "cell": 512,
+   "dir": [
+    0.707106781,
+    0.0,
+    -0.707106781
+   ],
+   "id": "mid_trap_r7",
+   "kind": "cold_trap",
+   "radius_m": 150.0,
+   "rate_per_s": 1.5,
+   "slot": -1
+  },
+  {
+   "capacity": 5000,
+   "cell": 5811712,
+   "dir": [
+    0.066617295,
+    0.0,
+    -0.997778601
+   ],
+   "id": "midnight_n",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.75,
+   "slot": -1
+  },
+  {
+   "capacity": 5000,
+   "cell": 5767636,
+   "dir": [
+    0.0,
+    -0.066617295,
+    -0.997778601
+   ],
+   "id": "midnight_e",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.75,
+   "slot": -1
+  },
+  {
+   "capacity": 5000,
+   "cell": 5722624,
+   "dir": [
+    -0.066617295,
+    0.0,
+    -0.997778601
+   ],
+   "id": "midnight_s",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.75,
+   "slot": -1
+  },
+  {
+   "capacity": 5000,
+   "cell": 5767723,
+   "dir": [
+    0.0,
+    0.066617295,
+    -0.997778601
+   ],
+   "id": "midnight_w",
+   "kind": "cold_trap",
+   "radius_m": 100.0,
+   "rate_per_s": 0.75,
+   "slot": -1
+  }
+ ],
+ "rules_overrides": {},
+ "start_slots": [
+  {
+   "dir": [
+    0.923879533,
+    0.382683432,
+    0.0
+   ],
+   "facing_dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "slot": 0
+  },
+  {
+   "dir": [
+    0.382683432,
+    0.923879533,
+    0.0
+   ],
+   "facing_dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "slot": 1
+  },
+  {
+   "dir": [
+    -0.382683432,
+    0.923879533,
+    0.0
+   ],
+   "facing_dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "slot": 2
+  },
+  {
+   "dir": [
+    -0.923879533,
+    0.382683432,
+    0.0
+   ],
+   "facing_dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "slot": 3
+  },
+  {
+   "dir": [
+    -0.923879533,
+    -0.382683432,
+    0.0
+   ],
+   "facing_dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "slot": 4
+  },
+  {
+   "dir": [
+    -0.382683432,
+    -0.923879533,
+    0.0
+   ],
+   "facing_dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "slot": 5
+  },
+  {
+   "dir": [
+    0.382683432,
+    -0.923879533,
+    0.0
+   ],
+   "facing_dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "slot": 6
+  },
+  {
+   "dir": [
+    0.923879533,
+    -0.382683432,
+    0.0
+   ],
+   "facing_dir": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "slot": 7
+  }
+ ],
+ "unused_slot_yield": 0.5
+}

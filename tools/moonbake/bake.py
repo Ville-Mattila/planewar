@@ -162,8 +162,10 @@ def _r9(v) -> list:
 
 def cell_of(d: np.ndarray, n: int) -> int:
     f, u, v = sphere.dir_to_face_uv(np.asarray(d, dtype=np.float64))
-    i = min(int(math.floor(float(u) * n)), n - 1)
-    j = min(int(math.floor(float(v) * n)), n - 1)
+    # Round before the floor: a node exactly on a cell boundary (pole nodes on the axes) must not flip cell with
+    # 1-ulp libm differences between platforms (03 s8.6).
+    i = min(int(math.floor(round(float(u) * n, 6))), n - 1)
+    j = min(int(math.floor(round(float(v) * n, 6))), n - 1)
     return int(f) * n * n + j * n + i
 
 
