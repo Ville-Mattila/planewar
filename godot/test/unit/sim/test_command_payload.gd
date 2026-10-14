@@ -5,7 +5,7 @@ extends GdUnitTestSuite
 
 func test_order_round_trip_move_and_patrol() -> void:
 	var p: Vector3 = Vector3(6100.125, -3.5, 12.0625)
-	var cmd: Command = Command.order(2, PackedInt32Array([EntityId.make(7, 3), EntityId.make(1279, 4095)]),
+	var cmd: Command = Command.order(2, PackedInt32Array([EntityId.make(7, 3), EntityId.make(1279, EntityId.GEN_MAX)]),
 		OrderSpec.make(OrderSpec.Kind.MOVE, EntityId.make(9, 1), p, OrderSpec.FLAG_QUEUE))
 	assert_int(cmd.kind).is_equal(Command.Kind.ORDER)
 	assert_int(cmd.player).is_equal(2)
@@ -13,8 +13,8 @@ func test_order_round_trip_move_and_patrol() -> void:
 	var ids: PackedInt32Array = PackedInt32Array()
 	assert_bool(CommandPayload.read_order(cmd, spec, ids)).is_true()
 	assert_int(ids[0]).is_equal(EntityId.make(7, 3))
-	assert_int(ids[1] & 0xFFFFFFFF).is_equal(EntityId.make(1279, 4095))   # i32 storage wraps gen >= 2048
-	assert_int(EntityId.gen(ids[1])).is_equal(4095)
+	assert_int(ids[1]).is_equal(EntityId.make(1279, EntityId.GEN_MAX))   # bit 31 clear: i32 storage is exact (A-48)
+	assert_int(EntityId.gen(ids[1])).is_equal(EntityId.GEN_MAX)
 	assert_int(EntityId.slot(ids[1])).is_equal(1279)
 	assert_int(spec.kind).is_equal(OrderSpec.Kind.MOVE)
 	assert_int(spec.flags).is_equal(OrderSpec.FLAG_QUEUE)
