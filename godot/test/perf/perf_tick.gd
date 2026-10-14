@@ -84,9 +84,10 @@ func _run_sim(ticks: int, full: bool, flat: bool) -> void:
 			sum += v
 		print("PERF_ROW row=%s p50_ms=%.3f p95_ms=%.3f p99_ms=%.3f max_ms=%.3f mean_ms=%.3f" % [ROW_NAMES[r], a[ticks / 2],
 			a[int(float(ticks) * 0.95)], a[int(float(ticks) * 0.99)], a[ticks - 1], sum / float(ticks)])
-	var pl: Variant = pw.path_load
-	print("PERF_PATH units=%d requests=%d cache_hit=%.3f no_path=%d" % [pl.units, pl.requests,
-		float(pl.cache_hits) / maxf(1.0, float(pl.requests)), pl.no_path])
+	var pl: Variant = pw.get("path_load")                 # absent in an A/B base older than TA-50
+	if pl != null:
+		print("PERF_PATH units=%d requests=%d cache_hit=%.3f no_path=%d" % [pl.units, pl.requests,
+			float(pl.cache_hits) / maxf(1.0, float(pl.requests)), pl.no_path])
 	_print_tick(samples, total, ticks)
 
 
