@@ -6600,7 +6600,9 @@
       "R0-amendments-03 A-36",
       "04 s3.4"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#9"
   },
   {
     "id": "NET-49",
@@ -6619,6 +6621,8 @@
       "04 s4.1",
       "03 s4.2"
     ],
-    "status": "todo"
+    "status": "review",
+    "pr": "public#11",
+    "note": "bench 8 clients canonical: prepare ~2.8 ms + encode ~6.9 ms = ~9.7 ms vs 4.0 ms row; cache saves 0.3-2.3 %; A-40 over-budget branch -> PM-01 with S-SIM-1; next lever: per-client tier-C skip test; nightly bench needs nightly.yml"
   }
 ]
