@@ -1752,7 +1752,7 @@
       "TA-30"
     ],
     "milestone": "M2",
-    "acceptance": "Step response within 5 deg in <= 2.0 s, overshoot < 15 % at v_cruise, under both lift_model values",
+    "acceptance": "Step response within 5 deg in <= 2.0 s, overshoot < 15 % at v_cruise, under both lift_model values ; also SC-09 and SC-10 (moved from AI-07)",
     "docs": [
       "05 s5.2",
       " R0 C2-04",
@@ -1792,7 +1792,8 @@
       "05 s5.4",
       " 05 AI-07"
     ],
-    "status": "todo"
+    "status": "todo",
+    "note": "SC-09/SC-10 moved to AI-05 (need FlightController + Dart brain); combined probe() single pass ruled by orchestrator (05 s5.3 budget 6 samples/think)"
   },
   {
     "id": "AI-08",
