@@ -11,7 +11,7 @@ class_name SimWorld extends RefCounted
 const _MAPS_ROOT: String = "res://content/maps/"
 const _BUDGET_RUNGS_MAX: int = 8   ## rung 7 (native twins) is code, not a profile entry; 8 is A-55
 
-var rng: Rng = Rng.new(0)              ## S7: the only RNG of the match; systems and the AI hook use forks
+var rng: Rng = Rng.new(0)              ## S7: the only RNG of the match; no forks exist yet
 var spatial: Spatial = null            ## read-only outside the sim lane: step 7's hash (tests, Combat, Vision)
 var collision: Collision = null        ## read-only outside the sim lane: step 8's Contact records
 var vision: Vision = null              ## read-only outside the sim lane: step 11 (TA-37); net reads interest_*()

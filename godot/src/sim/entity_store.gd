@@ -41,6 +41,8 @@ const _STATE: PackedStringArray = ["generation", "def_id", "kind", "flags", "own
 	"cargo_kind", "link", "timer_a", "timer_b", "ai_tag", "overlay", "visible_mask", "dirty", "anchor_cell", "ships",
 	"ground", "structures", "wrecks", "_free_n", "_q_head", "_q_n", "_q_last", "_free", "_q_slot", "_q_tick"]
 
+const _SLOT_ARRAYS: int = 38   ## the first 38 names of _STATE are the per-slot arrays
+
 var generation: PackedInt32Array
 var def_id: PackedInt32Array
 var kind: PackedByteArray
@@ -231,7 +233,54 @@ func write_state(buf: StreamPeerBuffer) -> void:
 
 ## Replaces the whole store from `write_state` bytes; false (store unusable) on a type or size mismatch.
 func read_state(buf: StreamPeerBuffer) -> bool:
-	return StateIO.get_props(buf, self, _STATE) and generation.size() == SLOT_COUNT and anchor_cell.size() == SLOT_COUNT 		and _free.size() == SLOT_COUNT - 1
+	return StateIO.get_props(buf, self, _STATE) and _state_ok()
+
+
+# Range checks of a restored store: every array its size, ring counters inside their range, free and quarantined slots
+# inside the range, live lists ascending and consistent with kind / flags, owner / team / possessor valid.
+func _state_ok() -> bool:
+	if not StateIO.sizes_ok(self, _STATE.slice(0, _SLOT_ARRAYS), SLOT_COUNT):
+		return false
+	if _free.size() != SLOT_COUNT - 1 or _q_slot.size() != SLOT_COUNT - 1 or _q_tick.size() != SLOT_COUNT - 1:
+		return false
+	for v: PackedInt32Array in [_free_n, _q_head, _q_n, _q_last]:
+		if v.size() != 2:
+			return false
+	for r: int in 2:
+		if not _ring_ok(r):
+			return false
+	if not (_list_ok(ships, K_SHIP) and _list_ok(ground, K_GROUND) and _list_ok(structures, K_STRUCTURE) and _list_ok(wrecks, K_WRECK)):
+		return false
+	for s: int in SLOT_COUNT:
+		for b: int in [owner[s], team[s], possessor[s]]:
+			if b != NONE_U8 and b > PlayerTable.SLOTS:
+				return false
+	return true
+
+
+func _ring_ok(r: int) -> bool:
+	var c: int = _cap[r]
+	if _free_n[r] < 0 or _q_n[r] < 0 or _free_n[r] + _q_n[r] > c or _q_head[r] < 0 or _q_head[r] >= c:
+		return false
+	var lo: int = _first[r]
+	for i: int in _free_n[r]:
+		var s: int = _free[_base[r] + i]
+		if s < lo or s >= lo + c:
+			return false
+	for i: int in _q_n[r]:
+		var q: int = _q_slot[_base[r] + (_q_head[r] + i) % c]
+		if q < lo or q >= lo + c:
+			return false
+	return true
+
+
+func _list_ok(list: PackedInt32Array, k: int) -> bool:
+	var prev: int = 0
+	for s: int in list:
+		if s <= prev or s >= SLOT_COUNT or (flags[s] & F_ALIVE) == 0 or kind[s] != k:
+			return false
+		prev = s
+	return true
 
 
 func _clear_tail(s: int) -> void:

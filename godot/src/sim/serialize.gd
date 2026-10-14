@@ -1,6 +1,6 @@
 class_name SimSerialize
 ## The byte form of a whole `SimWorld` (S4; 01 ADR-10; R0 C2-07, C2-25): `SimWorld.serialize()` / `deserialize()` call
-## `write` / `read`. File: magic u32, format u32, raw size u32, then the raw body zstd-compressed (the packed arrays are
+## `write` / `read`. File: magic u32, format u32, raw size u32, SHA-256 of the raw body (32 B), then the raw body zstd-compressed (the packed arrays are
 ## mostly zeros; ~600 KB raw is ~185 KB at 1,200 entities and 2,000 projectiles). Raw body, in this order (names in
 ## `SECTIONS`): header (seed, RNG, map), rules, clock,
 ## players, input slots, rate buckets, pending commands, control, entity store, projectile store, Collision's per-slot
@@ -11,10 +11,13 @@ class_name SimSerialize
 ## same build on the same machine (ADR-03/06): the bytes are a function of the state alone.
 
 const MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const FORMAT: int = 5           ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, header length, compact stores
-const HEADER_BYTES: int = 12    ## magic, format, raw size, all u32; everything after is format-specific
+const FORMAT: int = 6           ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header
+const HASH_BYTES: int = 32
+const HEADER_BYTES: int = 12 + HASH_BYTES   ## magic, format, raw size (u32 each), SHA-256 of the raw body
 const COMPRESSION: int = FileAccess.COMPRESSION_ZSTD
 const MAX_RAW_BYTES: int = 64 << 20   ## a header claiming more is refused before anything is allocated
+const MAX_TICK_HZ: int = 1000
+const MAX_RATIO: int = 256            ## ... as is one claiming more than this many times the compressed size
 const SECTIONS: PackedStringArray = ["header", "rules", "clock", "players", "inputs", "rate_buckets", "pending_commands",
 	"control", "entities", "projectiles", "collision", "combat", "orders", "pathing", "vision", "hook"]
 const _RULES_STATE: PackedStringArray = ["mode", "caps_profile", "sim_budget_profile", "core_exposure_s", "hard_end_s",
@@ -49,6 +52,7 @@ static func pack(raw: PackedByteArray) -> PackedByteArray:
 	head.put_u32(MAGIC)
 	head.put_u32(FORMAT)
 	head.put_u32(raw.size())
+	var _e: int = head.put_data(_hash(raw))
 	var out: PackedByteArray = head.data_array
 	out.append_array(raw.compress(COMPRESSION))
 	return out
@@ -59,10 +63,20 @@ static func unpack(bytes: PackedByteArray) -> PackedByteArray:
 	if check(bytes) != Status.OK:
 		return PackedByteArray()
 	var n: int = bytes.decode_u32(8)
-	if n <= 0 or n > MAX_RAW_BYTES or bytes.size() <= HEADER_BYTES:
+	var packed: int = bytes.size() - HEADER_BYTES
+	if n <= 0 or n > MAX_RAW_BYTES or packed <= 0 or n > packed * MAX_RATIO:
 		return PackedByteArray()
 	var raw: PackedByteArray = bytes.slice(HEADER_BYTES).decompress(n, COMPRESSION)
-	return raw if raw.size() == n else PackedByteArray()
+	if raw.size() != n or _hash(raw) != bytes.slice(12, HEADER_BYTES):
+		return PackedByteArray()
+	return raw
+
+
+static func _hash(raw: PackedByteArray) -> PackedByteArray:
+	var ctx: HashingContext = HashingContext.new()
+	var _e: int = ctx.start(HashingContext.HASH_SHA256)
+	_e = ctx.update(raw)
+	return ctx.finish()
 
 
 ## The uncompressed body of `w`. `marks` (optional, `SECTIONS.size()` entries) receives the size after each section.
@@ -136,28 +150,38 @@ static func read(bytes: PackedByteArray, content: ContentSet, hook: SimAiHook) -
 	rules.adopt_match_def(content.match_rules)
 	if not StateIO.get_props(buf, rules, _RULES_STATE) or not StateIO.get_props(buf, rules.caps, _CAPS_STATE):
 		return null
+	if rules.tick_hz < 1 or rules.tick_hz > MAX_TICK_HZ or rules.caps.units < 0 or rules.caps.structures < 0 			or rules.caps.projectiles < 0 or rules.caps.wrecks < 0 or rules.caps.slots < 0:
+		return null
 	var map: MapDef = MapDef.new()
 	map.id = StringName(str(map_v))
 	if not w.load_map(map, seed_v, rules).ok or not _read_body(w, buf):
 		return null
 	var rng_b: PackedByteArray = rng_v
-	w.rng = Rng.from_state(rng_b)
-	if not _read_hook(w, buf, hook):
+	var hv: Variant = buf.get_var()
+	if typeof(hv) != TYPE_PACKED_BYTE_ARRAY or buf.get_available_bytes() != 0 or not _indices_ok(w):
 		return null
+	w.rng = Rng.from_state(rng_b)
+	w._hook = hook
+	if hook != null:
+		var hook_b: PackedByteArray = hv
+		hook.deserialize(hook_b)          # last: every check above has passed
 	w.spatial.rebuild()
 	w.vision.rebuild_lists()
 	return w
 
 
-static func _read_hook(w: SimWorld, buf: StreamPeerBuffer, hook: SimAiHook) -> bool:
-	w._hook = hook
-	var hv: Variant = buf.get_var()
-	if typeof(hv) != TYPE_PACKED_BYTE_ARRAY:
-		return false
-	var hook_b: PackedByteArray = hv
-	if hook != null:
-		hook.deserialize(hook_b)
-	return buf.get_available_bytes() == 0
+# Indices the tick uses to address defs and tables, for every live slot and projectile.
+static func _indices_ok(w: SimWorld) -> bool:
+	var st: EntityStore = w._store
+	for list: PackedInt32Array in [st.ships, st.ground, st.structures, st.wrecks]:
+		for s: int in list:
+			if st.def_id[s] < 0 or st.def_id[s] >= DefRanges.WEAPON_BASE:
+				return false
+	var ps: ProjectileStore = w._proj
+	for i: int in ps.live:
+		if ps.projectile_def[i] >= w._defs.projectile_radius.size() or ps.weapon_def[i] >= w._defs.turn_rad_per_s.size():
+			return false
+	return w.vision.last_pass.size() == Vision.TEAMS
 
 
 static func _read_body(w: SimWorld, buf: StreamPeerBuffer) -> bool:
