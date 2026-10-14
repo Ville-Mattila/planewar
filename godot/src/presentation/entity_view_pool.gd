@@ -5,7 +5,7 @@ extends Node3D
 ## `sync(view, render_time)` draws every entity the viewer team sees: the nearest `view_cap` within their `_Far`
 ## switch distance get a pooled mesh node (nearest first, hysteresis-free: re-ranked per tick), the rest draw as
 ## `_Far` meshes through `FarPools`, and anything past the icon band as an `IconPool` glyph (~8 draws in total).
-## SimView is read once per sim tick (ids, pos, basis); between ticks the pool interpolates the last two ticks
+## SimView is read once per sim tick (ids, then one `SimView.read_poses` bulk call, R0 B.11 A-56); between ticks the pool interpolates the last two ticks
 ## with `render_time` (offline: LocalSimView; online: the same call over NetSimView, R0 C1-01). The possessed
 ## unit is driven by `set_local_override` every `_process` frame instead (R0 C1-07).
 ##
@@ -37,6 +37,8 @@ var _materials: UnitMaterialCache = null
 var _views: Array[EntityView] = []
 var _free: PackedInt32Array = PackedInt32Array()
 var _ids: PackedInt32Array = PackedInt32Array()
+var _pose_pos: PackedVector3Array = PackedVector3Array()   ## SimView.read_poses scratch, sized with _d2 (no per-frame allocation)
+var _pose_rot: PackedVector4Array = PackedVector4Array()
 var _last_tick: int = -1
 var _frame: int = 0
 var _ov_id: int = EntityId.NULL_ID
@@ -225,6 +227,10 @@ func _read_tick(view: SimView, tick: int) -> void:
 	if _d2.size() < n:
 		var _r13: int = _d2.resize(n + (n >> 1) + 16)
 		var _r14: int = _mode.resize(_d2.size())
+	if _pose_pos.size() < n:
+		var _r15: int = _pose_pos.resize(_d2.size())
+		var _r16: int = _pose_rot.resize(_d2.size())
+	var _alive: int = view.read_poses(_ids, _pose_pos, _pose_rot)
 	for i: int in n:
 		var id: int = _ids[i]
 		var s: int = EntityId.slot(id)
@@ -233,8 +239,9 @@ func _read_tick(view: SimView, tick: int) -> void:
 			_adopt(view, id, s)
 		elif (s + tick) % STATE_REFRESH_TICKS == 0:
 			_refresh_state(view, id, s)
-		var p: Vector3 = view.pos(id)
-		var q: Quaternion = view.basis(id).get_rotation_quaternion()
+		var p: Vector3 = _pose_pos[i]
+		var rv: Vector4 = _pose_rot[i]
+		var q: Quaternion = Quaternion(rv.x, rv.y, rv.z, rv.w)
 		_s_prev[s] = p if fresh else _s_cur[s]
 		_s_cur[s] = p
 		_s_pq[s] = q if fresh else _s_cq[s]

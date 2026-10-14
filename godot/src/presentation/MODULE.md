@@ -255,11 +255,11 @@ Consumes drained `SimEvent`s through `VfxRouter.drain`. Emits nothing.
 
 ## Performance budget
 
-Entity sync 2.4 ms at 800 views PC-mid, 0.8 ms on 200 + far pools (03 s10.2); pools 1.0 ms. Measured with `scenes/presentation/entities/entity_demo.tscn` (TA-26, dev laptop with the planet drawn): 800 views sync p50 1.1 ms between ticks, **p95 7.7 ms on tick frames** (the once-per-tick `SimView` read through per-id `pos` / `basis`). The row does not move; TA-52 switches `sync` to `SimView.read_poses` (R0 B.11 A-56, TA-51) and re-measures; the next lever is staggering the tick read across two frames.
+Entity sync 2.4 ms at 800 views PC-mid, 0.8 ms on 200 + far pools (03 s10.2); pools 1.0 ms. Measured with `scenes/presentation/entities/entity_demo.tscn` (TA-26, dev laptop with the planet drawn): 800 views sync p50 1.1 ms between ticks, **p95 7.7 ms on tick frames** (the once-per-tick `SimView` read through per-id `pos` / `basis`). TA-52: `sync` now reads poses through `SimView.read_poses` (R0 B.11 A-56, scratch arrays preallocated); same-session re-measure (windowed, 800 views, planet drawn, dev laptop, 3 runs each, machine load varied between runs): before p50 0.97-1.13 ms, p95 3.15-3.38 ms; after p50 1.12-1.62 ms, p95 2.91-3.42 ms, i.e. no measurable change (the per-id calls were not the dominant cost; the 3 ms is the per-view transform writes and slerp on the tick frame). Row still unmet at p95 on this laptop: follow-up to stagger the tick read across two frames. The next lever is staggering the tick read across two frames.
 
 ## Open items
 
-- A-56: `sync` reads poses per id; `SimView.read_poses(ids, pos, rot)` (sim, TA-51) replaces the two calls per view, TA-52 consumes it.
+- A-56: done in TA-52 (`sync` reads `SimView.read_poses`).
 - A-58 / HUM-06: `instance uniform` on Adreno / WebGL2 unmeasured; `UnitMaterialCache` is the chosen fallback (07 s4.3), `unit_lit_instanced.gdshader` kept for a v1.x switch. `ml_encode` cost on Android-mid: `planet/MODULE.md` Open items.
 - `vfx_prewarm.json` is not created yet (07); `VfxPrewarm.load_list` falls back to `VfxCatalog`. Real meshes: ART-04 / ART-05; effect looks: ART-13.
 

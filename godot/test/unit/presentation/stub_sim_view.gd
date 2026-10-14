@@ -66,3 +66,14 @@ func hp01(id: int) -> float:
 
 func radius(id: int) -> float:
 	return radii.get(id, 0.0)
+
+
+func read_poses(pids: PackedInt32Array, out_pos: PackedVector3Array, out_rot: PackedVector4Array) -> int:
+	var alive_n: int = 0
+	for i: int in pids.size():
+		var q: Quaternion = basis(pids[i]).get_rotation_quaternion()
+		out_pos[i] = pos(pids[i])
+		out_rot[i] = Vector4(q.x, q.y, q.z, q.w)
+		if positions.has(pids[i]):
+			alive_n += 1
+	return alive_n

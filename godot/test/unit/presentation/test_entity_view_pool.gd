@@ -292,6 +292,42 @@ func test_config_reads_the_tier_row() -> void:
 	assert_int(_tier("high").trail_segments).is_equal(1024)
 
 
+## TA-52 (R0 B.11 A-56): the bulk read gives the same poses as the per-id pos() / basis() the pool used before.
+func test_read_poses_matches_per_id_pos_and_basis() -> void:
+	var w: SimWorld = WorldTestKit.world(11)
+	var ids: PackedInt32Array = PackedInt32Array()
+	for k: int in 6:
+		var d: int = WorldTestKit.spawn(w, &"dart", 0, 0, WorldTestKit.at(300.0, 40.0 * float(k)), Vector3(0.0, 90.0, 30.0 * float(k)))
+		var _a: bool = ids.push_back(d)
+	for _t: int in 5:
+		w.step()
+	var sv: SimView = w.view()
+	var pos: PackedVector3Array = PackedVector3Array()
+	var rot: PackedVector4Array = PackedVector4Array()
+	var _r1: int = pos.resize(ids.size())
+	var _r2: int = rot.resize(ids.size())
+	assert_int(sv.read_poses(ids, pos, rot)).is_equal(ids.size())
+	for i: int in ids.size():
+		var q: Quaternion = sv.basis(ids[i]).get_rotation_quaternion()
+		assert_vector(pos[i]).is_equal(sv.pos(ids[i]))
+		assert_float(absf(q.dot(Quaternion(rot[i].x, rot[i].y, rot[i].z, rot[i].w)))).is_equal_approx(1.0, 1.0e-5)
+
+
+## The pool places a view from the bulk read and keeps its scratch arrays across ticks (no resize at a steady n).
+func test_sync_uses_bulk_poses_with_stable_scratch() -> void:
+	var pool: EntityViewPool = _pool(_cfg(50))
+	var v: StubSimView = StubSimView.new()
+	_fill(v, 20, NEAR_M)
+	pool.sync(v, 0.0)
+	var id: int = v.ids[3]
+	assert_vector(pool.view_for(id).position).is_equal_approx(v.pos(id), Vector3(1.0e-3, 1.0e-3, 1.0e-3))
+	var cap: int = pool._pose_pos.size()
+	v.advance()
+	pool.sync(v, 1.0 / pool.tick_hz)
+	assert_int(pool._pose_pos.size()).is_equal(cap)
+	assert_int(pool._pose_rot.size()).is_equal(cap)
+
+
 func _mean(a: PackedFloat64Array) -> float:
 	var s: float = 0.0
 	for x: float in a:
