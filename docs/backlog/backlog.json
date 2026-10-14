@@ -6758,7 +6758,8 @@
       "R0-amendments-04 A-56",
       "03 s10.2"
     ],
-    "status": "todo"
+    "status": "todo",
+    "note": "read_poses wired; no measurable gain on dev laptop (p95 2.9-3.4 ms vs 2.4); follow-up TA-55"
   },
   {
     "id": "TA-53",
@@ -6817,5 +6818,22 @@
     "status": "done",
     "merged": "2026-10-14",
     "pr": "public#28"
+  },
+  {
+    "id": "TA-55",
+    "title": "presentation: stagger EntityViewPool tick-frame pose read across two frames (800-view sync p95 3.0-3.4 ms vs 2.4 ms row after TA-52)",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-52"
+    ],
+    "milestone": "M2",
+    "acceptance": "800-view sync p95 <= 2.4 ms on the pinned runner (TA-42); pose output identical once settled; no per-frame allocation",
+    "docs": [
+      "03 s4.2",
+      "R0 B.11 A-56"
+    ],
+    "status": "todo"
   }
 ]
