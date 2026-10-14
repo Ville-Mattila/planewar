@@ -114,6 +114,7 @@ const SHADER_PATH: String; const RAMP_PATH: String; const MAX_SITES: int; const 
 static func base_material() -> ShaderMaterial                      # ramp + 1 x 1 mare biome array (no map)
 static func make_material(terrain: Terrain, cfg: PlanetTierConfig) -> ShaderMaterial
 static func measure_material() -> ShaderMaterial                   # mare mid, no detail: measurement plates
+static func biome_images(terrain: Terrain) -> Array[Image]
 static func biome_array(terrain: Terrain) -> Texture2DArray
 static func flat_biome_array(id: int) -> Texture2DArray
 static func set_sites(m: ShaderMaterial, sites: PackedVector4Array) -> void

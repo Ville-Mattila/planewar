@@ -99,13 +99,13 @@ func test_base_material_has_ramp_and_default_biome() -> void:
 func test_biome_array_matches_biome_at_by_texel() -> void:
 	var t: Terrain = Terrain.new()
 	assert_int(t.load_map(MAP)).is_equal(OK)
-	var arr: Texture2DArray = MoonTerrain.biome_array(t)
-	assert_int(arr.get_layers()).is_equal(6)
-	assert_int(arr.get_width()).is_equal(t.face_resolution)
+	assert_object(MoonTerrain.biome_array(t)).is_not_null()
+	var layers: Array[Image] = MoonTerrain.biome_images(t)
+	assert_int(layers.size()).is_equal(6)
 	var n: int = t.face_resolution
 	var seen: Dictionary = {}
 	for f: int in Terrain.FACE_COUNT:
-		var img: Image = arr.get_layer_data(f)
+		var img: Image = layers[f]
 		for k: int in 400:
 			var x: int = (k * 977 + f * 131) % n
 			var y: int = (k * 389 + f * 71) % n

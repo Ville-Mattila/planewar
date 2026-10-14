@@ -42,14 +42,19 @@ static func measure_material() -> ShaderMaterial:
 	return m
 
 
-## The six baked biome faces as an R8 array layer per cube face (layer = face).
-static func biome_array(terrain: Terrain) -> Texture2DArray:
+## The six baked biome faces as R8 images, one per cube face (layer = face).
+static func biome_images(terrain: Terrain) -> Array[Image]:
 	var n: int = terrain.face_resolution
 	var layers: Array[Image] = []
 	for f: int in Terrain.FACE_COUNT:
 		layers.append(Image.create_from_data(n, n, false, Image.FORMAT_R8, terrain.biome_face(f)))
+	return layers
+
+
+## `biome_images` uploaded as one Texture2DArray (one GPU upload at setup).
+static func biome_array(terrain: Terrain) -> Texture2DArray:
 	var t: Texture2DArray = Texture2DArray.new()
-	var _e: Error = t.create_from_images(layers)
+	var _e: Error = t.create_from_images(biome_images(terrain))
 	return t
 
 
