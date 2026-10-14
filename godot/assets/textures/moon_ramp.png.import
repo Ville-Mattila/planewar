@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dmbcua24jr5c8"
-valid=false
+path="res://.godot/imported/moon_ramp.png-443676331544d0251d490cb25b42e009.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/textures/moon_ramp.png"
+dest_files=["res://.godot/imported/moon_ramp.png-443676331544d0251d490cb25b42e009.ctex"]
 
 [params]
 
