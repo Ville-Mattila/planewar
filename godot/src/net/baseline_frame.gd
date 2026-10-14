@@ -12,7 +12,7 @@ const ORI_UNKNOWN: int = -1
 
 var tick: int = 0                           # 0 = unused
 var base_tick: int = 0                      # the baseline this frame was decoded against
-var usable: bool = false                    # server: may serve as a delta baseline (single-packet tick)
+var usable: bool = false                    # server: may serve as a delta baseline once acked (every emitted frame)
 var present: PackedByteArray = PackedByteArray()
 var pos: PackedInt64Array = PackedInt64Array()
 var ori: PackedInt64Array = PackedInt64Array()     # quat_s3 u32

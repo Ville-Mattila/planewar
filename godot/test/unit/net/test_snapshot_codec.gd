@@ -84,6 +84,7 @@ func test_worked_example_53_bytes_reproduced_and_decoded() -> void:
 	for q: int in [0x714C2F9A, 0x3E87C012]:
 		assert_int(Codec.quantize_quat(Codec.dequantize_quat(q))).is_equal(q)
 	var codec: SnapshotCodec = SnapshotCodec.new(G, HZ)
+	assert_int(codec.max_packets).is_equal(SnapshotCodec.MAX_PACKETS_PER_TICK)   # A-36 default 4
 	var store: BaselineStore = BaselineStore.new(0)
 	var dec: SnapshotDecoder = SnapshotDecoder.new(G, HZ, 0, _roster())
 	var out: Array[PackedByteArray] = []
@@ -91,11 +92,12 @@ func test_worked_example_53_bytes_reproduced_and_decoded() -> void:
 	assert_int(codec.encode(store, T0, PackedInt32Array([17, 23]), PackedInt32Array([41]), PackedInt32Array(), null, out)).is_equal(1)
 	assert_int(out[0].size()).is_equal(10 + 1 + 20 + 19 + 1 + 20)       # FULL records, own team +1 ai_tag
 	assert_int(dec.decode(out[0])).is_equal(SnapshotDecoder.Status.OK)
-	store.ack(dec.store.newest_tick)
+	store.ack(dec.store.complete_tick)
 	out.clear()
 	codec.prepare_tick(_example_frame(T1))
 	assert_int(codec.encode(store, T1, PackedInt32Array([17, 23]), PackedInt32Array([41]), PackedInt32Array(), _example_pilot(), out)).is_equal(1)
 	assert_int(out[0].size()).is_equal(53)
+	assert_int(out[0][9]).is_equal(0x2B)                                 # index 0 + LAST (A-36): byte unchanged
 	assert_array(Array(out[0])).is_equal(Array(_hex(EXAMPLE)))
 	assert_int(dec.decode(out[0])).is_equal(SnapshotDecoder.Status.OK)
 	assert_bool(dec.current().same_state(store.frame_at(T1))).is_true()

@@ -37,7 +37,7 @@ func _init() -> void:
 			if t >= WARMUP:
 				bytes += p.size()
 		var t3: int = Time.get_ticks_usec()
-		var _p: bool = acks.push_back(dec.store.newest_tick)
+		var _p: bool = acks.push_back(dec.store.complete_tick)
 		if acks.size() > 3:
 			store.ack(acks[acks.size() - 4])
 		if t >= WARMUP:

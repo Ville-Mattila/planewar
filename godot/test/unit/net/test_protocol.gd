@@ -227,6 +227,7 @@ func test_flag_bits_match_team_state_view_and_04() -> void:
 		Protocol.TEAM_SPEND_LOCK_ACTIVE]).is_equal([1, 2, 4, 8])
 	assert_array([Protocol.SNAP_HAS_A, Protocol.SNAP_HAS_B, Protocol.SNAP_HAS_C, Protocol.SNAP_HAS_PILOT,
 		Protocol.SNAP_CONTINUED, Protocol.SNAP_LAST]).is_equal([1, 2, 4, 8, 16, 32])
+	assert_int(Protocol.SNAP_INDEX_SHIFT).is_equal(6)                      # bits 6-7: packet index (A-36)
 	# 04 s3.5 worked example: flags 0x2B = HAS_A | HAS_B | HAS_PILOT | LAST.
 	assert_int(Protocol.SNAP_HAS_A | Protocol.SNAP_HAS_B | Protocol.SNAP_HAS_PILOT | Protocol.SNAP_LAST).is_equal(0x2B)
 	assert_int(Protocol.PROJ_HAS_FUSE).is_equal(0x80)
