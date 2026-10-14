@@ -14,7 +14,7 @@ class_name Vision extends RefCounted
 
 const TEAMS: int = InterestGrid.TEAMS
 const VISION_HZ: int = 10          ## 03 s3.7 base rate; documented default until rules.json carries it (needs content)
-const RUNG_2_VISION_HZ: int = 5    ## rules.cut_ladder.rung_2_vision_hz (R0 B.11 A-51) until TA-49 reads the def
+const RUNG_2_VISION_HZ: int = 5    ## default of rules.cut_ladder.rung_2_vision_hz (R0 B.11 A-51); `rung_2_hz` reads the def
 const RUNG_VISION: int = 2         ## the cut-ladder rung that lowers the rate (03 s4.3)
 const OWNERS: int = WorldDefs.NEUTRAL + 1
 const DEF_N: int = DefRanges.WEAPON_BASE   ## entity def_ids are below the weapon range
@@ -32,10 +32,13 @@ var _store: EntityStore
 var _seen: PackedInt32Array = PackedInt32Array()
 
 
-## `ticks_per_s` = MatchRules.tick_hz; every owner row starts from `defs.resolved(owner)`.
+## `ticks_per_s` = MatchRules.tick_hz; `rung_2_hz` = rules.cut_ladder.rung_2_vision_hz; every owner row starts
+## from `defs.resolved(owner)`.
 func _init(store: EntityStore, defs: WorldDefs, ticks_per_s: int) -> void:
 	_store = store
 	tick_hz = ticks_per_s
+	if defs.rules != null and defs.rules.rung_2_vision_hz > 0:
+		rung_2_hz = defs.rules.rung_2_vision_hz
 	var e: int = _seen.resize(EntityStore.SLOT_COUNT) | last_pass.resize(TEAMS)
 	e |= sensor_r.resize(OWNERS * DEF_N) | reveal_r.resize(OWNERS * DEF_N)
 	assert(e == OK)

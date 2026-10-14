@@ -22,11 +22,11 @@ to "Public API" or "Invariants" is a contract change: contract tests first, same
 ```gdscript
 class_name Vision extends RefCounted                                         # step 11; the rule of 03 s3.7, exact (V1)
 const TEAMS: int; const OWNERS: int; const DEF_N: int                        # 8 teams; owner rows 0..7 + WorldDefs.NEUTRAL; def_id < 1024
-const VISION_HZ: int; const RUNG_2_VISION_HZ: int; const RUNG_VISION: int    # 10 Hz, 5 Hz, rung 2 (defaults until the defs carry them, Open items)
+const VISION_HZ: int; const RUNG_2_VISION_HZ: int; const RUNG_VISION: int    # 10 Hz (no def yet, Open items), 5 Hz default of the def, rung 2
 var grid: InterestGrid; var groups: SensorGroups; var tick_hz: int; var hz: int; var rung_2_hz: int
 var last_pass: PackedInt32Array                                              # per team: tick of its last pass, -1 before the first (not S4 state)
 var sensor_r: PackedFloat32Array; var reveal_r: PackedFloat32Array          # [owner * DEF_N + def_id]: sensor_radius / deck_reveal_radius, 0 = none
-func _init(store: EntityStore, defs: WorldDefs, ticks_per_s: int) -> void    # every owner row from defs.resolved(owner)
+func _init(store: EntityStore, defs: WorldDefs, ticks_per_s: int) -> void    # rung_2_hz = rules.rung_2_vision_hz; owner rows from defs.resolved(owner)
 func bind(owner: int, r: ResolvedDefs) -> void                               # owner row from a doctrine resolve; grows the near table to the max reach
 func period(rungs: PackedInt32Array) -> int;  func runs(team: int, tick: int, rungs: PackedInt32Array) -> bool   # V3; rungs = MatchRules.sim_budget_profile
 func step(tick: int, rungs: PackedInt32Array) -> void                        # index once, then the passes of the teams scheduled on `tick`
@@ -74,7 +74,8 @@ After `SimWorld.deserialize` the lists are rebuilt from the mask with current ce
   row(e) = min(owner, NEUTRAL) * DEF_N + def_id. The pruning never changes a result (test_vision.gd brute force).
 - V2: only defs with `deck_reveal_radius > 0` (Sensor Mast; the captured Relay Station) reveal through the datum, out to
   that radius (01 s6.2); every other sensor needs an unoccluded segment (A-10 endpoint semantics, below-datum units included).
-- V3: period = floor(tick_hz / hz), or floor(tick_hz / rung_2_hz) while `sim_budget_profile` contains 2; team t passes on
+- V3: period = floor(tick_hz / hz), or floor(tick_hz / rung_2_hz) (`rules.cut_ladder.rung_2_vision_hz`) while
+  `sim_budget_profile` contains 2; team t passes on
   exactly the ticks with tick % period == t % period, so once per period and at most ceil(8 / period) teams per tick. A
   target entering range carries the bit within one period.
 - V4: after t's pass every live entity of team t carries bit t; wrecks never sense; neutral entities (team byte >= 8) are
@@ -125,9 +126,8 @@ reveal, wrecks, neutrals, bit clearing, `sees` vs Sphere, random scenes vs brute
 
 ## Open items
 
-- needs content: a `rules.json` `vision_hz` (10) field; `cut_ladder.rung_2_vision_hz` (5) is in the JSON, `RulesDef` reads
-  it with TA-49. Until then `VISION_HZ` / `RUNG_2_VISION_HZ` are the documented defaults (A-43 pattern) and `hz` / `rung_2_hz`
-  the override points.
+- needs content: a `rules.json` `vision_hz` (10) field (03 s3.7's base rate has none); until then `VISION_HZ` is the
+  documented default (A-43 pattern) and `hz` the override point. `rung_2_hz` reads `cut_ladder.rung_2_vision_hz` (TA-49).
 - Rule questions for the designer (02 owner), implemented literally now: structures under construction (`F_BUILDING`) and
   unpowered structures sense like finished ones; every structure has a def sensor radius, so 03 s4.2's "~70 sensors per tick"
   is ~400 at S-SIM-1 scale (the measured row still fits).

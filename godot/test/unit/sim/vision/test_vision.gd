@@ -190,3 +190,6 @@ func test_bind_reads_resolved_sensor_and_reveal_radii() -> void:
 		assert_float(v.reveal_r[row + WorldTestKit.def_id(&"sensor_mast")]).is_equal(1200.0)
 		assert_float(v.reveal_r[row + WorldTestKit.def_id(&"core")]).is_equal(0.0)
 	assert_float(v.grid.reach_m).is_greater_equal(3500.0)
+	assert_int(v.rung_2_hz).is_equal(WorldTestKit.content().rules.rung_2_vision_hz)
+	assert_int(v.hz).is_equal(Vision.VISION_HZ)
+	assert_int(v.period(PackedInt32Array([1]))).is_equal(MathX.floori_div(WorldTestKit.content().rules.tick_hz, Vision.VISION_HZ))
