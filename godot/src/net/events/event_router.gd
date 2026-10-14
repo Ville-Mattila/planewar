@@ -157,7 +157,7 @@ func _source(e: SimEvent, aud: EventAudience, src: int) -> int:
 
 
 ## Roster index of `id` for `aud`, or 0xFFFF when the entity is not in its roster (stale generation included).
-## Unfiltered audiences get the slot whenever it fits the 1,280-entry index space.
+## Unfiltered audiences get the slot whenever it fits the 1,536-entry index space (wrecks included, A-54).
 static func ref_of(id: int, aud: EventAudience) -> int:
 	if id <= 0:
 		return EventCodec.NONE_REF

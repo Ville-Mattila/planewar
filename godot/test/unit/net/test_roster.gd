@@ -170,7 +170,7 @@ func test_remove_malformed() -> void:
 	var got: PackedInt32Array = PackedInt32Array()
 	assert_int(RosterCodec.decode_remove(PackedByteArray([Protocol.ROSTER_REMOVE, 1, 0, 0, 3]), dst, got)).is_equal(-1)   # reason 3
 	assert_int(RosterCodec.decode_remove(PackedByteArray([Protocol.ROSTER_REMOVE, 2, 0, 0, 0]), dst, got)).is_equal(-1)   # short
-	assert_int(RosterCodec.decode_remove(PackedByteArray([Protocol.ROSTER_REMOVE, 1, 0, 0x05, 0]), dst, got)).is_equal(-1)   # slot 1280
+	assert_int(RosterCodec.decode_remove(PackedByteArray([Protocol.ROSTER_REMOVE, 1, 0, 0x06, 0]), dst, got)).is_equal(-1)   # slot 1536
 	assert_int(dst.count()).is_equal(3)
 
 

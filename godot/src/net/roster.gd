@@ -3,7 +3,7 @@ class_name Roster extends RefCounted
 ## team, tag). The roster index IS the sim slot number (04 s3.1: indices reuse slots inside KEYFRAME and
 ## ENTITY_META). Built by KEYFRAME / ENTITY_META, pruned by ROSTER_REMOVE. Packed arrays only; no Nodes.
 
-const CAPACITY: int = 1280                  # 04 s3.1: ordered array of up to 1,280 entries
+const CAPACITY: int = 1536                  # 04 s3.1: one entry per EntityStore slot 0-1,535 (R0 B.11 A-54)
 const REASON_COUNT: int = 3                 # Protocol.RosterRemoveReason
 const NEVER: int = -1
 

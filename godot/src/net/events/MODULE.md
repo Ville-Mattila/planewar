@@ -117,7 +117,7 @@ re-send over a LocalTransport BAD preset). Helper: `godot/test/unit/net/event_ri
 
 ## Open items
 
-- Wreck slots (1,280-1,535, 03 s3.1) were outside the 1,280-entry `Roster`: decided by R0 B.11 A-54, the roster has **1,536** entries (04 s3.1 patched); `Roster.CAPACITY` and its tests change in NET-50, after which WRECK_SPAWNED / WRECK_SALVAGED and wreck refs reach filtered clients.
+- Closed (R0 B.11 A-54, NET-50): `Roster.CAPACITY` is 1,536, so wreck slots 1,280-1,535 have roster indices and WRECK_SPAWNED / WRECK_SALVAGED and wreck refs reach filtered clients (`godot/test/unit/net/test_roster_wrecks.gd`).
 - `needs sim:` confirm the `SimEvent` field convention above as combat, economy and docking emit their kinds (HIT, SERVICED, LANDING, STRUCTURE_LOST).
 - `needs server:` call `EventRouter.route` / `route_shots` after `drain_events()`, send `outbox` on CH_EVENTS reliable and `shot_out` on CH_SNAPSHOT unreliable, then `clear_out()`; fill `EventAudience.cells` from Interest (NET-08).
 - Client-side spawn of the presentation projectile from `ShotTracker` (Kinematics.step_projectile) is NET-17.
