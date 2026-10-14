@@ -1,4 +1,4 @@
-"""Validation M1-M11 (docs/07 s9.5, docs/03 s8.2). Static checks need only the recipe; baked checks need a Bake."""
+"""Validation M1-M12 (docs/07 s9.5, docs/03 s8.2). Static checks need only the recipe; baked checks need a Bake."""
 
 from __future__ import annotations
 
@@ -27,6 +27,7 @@ M6_SOUTH_HALF_ARC = 45.0
 M6_CONTEST_FRAC = 0.05
 M7_SPACING_M = 150.0
 M10_MAX_BYTES = 4 * 1024 * 1024
+M12_MAX_STEP_M = 200.0  # largest height difference between two edge-adjacent texels (cliff/pillar guard)
 
 
 @dataclass
@@ -267,6 +268,21 @@ def m10_size(b: Bake, files: dict[str, bytes]) -> Result:
     return Result("M10", total <= M10_MAX_BYTES, msg + ("" if total <= M10_MAX_BYTES else " exceeds 4 MB"))
 
 
+def m12_texel_step(b: Bake) -> Result:
+    """Largest height difference between edge-adjacent texels of any face. A single-texel cliff reads as a pillar
+    at chase height and a spike from orbit (TA-15: craters stamped inside maria were mesas)."""
+    worst, where = 0.0, ""
+    for f in range(6):
+        h = b.height_m(f)
+        for axis, name in ((0, "y"), (1, "x")):
+            d = np.abs(np.diff(h, axis=axis))
+            i = np.unravel_index(int(np.argmax(d)), d.shape)
+            if d[i] > worst:
+                worst, where = float(d[i]), f"face {f} texel ({i[1]}, {i[0]}) along {name}"
+    ok = worst <= M12_MAX_STEP_M
+    return Result("M12", ok, f"max single-texel step {worst:.1f} m at {where}" + ("" if ok else f" exceeds {M12_MAX_STEP_M:g} m"))
+
+
 # region M8 ground connectivity
 def path_adjacency(g: int = GRID_PATH) -> np.ndarray:
     """(8, 6 g g) neighbour ids over the path grid: 4 orthogonal steps (across cube edges through the mapping)
@@ -352,5 +368,5 @@ def m8_connectivity(b: Bake) -> Result:
 def validate_baked(b: Bake, files: dict[str, bytes]) -> list[Result]:
     s = Sampler(b)
     return [m1_relief(b), m2_slots(b, s), m3_ore(b, s), m4_depth(b, s), m5_symmetry(b, s), m8_connectivity(b),
-            m9_biomes(b), m10_size(b, files)]
+            m9_biomes(b), m10_size(b, files), m12_texel_step(b)]
 # endregion

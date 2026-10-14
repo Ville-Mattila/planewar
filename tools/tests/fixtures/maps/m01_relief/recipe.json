@@ -3,7 +3,7 @@
   "id": "tiny_test",
   "seed": 20260,
   "radius_m": 6000,
-  "face_resolution": 128,
+  "face_resolution": 1024,
   "relief": {
     "min_m": -500,
     "max_m": 700

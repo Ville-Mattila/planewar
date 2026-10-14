@@ -1,4 +1,4 @@
-"""ART-28: the `cradle` map passes M1-M11 (and X1) at face_resolution 1024 and its committed outputs are fresh."""
+"""ART-28: the `cradle` map passes M1-M12 (and X1) at face_resolution 1024 and its committed outputs are fresh."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ class Cradle(unittest.TestCase):
 
     def test_every_check_passes(self) -> None:
         results = validate.validate_static(build_plan(self.recipe)) + validate.validate_baked(self.baked, self.files)
-        self.assertEqual({r.code for r in results} >= {f"M{i}" for i in (1, 2, 3, 5, 7, 8, 9, 10, 11)}, True)
+        self.assertEqual({r.code for r in results} >= {f"M{i}" for i in (1, 2, 3, 5, 7, 8, 9, 10, 11, 12)}, True)
         failed = [str(r) for r in results if not r.ok]
         self.assertEqual(failed, [])
 

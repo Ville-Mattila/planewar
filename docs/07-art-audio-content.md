@@ -638,7 +638,7 @@ Three v1 maps (`cradle`, `anvil`, `rimewater`), all 8-slot and 8-fold rotational
 5. Add `rilles` as lat/lon polylines.
 6. Leave `resources` on the s5.6 template, then add `overrides` for position tweaks only. 02 owns amounts.
 7. Add `boulder_fields`.
-8. Run `python -I -m moonbake validate content/maps/<id>/recipe.json`, then `bake <recipe> --out content/maps/<id>/` and `preview <recipe> --out content/maps/<id>/preview/`. Read the preview renders (cube-face unfolding of height, slope and biome as PNGs, plus a polar view) and fix every failed check (M1-M11, Section 9.5).
+8. Run `python -I -m moonbake validate content/maps/<id>/recipe.json`, then `bake <recipe> --out content/maps/<id>/` and `preview <recipe> --out content/maps/<id>/preview/`. Read the preview renders (cube-face unfolding of height, slope and biome as PNGs, plus a polar view) and fix every failed check (M1-M12, Section 9.5).
 9. Commit recipe and baked faces (LFS).
 
 ### 9.3 Biome rules (applied by the baker, first match wins)
@@ -676,7 +676,7 @@ Ids and characters follow 02 (R0 C3-11, Part B.2); display names Cradle / Anvil 
 
 ### 9.5 Validation checks (`python -I -m moonbake validate <recipe>`; implemented in TA-15, each is a CI test)
 
-M1-M11 are the validate rules of the baker (R0 Part B.2); ART-37 supplies one deliberately failing recipe fixture per check. Checks that depend on layout (M2, M6, M7, M8) run for every slot and, where relevant, for each `slots_by_player_count` layout of `modes.json` (2 players: slots 0 and 2; 4: 0/2/4/6; 8: all).
+M1-M12 are the validate rules of the baker (R0 Part B.2); ART-37 supplies one deliberately failing recipe fixture per check. Checks that depend on layout (M2, M6, M7, M8) run for every slot and, where relevant, for each `slots_by_player_count` layout of `modes.json` (2 players: slots 0 and 2; 4: 0/2/4/6; 8: all).
 
 | # | Check | Pass |
 |---|---|---|
@@ -691,6 +691,7 @@ M1-M11 are the validate rules of the baker (R0 Part B.2); ART-37 supplies one de
 | M9 | biome coverage | within +-5 percentage points of the map's table row |
 | M10 | file size | baked faces <= 4 MB compressed per map (web map pack) |
 | M11 | cube edges | no start-slot flatten disc (`flatten_radius_m + flatten_edge_m`) intersects a cube edge; a structure cluster may still straddle an equatorial edge elsewhere, which S-WORLD-1 scene Z8 and TA-19 test |
+| M12 | texel step | largest height difference between two edge-adjacent texels of any face <= 200 m (the largest legitimate step is a crater rim on a 128 texel test map, about 90-170 m; real maps at 1,024 texels stay near 100 m). A step this size is already a pillar at chase height; the pre-fix baker produced 378 m single-texel cliffs (craters stamped inside maria were pulled to the pre-mare level), the fixed Cradle bake peaks at about 105 m |
 
 ---
 

@@ -1,4 +1,4 @@
-"""moonbake: determinism, committed outputs, M1-M11 pass/fail fixtures, ramp, PNG, CLI (TA-15)."""
+"""moonbake: determinism, committed outputs, M1-M12 pass/fail fixtures, ramp, PNG, CLI (TA-15)."""
 
 from __future__ import annotations
 
@@ -126,7 +126,7 @@ class Validation(unittest.TestCase):
         res = self.static(self.rec)
         res.update(results_by_code(validate.validate_baked(self.bake, self.files)))
         self.assertEqual({k: v.msg for k, v in res.items() if not v.ok}, {})
-        for code in ("M1", "M2", "M3", "M4a", "M4b", "M5", "M6", "M7", "M8", "M9", "M10", "M11"):
+        for code in ("M1", "M2", "M3", "M4a", "M4b", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12"):
             self.assertIn(code, res)
 
     def test_m1_relief(self) -> None:
@@ -217,6 +217,23 @@ class Validation(unittest.TestCase):
         self.assertFalse(res["M11"].ok)
         self.assertIn("cube edge", res["M11"].msg)
 
+    def test_m12_texel_step(self) -> None:
+        self.assertTrue(validate.m12_texel_step(self.bake).ok)
+        old = validate.M12_MAX_STEP_M
+        validate.M12_MAX_STEP_M = 0.0
+        try:
+            self.assertFalse(validate.m12_texel_step(bake(self.rec)).ok)
+        finally:
+            validate.M12_MAX_STEP_M = old
+
+    def test_crater_floor_follows_mare(self) -> None:
+        rec = self.mutated(lambda r: (r.update(regions=[{"kind": "mare", "lat": 0, "lon": 0, "radius_m": 3000,
+                                                          "floor_m": -320, "edge_m": 500}]),
+                                      r.update(craters={"explicit": [
+                                          {"lat": 0, "lon": 0, "diam_m": 120, "depth_m": 10, "rim_m": 5}]})))
+        plan = bake(rec).plan
+        self.assertLess(plan.craters[0].base_mean, -250.0)
+
     def test_node_inside_flatten_disc(self) -> None:
         res = self.static(self.mutated(lambda r: r["resources"]["slot_features"][0].update(distance_m=200)))
         self.assertFalse(res["X1"].ok)
@@ -236,7 +253,7 @@ FIXTURES = REPO / "tools/tests/fixtures/maps"
 FIXTURE_CODES = {"good": None, "m01_relief": "M1", "m02_slot_slope": "M2", "m03_ore_slope": "M3",
                  "m04a_day_side_trap": "M4a", "m04b_shallow_trap": "M4b", "m05_asymmetry": "M5",
                  "m06_ore_distance": "M6", "m07_node_spacing": "M7", "m08_disconnected": "M8",
-                 "m09_biome_coverage": "M9", "m10_size": "M10", "m11_cube_edge": "M11"}
+                 "m09_biome_coverage": "M9", "m10_size": "M10", "m11_cube_edge": "M11", "m12_cliff": "M12"}
 
 
 @unittest.skipIf(np is None, gates.NUMPY_SKIP)
@@ -260,7 +277,7 @@ class MapFixtures(unittest.TestCase):
 
     def test_every_check_has_a_fixture(self) -> None:
         codes = {c for c in FIXTURE_CODES.values() if c}
-        self.assertEqual(codes, {"M1", "M2", "M3", "M4a", "M4b", "M5", "M6", "M7", "M8", "M9", "M10", "M11"})
+        self.assertEqual(codes, {"M1", "M2", "M3", "M4a", "M4b", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12"})
 
 
 @unittest.skipIf(np is None, gates.NUMPY_SKIP)
@@ -307,7 +324,7 @@ class Cli(unittest.TestCase):
     def test_validate_tiny(self) -> None:
         r = self.run_cli("validate", str(TINY), "--quiet")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("13/13", r.stdout)
+        self.assertIn("14/14", r.stdout)
 
     def test_check_and_bake(self) -> None:
         gates.require_blobs(TINY_DIR)

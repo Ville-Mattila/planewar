@@ -110,10 +110,11 @@ def prepare(plan: Plan) -> None:
     """Fill the probe-derived constants: crater base means, trap rim references, slot flatten means."""
     recipe = plan.recipe
     if plan.craters:
-        pts = np.concatenate([disc_probes(cr.c, cr.r) for cr in plan.craters])
-        hb = base_height(pts, recipe).reshape(len(plan.craters), 36)
-        for cr, row in zip(plan.craters, hb):
-            cr.base_mean = float(row.mean())
+        # Each crater pulls its floor to the surface as it is when it is stamped (regions and earlier craters
+        # applied), so a crater inside a mare does not become a mesa at the pre-mare level.
+        for i, cr in enumerate(plan.craters):
+            blk = Block(disc_probes(cr.c, cr.r), 36)
+            cr.base_mean = float(compute(blk, plan, "rilles", crater_count=i)[0].mean())
     traps = [n for n in plan.nodes if n.kind == "cold_trap"]
     for n in traps:
         n.ring_ref = float(compute(Block(_ring(n.c, n.radius_m, 12), 12), plan, "footprints")[0].mean())
@@ -147,9 +148,9 @@ def _regions(blk: Block, h: np.ndarray, tags: dict, plan: Plan) -> None:
         h[idx] = hh + (target - hh) * w
 
 
-def _craters(blk: Block, h: np.ndarray, tags: dict, plan: Plan) -> None:
+def _craters(blk: Block, h: np.ndarray, tags: dict, plan: Plan, count: int | None = None) -> None:
     seed = plan.recipe["seed"] + 4001
-    for cr in plan.craters:
+    for cr in plan.craters[:count]:
         r = cr.r
         idx, s = blk.near(cr.c, max(cr.ejecta, 1.75 * r))
         if not len(idx):
@@ -237,13 +238,16 @@ _STAGE_FN = {"regions": _regions, "craters": _craters, "rilles": _rilles, "poles
 # endregion
 
 
-def compute(blk: Block, plan: Plan, upto: str = "end"):
+def compute(blk: Block, plan: Plan, upto: str = "end", crater_count: int | None = None):
     """Height (metres, float64) and biome tag masks for every point of the block, running the stages before
-    `upto` (a stage name or "end")."""
+    `upto` (a stage name or "end"). `crater_count` limits the craters stamped (used by `prepare`)."""
     h = base_height(blk.d, plan.recipe)
     tags = {k: np.zeros(len(blk), dtype=bool) for k in TAGS}
     for name in STAGES:
         if name == upto:
             break
-        _STAGE_FN[name](blk, h, tags, plan)
+        if name == "craters":
+            _craters(blk, h, tags, plan, crater_count)
+        else:
+            _STAGE_FN[name](blk, h, tags, plan)
     return h, tags
