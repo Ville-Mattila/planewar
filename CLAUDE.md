@@ -64,7 +64,7 @@ Enforced by review; mechanically by `check_deps.py` where possible. Applies to `
 
 ## Local environment
 
-- Set `GODOT_BIN` to your Godot 4.7.2 console binary; the commands below use `$GODOT_BIN` (the gdUnit4 runner reads it too). Machine-specific paths live in the untracked `CLAUDE.local.md`.
+- Set `GODOT_BIN` to your Godot 4.7.2 console binary; the commands below use `$GODOT_BIN` (the gdUnit4 runner reads it too). Machine-specific paths live in the untracked `CLAUDE.local.md` of the main checkout (agent worktrees under `.claude/worktrees/` do not have it: read it from the main checkout two levels up). Always confirm `"$GODOT_BIN" --version` starts with `4.7.2`; an inherited shell `GODOT_BIN` may point at an older build.
 - Shell is Git Bash (POSIX syntax, forward slashes). Python is 3.14.
 - Export templates are not installed locally; exports run in CI only.
 - Branch protection on `main` is not available on the current GitHub plan. "main is protected" is a process rule enforced by review until the owner upgrades: never push to `main`, never merge your own PR, PRs only.
