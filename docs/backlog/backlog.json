@@ -615,7 +615,8 @@
       "R0 C1-11",
       " 03 TA-42"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; nightly perf_tick.gd --full and bench_snapshot canonical rows appended to perf/history.jsonl with the runner id (R0 B.11 A-62)"
   },
   {
     "id": "TA-27",
@@ -848,7 +849,7 @@
     "acceptance_append": "; sim/pilot_input.gd comment names PilotWire.to_wire/from_wire (R0 B.10 A-46); if sim/MODULE.md needs lines, the How-to-add-X recipes move to 03 s15.4 with a pointer (A-47)",
     "merged": "2026-10-14",
     "pr": "public#12",
-    "note": "1,200-entity dense case over budget (collision 8.0 ms vs 5.0, rebuild 1.51 vs 1.2) -> S-SIM-1 cut ladder; architect: 03 \"139 m per ring\" is ~94 m (fix s2.7/s3.6/s6.1); shooter_grace_ticks needs a def field; TA-19 pad radius vs approach"
+    "note": "ring coverage ~94 / ~188 m, shooter_grace_ticks def field and the pad approach column closed by R0 B.11 A-51..A-53 (code TA-49); dense-case numbers recorded in 03 s4.2 notes for S-SIM-1 (A-62)"
   },
   {
     "id": "TA-18",
@@ -873,7 +874,7 @@
     "status": "done",
     "merged": "2026-10-14",
     "pr": "public#15",
-    "note": "perf --full p95 (busy laptop): kinematics 8.2/3.0, projectiles 3.3/2.5, spatial 3.8/1.2, collision 9.7/5.0, total 27.6/25 ms -> S-SIM-1 cut ladder; signature changes for architect: deserialize(ContentSet), arc()->MatchArc.Arc, add_player(kind:int) (PlayerKind clash with net Protocol.PlayerKind); constants awaiting def fields: command rate/burst, 1,950 m uplink guard, match-arc bands, cut rungs, shooter grace ticks"
+    "note": "signatures ratified (R0 B.11 A-49), PlayerKind ordinals only + D1 fix TA-53 (A-50), def fields added (A-51, code TA-49); --full numbers recorded in 03 s4.2 notes for S-SIM-1 (A-62)"
   },
   {
     "id": "TEST-02",
@@ -890,7 +891,8 @@
       "01 s9.4 contract notes",
       " R0 C2-05"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; read_poses equals pos/basis element-wise on both views (R0 B.11 A-56)"
   },
   {
     "id": "TA-19",
@@ -911,7 +913,8 @@
       " R0 C3-08",
       " 03 TA-19"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; pad structures need no radius sizing for the approach: the RAM exemption covers the approach column (R0 B.11 A-53, code in TA-49)"
   },
   {
     "id": "TA-20",
@@ -931,10 +934,10 @@
       " R0 C1-05",
       " 03 TA-20"
     ],
-    "status": "review",
+    "status": "done",
     "merged": "2026-10-14",
     "pr": "public#23",
-    "note": "S-NAV-1 partial: amortised 0.27-0.34 ms, cache 0.94-0.97, 0 correctness failures pass; isolated 15 km worst 37 ticks (bar 30) and row 3b p95 1.6 ms (budget 0.5) fail; memory 8.8 MB vs 2 MB; recommended: re-baseline 3b to 1.7 ms, path_expansions_per_tick 120, cut rung; not wired into SimWorld step 3b; architect: brains->Pathing access, 03 s3.6 heuristic overestimates, impassable 0 vs 255"
+    "note": "S-NAV-1 partial pass ratified by R0 B.11 A-55 (path_expansions_per_tick 120, rung 8, heuristic 25 %, regions hierarchy, 0/255 impassable, CommandSinkBase.pathing(); wiring TA-50, baked slopes TA-54); status flips when the owner signs the REPORT (HUM-12)"
   },
   {
     "id": "TA-21",
@@ -943,7 +946,8 @@
     "tier": "Sonnet",
     "size_days": 1.5,
     "depends_on": [
-      "TA-18"
+      "TA-18",
+      "TA-50"
     ],
     "milestone": "M2",
     "acceptance": "S4 holds for 1,000 random ticks with a stub hook; payload ~150 KB at 1,200 entities",
@@ -981,7 +985,8 @@
     "size_days": 1.5,
     "depends_on": [
       "TA-13",
-      "TA-20"
+      "TA-20",
+      "TA-50"
     ],
     "milestone": "M2",
     "acceptance": "02 slope formula exact; position on the surface +-1 cm; a path across a cube edge followed without a jump; reverse only after 0.5 s at <= 3 m/s",
@@ -1222,7 +1227,7 @@
       " 04 NET-10"
     ],
     "status": "done",
-    "note": "A-27 deps edit applied; worst case 8 clients 60 events+40 shots = ~4.3 ms (re-measure in NET-08); architect: wreck slots 1280-1535 outside 1280-entry roster (04 s3.1 vs 03 s3.1)",
+    "note": "roster 1,536 decided (R0 B.11 A-54, NET-50); 4.3 ms worst case recorded in 03 s4.2 notes, re-measured in NET-08 (A-62)",
     "merged": "2026-10-14",
     "pr": "public#20"
   },
@@ -1309,7 +1314,8 @@
       " R0 C1-08",
       " 03 TA-22"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; the REPORT carries the 03 s14.1 table (every s4.2 row x budget x dev box p95 x pinned single-instance p95 x pinned 6-instance p95 x cost per unit) with the measured saving of every rung it recommends (R0 B.11 A-62)"
   },
   {
     "id": "TA-23",
@@ -1331,7 +1337,7 @@
     "status": "done",
     "merged": "2026-10-14",
     "pr": "public#10",
-    "note": "follow-ups: quality_tiers.json chunk_pool_size/chunk_starvation_frames (HIGH needs ~300 slots, 03 s7.3 says 220); Terrain.biome_texel or TA-24 biome texture; 03 s7.5 theta_up 0.2 vs formula 0.608; LOW 1.25 s worst wait vs 1 s (TA-25 on devices); 1024-face maps unmeasured"
+    "note": "chunk_pool_size per tier 150/220/300 and theta_up 0.61 rad in 03 (R0 B.11 A-59); biome texture is TA-24's; LOW wait and 1024-face maps measured by TA-25"
   },
   {
     "id": "ART-01",
@@ -1352,7 +1358,7 @@
     "status": "done",
     "merged": "2026-10-14",
     "pr": "public#13",
-    "note": "PC criteria pass; PENDING HUMAN (HUM-06): Android-mid + Web-mobile goldens, Adreno instance uniforms, ml_encode cost on Android; instance-uniform fallback chosen (per-material + team/state cache); rim fade-in 1.5-4.5 km is an owner taste check; moon_ramp.png.import needs the unit_atlas fix (TA-24)"
+    "note": "07 s1.5 / s4.3 patched per REPORT s6 (R0 B.11 A-58); PENDING HUMAN (HUM-06): Android-mid + Web-mobile goldens, Adreno instance uniforms, ml_encode cost; rim fade band is an owner taste check (HUM-09)"
   },
   {
     "id": "ART-03",
@@ -1372,7 +1378,7 @@
     "status": "done",
     "merged": "2026-10-14",
     "pr": "public#14",
-    "note": "presentation/ has no top-level MODULE.md; UnitMaterialCache API undocumented (architect)"
+    "note": "presentation/MODULE.md scope confirmed and UnitMaterialCache documented (R0 B.11 A-57)"
   },
   {
     "id": "TA-24",
@@ -1395,7 +1401,7 @@
     "status": "done",
     "merged": "2026-10-14",
     "pr": "public#16",
-    "note": "biome as texture (Terrain.biome_face, sim-lane accessor added); interim sky_moon.gdshader for ART-15 to restyle; Xvfb run in nightly TA-35 and device costs (HUM-06) unmeasured; detail_displacement_m=0 is the per-tier fallback"
+    "note": "Terrain.biome_face ratified as an append, interim sky_moon under the planet contract until ART-15 (R0 B.11 A-59); Xvfb nightly TA-35; device costs HUM-06"
   },
   {
     "id": "TA-25",
@@ -1438,7 +1444,7 @@
       " 03 TA-26"
     ],
     "status": "done",
-    "note": "800-view sync p95 7.7 ms vs 2.4 ms on tick frames: needs a bulk SimView accessor (sim lane)",
+    "note": "bulk accessor SimView.read_poses specified (R0 B.11 A-56): TA-51 sim, TA-52 presentation; 7.7 ms tick-frame p95 recorded in presentation/MODULE.md",
     "merged": "2026-10-14",
     "pr": "public#22"
   },
@@ -1653,7 +1659,7 @@
     "status": "done",
     "merged": "2026-10-13",
     "pr": 49,
-    "note": "04 s2.5: a 32-id ORDER fits 15 points, not 14 (8+128+120=256); net to fix the doc (NET-47 or NET-04). gen_module_api now checks nested MODULE.md files."
+    "note": "04 s2.5 already states 15 points; NET-04 acceptance corrected (R0 B.11 A-60)"
   },
   {
     "id": "AI-02",
@@ -1675,7 +1681,7 @@
     "status": "done",
     "merged": "2026-10-14",
     "pr": "public#21",
-    "note": "contract: SimWorld.admin_release, CommandValidator(ControlMachine), S4 format 2, alert extra[0]=player slot; open: AI-15 complete_head/fail_head, GD-20 release_team, NET-19 decay owner; rules.json fields for 10 s request TTL, 10 s override echo, 50 m uplink margin"
+    "note": "ControlMachine contract ratified (R0 B.11 A-61); rules.json request_ttl_s / override_echo_s / uplink_margin_m added (A-51, code TA-49); owners AI-15, GD-20, NET-19, AI-08 named in their acceptance"
   },
   {
     "id": "AI-03",
@@ -2177,7 +2183,8 @@
       " R0 C3-19",
       " 02 GD-20"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; calls ControlMachine.release_team when a team loses its last Core (C16, R0 B.11 A-61)"
   },
   {
     "id": "GD-23",
@@ -2345,7 +2352,8 @@
       " R0 C3-17",
       " 05 AI-15"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; brains call ControlOrders.complete_head / fail_head for C4 / C5 (R0 B.11 A-61)"
   },
   {
     "id": "AI-16",
@@ -2718,7 +2726,7 @@
       "NET-01"
     ],
     "milestone": "M3",
-    "acceptance": "Encode/decode test per kind; a 32-id, 14-point ORDER round-trips and a 15-point one is refused; malformed payload returns null",
+    "acceptance": "Encode/decode test per kind; a 32-id, 15-point ORDER round-trips and a 16-point one is refused (04 s2.5 formula, R0 B.11 A-60); malformed payload returns null",
     "docs": [
       "04 s2.5",
       " R0 C2-06",
@@ -2812,7 +2820,7 @@
       " 04 NET-17"
     ],
     "status": "todo",
-    "acceptance_append": "; acks complete ticks only (R0 B.10 A-36)"
+    "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56)"
   },
   {
     "id": "UX-24",
@@ -4042,7 +4050,8 @@
       " R0 C2-08",
       " 04 NET-19"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; one owner of the C13 decay: either the server feeds InputBuffer's decayed inputs or the sim's ControlMachine C13 runs, never both (R0 B.11 A-61)"
   },
   {
     "id": "NET-20",
@@ -6654,5 +6663,136 @@
     "pr": "public#11",
     "note": "bench 8 clients canonical: prepare ~2.8 ms + encode ~6.9 ms = ~9.7 ms vs 4.0 ms row; cache saves 0.3-2.3 %; A-40 over-budget branch -> PM-01 with S-SIM-1; next lever: per-client tier-C skip test; nightly bench needs nightly.yml",
     "merged": "2026-10-14"
+  },
+  {
+    "id": "TA-49",
+    "title": "sim: read the R0 B.11 A-51 def fields (rules.json command_rate_per_s/command_burst, uplink_margin_m, request_ttl_s, override_echo_s, shooter_grace_ticks, path_heuristic_pct, cut_ladder; match_rules.json arc divisors) in CommandValidator, ControlMachine, Collision, MatchRules, Pathing and set_budget_profile; pad approach column exempt from RAM (A-53)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1.25,
+    "depends_on": [
+      "TA-18",
+      "AI-02",
+      "TA-14"
+    ],
+    "milestone": "M2",
+    "acceptance": "Every A-51 value is read from the injected ContentSet at _init/from_defs and the named consts are documented defaults only; changing rules.command_burst, uplink_margin_m, shooter_grace_ticks and match_rules.arc_open_divisor in a test fixture changes the observed behaviour; set_budget_profile(3) caps live projectiles at cut_ladder.rung_3_projectile_cap and set_budget_profile(8) sets Pathing.expansions_per_tick to rung_8_path_expansions_per_tick (rungs 1/2/4/6 applied when their systems land, recorded in sim/world/MODULE.md); a friendly ship descending inside a pad's approach column never produces a RAM contact against that pad's structure while an enemy ship does (test_collision.gd)",
+    "docs": [
+      "R0-amendments-04 A-51",
+      "R0-amendments-04 A-53",
+      "03 s4.3",
+      "03 s6.1",
+      "05 s2.3"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-50",
+    "title": "sim: wire Pathing into SimWorld (load_map weights + terrain + prepare per ground-unit mask; advance() at step 3b ROW_PATHING; CommandSinkBase.pathing(); tickets/queue/cache in S4; memory reductions to ~6 MB) (R0 B.11 A-55)",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 1.5,
+    "depends_on": [
+      "TA-20",
+      "TA-18"
+    ],
+    "milestone": "M2",
+    "acceptance": "perf_tick.gd --full row 3b non-zero with 120 Harvester/Crawler requests re-pathing every 10 s and amortised <= 0.5 ms on the dev box; a brain stub reaches Pathing only through CommandSinkBase.pathing(); S4 round-trip holds with pending tickets and a warm cache (test_serialize.gd); Pathing.mem_mb <= 6.0 after merged tag/parent, u8 tags and dropped arc tables; sim/MODULE.md [planned: TA-50] marker removed",
+    "docs": [
+      "R0-amendments-04 A-55",
+      "docs/spikes/TA-20/REPORT.md s6",
+      "03 s3.6",
+      "03 s4.1"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-51",
+    "title": "sim: SimView.read_poses(ids, pos, rot) bulk accessor on LocalSimView (R0 B.11 A-56)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-18"
+    ],
+    "milestone": "M2",
+    "acceptance": "read_poses equals pos(id) and basis(id).get_rotation_quaternion() element-wise for 1,000 random alive/dead/projectile ids; no allocation when the caller pre-sizes the arrays; returns the alive count; sim/MODULE.md [planned: TA-51] marker removed",
+    "docs": [
+      "R0-amendments-04 A-56",
+      "03 s10.1"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-52",
+    "title": "presentation: EntityViewPool.sync reads poses through SimView.read_poses; re-measure the 800-view tick-frame sync (R0 B.11 A-56)",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-51",
+      "TA-26"
+    ],
+    "milestone": "M2",
+    "acceptance": "entity_demo --all-views --n=800 tick-frame sync p95 recorded before and after; <= 2.4 ms PC-mid or the stagger-the-tick-read follow-up filed with numbers; all presentation tests green",
+    "docs": [
+      "R0-amendments-04 A-56",
+      "03 s10.2"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-53",
+    "title": "tools: check_deps D1 treats a qualified token Foo.Bar as a reference to Foo only (R0 B.11 A-50)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "TA-02"
+    ],
+    "milestone": "M2",
+    "acceptance": "test_rules.py: a net file naming Protocol.PlayerKind passes with no named type; a net file naming a bare sim-only class still fails D1; check_deps on the repo stays clean",
+    "docs": [
+      "R0-amendments-04 A-50",
+      "03 s12.4"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-54",
+    "title": "tools (moonbake): bake the per-path-cell max slope so Pathing.prepare stops sampling texels at load (R0 B.11 A-55)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-15",
+      "TA-50"
+    ],
+    "milestone": "M3",
+    "acceptance": "A baked slope-per-path-cell output named in 03 s8.3 with its byte layout and SHA in meta.json; Pathing.prepare on the three v1 maps completes in <= 0.2 s with identical region graphs to the sampled path; moonbake validate covers it",
+    "docs": [
+      "R0-amendments-04 A-55",
+      "docs/spikes/TA-20/REPORT.md s6",
+      "03 s8.3"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "NET-50",
+    "title": "net: Roster capacity 1,536 (1,280 unit/structure + 256 wreck slots) so wreck events and refs reach filtered clients (R0 B.11 A-54)",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "NET-10"
+    ],
+    "milestone": "M2",
+    "acceptance": "A wreck in slot 1,535 gets a roster index, WRECK_SPAWNED/WRECK_SALVAGED route to a filtered client, KEYFRAME/ENTITY_META carry slots up to 1,535; snapshot bytes for a non-wreck scene are unchanged",
+    "docs": [
+      "R0-amendments-04 A-54",
+      "04 s3.1",
+      "04 s3.6"
+    ],
+    "status": "todo"
   }
 ]
