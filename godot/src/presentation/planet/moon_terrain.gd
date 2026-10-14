@@ -36,7 +36,13 @@ static func make_material(terrain: Terrain, cfg: PlanetTierConfig) -> ShaderMate
 
 ## Mare mid at ramp value 0.5, no detail: the Midnight Pole measurement plates (ART-01 goldens).
 static func measure_material() -> ShaderMaterial:
+	return measure_material_biome(0)
+
+
+## Biome `biome_id` at ramp value 0.5 (its mid stop), no detail: the ART-14 biome colour plates.
+static func measure_material_biome(biome_id: int) -> ShaderMaterial:
 	var m: ShaderMaterial = base_material()
+	m.set_shader_parameter(&"biome_faces", flat_biome_array(biome_id))
 	m.set_shader_parameter(&"ramp_v_override", MEASURE_RAMP_V)
 	m.set_shader_parameter(&"detail_range_m", 0.0)
 	return m

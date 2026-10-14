@@ -26,7 +26,7 @@ func test_shader_loads_includes_light_and_encodes_colour() -> void:
 	assert_int(sh.get_mode()).is_equal(Shader.MODE_SPATIAL)
 	assert_str(_src).contains("moon_light.gdshaderinc")
 	assert_str(_src).contains("ml_encode(ml.albedo)")
-	assert_str(_src).contains("ml_to_linear(texture(ramp")
+	assert_str(_src).contains("ml_to_linear(ramp_rgb(")
 	assert_str(_src).contains("render_mode cull_back, depth_draw_opaque")
 
 
@@ -84,6 +84,18 @@ func test_range_fade() -> void:
 	assert_float(MoonDetail.range_fade(300.0, 300.0)).is_equal(0.0)
 	assert_float(MoonDetail.range_fade(10.0, 0.0)).is_equal(0.0)
 	assert_float(MoonDetail.range_fade(225.0, 300.0)).is_between(0.0, 1.0)
+
+
+func test_measure_material_biome_selects_the_ramp_row_and_blends_edges() -> void:
+	var m: ShaderMaterial = MoonTerrain.measure_material_biome(5)
+	var arr: Texture2DArray = m.get_shader_parameter(&"biome_faces")
+	assert_int(arr.get_layers()).is_equal(Terrain.FACE_COUNT)
+	assert_int(arr.get_layer_data(0).get_pixel(0, 0).r8).is_equal(5)
+	assert_float(m.get_shader_parameter(&"ramp_v_override")).is_equal(MoonTerrain.MEASURE_RAMP_V)
+	assert_float(m.get_shader_parameter(&"detail_range_m")).is_equal(0.0)
+	# ART-14: ids stay nearest, the colour is blended over the four texels (no stair-stepped patch edges)
+	assert_str(_src).contains("sampler2DArray biome_faces : filter_nearest")
+	assert_str(_src).contains("mix(mix(c00, c10, f.x), mix(c01, c11, f.x), f.y)")
 
 
 func test_base_material_has_ramp_and_default_biome() -> void:
