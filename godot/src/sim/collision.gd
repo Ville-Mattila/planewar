@@ -14,7 +14,8 @@ class_name Collision extends RefCounted
 ##      pad_radius_m, |altitude above the pad plane| <= radius + 0.5) -> C_PAD with the landing band; its terrain
 ##      contact is then the landing's, not a scrape or damage (kill speed still destroys);
 ##   ship vs ship (each pair once) and ship vs structure (from the ship side) sphere-sphere -> C_RAM; a docked ship
-##      is exempt against its own pad, a ship inside a friendly pad's volume against that pad.
+##      is exempt against its own pad, a ship in a friendly pad's approach column (A-53: offset <= pad_radius_m, altitude
+##      >= -(radius + 0.5)) against that pad.
 ## The pad plane passes through the structure's `pos` with normal `up` (GD-15 may add a deck offset).
 ## Per-slot state (`ep_gen`, `ep_last`, `born_gen`, `born_tick`) is sim state for serialization (S4, TA-18).
 
@@ -299,6 +300,7 @@ func _ship(s: int, tick: int) -> void:
 
 func _ship_structure(s: int, o: int, p: Vector3, r: float, docked: bool) -> void:
 	var in_pad: bool = false
+	var in_col: bool = false
 	var d: int = _store.def_id[o]
 	var pad_r: float = _pad_radius[d] if d < _pad_radius.size() else 0.0
 	if pad_r > 0.0 and _store.team[o] == _store.team[s]:
@@ -309,11 +311,12 @@ func _ship_structure(s: int, o: int, p: Vector3, r: float, docked: bool) -> void
 			var rel: Vector3 = p - _store.pos[o]
 			var alt: float = rel.dot(up_p)
 			var off: float = (rel - up_p * alt).length()
-			in_pad = absf(alt) <= r + 0.5 and off <= pad_r
+			in_col = alt >= -(r + 0.5) and off <= pad_r
+			in_pad = in_col and alt <= r + 0.5
 			if in_pad and (_pad_slot < 0 or off < _pad_off):
 				_pad_slot = o
 				_pad_off = off
-	if not in_pad and p.distance_to(_store.pos[o]) <= r + _store.radius[o]:
+	if not (in_pad or in_col) and p.distance_to(_store.pos[o]) <= r + _store.radius[o]:
 		_add_ram(o)
 
 

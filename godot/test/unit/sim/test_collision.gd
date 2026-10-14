@@ -281,6 +281,28 @@ func test_no_pad_contact_outside_volume_enemy_pad_or_docked() -> void:
 	_kit.collision.report_terrain(ps.y, 4, 1.0)
 	_kit.detect(4)
 	assert_int(_kit.collision.contact_count).is_equal(0)                  # docked: exempt against its own pad
+
+
+func test_approach_column_exempts_friendly_descent_from_ram_but_not_enemy_or_outside() -> void:
+	# A-53: the pad structure's sphere (radius 15) reaches 21 m from the pad centre for a radius 6 ship.
+	var ps: Vector2i = _pad_and_ship(0)
+	_kit.store.pos[ps.y] = _at(15.0, 3.0)                              # descending, inside the column, inside the sphere
+	_kit.detect(1)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(0)
+	_kit.store.pos[ps.y] = _at(-6.0, 3.0)                              # lowest altitude the column covers: -(radius + 0.5)
+	_kit.detect(2)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(0)
+	_kit.store.pos[ps.y] = _at(-7.0, 3.0)                              # below the column: terrain and structures apply
+	_kit.detect(3)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
+	_kit.store.pos[ps.y] = _at(15.0, _kit.pad_radius + 0.1)            # beside the column
+	assert_float(_kit.pad_radius + 0.1).is_less(15.0 + 6.0)
+	_kit.detect(4)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
+	_kit.store.pos[ps.y] = _at(15.0, 3.0)
+	_kit.store.team[ps.y] = 1                                          # an enemy ship in the same column still rams
+	_kit.detect(5)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
 # endregion
 
 

@@ -118,6 +118,13 @@ func set_heuristic_pct(pct: int) -> void:
 	clusters.heuristic_pct = pct
 
 
+## A Pathing with the budget and heuristic inflation of `rules` (R0 B.11 A-51: `path_expansions_per_tick`, `path_heuristic_pct`).
+static func from_rules(rules: RulesDef) -> Pathing:
+	var p: Pathing = Pathing.new(rules.path_expansions_per_tick)
+	p.set_heuristic_pct(rules.path_heuristic_pct)
+	return p
+
+
 ## Request mask for a ground unit def (`max_slope_deg`; cells steeper than this are impassable, 02 s3).
 static func mask_for(max_slope_deg: float) -> int:
 	return clampi(int(max_slope_deg), 0, 0xFF)

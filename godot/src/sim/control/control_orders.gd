@@ -12,6 +12,7 @@ var _store: EntityStore
 var _players: PlayerTable
 var _events: SimEvents
 var _hz: int = 1
+var echo_window_s: int = ControlMachine.ECHO_WINDOW_S   ## rules.override_echo_s (ControlMachine.configure)
 var _spec: OrderSpec = OrderSpec.new()
 
 
@@ -99,13 +100,13 @@ func valid(s: int, spec: OrderSpec) -> bool:
 	return rules == null or rules.validate(spec, _store.def_id[s], false) == OrderRules.Verdict.OK
 
 
-# s3.4 echo: the replaced head came from a different human less than ECHO_WINDOW_S ago.
+# s3.4 echo: the replaced head came from a different human less than `echo_window_s` ago.
 func _echo(id: int, prev_issuer: int, prev_tick: int, by: int) -> void:
 	if prev_issuer < 0 or prev_issuer >= PlayerTable.SLOTS or prev_issuer == by:
 		return
 	if _players.kind[prev_issuer] != PlayerTable.KIND_HUMAN:
 		return
-	if _events.tick - prev_tick >= ControlMachine.ECHO_WINDOW_S * _hz:
+	if _events.tick - prev_tick >= echo_window_s * _hz:
 		return
 	_fail(EntityId.slot(id), prev_issuer, ControlMachine.OrderFail.OVERRIDDEN, by)
 

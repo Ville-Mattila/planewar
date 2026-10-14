@@ -7,7 +7,7 @@ class_name MatchRules extends RefCounted
 enum Phase { PLAYING, EXPOSURE, ENDED }
 
 ## 01 s3.3 arc bands as divisors of `core_exposure_s` (Open 0-5, Expand 5-15, Siege 15-30 of a 30 min exposure).
-## needs content: `match_rules.json` arc fields; until then these two integers are the 01 table.
+## Documented defaults of `match_rules.json` `arc_open_divisor` / `arc_expand_divisor` (R0 B.11 A-51, read by `from_defs`).
 const _ARC_OPEN_DIV: int = 6
 const _ARC_EXPAND_DIV: int = 2
 
@@ -23,6 +23,8 @@ var friendly_fire: bool = false
 var adjutant_allowed: StringName = &"off"
 var sun_period_s: float = 0.0
 var ranked: bool = false
+var arc_open_divisor: int = _ARC_OPEN_DIV               ## match_rules.json (A-51); not S4 state: `adopt_match_def` on deserialize
+var arc_expand_divisor: int = _ARC_EXPAND_DIV
 var tick_hz: int = 0                                    ## rules.json tick_hz; converts the second timers to ticks
 
 
@@ -43,10 +45,18 @@ static func from_defs(mode_def: ModeDef, match_def: MatchRulesDef, rules: RulesD
 		for a: String in mode_def.adjutant:
 			if a == "full" or (a == "economy" and m.adjutant_allowed == &"off"):
 				m.adjutant_allowed = StringName(a)
+	m.adopt_match_def(match_def)
 	m.caps_profile = profile if profile != &"" else (mode_def.caps if mode_def != null else &"standard")
 	var found: Variant = match_def.caps.get(m.caps_profile) if match_def != null else null
 	m.caps = found if found is CapsDef else CapsDef.new()
 	return m
+
+
+## Takes the arc divisors from `match_def` (null or non-positive: the documented defaults stay).
+func adopt_match_def(match_def: MatchRulesDef) -> void:
+	if match_def != null:
+		arc_open_divisor = match_def.arc_open_divisor if match_def.arc_open_divisor > 0 else _ARC_OPEN_DIV
+		arc_expand_divisor = match_def.arc_expand_divisor if match_def.arc_expand_divisor > 0 else _ARC_EXPAND_DIV
 
 
 ## 02 s12.1 rules phase of `tick` from the clock alone.
@@ -66,9 +76,9 @@ func arc(tick: int) -> MatchArc.Arc:
 	var s: float = _clock(tick)
 	if s >= core_exposure_s:
 		return MatchArc.Arc.OVERTIME
-	if s * float(_ARC_EXPAND_DIV) >= core_exposure_s:
+	if s * float(arc_expand_divisor) >= core_exposure_s:
 		return MatchArc.Arc.SIEGE
-	if s * float(_ARC_OPEN_DIV) >= core_exposure_s:
+	if s * float(arc_open_divisor) >= core_exposure_s:
 		return MatchArc.Arc.EXPAND
 	return MatchArc.Arc.OPEN
 

@@ -34,7 +34,7 @@ func drain_events() -> Array[SimEvent]
 func serialize() -> PackedByteArray                                          # includes the AI hook's opaque bytes
 static func deserialize(bytes: PackedByteArray, content: ContentSet, hook: SimAiHook) -> SimWorld   # null on malformed bytes
 func profile() -> PackedFloat32Array                                         # 14 rows of 03 s4.4 for the last tick
-func set_budget_profile(level: int) -> void                                  # activate cut rungs 1..level of 03 s4.3 at runtime
+func set_budget_profile(level: int) -> void;  func path_expansions_per_tick() -> int   # cut rungs 1..level (<= 8) of 03 s4.3; rung 3 caps live projectiles, 8 lowers the path budget (TA-49; TA-50 hands the value to Pathing)
 func terrain() -> Terrain                                                    # read-only sampler shared with presentation
 func store() -> EntityStore;  func projectiles() -> ProjectileStore;  var rng: Rng;  var spatial: Spatial;  var collision: Collision
     # store / projectiles (03): net encoder and tests only, presentation uses view(); rng = S7's one RNG; spatial / collision (TA-18): read-only
@@ -104,7 +104,7 @@ var core_exposure_s: float; var hard_end_s: float                           # fr
 var debug_commands: bool; var profile_enabled: bool; var friendly_fire: bool; var adjutant_allowed: StringName   # off | economy | full
 var sun_period_s: float; var ranked: bool
 func phase(tick: int) -> Phase;  func arc(tick: int) -> MatchArc.Arc
-var tick_hz: int;  static func from_defs(mode_def: ModeDef, match_def: MatchRulesDef, rules: RulesDef, profile: StringName) -> MatchRules   # (TA-18)
+var tick_hz: int;  var arc_open_divisor: int;  var arc_expand_divisor: int;  func adopt_match_def(match_def: MatchRulesDef) -> void;  static func from_defs(mode_def: ModeDef, match_def: MatchRulesDef, rules: RulesDef, profile: StringName) -> MatchRules   # (TA-18, TA-49)
 class_name MatchArc;  enum Arc { OPEN, EXPAND, SIEGE, OVERTIME }            # enum holder (clock band, 05 uses it); PlayerKind has no holder: ordinals below, PlayerTable.KIND_* (R0 B.11 A-50)
 
 class_name SimView extends RefCounted                                        # LocalSimView (direct arrays) and NetSimView (replicated) implement it
@@ -294,7 +294,6 @@ Recipes (SimEvent kind, order kind, AlertKind / Command.Kind / CommandResult.Cod
 ## Open items
 
 - R0 B.8-B.11 applied (A-1/3/7/8, A-11..14, A-20/21 with TA-43/44/45/48, A-41/42/46/47, A-49..A-56; `docs/reviews/R0-amendments-04.md`). Pending code:
-  TA-49 reads the A-51 `rules.json` / `match_rules.json` fields (rate / burst, uplink margin, request TTL, echo, shooter grace, heuristic pct, `cut_ladder`,
-  arc divisors) and adds the A-53 pad approach-column RAM exemption; TA-50 wires `Pathing` (step 3b, `pathing()`, S4); TA-51 adds `read_poses`.
+  TA-49 landed (A-51 fields read, A-53 approach column); TA-50 wires `Pathing` (step 3b, `pathing()`, S4); TA-51 adds `read_poses`.
 - Interim stand-ins (step-9 frees, validated-only kinds): `sim/world/MODULE.md`; control transitions: `sim/control/MODULE.md` (AI-02, A-61).
 - Owners: TA-11 store, TA-12 kinematics, TA-14 collision, TA-18 tick driver, TA-21 serialize format, TA-22 S-SIM-1, TA-37 vision, TA-38 ground; 05: steer/orders/control.

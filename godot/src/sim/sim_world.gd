@@ -15,7 +15,7 @@ const _RULES_STATE: PackedStringArray = ["mode", "caps_profile", "sim_budget_pro
 	"debug_commands", "profile_enabled", "friendly_fire", "adjutant_allowed", "sun_period_s", "ranked", "tick_hz"]
 const _CAPS_STATE: PackedStringArray = ["id", "units", "structures", "projectiles", "wrecks", "slots"]
 const _COLLISION_STATE: PackedStringArray = ["ep_gen", "ep_last", "born_gen", "born_tick"]
-const _BUDGET_RUNGS_MAX: int = 7
+const _BUDGET_RUNGS_MAX: int = 8   ## rung 7 (native twins) is code, not a profile entry; 8 is A-55
 
 var rng: Rng = Rng.new(0)              ## S7: the only RNG of the match; systems and the AI hook use forks
 var spatial: Spatial = null            ## read-only outside the sim lane: step 7's hash (tests, Combat, Vision)
@@ -198,6 +198,7 @@ static func deserialize(bytes: PackedByteArray, content: ContentSet, hook: SimAi
 	rules.caps = CapsDef.new()
 	if typeof(rng_v) != TYPE_PACKED_BYTE_ARRAY or typeof(map_v) != TYPE_STRING:
 		return null
+	rules.adopt_match_def(content.match_rules)
 	if not StateIO.get_props(buf, rules, _RULES_STATE) or not StateIO.get_props(buf, rules.caps, _CAPS_STATE):
 		return null
 	var map: MapDef = MapDef.new()
@@ -223,14 +224,24 @@ func profile() -> PackedFloat32Array:
 
 
 ## Activates cut rungs 1..level of 03 s4.3 by rewriting `MatchRules.sim_budget_profile`; consumers read the list:
-## rung 1 the AI hook (think cadence), rung 2 Vision (TA-37); rungs 3, 4 and 6 wait for their def fields.
+## rung 1 the AI hook (think cadence), rung 2 Vision (TA-37); rung 3 caps live projectiles at `cut_ladder`
+## `rung_3_projectile_cap` here; rung 8 is read through `path_expansions_per_tick()`; rungs 4, 5 and 6 wait for their systems.
 func set_budget_profile(level: int) -> void:
 	var n: int = clampi(level, 0, _BUDGET_RUNGS_MAX)
 	var rungs: PackedInt32Array = PackedInt32Array()
 	for k: int in n:
 		var _a: bool = rungs.push_back(k + 1)
 	_rules.sim_budget_profile = rungs
+	var live_cap: int = _rules.caps.projectiles if _rules.caps.projectiles > 0 else ProjectileStore.SLOT_COUNT
+	_proj.live_cap = mini(live_cap, _defs.rules.rung_3_projectile_cap) if n >= 3 else live_cap
 
+
+## Path budget of this tick: `rules.path_expansions_per_tick`, `cut_ladder.rung_8_path_expansions_per_tick` at rung 8.
+## `Pathing.expansions_per_tick` is assigned this value by the step 3b wiring (TA-50).
+func path_expansions_per_tick() -> int:
+	if _rules.sim_budget_profile.has(8):
+		return _defs.rules.rung_8_path_expansions_per_tick
+	return _defs.rules.path_expansions_per_tick
 
 func terrain() -> Terrain:
 	return _terrain
@@ -263,6 +274,8 @@ func _wire(rules: MatchRules) -> void:
 	_events = SimEvents.new()
 	_state = MatchState.new()
 	_control = ControlMachine.new(_store, _orders, _players, _inputs, _events, _defs.rules.ceiling_hard_m, rules.tick_hz)
+	_control.configure(_defs.rules)
+	collision.shooter_grace_ticks = _defs.rules.shooter_grace_ticks
 	_validator = CommandValidator.new(_store, _players, _defs, rules, _control)
 	var c: ContentSet = _defs.content
 	if c.order_rules != null:
