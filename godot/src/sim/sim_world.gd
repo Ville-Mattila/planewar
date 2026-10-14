@@ -4,7 +4,8 @@ class_name SimWorld extends RefCounted
 ## 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-50), 4 assist
 ## substitution (AI-10), 5 kinematics (ships: DOCKED skipped, A-41, terrain contacts to Collision; ground: GroundMotion,
 ## TA-38), 6 projectiles, 7 spatial rebuild, 8 collision, 9 weapon fire, damage from the contacts and fuses (Combat),
-## deferred deaths, 10 match timers (Economy, Production, Build, Docking and scoring land later), 11 vision, 12 the
+## deferred deaths (+ footprints, sites, queues), 10 Economy, Construction, Production and the match timers (Docking and
+## scoring land later), 11 vision, 12 the
 ## caller drains events. Helpers: `sim/world/`; control transitions: `sim/control/` (05 s2, AI-02).
 
 const _MAPS_ROOT: String = "res://content/maps/"
@@ -29,6 +30,7 @@ var _validator: CommandValidator = null
 var _applier: CommandApplier = null
 var _control: ControlMachine = null
 var _intake: CommandIntake = null
+var _econ: EconomyHub = null            ## Build, Economy, Construction, Production (TA-19)
 var _motion: ProjectileMotion = null
 var _combat: Combat = null
 var _ships: ShipMotion = null
@@ -71,11 +73,9 @@ func load_map(map: MapDef, _seed: int, rules: MatchRules) -> Result:
 func add_player(slot: int, team: int, doctrine: StringName, kind: int) -> void:
 	if slot < 0 or slot >= PlayerTable.SLOTS or team < 0 or team >= PlayerTable.TEAMS or _players == null:
 		return
-	var members: PackedInt32Array = PackedInt32Array()
-	_players.members(team, members)
-	if members.is_empty() and _defs.economy != null:
-		_players.team_ore[team] = _defs.economy.start_ore
-		_players.team_ice[team] = _defs.economy.start_ice
+	if _defs.economy != null and _players.active[slot] == 0:   # C2-14: start_ore / start_ice are per player, summed into the team pool
+		_players.team_ore[team] += _defs.economy.start_ore
+		_players.team_ice[team] += _defs.economy.start_ice
 	_players.active[slot] = 1
 	_players.team[slot] = team
 	_players.kind[slot] = kind
@@ -99,6 +99,12 @@ func admin_release(slot: int) -> void:
 		_control.admin_release(slot)
 
 
+## C2-14: lays out `economy.start_kit` for `slot` around `centre` (Core), the Refinery toward `toward`; see `EconomyHub`.
+## Call after `add_player`, before the first `step()`; false when a structure does not fit.
+func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3) -> bool:
+	return _econ.spawn_start_kit(slot, centre, toward, _state.tick) if _econ != null else false
+
+
 func set_ai_hook(hook: SimAiHook) -> void:
 	_hook = hook
 
@@ -119,6 +125,7 @@ func step() -> void:
 	var t: int = _state.tick + 1
 	_state.tick = t
 	_events.tick = t
+	_econ.begin_tick(t)
 	_profiler.begin()
 	_intake.apply_all(t)                                     # 1
 	_control.step_releases()                                 # 1: C12 disconnect, C18 admin
@@ -215,6 +222,11 @@ func interest_ids() -> PackedInt32Array:
 	return vision.grid.ids
 
 
+## Build, Economy, Construction and Production of this world (TA-19): tests and the Commander bot's economy reads.
+func economy() -> EconomyHub:
+	return _econ
+
+
 func terrain() -> Terrain:
 	return _terrain
 
@@ -261,10 +273,13 @@ func _wire(rules: MatchRules) -> void:
 	_combat = Combat.new(_store, _proj, collision, spatial, _defs, rules, _events, _applier, _inputs)
 	_ships = ShipMotion.new(_store, _inputs, _defs, collision, _terrain)
 	_profiler.enabled = rules.profile_enabled
+	_econ = EconomyHub.new(_store, _players, _defs, rules, _terrain, _events, _applier, _validator)
+	_intake.economy = _econ
 	_pathing = Pathing.from_rules(_defs.rules)
 	_pathing.set_terrain(_terrain)
 	_ground = GroundMotion.new(_store, _inputs, _defs, _terrain, _pathing)
 	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state, _pathing)
+	_view.production = _econ.production
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
 	vision = Vision.new(_store, _defs, rules.tick_hz)
 
@@ -298,6 +313,7 @@ func _step_combat(t: int) -> void:
 	_combat.step(t, rng)
 	for s: int in _applier.dying:
 		_combat.forget(s)
+		_econ.on_death(s)
 	_applier.resolve_deaths(t)
 
 
@@ -306,6 +322,7 @@ func _step_combat(t: int) -> void:
 func _step_match(t: int) -> void:
 	if _state.ended():
 		return
+	_econ.step(t, _dt)
 	var ph: MatchRules.Phase = _rules.phase(t)
 	var clock: float = float(t) / float(_rules.tick_hz)
 	if ph != MatchRules.Phase.PLAYING and _state.exposure_tick < 0:

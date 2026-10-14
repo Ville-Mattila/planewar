@@ -15,14 +15,18 @@ static func stockpile_cap(store: EntityStore, defs: WorldDefs, team: int) -> Vec
 	return c
 
 
-## (supply, demand) from the signed `power` of the team's live, finished structures.
+## (supply, demand) from the signed `power` of the team's live, finished structures; a Solar Array's output is scaled by
+## `Economy.solar_factor` at its position (02 s8.4, fixed sun along +Z).
 static func power_balance(store: EntityStore, defs: WorldDefs, team: int) -> Vector2:
 	var b: Vector2 = Vector2.ZERO
 	for s: int in store.structures:
 		if store.team[s] == team and (store.flags[s] & EntityStore.F_BUILDING) == 0:
 			var sd: StructureDef = defs.resolved(store.owner[s]).structure(store.def_id[s])
 			if sd != null:
-				b += Vector2(maxf(sd.power, 0.0), maxf(-sd.power, 0.0))
+				var pw: float = sd.power
+				if sd.solar and defs.economy != null:
+					pw *= Economy.solar_factor(store.up[s], Vector3.BACK, false, defs.economy.solar_band_deg, defs.economy.solar_plateau_mult)
+				b += Vector2(maxf(pw, 0.0), maxf(-pw, 0.0))
 	return b
 
 
@@ -50,6 +54,21 @@ static func has_structure(store: EntityStore, team: int, def_id: int) -> bool:
 		if store.def_id[s] == def_id and store.team[s] == team and (store.flags[s] & EntityStore.F_BUILDING) == 0:
 			return true
 	return false
+
+
+## The player-table half of a `PlayerStateView` (counts are the caller's, they read the store).
+static func fill_player(v: PlayerStateView, pl: PlayerTable, slot: int) -> void:
+	v.slot = slot
+	v.team = pl.team[slot]
+	v.kind = pl.kind[slot]
+	v.doctrine = StringName(pl.doctrine[slot])
+	v.possessed = pl.possessed[slot]
+	v.eliminated = pl.eliminated[slot] != 0
+	v.commander_rights = pl.is_active(slot) and not v.eliminated
+	v.connected = pl.connected[slot] != 0
+	v.disconnect_tick = pl.disconnect_tick[slot]
+	v.adjutant_profile = pl.adjutant_profile[slot]
+	v.adjutant_toggles = pl.adjutant_toggles[slot]
 
 
 ## Live entities of `live` owned by player slot `player`.

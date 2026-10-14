@@ -84,12 +84,15 @@ func test_produce_checks_owner_shape_cap_and_cost() -> void:
 	var dart: int = WorldTestKit.def_id(&"dart")
 	var bomber: int = WorldTestKit.def_id(&"bomber")
 	assert_int(_code(w, Command.produce(0, yard, dart, 1))).is_equal(C.ACCEPTED)
+	assert_int(_code(w, Command.produce(2, yard, dart, 1))).is_equal(C.ACCEPTED)            # queues are team-shared (02 s6.4)
 	assert_int(_code(w, Command.produce(0, enemy_yard, dart, 1))).is_equal(C.REJECTED_NOT_OWNER)
+	assert_int(_code(w, Command.produce(0, yard, bomber, 1))).is_equal(C.REJECTED_NO_RIGHTS)     # needs a Hangar
 	assert_int(_code(w, Command.produce(0, yard, dart, 0))).is_equal(C.REJECTED_MALFORMED)
 	assert_int(_code(w, Command.produce(0, yard, WorldTestKit.def_id(&"pad"), 1))).is_equal(C.REJECTED_MALFORMED)
-	var ore: int = WorldTestKit.content().economy.start_ore
-	var n: int = mini(5, ore / maxi(WorldTestKit.content().ships[bomber].cost_ore, 1) + 1)
-	assert_int(_code(w, Command.produce(0, yard, bomber, n))).is_equal(C.REJECTED_COST)
+	var pool: Vector2i = w.economy().economy.stockpile(0)
+	assert_bool(w.economy().economy.try_spend(0, pool.x, 0)).is_true()
+	assert_int(_code(w, Command.produce(0, yard, dart, 1))).is_equal(C.REJECTED_COST)
+	w.economy().economy.credit(0, pool.x, 0)
 	r.caps.units = 1
 	WorldTestKit.spawn(w, &"dart", 0, 0, WorldTestKit.at(500.0))
 	assert_int(_code(w, Command.produce(0, yard, dart, 1))).is_equal(C.REJECTED_CAP)
@@ -99,7 +102,9 @@ func test_build_checks_shape_cap_and_cost() -> void:
 	var r: MatchRules = WorldTestKit.rules()
 	var w: SimWorld = WorldTestKit.world(7, r)
 	var pad: int = WorldTestKit.def_id(&"pad")
-	assert_int(_code(w, Command.build(0, pad, 1234, 1))).is_equal(C.ACCEPTED)
+	var res: CommandResult = w.apply_command(Command.build(0, pad, 1234, 1))
+	assert_int(res.code).is_equal(C.REJECTED_PLACEMENT)                    # Build.can_place's verdict travels in `reject`
+	assert_int(res.reject).is_equal(Build.Reject.PREREQ)
 	assert_int(_code(w, Command.build(0, pad, 1234, 4))).is_equal(C.REJECTED_MALFORMED)
 	assert_int(_code(w, Command.build(0, WorldTestKit.def_id(&"dart"), 1234, 0))).is_equal(C.REJECTED_MALFORMED)
 	r.caps.structures = 0
@@ -179,7 +184,10 @@ func test_s12_cancel_produce_owner_or_delegable_teammate() -> void:
 	var w: SimWorld = WorldTestKit.world()
 	w.add_player(3, 0, &"", PlayerTable.KIND_HUMAN)
 	var yard: int = _structure(w, &"shipyard", 3, 0, false)
-	assert_int(_code(w, CommandPayload.cancel_produce(3, yard, 0))).is_equal(C.ACCEPTED)
+	assert_int(_code(w, CommandPayload.cancel_produce(3, yard, 0))).is_equal(C.REJECTED_DEAD)   # empty queue
+	assert_int(_code(w, Command.produce(3, yard, WorldTestKit.def_id(&"dart"), 2))).is_equal(C.ACCEPTED)
+	w.step()
+	assert_int(_code(w, CommandPayload.cancel_produce(3, yard, 1))).is_equal(C.ACCEPTED)       # the queuer
 	assert_int(_code(w, CommandPayload.cancel_produce(0, yard, 0))).is_equal(C.REJECTED_NOT_OWNER)
 	assert_int(_code(w, CommandPayload.cancel_produce(1, yard, 0))).is_equal(C.REJECTED_NOT_OWNER)
 	w.remove_player(3)

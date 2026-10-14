@@ -12,6 +12,7 @@ var n: int = Sphere.GRID_BUILD
 var _flags: PackedByteArray = PackedByteArray()
 var _slope: PackedByteArray = PackedByteArray()
 var _terrain: Terrain = null
+var _used: PackedInt32Array = PackedInt32Array()   ## cells whose flag byte is non-zero (unsorted); the save is sparse
 
 
 func _init(terrain: Terrain, grid_n: int = Sphere.GRID_BUILD) -> void:
@@ -34,17 +35,17 @@ func flags_of(cell: int) -> int:
 
 func occupy(cells: PackedInt32Array) -> void:
 	for c: int in cells:
-		_flags[c] |= OCCUPIED
+		_put(c, _flags[c] | OCCUPIED)
 
 
 func release(cells: PackedInt32Array) -> void:
 	for c: int in cells:
-		_flags[c] &= ~OCCUPIED
+		_put(c, _flags[c] & ~OCCUPIED)
 
 
 ## Marks `cell` as a resource node; `cold_trap` = an Ice node an Ice Extractor may be built on (ADR-05).
 func mark_node(cell: int, cold_trap: bool) -> void:
-	_flags[cell] |= NODE | (COLD_TRAP if cold_trap else 0)
+	_put(cell, _flags[cell] | NODE | (COLD_TRAP if cold_trap else 0))
 
 
 func slope_deg(cell: int) -> float:
@@ -66,17 +67,43 @@ func set_slope_deg(cell: int, deg: float) -> void:
 	_slope[cell] = clampi(roundi(deg / Terrain.SLOPE_STEP_DEG), 0, SLOPE_UNKNOWN - 1)
 
 
-## S4: the flag bytes (occupancy, nodes). The slope cache is derived from Terrain and refills lazily, so it is not saved.
+## S4: the non-zero flag bytes as (sorted cell list, flag bytes): a 1,024 grid is 6.3 MB of mostly zeros, the save is
+## O(occupied cells). The slope cache is derived from Terrain and refills lazily, so it is not saved.
 func write_state(buf: StreamPeerBuffer) -> void:
-	buf.put_var(_flags)
+	var cells: PackedInt32Array = _used.duplicate()
+	cells.sort()
+	var f: PackedByteArray = PackedByteArray()
+	var _r: int = f.resize(cells.size())
+	for k: int in cells.size():
+		f[k] = _flags[cells[k]]
+	buf.put_var(cells)
+	buf.put_var(f)
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
-	var v: Variant = buf.get_var()
-	if typeof(v) != TYPE_PACKED_BYTE_ARRAY:
+	var cv: Variant = buf.get_var()
+	var fv: Variant = buf.get_var()
+	if typeof(cv) != TYPE_PACKED_INT32_ARRAY or typeof(fv) != TYPE_PACKED_BYTE_ARRAY:
 		return false
-	var f: PackedByteArray = v
-	if f.size() != _flags.size():
+	var cells: PackedInt32Array = cv
+	var f: PackedByteArray = fv
+	if cells.size() != f.size():
 		return false
-	_flags = f
+	for k: int in cells.size():
+		if cells[k] < 0 or cells[k] >= _flags.size() or f[k] == 0 or (k > 0 and cells[k] <= cells[k - 1]):
+			return false
+	_flags.fill(0)
+	var _r: int = _used.resize(0)
+	for k: int in cells.size():
+		_put(cells[k], f[k])
 	return true
+
+
+# Writes a flag byte and keeps `_used` equal to the set of non-zero cells.
+func _put(c: int, v: int) -> void:
+	var old: int = _flags[c]
+	_flags[c] = v
+	if old == 0 and v != 0:
+		var _a: bool = _used.push_back(c)
+	elif old != 0 and v == 0:
+		_used.remove_at(_used.find(c))

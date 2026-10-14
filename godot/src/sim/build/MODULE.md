@@ -1,17 +1,17 @@
 # sim/build - MODULE.md
 
 Contract for `godot/src/sim/build/**`: placement validation of 02 s6.2 and 03 s3.6 (TA-19; R0 C2-12; A-21 split of
-`sim/MODULE.md`, which keeps the frozen `Build.Reject` ordinals). A change to "Public API" or
+`sim/MODULE.md`, which keeps the frozen `Build.Reject` ordinals) and the construction sites of 02 s6.3. A change to "Public API" or
 "Invariants" is a contract change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines.
 
 | Field | Value |
 |---|---|
-| Responsibility | `Build.can_place` with the 13 reasons in `Reject` order (first failure wins), footprint generation across cube edges and corners, the build grid (occupancy, resource nodes, slope cache), site creation by `place`. Not here: payment, construction slots, queued sites, cancel/refund (Economy / Production, rest of TA-19), Vision (TA-37). |
+| Responsibility | `Build.can_place` with the 13 reasons in `Reject` order (first failure wins), footprint generation across cube edges and corners, the build grid (occupancy, resource nodes, slope cache), site creation by `place` / `stamp`, and `Construction` (queued sites, construction slots, payment when assembly starts, progress and HP, completion, cancel refunds). Not here: the pools and the payment rules (`Economy`, sim/economy/), Vision (TA-37). |
 | Lane owner tier | Sonnet (Opus review) |
 | May depend on | `core`, `content`, `sim` (incl. `sim/world/`: `WorldDefs`, `PlayerTable`, `TeamStats`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads |
 | Autoloads used | None |
-| Status | can_place / place / footprint implemented (2026-10-14); not yet composed into `SimWorld` (needs sim: construct `Build`, call `set_clock` each tick, route `Command.BUILD` through `can_place`) |
+| Status | implemented (2026-10-14); composed into `SimWorld` by `EconomyHub` (TA-19): `BUILD` -> `can_place` -> `place` -> `Construction.enrol`, state in the "economy" section (format 7) |
 
 ## Public API
 
@@ -21,17 +21,27 @@ enum Reject { OK, ELIMINATED, PREREQ, CAP, OCCUPIED, SLOPE, NODE, NOT_VISIBLE, E
               NO_PRESENCE, SPACING, FUNDS, SPEND_LOCKED }                    # 0-13 frozen (sim/MODULE.md Enumerations)
 func can_place(player: int, def_id: int, cell: int, rotation: int) -> Build.Reject   # the one placement validator (03 s3.6)
 func place(player: int, def_id: int, cell: int, rotation: int) -> int        # site EntityId or 0; reserves the footprint, no payment
+func stamp(player: int, def_id: int, cell: int, rotation: int, finished: bool) -> int   # unvalidated `place` (finished: the start kit); 0 when the store is full
+func release_site(s: int) -> void                                            # frees the footprint of structure slot `s` (death / cancelled site)
+func lock_blocks(player: int, cost_ore: int) -> bool                         # early share lock (02 s6.4, C3-08): the one definition, used by can_place and Economy.try_pay
 func footprint_cells(def_id: int, cell: int, rotation: int) -> PackedInt32Array      # (03) crosses cube edges via neighbour_cell
 func _init(defs: WorldDefs, store: EntityStore, players: PlayerTable, terrain: Terrain, rules: MatchRules, grid_n: int = Sphere.GRID_BUILD)
 func set_clock(tick: int) -> void                                            # early share lock reads it
-func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # (TA-21) S4: ledgers, clock, grid flags; SimWorld adds the section when it owns a Build
-var grid: BuildGrid;  var spent_ore: PackedInt32Array;  var delivered_ore: PackedInt32Array   # per player slot; Economy writes the two ledgers
-const MAX_SLOPE_DEG: float;  const PRESENCE_RADIUS: float;  const MIN_SPACING_FRIENDLY: float;  const MIN_SPACING_ENEMY: float   # needs content: rules.json fields
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # (TA-21, TA-19) S4: ledgers, clock, placed rotations, grid flags
+var grid: BuildGrid;  var spent_ore: PackedInt32Array;  var delivered_ore: PackedInt32Array;  var rot: PackedByteArray   # ledgers per player slot (Economy writes them); rot per entity slot
+    # thresholds come from economy.json (ADR-09): build_max_slope_deg, outpost_presence_radius_m, outpost_spacing_friendly_m / _enemy_m, site_hp_fraction
 class_name BuildGrid extends RefCounted                                      # 6 x n x n flag bytes + lazy slope bytes (0.5 degree steps)
-func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # (TA-21) the flag bytes; the slope cache refills from Terrain
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # (TA-21) the non-zero flag bytes as (sorted cells, flags), O(occupied); the slope cache refills from Terrain
 const OCCUPIED: int;  const NODE: int;  const COLD_TRAP: int
 func cell_count() -> int;  func flags_of(cell: int) -> int;  func occupy(cells: PackedInt32Array) -> void;  func release(cells: PackedInt32Array) -> void
 func mark_node(cell: int, cold_trap: bool) -> void;  func slope_deg(cell: int) -> float;  func set_slope_deg(cell: int, deg: float) -> void
+class_name Construction extends RefCounted                                   # (TA-19) sites of 02 s6.3; progress in the entity's `timer_a`
+enum State { NONE, QUEUED, ASSEMBLING }
+func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, events: SimEvents, economy: Economy, build: Build)
+var state: PackedByteArray;  var paid_ore: PackedInt32Array;  var paid_ice: PackedInt32Array;  var waiting: PackedByteArray;  var applier: CommandApplier   # per entity slot
+func slot_limit(outposts_alive: int) -> int;  func enrol(s: int) -> void;  func is_site(s: int) -> bool;  func progress01(s: int) -> float
+func cancel(s: int) -> int;  func forget(s: int) -> void;  func step(_t: int, dt: float) -> void   # cancel: refund by state, deferred free; returns Ore refunded
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name BuildFootprint extends RefCounted                                 # centre-anchored w x h rectangle, rotation 0-3, generated by neighbour_cell stepping
 var crossed: bool
 func cells(anchor: int, w: int, h: int, rotation: int) -> PackedInt32Array;  func centre_dir() -> Vector3
@@ -45,7 +55,10 @@ func cells(anchor: int, w: int, h: int, rotation: int) -> PackedInt32Array;  fun
 - B4 NOT_VISIBLE (checked before ENEMY_RADIUS, so fog never leaks enemy structures): centre within the sensor radius of a finished friendly entity (3D distance). Vision (TA-37) is an entity-mask pass with datum occlusion, not a ground-point query, so the stand-in stays.
 - B5 Early share lock: team of >= 2 players, tick < `early_share_lock_s * tick_hz`, `spent_ore + cost_ore > early_share_ore + delivered_ore` is SPEND_LOCKED.
 - B6 Pure given (store, grid, players, clock): no RNG; the only allocation after `_init` is `place`'s entity slot.
+- B7 Construction slots per player: `construction_slots_base` + finished Outposts, at most `construction_slots_max`; sites start in placement order (`spawn_tick`, then slot). Payment is the full cost when assembly starts; a site that cannot pay (Ore, Ice, early share lock) stays QUEUED with one alert per wait. Assembly time ignores power. Site HP is `hp x max(site_hp_fraction, progress)`; a destroyed site leaves no wreck and no refund.
+- B8 Cancel (S12 rights are the validator's): a QUEUED site refunds `cancel_refund_queued` and an ASSEMBLING one `cancel_refund_assembly` of what it paid; the spent-Ore ledger falls by the Ore refunded. The footprint is freed with the deferred death (`EconomyHub.on_death`), never earlier.
+- B9 The grid is saved sparsely (sorted occupied cells); `read_state` refuses unsorted, out-of-range or zero entries.
 
 ## Tests
 
-`godot/test/unit/sim/build/test_build.gd`: every Reject, cross-edge and corner footprints, Outpost presence and spacing, rotation, determinism, `place`.
+`godot/test/unit/sim/build/test_build.gd`: every Reject, cross-edge and corner footprints, Outpost presence and spacing, rotation, determinism, `place`. `godot/test/unit/sim/build/test_construction.gd`: B7-B9, S12 on real sites, S4 mid-construction.
