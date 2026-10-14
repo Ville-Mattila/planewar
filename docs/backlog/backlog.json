@@ -6758,8 +6758,10 @@
       "R0-amendments-04 A-56",
       "03 s10.2"
     ],
-    "status": "todo",
-    "note": "read_poses wired; no measurable gain on dev laptop (p95 2.9-3.4 ms vs 2.4); follow-up TA-55"
+    "status": "done",
+    "note": "read_poses wired; no measurable gain on dev laptop (p95 2.9-3.4 ms vs 2.4); follow-up TA-55",
+    "merged": "2026-10-14",
+    "pr": "public#36"
   },
   {
     "id": "TA-53",
