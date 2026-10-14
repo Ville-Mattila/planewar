@@ -1004,8 +1004,10 @@
       " R0 C2-09",
       " 03 TA-38"
     ],
-    "status": "todo",
-    "note": "review: ground constants -> ground_units.json ground_common (A-63 orchestrator ruling); sim_world.gd at 400 lines (next step-10 system must extract first); 40 deg/s turn rate is an uncited tuning value (owner may retune)"
+    "status": "done",
+    "note": "review: ground constants -> ground_units.json ground_common (A-63 orchestrator ruling); sim_world.gd at 400 lines (next step-10 system must extract first); 40 deg/s turn rate is an uncited tuning value (owner may retune)",
+    "merged": "2026-10-14",
+    "pr": "public#44"
   },
   {
     "id": "TA-33",
