@@ -10,6 +10,8 @@ extends Node
 ## microseconds; the line ab_perf.py parses). A tree without perf_tick_world.gd (an A/B base older than TA-18)
 ## falls back to the S-CI-1 SoakWorldStub so the harness still prints PERF_TICK.
 
+## Bump when the measured scope changes; ab_perf.py skips (does not fail) an A/B whose fingerprints differ.
+const HARNESS_VERSION: int = 1
 const WARMUP_TICKS: int = 300
 const STEP_DT: float = 1.0 / 30.0
 const WORLD_SCRIPT: String = "res://test/perf/perf_tick_world.gd"
@@ -70,6 +72,8 @@ func _run_sim(ticks: int, full: bool, flat: bool) -> void:
 		w.drain_events()
 		pw.top_up()
 	var st: Variant = w.store()
+	print("PERF_FINGERPRINT harness=%d world=sim scale=%s map=%s rows=%d" % [HARNESS_VERSION,
+		"full" if full else "ab", map_id if map_id != &"" else "flat", ROW_NAMES.size()])
 	print("PERF_SCENE scale=%s map=%s ticks=%d entities=%d ships=%d projectiles_mean=%d" % ["full" if full else "ab",
 		map_id if map_id != &"" else "flat", ticks, st.live_count(), st.ships.size(), live_p / ticks])
 	for r: int in range(1, ROW_NAMES.size()):
@@ -93,6 +97,7 @@ func _run_stub(ticks: int) -> void:
 		var dt: int = Time.get_ticks_usec() - t0
 		samples[i] = dt
 		total += dt
+	print("PERF_FINGERPRINT harness=%d world=stub scale=stub map=flat rows=0" % HARNESS_VERSION)
 	print("PERF_SCENE scale=stub")
 	_print_tick(samples, total, ticks)
 

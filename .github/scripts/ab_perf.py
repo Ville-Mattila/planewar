@@ -17,30 +17,50 @@ import sys
 LINE = re.compile(r"PERF_TICK p50_us=(\d+) p95_us=(\d+) p99_us=(\d+) max_us=(\d+) mean_us=(\d+)")
 
 
-def run_once(project: str, ticks: int) -> tuple[int, int]:
+FP_LINE = re.compile(r"^PERF_FINGERPRINT (.*)$", re.M)
+
+
+def parse_output(out: str) -> tuple[int, int, str]:
+    """(p95_us, mean_us, fingerprint). A tree whose harness predates the fingerprint reports 'unknown'."""
+    m = LINE.search(out)
+    if not m:
+        raise SystemExit(f"no PERF_TICK line in output:\n{out}")
+    fp = FP_LINE.search(out)
+    return int(m.group(2)), int(m.group(5)), fp.group(1).strip() if fp else "unknown"
+
+
+def run_once(project: str, ticks: int) -> tuple[int, int, str]:
     godot = os.environ.get("GODOT_BIN", "godot")
     out = subprocess.run(
         [godot, "--headless", "--path", project, "res://test/perf/perf_tick.tscn", "--", f"--ticks={ticks}"],
         check=True, capture_output=True, text=True, timeout=300).stdout
-    m = LINE.search(out)
-    if not m:
-        raise SystemExit(f"no PERF_TICK line from {project}:\n{out}")
-    return int(m.group(2)), int(m.group(5))
+    return parse_output(out)
 
 
-def compare(base: str, head: str, rounds: int, ticks: int) -> tuple[float, float, float, float]:
+def decide(base_fp: str, head_fp: str, d95: float, threshold: float) -> tuple[int, str]:
+    """(exit code, message). Differing fingerprints: skip with a notice. Equal: gate on +threshold %."""
+    if base_fp != head_fp:
+        return 0, (f"::notice::A/B skipped, harness scope differs (base: {base_fp}; head: {head_fp}); "
+                   "the comparison would not be like for like")
+    if d95 > threshold:
+        return 1, "::error::head is slower than base beyond the A/B threshold"
+    return 0, ""
+
+
+def compare(base: str, head: str, rounds: int, ticks: int) -> tuple[float, float, float, float, str, str]:
     a_p95, a_mean, b_p95, b_mean = [], [], [], []
+    fps: dict[str, str] = {}
     for r in range(rounds):
         order = [(base, a_p95, a_mean), (head, b_p95, b_mean)]
         if r % 2:
             order.reverse()
         for proj, p95s, means in order:
-            p95, mean = run_once(proj, ticks)
+            p95, mean, fps[proj] = run_once(proj, ticks)
             p95s.append(p95)
             means.append(mean)
     ma, mb = statistics.median(a_p95), statistics.median(b_p95)
     na, nb = statistics.median(a_mean), statistics.median(b_mean)
-    return ma, mb, (mb - ma) / ma * 100.0, (nb - na) / na * 100.0
+    return ma, mb, (mb - ma) / ma * 100.0, (nb - na) / na * 100.0, fps[base], fps[head]
 
 
 def append_summary(text: str) -> None:
@@ -62,7 +82,7 @@ def main() -> int:
     if a.noise:
         deltas = []
         for i in range(a.noise):
-            ma, mb, d95, dmean = compare(a.base, a.base, a.rounds, a.ticks)
+            ma, mb, d95, dmean, _fa, _fb = compare(a.base, a.base, a.rounds, a.ticks)
             deltas.append(abs(d95))
             print(f"noise run {i + 1}: p95 {ma:.0f} us vs {mb:.0f} us -> {d95:+.2f} % (mean {dmean:+.2f} %)")
         text = (f"base-vs-base noise over {a.noise} repeats x {a.rounds} rounds: max |delta| {max(deltas):.2f} %, "
@@ -72,15 +92,16 @@ def main() -> int:
         if max(deltas) >= a.threshold:
             print(f"::warning::A/B noise {max(deltas):.2f} % is not under {a.threshold} %")
         return 0
-    ma, mb, d95, dmean = compare(a.base, a.head, a.rounds, a.ticks)
+    ma, mb, d95, dmean, fa, fb = compare(a.base, a.head, a.rounds, a.ticks)
     text = (f"A/B perf_tick: base p95 {ma:.0f} us, head p95 {mb:.0f} us -> {d95:+.2f} % "
             f"(mean {dmean:+.2f} %), threshold +{a.threshold} %")
     print(text)
     append_summary("### A/B perf\n" + text + "\n")
-    if d95 > a.threshold:
-        print("::error::head is slower than base beyond the A/B threshold")
-        return 1
-    return 0
+    code, msg = decide(fa, fb, d95, a.threshold)
+    if msg:
+        print(msg)
+        append_summary(msg.split("::", 2)[-1] + "\n")
+    return code
 
 
 if __name__ == "__main__":
