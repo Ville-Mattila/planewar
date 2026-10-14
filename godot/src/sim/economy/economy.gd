@@ -113,8 +113,8 @@ func credit(team: int, ore: int, ice: int, player: int = -1) -> void:
 	_players.team_ice[team] += ice_in
 	if player >= 0 and player < PlayerTable.SLOTS:
 		_build.delivered_ore[player] += ore_in
-	_report_full(team, ore > ore_in, 1)
-	_report_full(team, ice > ice_in, 2)
+	_report_full(team, ore > ore_in, _players.team_ore[team] < _cap_ore[team], 1)
+	_report_full(team, ice > ice_in, _players.team_ice[team] < _cap_ice[team], 2)
 
 
 ## Pays `ore` / `ice` for `player` out of the team pool: SHORT when the pool lacks it, LOCKED while the early share lock
@@ -173,11 +173,13 @@ func _ensure() -> void:
 		_refresh()
 
 
-func _report_full(team: int, overflow: bool, bit: int) -> void:
+## One alert per crossing: raised on the first overflow, re-armed only once the pool is back below the cap (a zero credit
+## into a full pool neither alerts nor re-arms).
+func _report_full(team: int, overflow: bool, below_cap: bool, bit: int) -> void:
 	if overflow and (_full[team] & bit) == 0:
 		var _e: SimEvent = _events.emit(SimEvent.Kind.ALERT, AlertKind.Kind.STORAGE_FULL, bit, Vector3.ZERO, 0.0, team)
 		_full[team] |= bit
-	elif not overflow:
+	elif below_cap:
 		_full[team] &= ~bit
 
 

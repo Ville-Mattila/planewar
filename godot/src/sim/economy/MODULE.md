@@ -23,7 +23,7 @@ static func solar_factor(up: Vector3, sun_dir: Vector3, on_plateau: bool, band_d
 static func harvest_trip_time(d: float, def: GroundUnitDef) -> float          # 02 s8.2, without the dock queue wait
 func power_ratio(team: int) -> float;  func stockpile(team: int) -> Vector2i;  func caps(team: int) -> Vector2i   # x Ore, y Ice
 func try_spend(team: int, ore: int, ice: int) -> bool                        # all or nothing
-func credit(team: int, ore: int, ice: int, player: int = -1) -> void         # clamps to caps, STORAGE_FULL once per episode; player >= 0 books `Build.delivered_ore`
+func credit(team: int, ore: int, ice: int, player: int = -1) -> void         # clamps to caps, STORAGE_FULL once per crossing (re-armed when the pool is below the cap); player >= 0 books `Build.delivered_ore`
 func try_pay(player: int, ore: int, ice: int) -> Pay                         # SHORT (pool), LOCKED (early share lock), else spends and grows `Build.spent_ore`
 func refund(player: int, ore: int, ice: int) -> void                         # credit + lowers `Build.spent_ore` (S12 cancels)
 func mark_dirty() -> void;  func step() -> void                              # step 10: cache refresh, Core trickle
@@ -56,3 +56,4 @@ Emits LOW_POWER, ALERT (LOW_POWER, STORAGE_FULL). Consumes nothing; `Constructio
 ## Test entry points
 
 `godot/test/unit/sim/economy/test_economy.gd`: start kit, per-player start Ore, pay / refund / ledger, early share lock, caps clamp, power ratio, solar factor, trip time, trickle, determinism.
+`godot/test/unit/sim/economy/test_stockpiles.gd` (GD-11): caps, 60 Ore/min trickle, try_spend atomicity, STORAGE_FULL once per crossing, S4 flags, determinism, EventCodec round trip of the alert.
