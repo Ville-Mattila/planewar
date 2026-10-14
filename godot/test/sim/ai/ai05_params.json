@@ -1,0 +1,25 @@
+{
+  "_doc": "AI-05 test parameters. 'flight' = the FlightGains keys proposed for autopilots.json flight blocks (05 s4.4 plus the AI-05 additions; needs content: AI-19 writes them into ap_*). 'landing' = the TA-30 spike values (spike_flight.json landing, 05 s5.5) that the auto-dock runs reuse. 'dock_runs' = the spike harness start-state ranges (spike_flight.json harness). 'guidance' = the test guidance shaping for SC-09/SC-10 (05 s5.1, s5.3 values, ap_dart anchors).",
+  "flight": {
+    "kp_path": 4.0, "ki_path": 0.3, "integ_max_rad": 0.8, "integ_band_deg": 6.0, "lead_max_deg": 80.0,
+    "kp_att": 6.0, "kp_yaw": 6.0, "kp_roll": 3.0, "kp_bank": 1.0, "bank_threshold_deg": 10.0, "bank_max_deg": 60.0,
+    "t_trim": 0.5, "kp_speed": 0.05, "ki_speed": 0.005, "kp_turn_thrust": 2.0, "brake_overspeed_mps": 20.0
+  },
+  "landing": {
+    "kp_pos": 0.35, "kd_pos": 1.1, "kp_vz": 1.2, "max_tilt_deg": 30.0, "transition_max_tilt_deg": 75.0,
+    "transition_nose_deg": 45.0, "transition_exit_hspeed_mps": 15.0, "transition_exit_dist_m": 30.0,
+    "transition_speed_cap_mps": 30.0, "flare_agl_m": 8.0, "touch_vz_mps": 2.0, "sink_gain": 0.25,
+    "sink_min_mps": 1.5, "sink_max_mps": 6.0, "flare_tilt_deg": 10.0, "pad_radius_m": 10.0,
+    "pad_contact_margin_m": 0.5, "contact_release_m": 2.0, "pad_lat_deg": 40.0, "pad_lon_deg": 22.5, "timeout_s": 120.0
+  },
+  "dock_runs": {
+    "seed": 3031, "dist_max_m": 140.0, "alt_min_m": 15.0, "alt_max_m": 120.0, "speed_max_mps": 40.0,
+    "heading_spread_deg": 90.0
+  },
+  "guidance": {
+    "think_period_ticks": 10, "deck_alt_agl_m": 60.0, "max_alt_m": 1450.0, "min_clearance_m": 25.0,
+    "clearance_per_mps": 0.25, "probe_times_s": [0.5, 1.0, 1.5, 2.0, 3.0, 4.0], "lift_max_frac": 0.6,
+    "lift_min_time_s": 0.5, "kp_alt": 0.5, "vz_max_mps": 60.0, "pull_up_check_ticks": 3,
+    "pull_up_sample_s": 1.0, "pull_up_clear_tti_s": 4.0, "pull_up_min_hold_s": 0.5, "waypoint_radius_m": 150.0
+  }
+}
