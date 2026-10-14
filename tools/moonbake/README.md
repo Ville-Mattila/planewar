@@ -5,7 +5,7 @@ PNGs are written with stdlib `zlib` (no Pillow).
 
 ```
 python -I tools/moonbake bake     <recipe.json> --out <dir> [--no-preview] [--ramp]
-python -I tools/moonbake validate <recipe.json>            # schema, M1-M11, bakes in memory; exit 1 on a failure
+python -I tools/moonbake validate <recipe.json>            # schema, M1-M12, bakes in memory; exit 1 on a failure
 python -I tools/moonbake preview  <recipe.json> --out <dir> # preview.png, faces_{height,slope,biome}.png, polar.png
 python -I tools/moonbake check    <recipe.json>            # re-bake and compare with the committed meta.json (CI)
 python -I tools/moonbake ramp     [--out P] [--ramps biome_ramps.json]   # moon_ramp.png hook (ART-14 / ART-31)
@@ -30,7 +30,7 @@ stored deflate blocks so its bytes do not depend on the zlib build.
 ## Decisions the spec left open
 - Base noise is made 8-fold symmetric by folding each point into the wedge starting at `wedge_start_deg` and blending
   with the neighbouring fold inside a 3 degree band at the wedge borders (`terrain.base_height`).
-- Stamps use the stage order of 03 s8.2; crater base height is the mean over an equal-area probe set; cold traps are
+- Stamps use the stage order of 03 s8.2; crater base height is the mean over an equal-area probe set measured on the surface as it is when that crater is stamped (regions and earlier craters applied); M12 caps the texel-to-texel step at 200 m; cold traps are
   `COLD_TRAP_DEPTH_M` (100 m) below their rim ring; M3 allows 2 % of cells above 10 degrees.
 - M8 checks connectivity by flood fill on the 6 x 256^2 path grid (cross-edge steps through the mapping), not A*.
 - M10 estimates the web pack as a delta-filtered, byte-plane-split zlib size (raw zlib of u16 heights is about 2.4x larger).
