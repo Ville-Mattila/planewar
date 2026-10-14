@@ -1434,8 +1434,10 @@
       " R0 C1-17",
       " 03 TA-26"
     ],
-    "status": "todo",
-    "note": "800-view sync p95 7.7 ms vs 2.4 ms on tick frames: needs a bulk SimView accessor (sim lane)"
+    "status": "done",
+    "note": "800-view sync p95 7.7 ms vs 2.4 ms on tick frames: needs a bulk SimView accessor (sim lane)",
+    "merged": "2026-10-14",
+    "pr": "public#22"
   },
   {
     "id": "ART-14",
