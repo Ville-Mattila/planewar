@@ -3,7 +3,7 @@ class_name SimWorld extends RefCounted
 ## `load_map` builds every system for one match. `step()` runs, in order: 1 queued commands (+ disconnect
 ## releases), 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-20), 4 assist
 ## substitution (AI-10), 5 kinematics (DOCKED ships skipped, A-41; terrain contacts to Collision), 6 projectiles,
-## 7 spatial rebuild, 8 collision, 9 deferred deaths and projectile contacts (Combat GD-08 / GD-36 add damage),
+## 7 spatial rebuild, 8 collision, 9 damage from the contacts (Combat, GD-08) and the deferred deaths,
 ## 10 match timers (Economy, Production, Build, Docking and scoring land later), 11 vision (TA-37), 12 the caller
 ## drains events. Systems not yet built are named in their step and cost nothing. Helpers: `sim/world/`; control
 ## transitions: `sim/control/` (05 s2, AI-02).
@@ -36,6 +36,7 @@ var _applier: CommandApplier = null
 var _control: ControlMachine = null
 var _intake: CommandIntake = null
 var _motion: ProjectileMotion = null
+var _combat: Combat = null
 var _ships: ShipMotion = null
 var _profiler: TickProfiler = TickProfiler.new()
 var _view: LocalSimView = null
@@ -273,6 +274,7 @@ func _wire(rules: MatchRules) -> void:
 	_applier = CommandApplier.new(_store, _orders, _players, _inputs, _events, _defs, _validator, _control)
 	_intake = CommandIntake.new(_validator, _applier, _state)
 	_motion = ProjectileMotion.new(_store, _proj, _defs)
+	_combat = Combat.new(_store, _proj, collision, spatial, _defs, rules, _events, _applier)
 	_ships = ShipMotion.new(_store, _inputs, _defs, collision, _terrain)
 	_profiler.enabled = rules.profile_enabled
 	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state)
@@ -307,14 +309,10 @@ func _assist_substitution() -> void:
 	pass
 
 
-# Step 9 until Combat (GD-08, GD-36): a projectile with a HIT or GROUND contact ends here (damage, blasts, fuses
-# and wrecks are Combat's); then the deferred deaths of this tick are freed (03 s4.1 rule 6).
+# Step 9: Combat (GD-08) applies the step-8 contacts (damage, blasts, ramming; weapon fire and fuses are GD-36's),
+# then the deferred deaths of this tick are freed (03 s4.1 rule 6). Combat draws on the world's `rng`, passed per step (S7).
 func _step_combat(t: int) -> void:
-	for k: int in collision.contact_count:
-		if collision.c_kind[k] <= Collision.C_GROUND:
-			var i: int = _proj.index_of(collision.c_a[k])
-			if i >= 0 and _proj.alive(collision.c_a[k]):
-				var _f: bool = _proj.free_slot(i, t)
+	_combat.step(t, rng)
 	_applier.resolve_deaths(t)
 
 

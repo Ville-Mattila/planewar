@@ -74,7 +74,7 @@ var projectile_radius: PackedFloat32Array; var pad_radius_by_def: PackedFloat32A
 var ship_table: Array[ShipDef]; var ship_count: int
 func resolve(slot: int, doctrine: StringName) -> bool;  func resolved(owner: int) -> ResolvedDefs;  func ship(owner: int, def_id: int) -> ShipDef
 func entity_kind(def_id: int) -> int;  func hp_max(owner: int, def_id: int) -> float;  func cost(owner: int, def_id: int) -> Vector2i
-func possessable(def_id: int) -> bool;  func radius_of(def_id: int) -> float
+func possessable(def_id: int) -> bool;  func radius_of(def_id: int) -> float;  static func build_cell_m() -> float
 class_name TeamStats                                                         # LocalSimView's team aggregates, O(structures), never on the tick path
 static func stockpile_cap(store: EntityStore, defs: WorldDefs, team: int) -> Vector2i;  static func power_balance(store: EntityStore, defs: WorldDefs, team: int) -> Vector2
 static func tech_available(store: EntityStore, defs: WorldDefs, team: int, def_id: int) -> bool;  static func has_structure(store: EntityStore, team: int, def_id: int) -> bool
@@ -117,6 +117,6 @@ static func put_props(buf: StreamPeerBuffer, o: Object, names: PackedStringArray
 ## Open items
 
 - Def fields exist since R0 B.11 A-51 (`rules.json` `command_rate_per_s` / `command_burst`, `shooter_grace_ticks`, `cut_ladder` rungs 1-6 and 8; `match_rules.json` `arc_open_divisor` / `arc_expand_divisor`; the uplink margin, request TTL and echo window are `ControlMachine`'s, `sim/control/MODULE.md`). **TA-49** reads them at `_init` / `from_defs`; `CommandValidator.RATE_PER_S` / `BURST`, `MatchRules._ARC_*_DIV` and `Collision.shooter_grace_ticks`'s caller value stay as documented defaults (A-43 pattern, no symbol removed). `set_budget_profile` applies `cut_ladder` rungs 3 and 8 in TA-49 and rungs 1 / 2 / 4 / 6 when their systems land (AI-04, TA-37, Collision tier-A sets, Economy caps).
-- Interim, replaced by their owners: ORDER ghost-age / visibility checks (AI-15); step-9 frees of projectiles with a HIT / GROUND contact and DEBUG deaths (GD-08, GD-36 Combat); BUILD, PRODUCE, CANCEL_*, SET_RALLY, TOGGLE_AUTO_REPLENISH and SURRENDER are validated and accepted but applied by TA-19, GD-17, GD-20; CANCEL_PRODUCE treats the factory owner as the queuer until GD-17 records per-item queuers.
+- Interim, replaced by their owners: ORDER ghost-age / visibility checks (AI-15); DEBUG deaths (DEATH cause; GD-36 Combat fire pipeline; step-9 damage landed with GD-08, `sim/combat/MODULE.md`); BUILD, PRODUCE, CANCEL_*, SET_RALLY, TOGGLE_AUTO_REPLENISH and SURRENDER are validated and accepted but applied by TA-19, GD-17, GD-20; CANCEL_PRODUCE treats the factory owner as the queuer until GD-17 records per-item queuers.
 - TA-21 compacts the S4 format (live slots only, ~150 KB at 1,200 entities) into `sim/serialize.gd`; today every slot is written (486 KB at 1,200 entities + 2,000 projectiles; serialize 2.2 ms, deserialize 35 ms incl. map load).
 - Assist substitution (step 4) and `Pathing.advance` (3b) are empty until AI-10 and TA-20; rows 3b, 8b, 11 and 12 read 0.

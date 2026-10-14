@@ -3,7 +3,7 @@
 Contract for `godot/src/sim/**`. Committed by CONTRACT-0 from R0 Part B (B.3 enumerations, B.4 deps, B.5 motion, tick order,
 signatures) and 03 s15.4; supersedes 01 s9.4's signatures. A change to "Public API", "Enumerations" or "Invariants" is a contract
 change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines (ADR-14). Subsystems
-(`sim/steer/`, `sim/orders/`, `sim/control/`, `sim/scoring/`, `sim/world/` = TA-18's tick-driver helpers) keep their own `MODULE.md` (R0 B.9 A-21).
+(`sim/steer/`, `sim/orders/`, `sim/control/`, `sim/scoring/`, `sim/world/` = TA-18's tick-driver helpers, `sim/combat/` = GD-08's step-9 damage) keep their own `MODULE.md` (R0 B.9 A-21).
 
 | Field | Value |
 |---|---|
