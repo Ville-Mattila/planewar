@@ -2,7 +2,7 @@ class_name PilotInput extends RefCounted
 ## One tick of control for one entity (01 s9.4, sim/MODULE.md). Every device and every autopilot produces
 ## exactly this; the sim never knows which. Axes: thrust 0..1, pitch/yaw/roll -1..1 (Kinematics clamps).
 ## Ships: pitch + nose up, yaw + nose left (rotation about body up), roll + right wing down.
-## The 8-byte wire form (`to_bytes` / `from_bytes`, 04 s2.4) is added by NET-03.
+## The 8-byte wire form (04 s2.4) is net's `PilotWire.to_wire` / `from_wire` (NET-03, R0 B.10 A-46); the sim has no codec.
 
 const BOOST: int = 1
 const BRAKE: int = 2

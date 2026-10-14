@@ -21,7 +21,7 @@ open `godot/src/sim/<subsystem>/MODULE.md` from the template with their first co
 R0 B.5 signatures; "(03)" marks symbols 03 s15.4 adds. Anything not listed is private (prefix `_`).
 
 ```gdscript
-# planned: SimWorld, SimAiHook, CommandSinkBase, Command, CommandResult, GroundMotion, Build, Pathing, MatchRules, MatchArc, PlayerKind, SimView, TeamStateView, PlayerStateView, SimEvent, Spatial, OrderSpec, AlertKind, Assist, LandingGrade
+# planned: SimWorld, SimAiHook, CommandSinkBase, Command, CommandResult, GroundMotion, Build, Pathing, MatchRules, MatchArc, PlayerKind, SimView, TeamStateView, PlayerStateView, SimEvent, OrderSpec, AlertKind, Assist, LandingGrade
 class_name SimWorld extends RefCounted
 func load_map(map: MapDef, seed: int, rules: MatchRules) -> Result            # rules carries mode, caps profile, sim_budget_profile
 func add_player(slot: int, team: int, doctrine: StringName, kind: PlayerKind) -> void
@@ -66,7 +66,7 @@ var code: Code; var reject: int                                              # r
 class_name PilotInput extends RefCounted
 var thrust: float; var pitch: float; var yaw: float; var roll: float; var buttons: int   # towers: pitch/yaw = slew rates; ground: thrust fwd, BRAKE stop, yaw steer
 const BOOST := 1; const BRAKE := 2; const FLIP := 4; const FIRE1 := 8; const FIRE2 := 16; const DOCK := 32; const RELEASE := 64   # bit7 reserved
-func to_bytes() -> PackedByteArray;  static func from_bytes(b: PackedByteArray) -> PilotInput   # [planned]
+# wire form: net's PilotWire.to_wire / from_wire (R0 B.10 A-46, NET-03); PilotInput itself has no codec
     # 04 s2.4 layout, 8 bytes: u8 thrust, i8 pitch, i8 yaw, i8 roll, u8 buttons, u8 reserved (0), u8 reserved (0), u8 tick_lo
 
 class_name Kinematics                                                        # all static, pure: no Node, no RNG, no Time (03 s5.2-5.3)
@@ -175,8 +175,17 @@ class_name ProjectileStore extends RefCounted                                # 0
 func _init(cap_live: int, quarantine_ticks: int = QUARANTINE_TICKS) -> void                 # (TA-11) cap_live = MatchRules.caps.projectiles; index = slot - 4096
 func alloc(projectile_kind: int, tick: int) -> int;  func free_slot(index: int, tick: int) -> bool;  func alive(id: int) -> bool;  func live_count() -> int;  func free_count() -> int;  func quarantined_count() -> int
 func index_of(id: int) -> int;  func id_of(index: int) -> int;  func clear_slot(i: int) -> void;  var live: PackedInt32Array   # live indices, ascending
-class_name Spatial extends RefCounted
+class_name Spatial extends RefCounted                                        # sim/spatial.gd (TA-14): counting-sort GRID_HASH hash, _init(store, projectiles)
 func rebuild() -> void;  func ids_near(p: Vector3, radius: float, mask: int) -> PackedInt32Array;  func ids_in_hash_cell(cell: int) -> PackedInt32Array
+static func cell_of(p: Vector3) -> int;  func item_id(item: int) -> int;  func ring_cells(cell: int, k: int) -> int   # (TA-14) = Sphere.cell_of(p, 64); ring k in {1, 2} into var `ring`
+    # mask bits 1 << EntityStore.kind (1 STRUCTURE .. 8 WRECK) | 16 PROJECTILE; centre distance <= radius; ring 1 ~94 m, ring 2 ~188 m (proof: spatial.gd)
+class_name Collision extends RefCounted                                      # sim/collision.gd (TA-14), step 8 + 8b; _init(store, projectiles, spatial, terrain)
+func configure(projectile_radius: PackedFloat32Array, pad_radius_by_def: PackedFloat32Array, common: FlightCommonDef, tick_hz: int) -> void
+func report_terrain(slot: int, tick: int, hit_normal_speed: float) -> void;  func step(tick: int) -> void   # step 5 reports ShipState.terrain_hit
+static func classify_terrain(hit_normal_speed: float, common: FlightCommonDef) -> int;  static func landing_band(v_vert: float, v_hor: float, tilt_deg: float, common: FlightCommonDef) -> int
+static func sweep_sphere(a: Vector3, b: Vector3, c: Vector3, r: float) -> float                 # entry t in [0, 1], -1.0 on a miss
+    # Contact records c_kind/c_class/c_a/c_b/c_value/c_point/c_vec[0, contact_count): kind 0 HIT, 1 GROUND, 2 TERRAIN (class 0 SCRAPE,
+    # 1 DAMAGE, 2 DESTROY), 3 RAM, 4 PAD (band 0 SAFE, 1 DAMAGE, 2 DESTROY); consumed by Combat (9) and Docking (10); collision.gd header
 class_name OrderSpec extends RefCounted                                      # 05 owns fields (kind, flags, haul_mode, target, points, issuer, progress; escort_slot, focus, escort_mode for SL-2)
 class_name AlertKind                                                         # enum holder, sim/alert_kind.gd
 class_name Assist                                                            # sim/steer/assist.gd, static: auto_dock(...), link_bridge(...) (05)
@@ -240,6 +249,8 @@ default +) over the first `flip_duration_s / 2`, then a half loop; ends upright,
 - S13: production queues never exceed `economy.queue_max` (5).
 - S14: enumeration ordinals in this file equal the GDScript enums; appending is the only allowed change.
 - S15: the def JSON the sim reads validates against `tools/schemas/*.schema.json` (`tools/validate_content.py`); field names are R0 B.1's.
+- S16: after `Spatial.rebuild()` every live entity and projectile is in exactly its `Sphere.cell_of(pos, GRID_HASH)` cell; `ids_near` equals the brute-force set at any radius; `Spatial` holds no Dictionary (test_spatial.gd).
+- S17: `Collision` emits one classified `TERRAIN` contact per contact episode (A-30; kill speed destroys at any tick) and a `PAD` contact on every tick a not-DOCKED ship is inside a friendly pad's volume (A-31) (test_collision.gd).
 
 ## Data owned
 
@@ -265,32 +276,24 @@ Existing (checked by check_deps D10): `godot/test/sim/` (scenario layer), `godot
 TA-12: `godot/test/unit/sim/test_kinematics.gd` (lift law, level flight, test_slug_hits_coaltitude_target),
 `godot/test/unit/sim/test_kinematics_purity.gd` (S8), `godot/test/sim/test_flight.gd`, `godot/test/perf/perf_kinematics.gd`;
 TA-48: `godot/test/unit/sim/test_kinematics_flip_fuel.gd` (flip redirect, fuel per mode, empty tank, replay).
+TA-14: `godot/test/unit/sim/test_spatial.gd` (S16, ring coverage), `godot/test/unit/sim/test_collision.gd` (S17, classification,
+pads, rams), `godot/test/sim/test_collision_sweeps.gd` (1,000 slug / rail geometries, determinism), `godot/test/perf/perf_collision.gd`.
 
 Planned (plain text until on disk, D10; each task adds its file and moves it above): godot/test/unit/sim/test_enums.gd (S14,
-TA-18), test_collision.gd, test_build.gd (placement incl. cross-edge footprints), test_landing.gd (tail-down rule and grade),
-test_spatial.gd, test_pathing.gd, test_serialize.gd (S4), test_command_validator.gd (S10, S12); godot/test/sim/scenarios/*.json
+TA-18), test_build.gd (placement incl. cross-edge footprints), test_landing.gd (tail-down rule and grade),
+test_pathing.gd, test_serialize.gd (S4), test_command_validator.gd (S10, S12); godot/test/sim/scenarios/*.json
 (possess/release, build radius and Outpost presence, victory, Core shield and Exposure, caps); godot/test/contract/test_sim_view_contract.gd.
 
 ## How to add X
 
-**A SimEvent kind (Sonnet).** 1) Append to `SimEvent.Kind` here and in `sim/sim_event.gd` (never reorder); 2) emit from exactly
-one system with all fields set; 3) add the payload layout to 04's event codec table (`needs net:` PR note, NET-10); 4) add a
-scenario test asserting the event; 5) run `gen_module_api.py --check`.
-
-**An order kind.** Orders are 05's vocabulary (`sim/orders/`, `order_rules.json`): append the id to `OrderSpec.Kind` here, add its
-completion/failure rule to `order_rules.json` and `Orders`, extend 04's ORDER payload only if the C2-06 layout cannot carry it, add a scenario test.
-
-**An AlertKind / Command.Kind / CommandResult.Code / Build.Reject.** Append here and in the GDScript enum in the same PR as its
-contract test; notify 06 (`alerts.json`) and 04 (codec) with a `needs <lane>:` PR comment.
-
-**A def field the sim reads.** Add it to the R0 B.1 field list via 02 (or 03 for `rules.json`), to the schema in `tools/schemas/`
-with `minimum`/`maximum` from the 01 anchor tolerance, and to the `*Def` class in `content`; run `python tools/validate_content.py`.
+Recipes (SimEvent kind, order kind, AlertKind / Command.Kind / CommandResult.Code / Build.Reject, def field) live in 03 s15.4 (R0 B.10 A-47).
 
 ## Open items
 
 - CONTRACT-0 Q1-Q8 (`docs/reviews/R0-amendments-01.md`, R0 B.8): own files for `ShipState` / `ProjectileState` (A-7, A-8); views above (A-8); `CapsDef` is content's; per-file weapon / projectile namespaces (A-1: resolve `WeaponDef.projectile` via `ContentDB.projectile_index`, never `def_index`); A-3 settled 2026-10-13: Foundry's x0.85 applies to `weapon_mount: ship` only.
 - Amendments 02 (`docs/reviews/R0-amendments-02.md`, R0 B.9): A-11 flip form, A-12 `step_projectile` `out`, A-13 `brake_fade_mps`, A-14 fixture rule, A-20 projectile quarantine 0, A-21 subsystem `MODULE.md` rule; code follow-ups TA-43, TA-44, TA-45, TA-48 all done (`Kinematics` takes content's `*Def` types, `sim/fixture/` deleted; A-30/A-31/A-34/A-35 consumers: TA-14, AI-10).
-- Amendments 03 (`docs/reviews/R0-amendments-03.md`, R0 B.10): A-41 DOCKED ships are not stepped (03 s4.1 rule 9); A-42 `is_projectile`
-  open-ended; A-46 `pilot_input.gd`'s comment must name `PilotWire.to_wire` / `from_wire` (net), not `to_bytes` (next sim task touching
-  it, TA-14 by order); A-47 when this file needs lines, move "How to add X" to 03 s15.4 and leave a pointer (register never compressed).
+- Amendments 03 (R0 B.10): A-41 DOCKED ships are not stepped (03 s4.1 rule 9); A-42 `is_projectile` open-ended; A-46, A-47 done (TA-14).
+- TA-14 findings: ring 1 covers ~94 m (3D), not the 139 m of 03 s2.7 / s3.6 / s6.1 (corner edge length, not strip width); `ids_near`
+  picks ring 2 above it. Pad plane = structure `pos` / `up` (GD-15 may add a deck offset); Build (TA-19) must size pad structures' `radius`
+  so the approach column is clear. `Collision.shooter_grace_ticks` (03 s6.1 "10 ticks") needs a def field (`needs content:`).
 - Owners: TA-11 entity store, TA-12 kinematics, TA-14 projectiles, TA-18 tick driver + `LocalSimView` (+ `possessed` live list), TA-22 S-SIM-1, TA-37 vision, TA-38 ground motion; 05 lane `sim/steer/`, `sim/orders/`, `sim/control/`.
