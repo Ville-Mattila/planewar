@@ -1492,7 +1492,10 @@
       " 07 s9",
       " 07 ART-28"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#19",
+    "note": "resources block is a placeholder until GD-22; contested field at lat 2 (02 says +3, fails M6); renderer shows spikes on 1024 maps (fix in progress)"
   },
   {
     "id": "TA-28",
