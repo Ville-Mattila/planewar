@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sim_scenario.schema.json",
+  "title": "Sim scenario (godot/test/sim/scenarios/*.json, TA-33)",
+  "$comment": "03 TA-33 / 01 ADR-11 scenario layer. Read by godot/test/sim/scenario_runner.gd; format documented in godot/test/sim/README.md. A scenario is scripted commands by tick, expected events and SimView/store queries. Commands in `script` at tick t are queued before step t, so their events carry tick t; `checks` at t run after step t. Names in enum fields are the GDScript enum keys (SimEvent.Kind, CommandResult.Code, Build.Reject, ControlMachine.ReleaseReason). status `planned` = the rule is not implemented yet: the runner reports it and does not execute it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "title", "refs", "status"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "$comment": "equals the file stem (validate_content and the runner check)" },
+    "title": { "type": "string", "minLength": 1 },
+    "refs": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 },
+      "$comment": "doc ids the expected values come from, e.g. 05 C6, 02 s6.3, 02 C-09"
+    },
+    "status": { "enum": ["active", "planned"] },
+    "planned_reason": { "type": "string", "$comment": "required when status is planned: the missing feature and its task" },
+    "world": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["standard", "solo_kit", "combat"], "$comment": "WorldTestKit.world / EconomyTestKit.solo_world (player 0 start kit) / CombatTestKit.world" },
+        "seed": { "type": "integer", "minimum": 0 },
+        "core_exposure_s": { "type": "number" },
+        "hard_end_s": { "type": "number" },
+        "unit_cap": { "type": "integer", "minimum": 1, "$comment": "overrides caps.units for this scenario" }
+      }
+    },
+    "bind_structures": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/bind" },
+      "$comment": "names the first live structure of a def and owner (start-kit buildings) before tick 1"
+    },
+    "ticks": { "type": "integer", "minimum": 1, "maximum": 18000 },
+    "script": { "type": "array", "items": { "$ref": "#/$defs/step" } },
+    "event_filter": { "type": "array", "items": { "type": "string" }, "uniqueItems": true, "$comment": "SimEvent.Kind names recorded for `events`" },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" }, "$comment": "the exact ordered list of filtered events; only the fields given are compared" },
+    "checks": { "type": "array", "items": { "$ref": "#/$defs/check" } }
+  },
+  "$defs": {
+    "ref": { "anyOf": [{ "type": "string", "minLength": 1 }, { "type": "integer" }], "$comment": "an entity name bound by a spawn / bind, or a raw id" },
+    "bind": {
+      "type": "object", "additionalProperties": false, "required": ["as", "def", "owner"],
+      "properties": {
+        "as": { "type": "string", "minLength": 1 },
+        "def": { "type": "string", "minLength": 1 },
+        "owner": { "type": "integer", "minimum": 0, "maximum": 7 }
+      }
+    },
+    "step": {
+      "type": "object", "additionalProperties": false, "required": ["at", "do"],
+      "properties": {
+        "at": { "type": "integer", "minimum": 1 },
+        "do": { "enum": ["spawn", "possess", "release", "build", "produce", "kill", "remove_player", "hold"] },
+        "as": { "type": "string" },
+        "def": { "type": "string" },
+        "owner": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "team": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "alt": { "type": "number", "$comment": "metres above the datum" },
+        "east": { "type": "number" },
+        "north": { "type": "number" },
+        "pin": { "type": "boolean", "$comment": "spawn: hold position and velocity every tick (no gravity drift)" },
+        "player": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "slot": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "entity": { "$ref": "#/$defs/ref" },
+        "factory": { "$ref": "#/$defs/ref" },
+        "west_m": { "type": "number", "$comment": "build: metres west of the Core along the datum great circle" },
+        "rotation": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "count": { "type": "integer", "minimum": 1 },
+        "buttons": { "type": "array", "items": { "enum": ["BOOST", "BRAKE", "FLIP", "FIRE1", "FIRE2", "DOCK", "RELEASE"] }, "$comment": "hold: PilotInput buttons driven every tick from this tick on" },
+        "expect": { "type": "string", "$comment": "CommandResult.Code key the command must return" },
+        "expect_reject": { "type": "string", "$comment": "Build.Reject key when expect is REJECTED_PLACEMENT" }
+      }
+    },
+    "event": {
+      "type": "object", "additionalProperties": false, "required": ["tick", "kind"],
+      "properties": {
+        "tick": { "type": "integer", "minimum": 1 },
+        "kind": { "type": "string" },
+        "a": { "$ref": "#/$defs/ref" },
+        "b": { "$ref": "#/$defs/ref" },
+        "reason": { "type": "string", "$comment": "ControlMachine.ReleaseReason key, compared with extra[0]" }
+      }
+    },
+    "check": {
+      "type": "object", "additionalProperties": false, "required": ["at", "query", "value"],
+      "properties": {
+        "at": { "type": "integer", "minimum": 1 },
+        "query": { "enum": ["possessor", "alive", "hp01", "ore", "queue_size", "ship_count", "structure_count", "event_count"] },
+        "entity": { "$ref": "#/$defs/ref" },
+        "team": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "owner": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "def": { "type": "string" },
+        "kind": { "type": "string", "$comment": "event_count: SimEvent.Kind key, counted over every event since tick 1" },
+        "op": { "enum": ["eq", "ge", "le", "lt", "gt", "approx"] },
+        "tol": { "type": "number", "minimum": 0 },
+        "value": { "$comment": "number, bool or entity name" }
+      }
+    }
+  }
+}

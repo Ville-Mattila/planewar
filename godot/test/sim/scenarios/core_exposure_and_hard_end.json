@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "core_exposure_and_hard_end",
+  "title": "CORE_EXPOSURE fires once at core_exposure_s, the hard end releases every possession (MATCH) then MATCH_END fires, later commands are REJECTED_PHASE",
+  "refs": ["02 s12.1", "05 C16"],
+  "status": "active",
+  "world": { "kind": "standard", "seed": 11, "core_exposure_s": 2.0, "hard_end_s": 3.0 },
+  "ticks": 95,
+  "script": [
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 0, "team": 0, "alt": 600, "as": "A" },
+    { "at": 5, "do": "possess", "player": 0, "entity": "A" },
+    { "at": 95, "do": "release", "player": 0, "expect": "REJECTED_PHASE" }
+  ],
+  "event_filter": ["POSSESSED", "RELEASED", "CORE_EXPOSURE", "MATCH_END"],
+  "events": [
+    { "tick": 5, "kind": "POSSESSED", "a": "A" },
+    { "tick": 60, "kind": "CORE_EXPOSURE" },
+    { "tick": 90, "kind": "RELEASED", "a": "A", "reason": "MATCH" },
+    { "tick": 90, "kind": "MATCH_END" }
+  ],
+  "checks": [
+    { "at": 59, "query": "event_count", "kind": "CORE_EXPOSURE", "value": 0 },
+    { "at": 60, "query": "event_count", "kind": "CORE_EXPOSURE", "value": 1 },
+    { "at": 89, "query": "possessor", "entity": "A", "value": 0 },
+    { "at": 90, "query": "possessor", "entity": "A", "value": -1 },
+    { "at": 95, "query": "event_count", "kind": "MATCH_END", "value": 1 }
+  ]
+}

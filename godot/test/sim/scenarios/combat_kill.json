@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "id": "combat_kill",
+  "title": "An enemy Dart holding FIRE1 at a Scout 150 m ahead wears it down and kills it; the shooter survives and the death is reported once",
+  "refs": ["02 s4.3", "02 s4.4", "02 C-09"],
+  "status": "active",
+  "world": { "kind": "combat", "seed": 7 },
+  "ticks": 120,
+  "script": [
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 1, "team": 1, "alt": 500, "pin": true, "as": "shooter" },
+    { "at": 1, "do": "spawn", "def": "scout", "owner": 0, "team": 0, "alt": 500, "east": 150, "pin": true, "as": "target" },
+    { "at": 3, "do": "hold", "entity": "shooter", "buttons": ["FIRE1"] }
+  ],
+  "event_filter": ["DEATH"],
+  "events": [
+    { "tick": 21, "kind": "DEATH", "a": "target", "b": "shooter" }
+  ],
+  "checks": [
+    { "at": 2, "query": "hp01", "entity": "target", "value": 1.0 },
+    { "at": 12, "query": "hp01", "entity": "target", "op": "lt", "value": 1.0 },
+    { "at": 120, "query": "alive", "entity": "target", "value": false },
+    { "at": 120, "query": "alive", "entity": "shooter", "value": true },
+    { "at": 120, "query": "event_count", "kind": "DEATH", "value": 1 }
+  ]
+}

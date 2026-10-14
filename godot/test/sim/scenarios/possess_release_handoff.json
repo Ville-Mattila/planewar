@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "id": "possess_release_handoff",
+  "title": "Possessing a second ship releases the first (PLAYER), an enemy ship cannot be possessed, release frees the slot",
+  "refs": ["05 C6", "05 C9", "05 C7"],
+  "status": "active",
+  "world": { "kind": "standard", "seed": 11 },
+  "ticks": 45,
+  "event_filter": ["SPAWN", "POSSESSED", "RELEASED"],
+  "script": [
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 0, "team": 0, "alt": 600, "as": "A" },
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 0, "team": 0, "alt": 700, "east": 200, "as": "B" },
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 1, "team": 1, "alt": 800, "east": 500, "as": "C" },
+    { "at": 5, "do": "possess", "player": 0, "entity": "A" },
+    { "at": 20, "do": "possess", "player": 0, "entity": "B" },
+    { "at": 30, "do": "possess", "player": 1, "entity": "A", "expect": "REJECTED_NOT_OWNER" },
+    { "at": 31, "do": "possess", "player": 0, "entity": "C", "expect": "REJECTED_NOT_OWNER" },
+    { "at": 40, "do": "release", "player": 0 }
+  ],
+  "events": [
+    { "tick": 1, "kind": "SPAWN", "a": "A" },
+    { "tick": 1, "kind": "SPAWN", "a": "B" },
+    { "tick": 1, "kind": "SPAWN", "a": "C" },
+    { "tick": 5, "kind": "POSSESSED", "a": "A" },
+    { "tick": 20, "kind": "RELEASED", "a": "A", "reason": "PLAYER" },
+    { "tick": 20, "kind": "POSSESSED", "a": "B" },
+    { "tick": 40, "kind": "RELEASED", "a": "B", "reason": "PLAYER" }
+  ],
+  "checks": [
+    { "at": 5, "query": "possessor", "entity": "A", "value": 0 },
+    { "at": 20, "query": "possessor", "entity": "A", "value": -1 },
+    { "at": 20, "query": "possessor", "entity": "B", "value": 0 },
+    { "at": 30, "query": "possessor", "entity": "A", "value": -1 },
+    { "at": 40, "query": "possessor", "entity": "B", "value": -1 }
+  ]
+}

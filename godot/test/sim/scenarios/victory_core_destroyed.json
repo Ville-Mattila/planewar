@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "id": "victory_core_destroyed",
+  "title": "A team whose last Core falls is eliminated and the other team wins (MATCH_END carries the winner)",
+  "refs": ["02 s12.1", "02 GD-20"],
+  "status": "planned",
+  "planned_reason": "no elimination or winner logic yet: SimWorld._step_match only ends the match at hard_end_s with winner_team -1; surviving-structure-value scoring and PLAYER_ELIMINATED are GD-20 (Economy scoring)"
+}

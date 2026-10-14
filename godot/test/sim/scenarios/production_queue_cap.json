@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "production_queue_cap",
+  "title": "A Shipyard queue holds at most 5 items: a request that would exceed it is refused REJECTED_CAP, one that fits is accepted",
+  "refs": ["02 s6.4", "R0 C3-08 S13"],
+  "status": "active",
+  "world": { "kind": "solo_kit", "seed": 7 },
+  "bind_structures": [{ "as": "yard", "def": "shipyard", "owner": 0 }],
+  "ticks": 6,
+  "script": [
+    { "at": 1, "do": "produce", "player": 0, "factory": "yard", "def": "dart", "count": 3, "expect": "ACCEPTED" },
+    { "at": 2, "do": "produce", "player": 0, "factory": "yard", "def": "dart", "count": 3, "expect": "REJECTED_CAP" },
+    { "at": 3, "do": "produce", "player": 0, "factory": "yard", "def": "dart", "count": 2, "expect": "ACCEPTED" },
+    { "at": 4, "do": "produce", "player": 0, "factory": "yard", "def": "dart", "count": 1, "expect": "REJECTED_CAP" }
+  ],
+  "checks": [
+    { "at": 2, "query": "queue_size", "entity": "yard", "value": 3 },
+    { "at": 4, "query": "queue_size", "entity": "yard", "value": 5 },
+    { "at": 6, "query": "queue_size", "entity": "yard", "value": 5 }
+  ]
+}

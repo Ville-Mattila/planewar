@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "unit_cap_blocks_production",
+  "title": "At the unit cap the queue head blocks with one CAP_REACHED, nothing is paid, and the block is reported once even after the slot is freed",
+  "refs": ["02 s6.4", "R0 C3-08 P4"],
+  "status": "active",
+  "world": { "kind": "solo_kit", "seed": 7, "unit_cap": 2 },
+  "bind_structures": [{ "as": "yard", "def": "shipyard", "owner": 0 }],
+  "ticks": 12,
+  "script": [
+    { "at": 1, "do": "produce", "player": 0, "factory": "yard", "def": "dart", "count": 1, "expect": "ACCEPTED" },
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 0, "team": 0, "alt": 500, "as": "filler" },
+    { "at": 7, "do": "kill", "entity": "filler" }
+  ],
+  "event_filter": ["CAP_REACHED"],
+  "events": [
+    { "tick": 1, "kind": "CAP_REACHED", "a": 0 }
+  ],
+  "checks": [
+    { "at": 5, "query": "queue_size", "entity": "yard", "value": 1 },
+    { "at": 5, "query": "event_count", "kind": "CAP_REACHED", "value": 1 },
+    { "at": 5, "query": "alive", "entity": "filler", "value": true },
+    { "at": 12, "query": "alive", "entity": "filler", "value": false },
+    { "at": 12, "query": "event_count", "kind": "CAP_REACHED", "value": 1 }
+  ]
+}

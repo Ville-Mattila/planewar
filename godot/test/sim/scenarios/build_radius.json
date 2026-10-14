@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "id": "build_radius",
+  "title": "A structure inside the Core's build radius is placed and paid; one outside every build radius is refused with NO_RADIUS and changes nothing",
+  "refs": ["02 s6.2", "02 s6.3"],
+  "status": "active",
+  "world": { "kind": "solo_kit", "seed": 7 },
+  "ticks": 6,
+  "script": [
+    { "at": 1, "do": "build", "player": 0, "def": "solar_array", "west_m": 250, "expect": "ACCEPTED" },
+    { "at": 1, "do": "build", "player": 0, "def": "solar_array", "west_m": 1500, "expect": "REJECTED_PLACEMENT", "expect_reject": "NO_RADIUS" }
+  ],
+  "event_filter": ["BUILD_STARTED"],
+  "events": [
+    { "tick": 1, "kind": "BUILD_STARTED" }
+  ],
+  "checks": [
+    { "at": 2, "query": "structure_count", "def": "solar_array", "owner": 0, "value": 1 },
+    { "at": 6, "query": "structure_count", "def": "solar_array", "owner": 0, "value": 1 }
+  ]
+}
