@@ -303,7 +303,7 @@ All three v1 maps are 8-slot maps; player counts use slot subsets (Part B.6). `g
 | `content` | `core` | sim, UI | `resolve_for_doctrine()` is a pure function here (C2-01) |
 | `sim` | `core`, `content` | Nodes, `net`, `presentation`, `ui`, `sim_ai` | contains `sim/steer/` (FlightController, LandingController, TerrainProbe, Assist), `sim/orders/`, `sim/control/`, `sim/scoring/` (LandingGrade), abstract `SimAiHook` and `CommandSinkBase`; AI runs inside `step()` through the hook |
 | `sim_ai` | `core`, `content`, `sim` (reads `SimView`, issues `Command`s through `CommandSink`, writes input slots through `CommandSink.drive`) | anything above | implements `SimAiHook`; owns `AiState`; may write `ai_tag` |
-| `net` | `core`, `content` (hash), `sim` (`SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain` read) | presentation, UI | `Prediction` calls `Assist.auto_dock()`/`link_bridge()` exactly as the server |
+| `net` | `core`, `content` (hash), `sim` (`SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `SimEvent`, `CommandResult`, `Terrain` read) | presentation, UI | `Prediction` calls `Assist.auto_dock()`/`link_bridge()` exactly as the server |
 | `server` | `core`, `content`, `sim`, `sim_ai`, `net`, `platform` (token validation only) | presentation, UI | `ProtocolValidator` (renamed), `MatchConfig` |
 | `presentation` | `core`, `content`, `sim` (`SimView`, `SimEvent`, `Terrain` read), `net` (`NetSimView` type) | writing to the sim, UI | far-pool path (ART-A1) |
 | `camera` | `core`, `presentation` (read `ViewState`) | sim, net | |
