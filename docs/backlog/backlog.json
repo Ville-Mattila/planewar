@@ -1281,8 +1281,10 @@
       " 01 ADR-10",
       " 04 NET-25"
     ],
-    "status": "todo",
-    "note": "replay writer ~1.4 ms/tick at NET-49 speed (row 12 over, A-62); size ~61 MB/30 min synthetic all-movers vs ADR-10 20 MB (gzip 1.3): decide 5 Hz tier-C fallback on a real match; PROJECTILE_BATCH not recorded (04 s13.1 has no frame type, architect); server wiring NET-15, ClientSession ReplayTransport NET-17"
+    "status": "done",
+    "note": "replay writer ~1.4 ms/tick at NET-49 speed (row 12 over, A-62); size ~61 MB/30 min synthetic all-movers vs ADR-10 20 MB (gzip 1.3): decide 5 Hz tier-C fallback on a real match; PROJECTILE_BATCH not recorded (04 s13.1 has no frame type, architect); server wiring NET-15, ClientSession ReplayTransport NET-17",
+    "merged": "2026-10-14",
+    "pr": "public#37"
   },
   {
     "id": "NET-11",
