@@ -14,6 +14,8 @@ const MIN_SPACING_FRIENDLY: float = 800.0
 const MIN_SPACING_ENEMY: float = 1500.0   # warning D6 accepted: needs content
 const SITE_HP_FRACTION: float = 0.1   ## 02 s6.3: a site has hp * max(0.1, progress)
 
+const _STATE: PackedStringArray = ["spent_ore", "delivered_ore", "_tick"]
+
 var grid: BuildGrid
 var spent_ore: PackedInt32Array = PackedInt32Array()       ## per player, Ore paid so far (Economy writes)
 var delivered_ore: PackedInt32Array = PackedInt32Array()   ## per player, Ore its Harvesters and Core trickle delivered
@@ -42,6 +44,19 @@ func _init(defs: WorldDefs, store: EntityStore, players: PlayerTable, terrain: T
 	delivered_ore.fill(0)
 	_core_def = defs.content.entity_index.get(&"core", -1)
 	_outpost_def = defs.content.entity_index.get(&"outpost", -1)
+
+
+## S4: Ore counters, clock and the grid flags. Not yet part of `SimSerialize` (SimWorld owns no Build until Economy lands);
+## the section is appended there then (format bump).
+func write_state(buf: StreamPeerBuffer) -> void:
+	StateIO.put_props(buf, self, _STATE)
+	grid.write_state(buf)
+
+
+func read_state(buf: StreamPeerBuffer) -> bool:
+	if not StateIO.get_props(buf, self, _STATE) or spent_ore.size() != PlayerTable.SLOTS or delivered_ore.size() != PlayerTable.SLOTS:
+		return false
+	return grid.read_state(buf)
 
 
 func set_clock(tick: int) -> void:

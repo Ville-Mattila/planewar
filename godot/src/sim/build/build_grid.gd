@@ -64,3 +64,19 @@ func slope_deg(cell: int) -> float:
 ## Test and bake seam: pins the cached slope of `cell`.
 func set_slope_deg(cell: int, deg: float) -> void:
 	_slope[cell] = clampi(roundi(deg / Terrain.SLOPE_STEP_DEG), 0, SLOPE_UNKNOWN - 1)
+
+
+## S4: the flag bytes (occupancy, nodes). The slope cache is derived from Terrain and refills lazily, so it is not saved.
+func write_state(buf: StreamPeerBuffer) -> void:
+	buf.put_var(_flags)
+
+
+func read_state(buf: StreamPeerBuffer) -> bool:
+	var v: Variant = buf.get_var()
+	if typeof(v) != TYPE_PACKED_BYTE_ARRAY:
+		return false
+	var f: PackedByteArray = v
+	if f.size() != _flags.size():
+		return false
+	_flags = f
+	return true

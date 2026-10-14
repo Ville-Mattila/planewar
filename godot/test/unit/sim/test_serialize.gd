@@ -3,7 +3,7 @@ extends GdUnitTestSuite
 ## byte for byte, over 1,000 ticks of random commands, projectiles and terrain contacts; the AI hook's opaque bytes
 ## round-trip; Collision's per-slot state (episodes, projectile first ticks) is part of the bytes; two worlds fed the
 ## same seed and command stream stay byte-identical; TA-50: pending tickets, the search in flight and a warm route
-## cache survive a save (Pathing bytes). TA-21 later compacts the format (sim/serialize.gd).
+## cache survive a save (Pathing bytes). TA-21: the format and its policy are in sim/serialize.gd (test_serialize_all.gd).
 
 const TICKS: int = 1000
 const RESYNC_EVERY: int = 25

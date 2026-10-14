@@ -9,12 +9,6 @@ class_name SimWorld extends RefCounted
 ## transitions: `sim/control/` (05 s2, AI-02).
 
 const _MAPS_ROOT: String = "res://content/maps/"
-const _MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const _FORMAT: int = 4   ## 4: Combat fire state (GD-36)
-const _RULES_STATE: PackedStringArray = ["mode", "caps_profile", "sim_budget_profile", "core_exposure_s", "hard_end_s",
-	"debug_commands", "profile_enabled", "friendly_fire", "adjutant_allowed", "sun_period_s", "ranked", "tick_hz"]
-const _CAPS_STATE: PackedStringArray = ["id", "units", "structures", "projectiles", "wrecks", "slots"]
-const _COLLISION_STATE: PackedStringArray = ["ep_gen", "ep_last", "born_gen", "born_tick"]
 const _BUDGET_RUNGS_MAX: int = 8   ## rung 7 (native twins) is code, not a profile entry; 8 is A-55
 
 var rng: Rng = Rng.new(0)              ## S7: the only RNG of the match; systems and the AI hook use forks
@@ -168,69 +162,15 @@ func drain_events() -> Array[SimEvent]:
 	return _events.drain()
 
 
-## The whole match state (S4) in a fixed order: header, rules, clock, players, input slots, rate buckets, pending
-## commands, entity and projectile stores, Collision's per-slot state, Combat's fire state, orders, pathing, then the AI hook's bytes.
-## Events are not included: the caller drains them every tick (step 12).
+## The whole match state (S4) as `SimSerialize` lays it out; events are not included (the caller drains them every tick).
 func serialize() -> PackedByteArray:
-	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
-	buf.put_32(_MAGIC)
-	buf.put_32(_FORMAT)
-	buf.put_64(_match_seed)
-	buf.put_var(rng.state())
-	buf.put_var(String(_map_id))
-	StateIO.put_props(buf, _rules, _RULES_STATE)
-	StateIO.put_props(buf, _rules.caps, _CAPS_STATE)
-	_state.write_state(buf)
-	_players.write_state(buf)
-	_inputs.write_state(buf)
-	_validator.write_state(buf)
-	_intake.write_state(buf)
-	_control.write_state(buf)
-	_store.write_state(buf)
-	_proj.write_state(buf)
-	StateIO.put_props(buf, collision, _COLLISION_STATE)
-	_combat.write_state(buf)
-	buf.put_var(OrderQueueCodec.serialize(_orders))
-	_pathing.write_state(buf)
-	buf.put_var(_hook.serialize() if _hook != null else PackedByteArray())
-	return buf.data_array
+	return SimSerialize.write(self)
 
 
 ## A world equal to the one `serialize` saw (S4), with `hook` attached and handed its bytes; null when `bytes`
-## are malformed or the map fails to load.
+## are refused (`SimSerialize.check`), malformed, or the map fails to load.
 static func deserialize(bytes: PackedByteArray, content: ContentSet, hook: SimAiHook) -> SimWorld:
-	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
-	buf.data_array = bytes
-	if bytes.size() < 8 or buf.get_32() != _MAGIC or buf.get_32() != _FORMAT:
-		return null
-	var w: SimWorld = SimWorld.new(content)
-	w._restoring = true
-	var seed_v: int = buf.get_64()
-	var rng_v: Variant = buf.get_var()
-	var map_v: Variant = buf.get_var()
-	var rules: MatchRules = MatchRules.new()
-	rules.caps = CapsDef.new()
-	if typeof(rng_v) != TYPE_PACKED_BYTE_ARRAY or typeof(map_v) != TYPE_STRING:
-		return null
-	rules.adopt_match_def(content.match_rules)
-	if not StateIO.get_props(buf, rules, _RULES_STATE) or not StateIO.get_props(buf, rules.caps, _CAPS_STATE):
-		return null
-	var map: MapDef = MapDef.new()
-	map.id = StringName(str(map_v))
-	if not w.load_map(map, seed_v, rules).ok or not w._read_state(buf):
-		return null
-	var rng_b: PackedByteArray = rng_v
-	w.rng = Rng.from_state(rng_b)
-	w._hook = hook
-	if hook != null:
-		var hv: Variant = buf.get_var()
-		var hook_b: PackedByteArray = PackedByteArray()
-		if typeof(hv) == TYPE_PACKED_BYTE_ARRAY:
-			hook_b = hv
-		hook.deserialize(hook_b)
-	w.spatial.rebuild()
-	w.vision.rebuild_lists()
-	return w
+	return SimSerialize.read(bytes, content, hook)
 
 
 ## The 14 rows of 03 s4.4 for the last tick, in ms (zeros unless `MatchRules.profile_enabled`); a copy.
@@ -325,29 +265,6 @@ func _wire(rules: MatchRules) -> void:
 	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state, _pathing)
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
 	vision = Vision.new(_store, _defs, rules.tick_hz)
-
-
-func _read_state(buf: StreamPeerBuffer) -> bool:
-	if not (_state.read_state(buf) and _players.read_state(buf) and _inputs.read_state(buf)):
-		return false
-	if not (_validator.read_state(buf) and _intake.read_state(buf) and _control.read_state(buf)):
-		return false
-	if not (_store.read_state(buf) and _proj.read_state(buf)):
-		return false
-	if not StateIO.get_props(buf, collision, _COLLISION_STATE) or not _combat.read_state(buf):
-		return false
-	var ov: Variant = buf.get_var()
-	if typeof(ov) != TYPE_PACKED_BYTE_ARRAY:
-		return false
-	var ob: PackedByteArray = ov
-	if not OrderQueueCodec.deserialize(_orders, ob) or not _pathing.read_state(buf):
-		return false
-	for p: int in PlayerTable.SLOTS:
-		if _players.is_active(p):
-			var _ok: bool = _defs.resolve(p, StringName(_players.doctrine[p]))
-			vision.bind(p, _defs.resolved(p))
-	_events.tick = _state.tick
-	return true
 
 
 # Map load (A-55): baked weights; region graphs for each distinct ground-unit slope mask (at most MASK_SLOTS, in
