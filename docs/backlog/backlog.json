@@ -870,7 +870,10 @@
       " R0 B.3",
       " 03 TA-18"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#15",
+    "note": "perf --full p95 (busy laptop): kinematics 8.2/3.0, projectiles 3.3/2.5, spatial 3.8/1.2, collision 9.7/5.0, total 27.6/25 ms -> S-SIM-1 cut ladder; signature changes for architect: deserialize(ContentSet), arc()->MatchArc.Arc, add_player(kind:int) (PlayerKind clash with net Protocol.PlayerKind); constants awaiting def fields: command rate/burst, 1,950 m uplink guard, match-arc bands, cut rungs, shooter grace ticks"
   },
   {
     "id": "TEST-02",
