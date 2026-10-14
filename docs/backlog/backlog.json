@@ -1218,8 +1218,10 @@
       " R0 C2-35",
       " 04 NET-10"
     ],
-    "status": "todo",
-    "note": "depends on A-27 deps.json edit (SimEvent, CommandResult named for net; owner default approve)"
+    "status": "done",
+    "note": "A-27 deps edit applied; worst case 8 clients 60 events+40 shots = ~4.3 ms (re-measure in NET-08); architect: wreck slots 1280-1535 outside 1280-entry roster (04 s3.1 vs 03 s3.1)",
+    "merged": "2026-10-14",
+    "pr": "public#20"
   },
   {
     "id": "NET-08",
