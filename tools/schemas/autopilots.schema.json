@@ -148,6 +148,18 @@
           "minimum": 0,
           "maximum": 10
         },
+        "lift_max_frac": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 2,
+          "$comment": "TerrainProbe lift cap as a fraction of speed (05 s5.3: 0.6); AI-07"
+        },
+        "lift_min_time_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10,
+          "$comment": "TerrainProbe floor of the sample time in the lift division (05 s5.3: 0.5 s); AI-07"
+        },
         "probe_times_s": {
           "type": "array",
           "items": {
