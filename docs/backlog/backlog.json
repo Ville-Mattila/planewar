@@ -1026,7 +1026,10 @@
       "01 ADR-11",
       " 03 TA-33"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#52",
+    "note": "3 planned scenarios await GD-20 victory, GD-10 shield, LandingGrade; sim/MODULE.md D10 test entry points to add (sim lane)"
   },
   {
     "id": "GD-08",
