@@ -12,7 +12,7 @@ reviewed for both the `sim_ai` and the `net` lane.
 | May depend on | `core`, `content`, `sim` (`Terrain`, `Kinematics`, `PilotInput`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, RNG, autoloads, member state (S8) |
 | Autoloads used | None |
-| Status | `TerrainProbe` (AI-07), `FlightController` + `FlightGains` (AI-05), `LandingController` + structs (AI-09, 2026-10-14); assist planned |
+| Status | `TerrainProbe` (AI-07), `FlightController` + `FlightGains` (AI-05), `LandingController` + structs (AI-09, 2026-10-14); `AimSolver` + `Ballistics` (AI-12, 2026-10-14); assist planned |
 
 ## Public API
 
@@ -45,6 +45,19 @@ var worst_dir: Vector3; var lift_mps: float                                  # u
 class_name TerrainProbe extends RefCounted                                   # 05 s5.3, static only
 static func probe(terrain: Terrain, p: Vector3, v: Vector3, probe_params: ProbeParams, h_req: float, out: ProbeResult) -> void   # ONE pass, 6 samples
 static func sample_clearance(terrain: Terrain, p: Vector3, v: Vector3, gravity: float, t: float) -> float   # 1 sample: the 1.0 s act-time re-check
+
+class_name AimSolver extends RefCounted                                      # AI-12, 05 s6.2/s6.8, R0 C1-03: straight-line intercept, static only
+static func intercept_time(r: Vector3, u: Vector3, speed: float) -> float    # |r + u t| = speed t, r = p_t - p_s, u = v_t - v_s; INF if none
+static func lead_point(p_s: Vector3, v_s: Vector3, p_t: Vector3, v_t: Vector3, speed: float) -> Vector3
+static func aim_dir(p_s: Vector3, v_s: Vector3, p_t: Vector3, v_t: Vector3, speed: float) -> Vector3   # ZERO if none
+static func fuse_time(r: Vector3, u: Vector3, speed: float, delay_s: float, arm_s: float, lifetime_s: float) -> float   # flak timed fuse
+static func in_fire_cone(nose: Vector3, aim: Vector3, cone_k: float, target_radius: float, dist: float) -> bool
+
+class_name Ballistics extends RefCounted                                     # AI-12, 05 s6.3.1: bombs and siege shells only, static only
+static func predict_impact(p: Vector3, v: Vector3, def: ProjectileDef, rules: RulesDef, terrain: Terrain, dt: float, max_steps: int) -> Vector4   # xyz, w = flight time; NO_IMPACT
+static func flat_impact(p: Vector3, v: Vector3, def: ProjectileDef, rules: RulesDef, ground_alt_m: float) -> Vector4   # closed form, local flat
+static func shift_impact(cached: Vector4, p0: Vector3, v0: Vector3, p: Vector3, v: Vector3, def: ProjectileDef, rules: RulesDef, ground_alt_m: float) -> Vector4
+static func has_impact(r: Vector4) -> bool
 ```
 
 ```gdscript
@@ -169,6 +182,8 @@ and a per-candidate threat penalty array (no `ThreatSampler` exists yet); `shoul
 - LC4: L6 never commands the thrust axis past `flare_tilt_deg`; |T| never exceeds the thrust available along it; below
   `hover_agl_m` in L4 (and in L5 off the pad) the vertical command is a climb (`test_flare_*`, `test_vertical_first_*`,
   `test_floor_*`). A terrain contact in L4-L6 is a failed landing in every closed-loop test (A-70).
+- AS1: `AimSolver` solves the straight-line equation exactly (05 wrote two fixed-point iterations; the closed form is their limit); the shooter velocity is carried, no gravity term. Slugs stepped by `Kinematics.step_projectile` hit co-altitude targets at 200/400/650/800 m and random moving shooter/target pairs within 5 cm (`test_aim_solver.gd`); the converged time agrees with `ui/hud/lead_solver.gd` within 1 %. Cross-lane: the HUD pip is mirrored, not shared (ui is not allowed to reference `sim/steer`); the Architect may point `LeadSolver` at `AimSolver` later.
+- BA1: `predict_impact` uses the sim's own `Kinematics.step_projectile` and the Collision ground test (altitude < height + radius); at `dt` = 2 sim ticks it is within 2 m of the stepped sim for drops of 50-800 m (accepted 3 m). 05 s6.3.1's 0.1 s x 60 steps gives 3.9 m at 800 m / 250 m/s and cannot reach an 11 s fall, so callers pass `dt` and `max_steps` (autopilots def). `shift_impact` keeps the cached impact current between thinks within 5 m over a 10-tick gap; the plain closed form alone is hundreds of metres off over a long fall (6 km moon curvature).
 
 ## Performance budget
 
@@ -191,7 +206,7 @@ samples), once per approach at think. No allocation (struct fields, Vector3 / fl
 
 `godot/test/unit/sim/steer/test_flight_controller.gd` (step response under both lift models, any-attitude recovery, hover,
 interface, purity, perf); `godot/test/sim/ai/test_auto_dock_landing.gd` (TA-30 spike landing numbers);
-`godot/test/sim/ai/test_sc_terrain_flight.gd` (SC-09, SC-10 on cradle); `godot/test/unit/sim/steer/test_terrain_probe.gd`
+`godot/test/sim/ai/test_sc_terrain_flight.gd` (SC-09, SC-10 on cradle); `godot/test/unit/sim/steer/test_aim_solver.gd`, `test_ballistics.gd`, `test_terrain_probe.gd`
 (closed forms on flat and sloped synthetic terrain, ridge, cradle crater rims against an independent Quaternion path, lift,
 cost, purity); `godot/test/unit/sim/steer/test_landing_controller.gd` (transitions, aborts, bearing, L4-L6 law, purity,
 perf); `godot/test/sim/ai/test_landing_dock_sets.gd` (L4-L6 from the TA-30 dock sets, every class, both lift models);
