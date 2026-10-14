@@ -157,6 +157,25 @@ func test_is_occluded_by_datum() -> void:
 	assert_bool(Sphere.is_occluded_by_datum(a, far)).is_true()
 
 
+## R0 B.9 A-10 / 03 s2.8, added by TA-37: the two below-datum vectors. Endpoints never occlude, so a unit on a
+## mare or crater floor (R - 200) is seen from a higher observer, while two floor units 2,000 m apart are hidden
+## by the datum between them (chord sagitta ~83 m > 0 below R - 200 + 200). Both are symmetric.
+func test_is_occluded_by_datum_below_datum_a10() -> void:
+	var r: float = Sphere.PLANET_RADIUS
+	var floor_r: float = r - 200.0
+	var p: Vector3 = Sphere.from_lat_lon(0.0, 0.0, floor_r)
+	var q: Vector3 = Sphere.from_lat_lon(0.0, 2000.0 / floor_r, floor_r)
+	assert_float(p.distance_to(q)).is_between(1990.0, 2000.0)
+	assert_bool(Sphere.is_occluded_by_datum(p, q)).is_true()
+	assert_bool(Sphere.is_occluded_by_datum(q, p)).is_true()
+	# a = (R - 200, 0, 0); b 500 m above a and 3,000 m along the equator's tangent (east) from it.
+	var a: Vector3 = Vector3(floor_r, 0.0, 0.0)
+	var b: Vector3 = a + Vector3(500.0, 3000.0, 0.0)
+	assert_bool(Sphere.is_occluded_by_datum(a, b)).is_false()
+	assert_bool(Sphere.is_occluded_by_datum(b, a)).is_false()
+	assert_bool(Sphere.is_occluded_by_datum(a, a)).is_false()
+
+
 # --- C1-C5 property tests ----------------------------------------------------
 
 func test_c1_round_trip_dir_cell_center_10000() -> void:

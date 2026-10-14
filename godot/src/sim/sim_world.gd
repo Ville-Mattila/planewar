@@ -4,7 +4,7 @@ class_name SimWorld extends RefCounted
 ## releases), 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-50), 4 assist
 ## substitution (AI-10), 5 kinematics (DOCKED ships skipped, A-41; terrain contacts to Collision), 6 projectiles,
 ## 7 spatial rebuild, 8 collision, 9 damage from the contacts (Combat, GD-08) and the deferred deaths,
-## 10 match timers (Economy, Production, Build, Docking and scoring land later), 11 vision (TA-37), 12 the caller
+## 10 match timers (Economy, Production, Build, Docking and scoring land later), 11 vision (sim/vision/), 12 the caller
 ## drains events. Systems not yet built are named in their step and cost nothing. Helpers: `sim/world/`; control
 ## transitions: `sim/control/` (05 s2, AI-02).
 
@@ -20,6 +20,7 @@ const _BUDGET_RUNGS_MAX: int = 8   ## rung 7 (native twins) is code, not a profi
 var rng: Rng = Rng.new(0)              ## S7: the only RNG of the match; systems and the AI hook use forks
 var spatial: Spatial = null            ## read-only outside the sim lane: step 7's hash (tests, Combat, Vision)
 var collision: Collision = null        ## read-only outside the sim lane: step 8's Contact records
+var vision: Vision = null              ## read-only outside the sim lane: step 11 (TA-37); net reads interest_*()
 
 var _defs: WorldDefs
 var _rules: MatchRules = null
@@ -88,6 +89,7 @@ func add_player(slot: int, team: int, doctrine: StringName, kind: int) -> void:
 	_players.connected[slot] = 0 if kind == PlayerTable.KIND_OPEN else 1
 	_players.disconnect_tick[slot] = -1
 	var _ok: bool = _defs.resolve(slot, doctrine)
+	vision.bind(slot, _defs.resolved(slot))
 
 
 ## Disconnect: the player is flagged now; its possession ends in step 1 of the next tick (05 C12).
@@ -149,7 +151,8 @@ func step() -> void:
 	_profiler.lap(TickProfiler.ROW_COMBAT)
 	_step_match(t)                                           # 10
 	_profiler.lap(TickProfiler.ROW_ECONOMY)
-	_profiler.lap(TickProfiler.ROW_VISION)                   # 11: Vision (TA-37)
+	vision.step(t, _rules.sim_budget_profile)                # 11: staggered per team (TA-37)
+	_profiler.lap(TickProfiler.ROW_VISION)
 	_profiler.finish()                                       # 12: the caller drains events
 
 
@@ -225,6 +228,7 @@ static func deserialize(bytes: PackedByteArray, content: ContentSet, hook: SimAi
 			hook_b = hv
 		hook.deserialize(hook_b)
 	w.spatial.rebuild()
+	w.vision.rebuild_lists()
 	return w
 
 
@@ -234,8 +238,8 @@ func profile() -> PackedFloat32Array:
 
 
 ## Activates cut rungs 1..level of 03 s4.3 by rewriting `MatchRules.sim_budget_profile`; consumers read the list:
-## rung 1 the AI hook (think cadence), rung 2 Vision (TA-37); rung 3 caps live projectiles at `cut_ladder`
-## `rung_3_projectile_cap` here; rung 8 is read through `path_expansions_per_tick()`; rungs 4, 5 and 6 wait for their systems.
+## rung 1 the AI hook (think cadence), rung 2 Vision (`cut_ladder.rung_2_vision_hz`, read every step); rung 3 caps live
+## projectiles at `cut_ladder` `rung_3_projectile_cap` here; rung 8 is read through `path_expansions_per_tick()`; rungs 4, 5 and 6 wait for their systems.
 func set_budget_profile(level: int) -> void:
 	var n: int = clampi(level, 0, _BUDGET_RUNGS_MAX)
 	var rungs: PackedInt32Array = PackedInt32Array()
@@ -252,6 +256,22 @@ func path_expansions_per_tick() -> int:
 	if _rules.sim_budget_profile.has(8):
 		return _defs.rules.rung_8_path_expansions_per_tick
 	return _defs.rules.path_expansions_per_tick
+
+
+## Vision's per-team interest lists (03 s3.6; layout in sim/vision/MODULE.md): team t, interest cell c
+## (Sphere.cell_of(p, GRID_INTEREST)) -> interest_ids()[interest_start()[t * 384 + c] + k], k < interest_count()[...].
+## Read-only and valid until the next step() (S3); shared, not copied, so do not keep them across ticks.
+func interest_start() -> PackedInt32Array:
+	return vision.grid.cell_start
+
+
+func interest_count() -> PackedInt32Array:
+	return vision.grid.cell_count
+
+
+func interest_ids() -> PackedInt32Array:
+	return vision.grid.ids
+
 
 func terrain() -> Terrain:
 	return _terrain
@@ -303,6 +323,7 @@ func _wire(rules: MatchRules) -> void:
 	_pathing.set_terrain(_terrain)
 	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state, _pathing)
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
+	vision = Vision.new(_store, _defs, rules.tick_hz)
 
 
 func _read_state(buf: StreamPeerBuffer) -> bool:
@@ -323,6 +344,7 @@ func _read_state(buf: StreamPeerBuffer) -> bool:
 	for p: int in PlayerTable.SLOTS:
 		if _players.is_active(p):
 			var _ok: bool = _defs.resolve(p, StringName(_players.doctrine[p]))
+			vision.bind(p, _defs.resolved(p))
 	_events.tick = _state.tick
 	return true
 
