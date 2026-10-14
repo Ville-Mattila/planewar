@@ -195,6 +195,18 @@ func test_core_takes_125_percent_after_exposure_only() -> void:
 	assert_float(CombatTestKit.hp(late, core2)).is_equal(3000.0 - 500.0)
 
 
+func test_core_exposure_factor_does_not_apply_once_the_match_has_ended() -> void:
+	var ended: SimWorld = CombatTestKit.world(7, WorldTestKit.rules(0.0, 0.0))
+	var core: int = CombatTestKit.spawn(ended, &"core", 0, 0, _at(0.0))
+	var _b: int = _bomb(ended, 0.0)
+	var _ev: Array[SimEvent] = _step(ended)
+	assert_float(CombatTestKit.hp(ended, core)).is_equal(3000.0 - 400.0)
+
+
+func test_build_cell_is_shared_with_world_defs_radius() -> void:
+	assert_float(WorldDefs.build_cell_m()).is_equal(R * PI * 0.5 / float(Sphere.GRID_BUILD))
+
+
 func test_bomb_not_yet_armed_passes_through_a_ship() -> void:
 	var w: SimWorld = CombatTestKit.world()
 	var ship: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(500.0))

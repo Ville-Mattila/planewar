@@ -310,10 +310,9 @@ func _assist_substitution() -> void:
 
 
 # Step 9: Combat (GD-08) applies the step-8 contacts (damage, blasts, ramming; weapon fire and fuses are GD-36's),
-# then the deferred deaths of this tick are freed (03 s4.1 rule 6). Combat draws on this world's own `rng` (S7).
+# then the deferred deaths of this tick are freed (03 s4.1 rule 6). Combat draws on the world's `rng`, passed per step (S7).
 func _step_combat(t: int) -> void:
-	_combat.rng = rng
-	_combat.step(t)
+	_combat.step(t, rng)
 	_applier.resolve_deaths(t)
 
 

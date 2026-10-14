@@ -74,7 +74,7 @@ var projectile_radius: PackedFloat32Array; var pad_radius_by_def: PackedFloat32A
 var ship_table: Array[ShipDef]; var ship_count: int
 func resolve(slot: int, doctrine: StringName) -> bool;  func resolved(owner: int) -> ResolvedDefs;  func ship(owner: int, def_id: int) -> ShipDef
 func entity_kind(def_id: int) -> int;  func hp_max(owner: int, def_id: int) -> float;  func cost(owner: int, def_id: int) -> Vector2i
-func possessable(def_id: int) -> bool;  func radius_of(def_id: int) -> float
+func possessable(def_id: int) -> bool;  func radius_of(def_id: int) -> float;  static func build_cell_m() -> float
 class_name TeamStats                                                         # LocalSimView's team aggregates, O(structures), never on the tick path
 static func stockpile_cap(store: EntityStore, defs: WorldDefs, team: int) -> Vector2i;  static func power_balance(store: EntityStore, defs: WorldDefs, team: int) -> Vector2
 static func tech_available(store: EntityStore, defs: WorldDefs, team: int, def_id: int) -> bool;  static func has_structure(store: EntityStore, team: int, def_id: int) -> bool

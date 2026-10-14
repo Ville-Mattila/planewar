@@ -28,7 +28,7 @@ func _init(store: EntityStore, spatial: Spatial, defs: WorldDefs, sink: DamageSi
 	_sink = sink
 	_rules = rules
 	_events = events
-	_cell_m = Sphere.PLANET_RADIUS * PI * 0.5 / float(Sphere.GRID_BUILD)
+	_cell_m = WorldDefs.build_cell_m()
 
 
 ## Bomb detonation at `pos` (rules 2-3): ships whose bounding sphere is within `blast_radius_m` are destroyed
@@ -96,7 +96,7 @@ func bomb_mult(s: int, tick: int) -> float:
 	if sd.pad_roofed:
 		return ROOF_BOMB_MULT
 	var mr: MatchRulesDef = _defs.content.match_rules
-	if sd.id == &"core" and mr != null and _rules.phase(tick) != MatchRules.Phase.PLAYING:
+	if sd.id == &"core" and mr != null and _rules.phase(tick) == MatchRules.Phase.EXPOSURE:
 		return mr.core_bomb_mult_exposure
 	return 1.0
 

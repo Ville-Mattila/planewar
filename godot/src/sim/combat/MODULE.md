@@ -21,9 +21,8 @@ Lane-internal: `SimWorld` composes one `Combat`; other lanes see its effects thr
 
 ```gdscript
 class_name Combat extends RefCounted                                         # step 9; one per SimWorld
-var rng: Rng                                                                 # SimWorld hands over its own Rng before each step (S7)
-func step(tick: int) -> void                                                 # HIT / GROUND / RAM contacts of the last Collision.step, in contact order
-func detonate_bomb(pos: Vector3, owner_team: int, w: WeaponDef, p: ProjectileDef, attacker: int, tick: int) -> void   # rules 2-3, as a fuse would fire it
+func step(tick: int, dice: Rng) -> void                                                 # HIT / GROUND / RAM contacts of the last Collision.step, in contact order
+func detonate_bomb(pos: Vector3, owner_team: int, w: WeaponDef, p: ProjectileDef, attacker: int, tick: int, dice: Rng) -> void   # rules 2-3, as a fuse would fire it
 static func roll_gun_damage(w: WeaponDef, target_kind: int, dice: Rng, extra_mult: float = 1.0) -> int   # rule 1; target_kind is EntityStore.K_*
 class_name Blast extends RefCounted                                          # area rules: bomb, flak, siege shell
 const ROOF_BOMB_MULT: float                                                  # 0.25 (needs content: structure_bomb_mult)

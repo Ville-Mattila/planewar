@@ -135,10 +135,15 @@ func radius_of(def_id: int) -> float:
 	var t: StructureDef = base.structure(def_id)
 	if t == null:
 		return 0.0
-	var cell_m: float = Sphere.PLANET_RADIUS * PI * 0.5 / float(Sphere.GRID_BUILD)
+	var cell_m: float = build_cell_m()
 	var w: int = t.footprint[0] if t.footprint.size() > 0 else 1
 	var h: int = t.footprint[1] if t.footprint.size() > 1 else w
 	return maxf(Vector2(float(w), float(h)).length() * cell_m * 0.5, pad_radius_by_def[def_id])
+
+
+## Edge of one GRID_BUILD cell in metres (footprints are counted in these).
+static func build_cell_m() -> float:
+	return Sphere.PLANET_RADIUS * PI * 0.5 / float(Sphere.GRID_BUILD)
 
 
 func _bind(slot: int, r: ResolvedDefs) -> void:
