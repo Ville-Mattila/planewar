@@ -1771,7 +1771,10 @@
       " R0 C2-04",
       " 05 AI-05"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-14",
+    "pr": "public#46",
+    "note": "damping_only 15 deg dives 2.5 s / 18 % overshoot (architect); autopilots.schema needs 8 new flight keys, kp_path/kp_yaw meaning change (AI-19); probe gravity drop climbs level ships out of deck band (Dart brain / 05 fix); landing law L4 has no height floor -> 37/200 fast-entry scrapes (AI-09); Dart think 51-56 us vs 25 us row"
   },
   {
     "id": "AI-06",
