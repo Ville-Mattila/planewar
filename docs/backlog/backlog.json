@@ -1837,7 +1837,10 @@
       " R0 C2-08",
       " 05 AI-08"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-15",
+    "pr": "public#53",
+    "note": "SC-12 blocked: AI-issued RETURN rejected by SimSink.submit (needs sim system path, issuer -1, FLAG_PREPEND); needs SimView.overlay(id) + AI overlay end; content keys (AI-19) incl. recover_ceiling_gamma_deg/exit_alt_m; LINK_BRIDGE hold adds A-69 lift + nose-up trim (deviation from 05 hold-velocity)"
   },
   {
     "id": "AI-09",
@@ -1915,7 +1918,10 @@
       " R0 C1-03",
       " 05 AI-12"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-15",
+    "pr": "public#51",
+    "note": "choose_* N=8 ~43 us vs 25 us think row on desktop debug (A-62 measure-first; use every other think or N<=4 until architect revisits); predict_impact fine mode ~2 m/100 us, far mode 5.2 m; rank weights need content"
   },
   {
     "id": "UX-01",
@@ -6988,6 +6994,23 @@
     "docs": [
       "R0-amendments-05 A-77",
       "04 s13.1"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-59",
+    "title": "sim: system path for AI-issued orders (issuer -1, FLAG_PREPEND RETURN) through SimSink.submit; SimView.overlay(id) accessor and AI-side overlay end",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1,
+    "depends_on": [
+      "AI-08"
+    ],
+    "milestone": "M2",
+    "acceptance": "SC-12 passes (low-fuel RETURN accepted and executed); overlay byte clears when the AI overlay ends; S4 round trip",
+    "docs": [
+      "05 overlays",
+      "R0 C2-04"
     ],
     "status": "todo"
   }
