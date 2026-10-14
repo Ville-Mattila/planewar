@@ -74,6 +74,12 @@
       "minimum": 0,
       "maximum": 1
     },
+    "unsupplied_rate_mult": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "$comment": "02 s5.4: an unsupplied tower fires at this fraction of its rate (0.5); R0 B.12 A-66 (GD-36 named const until TA-56)"
+    },
     "production_min_speed": {
       "type": "number",
       "minimum": 0,
@@ -212,6 +218,7 @@
     "start_kit",
     "start_ore",
     "tower_offline_ratio",
+    "unsupplied_rate_mult",
     "unused_slot_yield",
     "wreck_fraction",
     "wreck_lifetime_s"

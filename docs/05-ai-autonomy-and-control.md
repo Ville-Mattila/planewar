@@ -391,8 +391,9 @@ static func act_batch(ids: PackedInt32Array, v: SimView, st: AiState, p: Autopil
     "bomb": { "dive_angle_deg": 30, "release_tolerance_m": 15, "pullout_g_margin_s": 1.5 },
     "evade": { "hp_drop_trigger": 0.15, "duration_s": 2.5 },
     "separation": { "radius_m": 60, "gain": 1.0 },
-    "flight": { "kp_path": 2.5, "ki_path": 0.6, "kp_roll": 3.0, "kp_yaw": 1.5, "bank_threshold_deg": 10,
-                "kp_speed": 0.05, "ki_speed": 0.02, "brake_overspeed_mps": 20, "k_guidance": 0.8 },
+    "flight": { "kp_path": 4.0, "ki_path": 0.3, "integ_max_rad": 0.8, "integ_band_deg": 6, "lead_max_deg": 80,
+                "kp_att": 6.0, "kp_yaw": 6.0, "kp_roll": 3.0, "kp_bank": 1.0, "bank_threshold_deg": 10, "bank_max_deg": 60,
+                "t_trim": 0.5, "kp_speed": 0.05, "ki_speed": 0.005, "kp_turn_thrust": 2.0, "brake_overspeed_mps": 20, "k_guidance": 0.8 },
     "landing": { "gate_dist_m": 1200, "pitch_over_agl_m": 20, "launch_climb_agl_m": 80, "glide_deg": 8, "transition_dist_m": 250, "transition_agl_m": 60,
                  "hover_agl_m": 25, "flare_agl_m": 8, "touch_vz_mps": 2.0, "max_tilt_deg": 30,
                  "kp_pos": 0.35, "kd_pos": 1.1, "kp_vz": 1.2, "abort_horiz_err_m": 12, "abort_vz_mps": 6, "max_attempts": 3 }
@@ -400,7 +401,7 @@ static func act_batch(ids: PackedInt32Array, v: SimView, st: AiState, p: Autopil
 }
 ```
 
-`think_period_ticks` is the online default; `AiDriver.set_offline_profile(true)` (offline web/mobile, s10) and cut-ladder rung 1 override it to 15 for every class. Other classes share the schema with their own values (Lancer: `cruise_alt_agl_m` 200, `target_weights` ground-first; Bomber: `cruise_alt_agl_m` 400; Scout: `flee_radius_m` 1000; Hauler: `tow_scan_m` 800, `tow_enemy_clear_m` 1000 (tether geometry and the towing rate cap come from `flight_common`, s6.5); Harvester: `flee_radius_m` 600, `quiet_s` 15; towers: priority tables, s6.8). The JSON Schema `tools/schemas/autopilots.schema.json` constrains ranges (e.g. `kp_*` in (0, 10], times > 0) so Haiku edits are safe.
+`think_period_ticks` is the online default; `AiDriver.set_offline_profile(true)` (offline web/mobile, s10) and cut-ladder rung 1 override it to 15 for every class. Other classes share the schema with their own values (Lancer: `cruise_alt_agl_m` 200, `target_weights` ground-first; Bomber: `cruise_alt_agl_m` 400; Scout: `flee_radius_m` 1000; Hauler: `tow_scan_m` 800, `tow_enemy_clear_m` 1000 (tether geometry and the towing rate cap come from `flight_common`, s6.5); Harvester: `flee_radius_m` 600, `quiet_s` 15; towers: priority tables, s6.8). The JSON Schema `tools/schemas/autopilots.schema.json` constrains ranges (e.g. `kp_*` in (0, 10], times > 0) so Haiku edits are safe. The `flight` block above is the AI-05 `FlightGains` set (R0 B.12 A-67): the sixteen keys other than `k_guidance` are required whenever a `flight` object is present; the values are the AI-05 tuned anchors (`godot/test/sim/ai/ai05_params.json`), which AI-19 writes into every `ap_*` and AI-06 tunes.
 
 ---
 
@@ -435,14 +436,14 @@ Control law (`flight` params of s4.4; inputs clamped to their ranges):
 | Output | Law |
 |---|---|
 | roll | if `abs(e_lat) > bank_threshold_deg`: bank-to-turn, `roll = kp_roll * angle(up_projected, d_lateral)` (rotate body up toward the lateral command); else wings-level: `roll = kp_roll * angle(right, local_horizontal_right)`, so released ships settle head-up (helps the camera, 01 s4.1) |
-| pitch | `pitch = kp_path * e_pitch + ki_path * integral(e_pitch)`; integrator clamped to +-0.5 and reset on mode change; it absorbs the steady angle of attack |
-| yaw | `yaw = kp_yaw * e_lat` when `abs(e_lat) <= bank_threshold_deg`, else 0 (fine heading only) |
-| thrust | `thrust = clamp(t_trim + kp_speed * (s_cmd - u) + ki_speed * integral(s_cmd - u), 0, 1)`; `t_trim` 0.5 |
+| pitch | the nose is pointed at the velocity direction rotated toward `d` by `kp_path` x the path error (nose lead per radian, capped at `lead_max_deg`), plus the pitch integrator `ki_path * integral(e_pitch)` (input clamped to `integ_band_deg`, integrator clamped to `integ_max_rad`, frozen while the lead is at its cap, reset on mode change); the attitude loop closes with `kp_att`; it absorbs the steady angle of attack (R0 B.12 A-67, AI-05 as built) |
+| yaw | `kp_yaw` is the pointing gain of the nose onto the commanded direction (fine heading); banking takes over above `bank_threshold_deg` with `kp_bank` x (heading error - threshold) up to `bank_max_deg` (A-67) |
+| thrust | `thrust = clamp((t_trim + kp_speed * (s_cmd - u) + ki_speed * integral(s_cmd - u)) / max(cos AoA, 0.5) + kp_turn_thrust * path_error, 0, 1)`; `t_trim` 0.5 (A-67) |
 | brake | on when `u - s_cmd > brake_overspeed_mps` (20 m/s) |
 | boost | brain-controlled only (intercept closing > 600 m, egress under fire); respects def cooldown |
 | flip | brain-controlled only (s6.2 evade, s6.3 egress) |
 
-Inputs are rate commands scaled by the def's caps (`pitch_rate_dps` / `yaw_rate_dps` / `roll_rate_dps` 120 / 60 / 180 and `rate_accel_dps2` 720 for the Dart, 02 s2.2; times `tow_turn_rate_mult` while towing), so the autopilot is bound by the same agility as a human. Gains are anchors to be tuned in S-FLIGHT-1 with the tuning harness (AI-06); acceptance: from any attitude, the velocity converges within 5 degrees of a step command in <= 2.0 s with < 15 % overshoot at cruise speed.
+Inputs are rate commands scaled by the def's caps (`pitch_rate_dps` / `yaw_rate_dps` / `roll_rate_dps` 120 / 60 / 180 and `rate_accel_dps2` 720 for the Dart, 02 s2.2; times `tow_turn_rate_mult` while towing), so the autopilot is bound by the same agility as a human. Gains are anchors to be tuned in S-FLIGHT-1 with the tuning harness (AI-06); acceptance: from any attitude, the velocity converges within 5 degrees of a step command in <= 2.0 s with < 15 % overshoot at cruise speed under the default `speed_scaled` lift law; under the `damping_only` A/B variant a 15 degree dive is thrust-limited and accepted at <= 2.6 s with < 20 % overshoot, with no per-model gain set (R0 B.12 A-68; `sim/steer/MODULE.md` FC3).
 
 ```gdscript
 # src/sim/steer/flight_controller.gd
@@ -466,7 +467,7 @@ static func terrain_lift(p: Vector3, v: Vector3, probe: ProbeParams, h_req: floa
 ```
 
 - **Required clearance** `h_req = min_clearance_m + clearance_per_mps * u` (Dart at 110 m/s: 25 + 27.5 = 52.5 m).
-- **Lift**: for the worst sample, `lift = max(0, h_req - c_k) / max(t_k, 0.5)` m/s, added to `v_cmd` along local up (capped at 0.6 u). This produces smooth ridge hopping; rilles and crater rims are flown over, not through.
+- **Lift**: the ballistic path is the pessimistic truth for TTI and PULL_UP, but a ship holding its vertical speed does not fall `0.5 g t^2` (48 m at 4 s), so the lift term uses the **drop-free clearance** `c_k' = c_k + 0.5 g t_k^2`: for the worst sample, `lift = max(0, h_req - c_k') / max(t_k, lift_min_time_s)` m/s, capped at `lift_max_frac` x u (0.6), and the brain commands `v_cmd.radial = v_r + lift`, the current radial speed plus the lift, never lift added to an altitude-hold command (otherwise a level ship climbs out of the deck band over flat ground; R0 B.12 A-69, AI-05 finding). This produces smooth ridge hopping; rilles and crater rims are flown over, not through.
 - **TTI**: the first sample with `c_k <= 0`, linearly refined between samples. Cached in `AiState.tti` at think; at act, every 3rd tick the probe re-samples only the 1.0 s point; if it is below 0, the emergency **PULL_UP** mode starts that tick (nose to local up at max rate, thrust 1, brake off) until TTI >= 4 s.
 - **Altitude band clamp**: guidance never commands above `max_alt_m` = 1,450 m (below the 1,500 m soft ceiling) and never below `deck_alt_agl_m` except in landing.
 - **Cost**: 6 bilinear samples per think, 1 per 3 ticks at act. At 400 AI ships: 400 x (6 x 3 + 10) = 11,200 samples/s, about 375 per tick.
@@ -502,7 +503,7 @@ fuel check: reject if fuel needed (eta at cruise burn + fuel_reserve_s) > remain
 | L2 APPROACH | gate | choose approach bearing: 8 candidates (45 degree steps), score = alignment with current track (cos) - terrain penalty (max probe height along the 1,200 m line above the glide path) - threat (enemy towers whose envelope covers the line); then fly the glide slope: target AGL `h(d) = d * tan(glide_deg = 8)`, speed schedule `s(d) = 40 + (v_cruise - 40) * (d - 250) / (gate - 250)` | d < `transition_dist_m` (250 m) and AGL within +-25 m of `h(d)` -> L4; else L3 |
 | L2b HOLD | pad busy | 400 m orbit, 150 m AGL | pad free -> L2 |
 | L3 GO-AROUND | any abort rule | climb at full thrust to 200 m AGL along the approach bearing, extend 1,500 m, re-enter L2; attempts + 1 | attempts > `max_attempts` (3) -> select a different pad, attempts = 0 |
-| L4 TRANSITION | d < 250 m | pitch nose up toward local up while braking; switch the controller to `track_thrust_vector` once the nose is within 45 degrees of local up | horizontal speed < 15 m/s and over the pad within 30 m -> L5 |
+| L4 TRANSITION | d < 250 m | pitch nose up toward local up while braking; switch the controller to `track_thrust_vector` once the nose is within 45 degrees of local up; **height floor:** while `agl < hover_agl_m` (25) the law commands `vz_cmd >= 0` and limits the tilt so the vertical thrust component holds the floor; a terrain contact in L4-L6 is a failed landing, never a landing (R0 B.12 A-70, AI-05 finding: 37 of 200 fast entries scraped without it) | horizontal speed < 15 m/s and over the pad within 30 m -> L5 |
 | L5 HOVER-DESCENT | stable | position law below; target sink `vz_cmd = -clamp(0.25 * agl, 1.5, 6.0)` m/s | agl < `flare_agl_m` (8 m) -> L6 |
 | L6 FLARE / TOUCH | agl < 8 m | `vz_cmd = -touch_vz_mps` (2.0); horizontal speed target 0; thrust axis within 10 degrees of the pad normal | sim reports contact: `LANDING` (grade) then `DOCKED` |
 
@@ -1187,3 +1188,4 @@ Revised 2026-10-10 against `reviews/R0-resolution-register.md` and 01 v1.1.
 | R0 B.10 A-44, A-45 (CONTRACT-0 amendments 03, 2026-10-13) | C13 silent-pilot reuse: BOOST / BRAKE held, FLIP / DOCK / RELEASE / FIRE bits cleared; the 10-tick window is confirmed (04 NQ10 closed) | s2.3 (C13) |
 
 | R0 B.11 A-51, A-55, A-61 (CONTRACT-0 amendments 04, 2026-10-14) | C6 uplink guard, C10 / C17 request TTL and the s3.4 echo window are `rules.json` fields (`uplink_margin_m` 50, `request_ttl_s` 10, `override_echo_s` 10; code in TA-49); brains reach the time-sliced A* through `CommandSinkBase.pathing()` (s5.7 unchanged otherwise); AI-02's `ControlMachine` contract ratified as built | s2.3 (notes), s5.7 |
+| R0 B.12 A-67..A-70 (CONTRACT-0 amendments 05, 2026-10-14) | s4.4 `flight` block = the sixteen AI-05 `FlightGains` keys (`kp_path` nose lead per radian, `kp_yaw` pointing gain; eight new keys; AI-19 writes them); s5.2 law table as built and the `damping_only` dive acceptance 2.6 s / 20 %; s5.3 lift from the drop-free clearance added to the radial speed; s5.5 L4 height floor at `hover_agl_m` and scrapes counted as failed landings | s4.4, s5.2, s5.3, s5.5 |

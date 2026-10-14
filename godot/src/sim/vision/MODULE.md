@@ -127,10 +127,9 @@ reveal, wrecks, neutrals, bit clearing, `sees` vs Sphere, random scenes vs brute
 
 ## Open items
 
-- needs content: a `rules.json` `vision_hz` (10) field (03 s3.7's base rate has none); until then `VISION_HZ` is the
-  documented default (A-43 pattern) and `hz` the override point. `rung_2_hz` reads `cut_ladder.rung_2_vision_hz` (TA-49).
-- Rule questions for the designer (02 owner), implemented literally now: structures under construction (`F_BUILDING`) and
-  unpowered structures sense like finished ones; every structure has a def sensor radius, so 03 s4.2's "~70 sensors per tick"
-  is ~400 at S-SIM-1 scale (the measured row still fits).
+- `rules.json` `vision_hz` (10) exists (R0 B.12 A-66); **TA-56** reads it at `_init` and `VISION_HZ` becomes the documented
+  default (A-43 pattern). `rung_2_hz` reads `cut_ladder.rung_2_vision_hz` (TA-49).
+- A-76 (TA-56 implements, V1 gains the clause): a structure with `F_BUILDING` does **not** sense; an unpowered finished
+  structure senses normally. 03 s4.2 row 11 now says ~400 sensors per pass; the 1.1 ms row is unchanged.
 - `needs net:` NET-08 / NET-15 may switch `Interest`'s per-team V from re-bucketing the mask to `SimWorld.interest_*` (same bits);
   `net/Interest` adds the one-period grace (03 s3.7).

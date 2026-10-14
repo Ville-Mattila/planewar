@@ -248,6 +248,7 @@
    "pads": 1,
    "pad_radius_m": 10,
    "pad_roofed": true,
+   "structure_bomb_mult": 0.25,
    "upgrade_from": "pad",
    "upgrade_cost_ore": 75,
    "upgrade_time_s": 15

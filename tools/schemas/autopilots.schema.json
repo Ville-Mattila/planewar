@@ -409,9 +409,63 @@
             "k_guidance": {
               "type": "number",
               "minimum": 0,
-              "maximum": 10
+              "maximum": 10,
+              "$comment": "05 s4.4 guidance shaping; not read by FlightController (AI-05)"
+            },
+            "integ_max_rad": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3.2,
+              "$comment": "AI-05 pitch integrator clamp (rad); anchor 0.8 (R0 B.12 A-67)"
+            },
+            "integ_band_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90,
+              "$comment": "AI-05 pitch integrator input clamp (deg); anchor 6"
+            },
+            "lead_max_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 180,
+              "$comment": "AI-05 nose lead cap (deg); anchor 80"
+            },
+            "kp_att": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "$comment": "05 s4.4: kp_* in (0, 10]; AI-05 attitude loop gain, anchor 6"
+            },
+            "kp_bank": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10,
+              "$comment": "05 s4.4: kp_* in (0, 10]; AI-05 bank-to-turn gain, anchor 1"
+            },
+            "bank_max_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90,
+              "$comment": "AI-05 bank cap (deg); anchor 60"
+            },
+            "t_trim": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "$comment": "05 s5.2 throttle trim; anchor 0.5"
+            },
+            "kp_turn_thrust": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "$comment": "AI-05 throttle added per radian of path error; anchor 2"
             }
-          }
+          },
+          "required": [
+            "kp_path", "ki_path", "integ_max_rad", "integ_band_deg", "lead_max_deg", "kp_att", "kp_yaw", "kp_roll",
+            "kp_bank", "bank_threshold_deg", "bank_max_deg", "t_trim", "kp_speed", "ki_speed", "kp_turn_thrust", "brake_overspeed_mps"
+          ],
+          "$comment": "FlightGains.KEYS (sim/steer, AI-05): the sixteen keys are required whenever a flight object is present (R0 B.12 A-67); k_guidance is optional"
         },
         "landing": {
           "type": "object",

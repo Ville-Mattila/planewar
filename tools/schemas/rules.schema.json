@@ -101,6 +101,12 @@
       "maximum": 100,
       "$comment": "03 s3.6 / TA-20 REPORT s3: A* heuristic inflation in percent; 25 measured (0 = exact A*); Pathing.set_heuristic_pct until TA-49"
     },
+    "vision_hz": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 30,
+      "$comment": "03 s3.7 base vision rate (10 Hz); cut rung 2 substitutes cut_ladder.rung_2_vision_hz; R0 B.12 A-66 (Vision.VISION_HZ is the documented default until TA-56)"
+    },
     "cut_ladder": {
       "type": "object",
       "additionalProperties": false,
@@ -176,7 +182,8 @@
     "shooter_grace_ticks",
     "sim_budget_profile",
     "tick_hz",
-    "uplink_margin_m"
+    "uplink_margin_m",
+    "vision_hz"
   ],
   "$defs": {
     "id": {

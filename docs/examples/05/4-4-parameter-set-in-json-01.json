@@ -14,8 +14,9 @@
     "bomb": { "dive_angle_deg": 30, "release_tolerance_m": 15, "pullout_g_margin_s": 1.5 },
     "evade": { "hp_drop_trigger": 0.15, "duration_s": 2.5 },
     "separation": { "radius_m": 60, "gain": 1.0 },
-    "flight": { "kp_path": 2.5, "ki_path": 0.6, "kp_roll": 3.0, "kp_yaw": 1.5, "bank_threshold_deg": 10,
-                "kp_speed": 0.05, "ki_speed": 0.02, "brake_overspeed_mps": 20, "k_guidance": 0.8 },
+    "flight": { "kp_path": 4.0, "ki_path": 0.3, "integ_max_rad": 0.8, "integ_band_deg": 6, "lead_max_deg": 80,
+                "kp_att": 6.0, "kp_yaw": 6.0, "kp_roll": 3.0, "kp_bank": 1.0, "bank_threshold_deg": 10, "bank_max_deg": 60,
+                "t_trim": 0.5, "kp_speed": 0.05, "ki_speed": 0.005, "kp_turn_thrust": 2.0, "brake_overspeed_mps": 20, "k_guidance": 0.8 },
     "landing": { "gate_dist_m": 1200, "pitch_over_agl_m": 20, "launch_climb_agl_m": 80, "glide_deg": 8, "transition_dist_m": 250, "transition_agl_m": 60,
                  "hover_agl_m": 25, "flare_agl_m": 8, "touch_vz_mps": 2.0, "max_tilt_deg": 30,
                  "kp_pos": 0.35, "kd_pos": 1.1, "kp_vz": 1.2, "abort_horiz_err_m": 12, "abort_vz_mps": 6, "max_attempts": 3 }
