@@ -14,7 +14,7 @@
     "bomb": { "dive_angle_deg": 30, "release_tolerance_m": 15, "pullout_g_margin_s": 1.5 },
     "evade": { "hp_drop_trigger": 0.15, "duration_s": 2.5 },
     "separation": { "radius_m": 60, "gain": 1.0, "push_mps": 20, "lookahead_s": 4, "lookahead_miss_m": 80, "lookahead_lag_s": 1.0,
-                    "lookahead_eff": 0.7, "lookahead_min_s": 0.3, "lookahead_max_mps": 60, "lookahead_brake": 1.0, "query_radius_m": 200 },
+                    "lookahead_eff": 0.7, "lookahead_min_s": 0.3, "lookahead_max_mps": 60, "lookahead_brake": 1.0, "query_radius_m": 180 },
     "formation": { "class_slots_m": [[-40, -30, 20], [40, -30, 20], [0, -60, 40], [-80, -60, 20]], "k_form": 0.5, "speed_cap_mult": 1.1,
                    "rejoin_radius_m": 1500, "break_utility": 0.5, "max_break_frac": 0.5, "slot_scan_m": 1500, "min_heading_speed_mps": 5 },
     "flight": { "kp_path": 4.0, "ki_path": 0.3, "integ_max_rad": 0.8, "integ_band_deg": 6, "lead_max_deg": 80,

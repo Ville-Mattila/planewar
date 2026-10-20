@@ -1923,8 +1923,10 @@
       "05 s5.6",
       " 05 AI-11"
     ],
-    "status": "todo",
-    "note": "05 s5.4 look-ahead ratified as A-84 (lookahead_miss_m anchor 80 per the fixture; MODULE.md text aligned); formation.engage_radius_m dropped in favour of order_rules.escort_engage_radius_m (A-86); SL-2 wire path is TA-60 / NET-04 (A-85); think ~39 us vs 25 us row recorded, no row moves (A-62)"
+    "status": "done",
+    "note": "05 s5.4 look-ahead ratified as A-84 (lookahead_miss_m anchor 80 per the fixture; MODULE.md text aligned); formation.engage_radius_m dropped in favour of order_rules.escort_engage_radius_m (A-86); SL-2 wire path is TA-60 / NET-04 (A-85); think ~39 us vs 25 us row recorded, no row moves (A-62) Merged after 4 Opus rounds (escalated to Opus for round 3): query_radius_m 180 (<= ring2), conditional separation hold (refresh while a friendly closes at >= 1 m/s), form_roster with overflow escorts outside the roster. 300-seed 4/300, stress 19/300. Think ~23 us steady parallel flight, ~30 us flown formation (refresh share 0.74-0.81): TA-22/PM-01 should weight by that share. Nits: static var _closing side channel in Separation.push; doc wording of closing rule; overflow escorts stay doubled after a slot frees.",
+    "pr": 69,
+    "merged": "2026-10-20"
   },
   {
     "id": "AI-12",

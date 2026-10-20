@@ -391,7 +391,7 @@ static func act_batch(ids: PackedInt32Array, v: SimView, st: AiState, p: Autopil
     "bomb": { "dive_angle_deg": 30, "release_tolerance_m": 15, "pullout_g_margin_s": 1.5 },
     "evade": { "hp_drop_trigger": 0.15, "duration_s": 2.5 },
     "separation": { "radius_m": 60, "gain": 1.0, "push_mps": 20, "lookahead_s": 4, "lookahead_miss_m": 80, "lookahead_lag_s": 1.0,
-                    "lookahead_eff": 0.7, "lookahead_min_s": 0.3, "lookahead_max_mps": 60, "lookahead_brake": 1.0, "query_radius_m": 200 },
+                    "lookahead_eff": 0.7, "lookahead_min_s": 0.3, "lookahead_max_mps": 60, "lookahead_brake": 1.0, "query_radius_m": 180 },
     "formation": { "class_slots_m": [[-40, -30, 20], [40, -30, 20], [0, -60, 40], [-80, -60, 20]], "k_form": 0.5, "speed_cap_mult": 1.1,
                    "rejoin_radius_m": 1500, "break_utility": 0.5, "max_break_frac": 0.5, "slot_scan_m": 1500, "min_heading_speed_mps": 5 },
     "flight": { "kp_path": 4.0, "ki_path": 0.3, "integ_max_rad": 0.8, "integ_band_deg": 6, "lead_max_deg": 80,
@@ -479,7 +479,7 @@ Ground units do not probe; their path grid already encodes slope.
 
 ### 5.4 Separation and structure avoidance
 
-At think, `SimView.ids_near(p, separation.query_radius_m = 200, MASK_SHIP)` (collision-hash backed; `query_radius_m` <= the hash's ring-2 coverage, R0 B.11 A-52) gives the friendly neighbours once. Two terms, every number a key of the autopilot def's `separation` block (R0 B.14 A-84; measured on AI-11's 50-seed swarm: the ring alone collides in 30 of 50 seeds, both terms in 0 of 50 and 1 of 300):
+At think, `SimView.ids_near(p, separation.query_radius_m = 180, MASK_SHIP)` (collision-hash backed; `query_radius_m` <= the hash's ring-2 coverage, R0 B.11 A-52) gives the friendly neighbours once. Two terms, every number a key of the autopilot def's `separation` block (R0 B.14 A-84; measured on AI-11's 50-seed swarm: the ring alone collides in 30 of 50 seeds, both terms in 0 of 50 and 1 of 300):
 
 1. **Proximity ring.** For each friendly ship j inside `radius_m` (60): `ring += (p - p_j).normalized() * (radius_m - dist) / radius_m` (coincident ships split along a tangent chosen by id order).
 2. **Look-ahead.** For each friendly ship j that is closing (`v_rel = v - v_j`, time of closest approach `t* > 0`, `t = min(t*, lookahead_s = 4)`), the predicted miss is `m = |d + v_rel t|`. If `m < lookahead_miss_m` (80): `deficit = lookahead_miss_m - m`, `urgency = deficit / lookahead_miss_m`, and the push is `min(deficit / (lookahead_eff (0.7) * max(t - lookahead_lag_s (1.0), lookahead_min_s (0.3))), lookahead_max_mps (60))` m/s along the **horizontal** side direction: the horizontal part of the miss vector when it carries more than half of it, else `up x v_rel` (opposite for the two ships of a pair, so they split; an exactly aligned pair splits by id order). A ship catching up on a neighbour ahead (`d . v < 0`, `v_rel . v > 0`) also sheds `lookahead_brake (1.0) * urgency * min(closing speed, lookahead_max_mps)` along its own velocity. Only the **most urgent** neighbour's look-ahead counts (sums cancel in a clump).
