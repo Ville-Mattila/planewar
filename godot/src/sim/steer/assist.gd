@@ -2,7 +2,7 @@ class_name Assist extends RefCounted
 ## Assist substitution of tick-order step 4 (R0 B.5, C2-04; 05 s1.2, s2.4): pure functions that write the input of
 ## a possessed entity in place of its pilot's. `SimWorld` calls them on the server (`AssistStep`); `net`'s
 ## `Prediction` calls them with the same arguments for the client's own ship (ADR-07), so they read nothing but their
-## arguments (S8) and a change here is reviewed for both the `sim_ai` and the `net` lane. `auto_dock` joins with AI-10.
+## arguments (S8) and a change here is reviewed for both the `sim_ai` and the `net` lane.
 ##
 ## LINK_BRIDGE (05 C10, C13; R0 C2-08) is the SAFETY behaviour of 05 s2.4 while the entity stays POSSESSED: pull up
 ## when the time to impact is below `safety_pull_up_tti_s`, else hold the current velocity, shaped by the 05 s5.3
@@ -68,3 +68,54 @@ static func trim_lead(v: Vector3, up_local: Vector3, bp: BridgeParams) -> float:
 	if k <= 0.0:
 		return bp.gains.integ_max
 	return minf(asin(minf(g_perp / (u * k), 1.0)), bp.gains.integ_max)
+
+
+## Auto-dock (05 s5.5 "Auto-dock assist", AI-10). `inp` is the possessed ship's input of this tick (the human's); returns
+## true and overwrites its thrust / pitch / yaw / roll / BRAKE with the L4-L6 landing law (LandingController.step_assist)
+## when the assist acts, false and `inp` untouched when the stick stays with the pilot. `st` is the caller's per-ship
+## LandingState and the only thing besides `inp` written. At possession the caller passes the AUTOPILOT's state (copied
+## from AiState) when the ship was landing: a ship possessed in L5 or L6 then continues in that phase and its
+## integrators (05:237, SC-16), instead of dropping back to L4 and climbing to the hover floor. Without a landing in
+## progress (any phase before L4, incl. a fresh state) the assist cold-starts in L4 TRANSITION. Rules:
+##  - DOCK not held: the stick goes straight back (`st.release()`).
+##  - Engage: DOCK held, the pad valid and free (`pad.valid`, not `pad.busy`), the ship above the pad plane and its
+##    HORIZONTAL distance in the pad frame <= `radius_m` (flight_common.auto_dock_radius_m, R0 B.12 A-33; altitude is
+##    the landing law's business).
+##  - Latch (A-34): once in L4-L6 it holds out to `radius_m * latch_mult` (flight_common.auto_dock_latch_mult).
+##  - The pad lost or taken while engaged hands the stick back and sets `st.assist_off` until DOCK is released.
+##    Unlike the autopilot it never aborts for horizontal error, sink or TTI: the law (height floor, climb-back off the
+##    pad) keeps flying, a human has no go-around.
+##  - `st.assist_near` is set on every acting tick within `radius_m` of the pad: a landing with it set is AUTO, without
+##    it manual ("no assist tick in the final 150 m"). The sim reads it at the LANDING event and then calls `st.reset()`.
+## BOOST and FLIP are cleared while the assist acts, other buttons are kept.
+static func auto_dock(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams, g: FlightGains,
+		radius_m: float, latch_mult: float, inp: PilotInput) -> bool:
+	if (inp.buttons & PilotInput.DOCK) == 0:
+		st.release()
+		return false
+	if st.assist_off or st.phase == LandingController.Phase.DONE:
+		return false
+	var engaged: bool = st.phase >= LandingController.Phase.TRANSITION
+	if not engaged and (not pad.valid or pad.busy):
+		return false
+	var rel: Vector3 = ship.p - pad.p
+	var hc: float = rel.dot(pad.n)
+	var ed: float = (rel - pad.n * hc).length()
+	if engaged:
+		if ed > radius_m * latch_mult:
+			st.release()
+			return false
+		if not pad.valid or pad.busy:
+			st.assist_off = true
+			st.abort_reason = LandingController.Abort.PAD_INVALID if not pad.valid else LandingController.Abort.PAD_BUSY
+			return false
+	elif ed > radius_m or hc <= 0.0:
+		return false
+	else:
+		st.phase = LandingController.Phase.TRANSITION
+		st.integ = Vector2.ZERO
+	var _ph: int = LandingController.step_assist(st, ship, pad, prm, g, inp)
+	inp.buttons &= ~(PilotInput.BOOST | PilotInput.FLIP)
+	if ed <= radius_m:
+		st.assist_near = true
+	return true

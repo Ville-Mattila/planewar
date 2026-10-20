@@ -7,12 +7,12 @@ reviewed for both the `sim_ai` and the `net` lane.
 
 | Field | Value |
 |---|---|
-| Responsibility | Pure functions of their arguments that turn state into controls or probes: `FlightController` (05 s5.2, guidance target -> `PilotInput`) with its `FlightGains`, `TerrainProbe` (05 s5.3, time to impact, worst clearance, lift), `LandingController` (05 s5.5, tail-down L1-L6, aborts, go-around, bearing) and `Assist` (R0 B.5 step 4 substitution: `link_bridge`, AI-08; driven by `AssistStep`) with its `BridgeParams`. `Assist.auto_dock` lands with AI-10. |
+| Responsibility | Pure functions of their arguments that turn state into controls or probes: `FlightController` (05 s5.2, guidance target -> `PilotInput`) with its `FlightGains`, `TerrainProbe` (05 s5.3, time to impact, worst clearance, lift), `LandingController` (05 s5.5, tail-down L1-L6, aborts, go-around, bearing) and `Assist` (R0 B.5 step 4 substitution: `link_bridge`, AI-08; driven by `AssistStep`) with its `BridgeParams`. `Assist.auto_dock` (AI-10): the possessed ship's DOCK-held landing law. |
 | Lane owner tier | Opus reviews (05 lane writes it; Sonnet may implement against this file) |
 | May depend on | `core`, `content`, `sim` (`Terrain`, `Kinematics`, `PilotInput`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, RNG, autoloads, member state (S8) |
 | Autoloads used | None |
-| Status | `TerrainProbe` (AI-07), `FlightController` + `FlightGains` (AI-05), `LandingController` + structs (AI-09, 2026-10-14); `AimSolver` + `Ballistics` (AI-12, 2026-10-14); `Assist.link_bridge` + `BridgeParams` + `AssistStep` (AI-08, 2026-10-14); auto-dock planned |
+| Status | `TerrainProbe` (AI-07), `FlightController` + `FlightGains` (AI-05), `LandingController` + structs (AI-09, 2026-10-14); `AimSolver` + `Ballistics` (AI-12, 2026-10-14); `Assist.link_bridge` + `BridgeParams` + `AssistStep` (AI-08, 2026-10-14); `Assist.auto_dock` (AI-10) |
 
 ## Public API
 
@@ -57,6 +57,7 @@ static func autopilot_raw(content: ContentSet, id: StringName) -> Dictionary # A
 
 class_name Assist extends RefCounted                                         # R0 B.5 step 4 substitution, static only; SimWorld and net Prediction
 static func link_bridge(b: Basis, p: Vector3, v: Vector3, terrain: Terrain, bp: BridgeParams, probe: ProbeResult, out: PilotInput) -> void
+static func auto_dock(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams, g: FlightGains, radius_m: float, latch_mult: float, inp: PilotInput) -> bool   # true = assist overwrote inp
 static func link_bridge_ground(out: PilotInput) -> void                      # ground unit: stop (thrust 0, no BRAKE: no reverse)
 static func pull_up(b: Basis, up_local: Vector3, g: FlightGains, out: PilotInput) -> void   # 05 s5.3 PULL_UP: nose to local up, thrust 1, buttons 0
 static func hold_velocity(b: Basis, v: Vector3, lift_mps: float, up_local: Vector3, g: FlightGains, lead: float, out: PilotInput) -> void   # v_cmd = v + up * lift, pitch integrator = lead
@@ -84,6 +85,7 @@ class_name LandingController extends RefCounted                              # 0
 enum Phase { TRANSIT, APPROACH, HOLD, GO_AROUND, TRANSITION, HOVER, FLARE, DONE }   # L1 L2 L2b L3 L4 L5 L6; append-only
 enum Abort { NONE, HORIZ_ERR, SINK, PAD_INVALID, PAD_BUSY, PAD_THREAT, TTI, GLIDE } # append-only (AiState bytes)
 static func step(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams, g: FlightGains, out: PilotInput) -> int   # one tick
+static func step_assist(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams, g: FlightGains, out: PilotInput) -> int   # L4-L6 only: no abort rules, no L1-L3 (Assist.auto_dock)
 static func should_abort(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams) -> int   # Abort
 static func go_around(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, reason: int) -> void
 static func guidance(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams) -> Vector3   # L1-L3 v_cmd
@@ -106,6 +108,8 @@ var bearing_count: int; var bearing_samples: int; var bearing_clear_m: float; va
 
 class_name LandingState extends RefCounted                                   # per-landing memory; the caller keeps it per entity
 var phase: int; var attempts: int; var abort_reason: int; var bearing: Vector3; var mark: Vector3; var ga_dir: Vector3; var integ: Vector2
+var assist_off: bool; var assist_near: bool                                  # AI-10: auto-dock gave up (until DOCK released); acted within auto_dock_radius_m = AUTO landing
+func release() -> void                                                       # DOCK released: L1, assist re-armed, assist_near kept
 func reset() -> void                                                         # L1, no bearing, no attempts, no abort
 class_name ShipSnapshot extends RefCounted                                   # reused input scratch
 var b: Basis; var p: Vector3; var v: Vector3; var a_thrust: float; var eff_fade_start: float; var bounding_radius: float
@@ -274,3 +278,15 @@ through `SimWorld` step 4).
 - The structure bounding-sphere probe of 05 s5.4 and the 1.0 s re-sample at act (PULL_UP) are `sim_ai` callers of `TerrainProbe`.
 - A-69 (05 s5.3 erratum): lift callers use the drop-free clearance `c_k + 0.5 g t_k^2` and add the lift to the current radial speed; TTI / PULL_UP keep the ballistic probe. `probe()` is unchanged; AI-13 owns the brain side. `LandingPilot` (AI-09) already does both.
 - A-70 (05 s5.5 erratum): implemented by AI-09 (`LandingController.thrust_vector`, floor = `landing.hover_agl_m`; LC2); `Assist.auto_dock()` (AI-10) inherits it.
+
+**Assist.auto_dock (AI-10).** `inp` is the possessed ship's input (human, or the net-predicted copy). The caller keeps one `LandingState`
+per possessed ship and at possession **passes the autopilot's own state** (copied from AiState: phase, attempts, bearing, integ) when
+the ship was landing: a ship possessed in L5/L6 continues in that phase (05:237, SC-16); with no landing in progress (any phase before
+L4, or a fresh state) the assist cold-starts in L4 TRANSITION. With DOCK held, a valid free pad, the ship above the pad plane and its
+horizontal distance in the pad frame <= `radius_m` (`flight_common.auto_dock_radius_m`, A-33) it overwrites thrust / pitch / yaw / roll
+/ BRAKE via `LandingController.step_assist` (BOOST and FLIP cleared, other buttons kept); once in L4-L6 it holds out to
+`radius_m * latch_mult` (A-34, x5); L4 is limited to `transition_max_tilt_deg` (75 degrees) while braking. DOCK released or out of
+the latch: `st.release()`. The pad lost or taken sets `st.assist_off` until DOCK is released. No abort for horizontal error, sink or
+TTI (a human has no go-around). `LandingState.assist_near` is set by every acting tick within `radius_m` of the pad and survives
+`release()`: the sim reads it at the LANDING event (set = grade AUTO, unset = manual) and then calls `reset()`. Fill the snapshots with
+`tti_s` INF and `pad.threat` false. Wiring into `AssistStep`, `LANDING_ASSIST` and the grade itself wait for GD-15 and NET-18.
