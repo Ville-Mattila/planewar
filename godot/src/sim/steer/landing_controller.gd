@@ -36,6 +36,15 @@ static func step(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: La
 	return st.phase
 
 
+## One tick of L4-L6 only, for `Assist.auto_dock` (AI-10): no abort rules and no L1-L3, because a human pilot has no
+## go-around; the L4 -> L5 -> L6 transitions and the position law run as in `step`. `st.phase` must be TRANSITION..FLARE.
+static func step_assist(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams, g: FlightGains,
+		out: PilotInput) -> int:
+	_advance_thrust(st, ship, pad, prm)
+	thrust_law(st.phase, ship, pad, prm, g, out)
+	return st.phase
+
+
 ## The 05 s5.5 abort rules for the current phase; Abort.NONE when none applies. TRANSIT and HOLD abort only on an
 ## invalid pad; GO_AROUND and DONE never.
 static func should_abort(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams) -> int:
