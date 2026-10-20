@@ -3,7 +3,7 @@ class_name SimViewContract extends RefCounted
 ## on the scripted scene and records the accessor names that failed (`failed`) and that were exercised
 ## (`covered`). It never asserts, so the same clauses judge a real view (must fail nothing) and a mutant (must fail
 ## the broken accessor). Accessors whose system has not landed (service / pad queue: GD-15; field_remaining,
-## supply01, auto_replenish_target: Economy; player_score, landing_grade_last: scoring; path_grid_version: TA-50)
+## supply01: Economy; player_score, landing_grade_last: scoring; path_grid_version: TA-50)
 ## are held to the neutral default of the SimView base class; the clause changes when the system lands.
 
 const EPS: float = 1e-4
@@ -157,7 +157,9 @@ func _team_and_match() -> void:
 	_t(&"power_balance", _v.power_balance(0).is_equal_approx(power) and _v.power_balance(1) == Vector2.ZERO)
 	_t(&"tech_available", _v.tech_available(0, WorldTestKit.def_id(&"solar_array")) and _v.tech_available(0, WorldTestKit.def_id(&"outpost"))
 			and not _v.tech_available(1, WorldTestKit.def_id(&"solar_array")))
-	_t(&"auto_replenish_target", _v.auto_replenish_target(0, WorldTestKit.def_id(&"dart")) == 0)
+	var harv: int = WorldTestKit.def_id(&"harvester")
+	_t(&"auto_replenish_target", _v.auto_replenish_target(0, harv) == 2 and _v.auto_replenish_target(0, WorldTestKit.def_id(&"dart")) == 0
+			and _v.auto_replenish_target(1, harv) == 0)
 	_t(&"field_remaining", _v.field_remaining(0) == 0)
 	_t(&"player_score", _v.player_score(0) == Vector2i.ZERO)
 	var ts: TeamStateView = _v.team_state(0)

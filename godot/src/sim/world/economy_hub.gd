@@ -41,7 +41,8 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 ## True for the command kinds step 1 routes here instead of `CommandApplier`.
 static func handles(kind: Command.Kind) -> bool:
 	return kind == Command.Kind.BUILD or kind == Command.Kind.CANCEL_BUILD or kind == Command.Kind.PRODUCE \
-			or kind == Command.Kind.CANCEL_PRODUCE
+			or kind == Command.Kind.CANCEL_PRODUCE \
+			or kind == Command.Kind.SET_RALLY or kind == Command.Kind.TOGGLE_AUTO_REPLENISH
 
 
 ## Step 1: applies `cmd` after the validator's re-check (a command made invalid by an earlier one has no effect).
@@ -61,6 +62,10 @@ func apply(cmd: Command) -> void:
 			var _ok: bool = production.enqueue(EntityId.slot(cmd.target), cmd.player, CommandPayload.u16_at(cmd, 0), CommandPayload.u8_at(cmd, 2))
 		Command.Kind.CANCEL_PRODUCE:
 			production.cancel(EntityId.slot(cmd.target), CommandPayload.u8_at(cmd, 0))
+		Command.Kind.SET_RALLY:
+			production.launch.set_rally(EntityId.slot(cmd.target), CommandPayload.v3_at(cmd.payload, 0))
+		Command.Kind.TOGGLE_AUTO_REPLENISH:
+			production.replenish.apply(cmd.player, cmd.payload)
 
 
 ## Start of every tick: the clock `Build` stamps sites with and the early share lock reads.

@@ -109,7 +109,7 @@ func check(cmd: Command) -> int:
 		Command.Kind.CANCEL_BUILD, Command.Kind.CANCEL_PRODUCE:
 			return _check_cancel(cmd)
 		Command.Kind.SET_RALLY, Command.Kind.TOGGLE_AUTO_REPLENISH:
-			return _check_own_structure(cmd)
+			return _check_factory_setting(cmd)
 		Command.Kind.POSSESS:
 			return _control.check_possess(p, cmd.target, _claimed.has(cmd.target))
 		Command.Kind.RELEASE:
@@ -287,6 +287,29 @@ func _check_own_structure(cmd: Command) -> int:
 	if _store.kind[s] != EntityStore.K_STRUCTURE:
 		return CommandResult.Code.REJECTED_MALFORMED
 	return CommandResult.Code.ACCEPTED if _store.owner[s] == cmd.player else CommandResult.Code.REJECTED_NOT_OWNER
+
+
+## SET_RALLY / TOGGLE_AUTO_REPLENISH (GD-17, A-81): the payload shape, then a finished factory of the issuer's team
+## (team-shared, 04 s11.3 V-OWN; owner-only is CANCEL_* alone).
+func _check_factory_setting(cmd: Command) -> int:
+	var ok: bool = false
+	if cmd.kind == Command.Kind.SET_RALLY:
+		var p: Vector3 = CommandPayload.v3_at(cmd.payload, 0) if cmd.payload.size() == 24 else Vector3.ZERO
+		ok = p.is_finite() and p.length_squared() > 0.0
+	else:
+		ok = production != null and production.replenish.payload_ok(cmd.payload)
+	if not ok:
+		return CommandResult.Code.REJECTED_MALFORMED
+	var t: int = cmd.target
+	if not _store.alive(t) or EntityId.is_wreck(t):
+		return CommandResult.Code.REJECTED_DEAD
+	var s: int = EntityId.slot(t)
+	if _store.kind[s] != EntityStore.K_STRUCTURE:
+		return CommandResult.Code.REJECTED_MALFORMED
+	if _store.team[s] != _players.team[cmd.player]:
+		return CommandResult.Code.REJECTED_NOT_OWNER
+	var factory: bool = production != null and production.is_factory(_store.def_id[s])
+	return CommandResult.Code.ACCEPTED if factory and (_store.flags[s] & EntityStore.F_BUILDING) == 0 else CommandResult.Code.REJECTED_MALFORMED
 
 
 func _check_adjutant(cmd: Command) -> int:

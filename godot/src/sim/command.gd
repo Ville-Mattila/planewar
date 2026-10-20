@@ -56,6 +56,26 @@ static func produce(_player: int, factory: int, def_id: int, count: int) -> Comm
 	return _make(_player, Kind.PRODUCE, factory, b)
 
 
+## SET_RALLY at `factory`: f64 x 3 rally position (04 s2.5 `pos`, unquantised in the sim form).
+static func set_rally(_player: int, factory: int, pos: Vector3) -> Command:
+	var b: PackedByteArray = PackedByteArray()
+	var _r: int = b.resize(24)
+	_put_v3(b, 0, pos)
+	return _make(_player, Kind.SET_RALLY, factory, b)
+
+
+## TOGGLE_AUTO_REPLENISH (target: one of the player's factories): u8 enabled, then 0-8 pairs of u16 unit def_id, u8 count.
+## The roster replaces the player's targets; disabled clears them. `roster` is [def_id, count, def_id, count, ...].
+static func toggle_auto_replenish(_player: int, factory: int, enabled: bool, roster: PackedInt32Array) -> Command:
+	var b: PackedByteArray = PackedByteArray()
+	var _r: int = b.resize(1 + 3 * (roster.size() >> 1))
+	b.encode_u8(0, 1 if enabled else 0)
+	for k: int in roster.size() >> 1:
+		b.encode_u16(1 + 3 * k, roster[2 * k])
+		b.encode_u8(3 + 3 * k, roster[2 * k + 1])
+	return _make(_player, Kind.TOGGLE_AUTO_REPLENISH, factory, b)
+
+
 static func possess(_player: int, id: int) -> Command:
 	return _make(_player, Kind.POSSESS, id, PackedByteArray())
 

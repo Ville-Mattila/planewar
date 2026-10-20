@@ -25,6 +25,7 @@ func power_ratio(team: int) -> float;  func stockpile(team: int) -> Vector2i;  f
 func try_spend(team: int, ore: int, ice: int) -> bool                        # all or nothing
 func credit(team: int, ore: int, ice: int, player: int = -1) -> void         # clamps to caps, STORAGE_FULL once per crossing (re-armed when the pool is below the cap); player >= 0 books `Build.delivered_ore`
 func try_pay(player: int, ore: int, ice: int) -> Pay                         # SHORT (pool), LOCKED (early share lock), else spends and grows `Build.spent_ore`
+func spend_locked(player: int, ore: int) -> bool                             # (GD-17) the early share lock would forbid `ore` more; auto-replenish checks it before queuing
 func refund(player: int, ore: int, ice: int) -> void                         # credit + lowers `Build.spent_ore` (S12 cancels)
 var sun_period_s: float                                                      # 0 = fixed sun +Z, > 0 moving (EconomyHub copies MatchRules.sun_period_s)
 func set_clock(tick: int) -> void;  func set_plateaus(centres: PackedVector3Array) -> void   # moving-sun refresh clock; unit-vector Plateau centres (GD-13)

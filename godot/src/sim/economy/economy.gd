@@ -166,6 +166,11 @@ func try_pay(player: int, ore: int, ice: int) -> Pay:
 	return Pay.OK
 
 
+## True while the early share lock forbids `player` to spend `ore` more (GD-17: auto-replenish does not queue into it).
+func spend_locked(player: int, ore: int) -> bool:
+	return _build.lock_blocks(player, ore)
+
+
 ## Gives back part of a payment (cancel rules, S12): the pool is credited and the ledger lowered by the Ore refunded.
 func refund(player: int, ore: int, ice: int) -> void:
 	credit(_players.team[player], ore, ice)

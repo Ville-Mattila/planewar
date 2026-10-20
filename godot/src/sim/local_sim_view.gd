@@ -224,9 +224,15 @@ func pad_occupant(pad: int) -> int:
 	if not _store.alive(pad):
 		return 0
 	for s: int in _store.ships:
-		if (_store.flags[s] & EntityStore.F_DOCKED) != 0 and _store.link[s] == pad:
+		if (_store.flags[s] & EntityStore.F_DOCKED) != 0 and _store.link[s] == pad and _pad_serves(pad):
 			return _store.id_of(s)
 	return 0
+
+
+# A-19: a launch-only pad (no `pad_radius_m`, the Shipyard) is never a service pad, so it has no occupant.
+func _pad_serves(pad: int) -> bool:
+	var d: int = _store.def_id[EntityId.slot(pad)]
+	return d < _defs.pad_radius_by_def.size() and _defs.pad_radius_by_def[d] > 0.0
 
 
 ## Nearest live friendly structure with a pad (`pad_radius_by_def` > 0), or 0.
@@ -340,6 +346,10 @@ func production_queue(factory: int) -> PackedInt32Array:
 
 func production_progress01(factory: int) -> float:
 	return production.progress01(EntityId.slot(factory)) if production != null and _store.alive(factory) else 0.0
+
+
+func auto_replenish_target(player: int, _def_id: int) -> int:
+	return production.replenish.target_of(player, _def_id) if production != null else 0
 
 
 func terrain_height(dir: Vector3) -> float:
