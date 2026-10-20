@@ -6,7 +6,7 @@ class_name FormationParams extends RefCounted
 ## `FORM_KEYS` (fixture `test/sim/ai/ai11_params.json` carries the 05 values until then).
 
 const SEP_KEYS: PackedStringArray = ["radius_m", "gain", "push_mps", "lookahead_s", "lookahead_miss_m", "lookahead_lag_s", "lookahead_eff", "lookahead_min_s", "lookahead_max_mps", "lookahead_brake", "query_radius_m"]
-const FORM_KEYS: PackedStringArray = ["class_slots_m", "k_form", "speed_cap_mult", "engage_radius_m", "rejoin_radius_m",
+const FORM_KEYS: PackedStringArray = ["class_slots_m", "k_form", "speed_cap_mult", "rejoin_radius_m",
 	"break_utility", "max_break_frac", "min_heading_speed_mps"]
 
 var sep_radius_m: float = 0.0          ## neighbours inside this radius push
@@ -37,8 +37,9 @@ var break_s: float = 0.0
 var ceiling_m: float = 0.0             ## wingmen never follow above rules.ceiling_soft_m
 
 
+## `engage_m`: OrderRulesDef.escort_engage_radius_m (order_rules.json; one home, 05 s3.1 / A-86).
 ## `ring2_m`: the collision hash's `Spatial.ring2_m`; `query_radius_m` is clamped to it so the neighbour query stays on the ring path.
-static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_soft_m: float, ring2_m: float = INF) -> FormationParams:
+static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_soft_m: float, engage_m: float, ring2_m: float = INF) -> FormationParams:
 	for k: String in SEP_KEYS:
 		if not _is_num(sep.get(k)):
 			return null
@@ -59,7 +60,7 @@ static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_
 	p.query_radius_m = minf(_f(sep, "query_radius_m"), ring2_m)
 	p.k_form = _f(form, "k_form")
 	p.speed_cap_mult = _f(form, "speed_cap_mult")
-	p.engage_radius_m = _f(form, "engage_radius_m")
+	p.engage_radius_m = engage_m
 	p.rejoin_radius_m = _f(form, "rejoin_radius_m")
 	p.break_utility = _f(form, "break_utility")
 	p.max_break_frac = _f(form, "max_break_frac")

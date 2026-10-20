@@ -5,7 +5,7 @@
   "formation": {
     "class_slots_m": [[-40, -30, 20], [40, -30, 20], [0, -60, 40], [-80, -60, 20]],
     "k_form": 0.5, "speed_cap_mult": 1.1,
-    "engage_radius_m": 1000, "rejoin_radius_m": 1500, "break_utility": 0.5, "max_break_frac": 0.5,
+    "rejoin_radius_m": 1500, "break_utility": 0.5, "max_break_frac": 0.5,
     "min_heading_speed_mps": 5
   }
 }

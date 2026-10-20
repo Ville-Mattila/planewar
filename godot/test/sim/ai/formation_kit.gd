@@ -28,9 +28,15 @@ static func ring2_m() -> float:
 	return _ring2
 
 
+## OrderRulesDef keeps its fields in `raw` until sim_ai names them.
+static func engage_m() -> float:
+	var e: float = content().order_rules.raw["escort_engage_radius_m"]
+	return e
+
+
 static func params() -> FormationParams:
 	var c: ContentSet = content()
-	var p: FormationParams = FormationParams.from_dict(block("separation"), block("formation"), c.wing, c.rules.ceiling_soft_m, ring2_m())
+	var p: FormationParams = FormationParams.from_dict(block("separation"), block("formation"), c.wing, c.rules.ceiling_soft_m, engage_m(), ring2_m())
 	assert(p != null, "ai11_params.json must build FormationParams")
 	return p
 

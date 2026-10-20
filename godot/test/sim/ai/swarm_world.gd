@@ -19,6 +19,7 @@ var goal: PackedVector3Array = PackedVector3Array()      ## guidance velocity pe
 var integ: PackedVector2Array = PackedVector2Array()
 var sep_term: PackedVector3Array = PackedVector3Array()  ## cached Separation.push, refreshed every second think like EscortPilot
 var thinks: int = 0
+var sep_every: int = 2
 var waypoint: PackedVector3Array = PackedVector3Array()  ## current waypoint (a point at the flight level)
 var leg: PackedInt32Array = PackedInt32Array()           ## waypoint index per ship
 var min_gap: float = INF                                 ## smallest surface gap between two same-team ships so far
@@ -53,7 +54,7 @@ func think(i: int, speed: float) -> void:
 	var to: Vector3 = waypoint[i] - s.p
 	var tang: Vector3 = (to - up * to.dot(up)).normalized()
 	var vz: float = clampf(0.5 * (waypoint[i].length() - s.p.length()), -10.0, 10.0)
-	if (thinks + i) % 2 == 0:   # the neighbour query runs every second think (05 s10 think row)
+	if (thinks + i) % sep_every == 0:   # the neighbour query runs every second think (05 s10 think row)
 		sep_term[i] = Separation.push(ids[i], s.p, s.v, teams[i], self, prm)
 	goal[i] = tang * speed + up * vz + sep_term[i]
 

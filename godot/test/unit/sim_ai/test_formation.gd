@@ -18,16 +18,17 @@ func test_params_build_and_reject_a_missing_key() -> void:
 	var prm: FormationParams = FormationKit.params()
 	assert_float(prm.sep_radius_m).is_equal(60.0)
 	assert_float(prm.k_form).is_equal(0.5)
+	assert_float(prm.engage_radius_m).is_equal(FormationKit.engage_m())
 	assert_int(prm.slot_count(false)).is_equal(4)
 	assert_int(prm.slot_count(true)).is_equal(3)
 	var sep: Dictionary = FormationKit.block("separation").duplicate()
 	var _e: bool = sep.erase("gain")
-	assert_object(FormationParams.from_dict(sep, FormationKit.block("formation"), null, 1500.0)).is_null()
+	assert_object(FormationParams.from_dict(sep, FormationKit.block("formation"), null, 1500.0, 1000.0)).is_null()
 	var form: Dictionary = FormationKit.block("formation").duplicate()
 	form["class_slots_m"] = []
-	assert_object(FormationParams.from_dict(FormationKit.block("separation"), form, null, 1500.0)).is_null()
+	assert_object(FormationParams.from_dict(FormationKit.block("separation"), form, null, 1500.0, 1000.0)).is_null()
 	form["class_slots_m"] = [[1, 2]]
-	assert_object(FormationParams.from_dict(FormationKit.block("separation"), form, null, 1500.0)).is_null()
+	assert_object(FormationParams.from_dict(FormationKit.block("separation"), form, null, 1500.0, 1000.0)).is_null()
 
 
 func test_query_radius_stays_on_the_hash_ring_path() -> void:
@@ -35,7 +36,7 @@ func test_query_radius_stays_on_the_hash_ring_path() -> void:
 	assert_float(FormationKit.params().query_radius_m).is_less_equal(ring2)
 	var wide: Dictionary = FormationKit.block("separation").duplicate()
 	wide["query_radius_m"] = 500
-	var clamped: FormationParams = FormationParams.from_dict(wide, FormationKit.block("formation"), null, 1500.0, ring2)
+	var clamped: FormationParams = FormationParams.from_dict(wide, FormationKit.block("formation"), null, 1500.0, 1000.0, ring2)
 	assert_float(clamped.query_radius_m).is_equal(ring2)
 
 
