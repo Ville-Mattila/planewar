@@ -4,13 +4,18 @@ extends GdUnitTestSuite
 ## while a pair closes) and EscortPilot.act (track_velocity) on a real SimWorld with a Bomber, 4 escort Darts in
 ## slots, 12 more friendly Darts within ~300 m and FAR_SHIPS friendly Darts spread over the sphere (a match-sized
 ## population: a query that fell off the ring path would scan their cells). Three cases: no threat, an engage-gate case (a
-## qualifying threat for the slot that may not break, so the gate runs every think) and act. Per-call timings, so the
-## mean includes the refresh calls and the held calls; mean and p95 are printed for the PR. Bounds are the 05 s10 rows with
-## a CI factor of `CI_FACTOR` (shared runners are slower than the dev machine; 05 s11.1, R0 A-62). A fourth case times a
+## qualifying threat for the slot that may not break, so the gate runs every think) and act. Think timings are per call, so
+## the mean includes the refresh calls and the held calls; mean and p95 are printed for the PR. Act is timed the way the
+## 05 s10 act row is defined (a per-tick batch over the AI ships, divided by the count; `AiDriver` acts its ships back to
+## back): `ACT_BATCHES` consecutive act loops over the escorts after one untimed warm-up loop, minimum batch mean (AI-40;
+## the minimum is the robust location estimate for timing noise that only adds, Chen and Revels 2016, "Robust benchmarking
+## in noisy environments"; the same statistic as the sim/steer per-call perf tests). Bounds are the 05 s10 rows with a CI
+## factor of `CI_FACTOR` (shared runners are slower than the dev machine; 05 s11.1, R0 A-62). A fourth case times a
 ## think with a closing friendly neighbour, which refreshes every think (Separation.term).
 
 const CALLS: int = 1000
 const BATCHES: int = 6
+const ACT_BATCHES: int = 30          ## act: one warm-up loop, then the best of 30 loops of CALLS acts (AI-40)
 const FAR_SHIPS: int = 240
 const THINK_ROW_US: float = 25.0
 const ACT_ROW_US: float = 6.0
@@ -85,14 +90,12 @@ func test_perf_think_and_act() -> void:
 	var inp: PilotInput = PilotInput.new()
 	var sc: Vector3 = Vector3(INF, 0.0, 0.0)
 	var sg: Vector3 = Vector3(INF, 0.0, 0.0)
-	var sa: Vector3 = Vector3(INF, 0.0, 0.0)
 	var refreshes: int = 0
 	var gate_refreshes: int = 0
 	for _b: int in BATCHES:   # best batch by mean: the desktop scheduler's noise is larger than the code
 		var calm: PackedFloat32Array = PackedFloat32Array()
 		var gate: PackedFloat32Array = PackedFloat32Array()
-		var act: PackedFloat32Array = PackedFloat32Array()
-		var _n: int = calm.resize(CALLS) | gate.resize(CALLS) | act.resize(CALLS)
+		var _n: int = calm.resize(CALLS) | gate.resize(CALLS)
 		for k: int in CALLS:
 			var id: int = darts[k % 4]
 			var t0: int = Time.get_ticks_usec()
@@ -104,20 +107,34 @@ func test_perf_think_and_act() -> void:
 			var t2: int = Time.get_ticks_usec()
 			gate[k] = float(t2 - t1)
 			gate_refreshes += st.sep_age[EntityId.slot(darts[0])] & Separation.AGE_FRESH
-			var _c: bool = pilot.act(id, v, st, inp)
-			act[k] = float(Time.get_ticks_usec() - t2)
 		sc = _best(sc, _stats(calm))
 		sg = _best(sg, _stats(gate))
-		sa = _best(sa, _stats(act))
+	var act_us: float = _act_batches(pilot, v, st, inp, darts)
 	var sx: Vector3 = _closing_case(w, pilot, st, darts[2])
 	print("separation refresh share: quiet thinks %.2f, gate thinks %.2f" % [float(refreshes) / float(BATCHES * CALLS),
 		float(gate_refreshes) / float(BATCHES * CALLS)])
-	print("AI-11 perf (%d far ships, best of %d batches of %d): think mean %.1f / median %.1f / p95 %.1f us; threat-gate think mean %.1f / median %.1f / p95 %.1f us (row %.0f); act mean %.1f / p95 %.1f us (row %.0f); closing-neighbour think (refresh every think) mean %.1f / median %.1f / p95 %.1f us" % [
-		FAR_SHIPS, BATCHES, CALLS, sc.x, sc.y, sc.z, sg.x, sg.y, sg.z, THINK_ROW_US, sa.x, sa.z, ACT_ROW_US, sx.x, sx.y, sx.z])
+	print("AI-11 perf (%d far ships, best of %d batches of %d): think mean %.1f / median %.1f / p95 %.1f us; threat-gate think mean %.1f / median %.1f / p95 %.1f us (row %.0f); act %.2f us/ship (best of %d batch loops of %d after a warm-up; row %.0f); closing-neighbour think (refresh every think) mean %.1f / median %.1f / p95 %.1f us" % [
+		FAR_SHIPS, BATCHES, CALLS, sc.x, sc.y, sc.z, sg.x, sg.y, sg.z, THINK_ROW_US, act_us, ACT_BATCHES, CALLS, ACT_ROW_US, sx.x, sx.y, sx.z])
 	assert_float(sc.x).is_less(THINK_ROW_US * CI_FACTOR)
 	assert_float(sg.x).is_less(THINK_ROW_US * CI_FACTOR)
-	assert_float(sa.x).is_less(ACT_ROW_US * CI_FACTOR)
+	assert_float(act_us).is_less(ACT_ROW_US * CI_FACTOR)
 	assert_float(sx.x).is_less(THINK_ROW_US * CI_FACTOR * CLOSING_FACTOR)
+
+
+## Act per ship, as the 05 s10 act row counts it: back-to-back acts over the 4 slotted escorts (each returns true, so
+## every call runs track_velocity), one untimed warm-up loop, then the minimum mean over ACT_BATCHES loops of CALLS.
+func _act_batches(pilot: EscortPilot, v: SimView, st: AiState, inp: PilotInput, darts: PackedInt32Array) -> float:
+	var best: float = INF
+	var flying: int = 0
+	for b: int in ACT_BATCHES + 1:
+		var t0: int = Time.get_ticks_usec()
+		for k: int in CALLS:
+			flying += 1 if pilot.act(darts[k & 3], v, st, inp) else 0
+		var us: float = float(Time.get_ticks_usec() - t0) / float(CALLS)
+		if b > 0:   # loop 0 warms the caches and the clock
+			best = minf(best, us)
+	assert_int(flying).is_equal((ACT_BATCHES + 1) * CALLS)   # every timed act flies the formation (no early-out call)
+	return best
 
 
 ## A friendly Dart 150 m ahead of `escort`, head-on at 70 m/s: the escort refreshes on every think while it closes (the
