@@ -28,6 +28,21 @@ func submit(cmd: Command) -> CommandResult:
 	return r
 
 
+## The system path of `SimSink.submit` (TA-59): the ORDER is queued with `player` SYSTEM (-1) so step 1 stamps issuer -1.
+## The caller's command is not changed.
+func submit_system(cmd: Command) -> CommandResult:
+	var c: Command = Command.new()
+	c.tick = cmd.tick
+	c.player = CommandValidator.SYSTEM
+	c.kind = cmd.kind
+	c.target = cmd.target
+	c.payload = cmd.payload
+	var r: CommandResult = _validator.validate_system(c, _state.ended(), pending.size())
+	if r.code == CommandResult.Code.ACCEPTED:
+		pending.append(c)
+	return r
+
+
 ## Step 1: applies every queued command in arrival order, then empties the queue.
 func apply_all(tick: int) -> void:
 	_validator.begin_tick()

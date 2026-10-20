@@ -281,6 +281,10 @@ func ai_tag(id: int) -> int:
 	return _store.ai_tag[EntityId.slot(id)] if _store.alive(id) else 0
 
 
+func overlay(id: int) -> int:
+	return _store.overlay[EntityId.slot(id)] if _store.alive(id) else 0
+
+
 func stockpile_cap(_team: int) -> Vector2i:
 	return TeamStats.stockpile_cap(_store, _defs, _team)
 
@@ -355,25 +359,7 @@ func match_clock_s() -> float:
 
 
 func read_poses(ids: PackedInt32Array, _pos: PackedVector3Array, _rot: PackedVector4Array) -> int:
-	var n_alive: int = 0
-	for i: int in ids.size():
-		var id: int = ids[i]
-		if _store.alive(id):
-			var s: int = EntityId.slot(id)
-			var f: Vector3 = _store.fwd[s]
-			var u: Vector3 = _store.up[s]
-			var q: Quaternion = Basis(f.cross(u), u, -f).get_rotation_quaternion()
-			_pos[i] = _store.pos[s]
-			_rot[i] = Vector4(q.x, q.y, q.z, q.w)
-			n_alive += 1
-		elif EntityId.is_projectile(id) and _proj.alive(id):
-			_pos[i] = _proj.pos[_proj.index_of(id)]
-			_rot[i] = Vector4(0.0, 0.0, 0.0, 1.0)
-			n_alive += 1
-		else:
-			_pos[i] = Vector3.ZERO
-			_rot[i] = Vector4(0.0, 0.0, 0.0, 1.0)
-	return n_alive
+	return PoseReader.read(_store, _proj, ids, _pos, _rot)
 
 
 func _ship_def(id: int) -> ShipDef:

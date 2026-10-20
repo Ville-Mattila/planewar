@@ -17,7 +17,11 @@ func _init(intake: CommandIntake, store: EntityStore, inputs: InputSlots, path: 
 	_pathing = path
 
 
+## An ORDER with FLAG_PREPEND is the AI's system path (TA-59, 05 s2.4): issuer -1, no owner check, no rate token,
+## FLAG_PREPEND accepted; every other command is exactly `SimWorld.apply_command`.
 func submit(cmd: Command) -> CommandResult:
+	if cmd.kind == Command.Kind.ORDER and cmd.payload.size() > 1 and (cmd.payload.decode_u8(1) & OrderSpec.FLAG_PREPEND) != 0:
+		return _intake.submit_system(cmd)
 	return _intake.submit(cmd)
 
 
@@ -35,6 +39,16 @@ func set_ai_tag(id: int, tag: int) -> void:
 	if _store.alive(id):
 		var s: int = EntityId.slot(id)
 		_store.ai_tag[s] = tag & 0xFF
+		_store.dirty[s] |= EntityStore.DIRTY_CONTROL
+
+
+func end_overlay(id: int) -> void:
+	if not _store.alive(id):
+		return
+	var s: int = EntityId.slot(id)
+	var ov: int = _store.overlay[s]
+	if ov == ControlMachine.Overlay.SAFETY or ov == ControlMachine.Overlay.RECOVER_CEILING:
+		_store.overlay[s] = ControlMachine.Overlay.NONE
 		_store.dirty[s] |= EntityStore.DIRTY_CONTROL
 
 

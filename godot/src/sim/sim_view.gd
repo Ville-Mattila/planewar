@@ -173,6 +173,11 @@ func projectiles_near(_p: Vector3, _r: float, _team_mask: int) -> PackedInt32Arr
 	return PackedInt32Array()
 
 
+## The replicated overlay byte (`ControlMachine.Overlay`): NONE, SAFETY, RECOVER_CEILING or LINK_BRIDGE; 0 for a dead id.
+func overlay(_id: int) -> int:
+	return 0
+
+
 func ai_tag(_id: int) -> int:
 	return 0
 

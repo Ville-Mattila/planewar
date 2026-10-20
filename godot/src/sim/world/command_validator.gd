@@ -11,6 +11,8 @@ const RATE_PER_S: int = 10
 const BURST: int = 30
 ## sim/MODULE.md "Data owned": pending command queue <= 256 per tick; overflow rejects with REJECTED_RATE.
 const QUEUE_MAX: int = 256
+## `Command.player` of a system ORDER (SimSink.submit with FLAG_PREPEND, TA-59); the applier stamps issuer -1.
+const SYSTEM: int = -1
 const _STATE: PackedStringArray = ["_tokens", "_last", "_claimed"]
 
 var order_rules: OrderRules = null                    ## null: every ORDER is REJECTED_INVALID_ORDER
@@ -66,6 +68,18 @@ func validate(cmd: Command, tick: int, ended: bool, queued: int) -> CommandResul
 		r.reject = last_reject
 	if r.code == CommandResult.Code.ACCEPTED and cmd.kind == Command.Kind.POSSESS:
 		var _a: bool = _claimed.push_back(cmd.target)
+	return r
+
+
+## Verdict for a system ORDER (`player` == SYSTEM; TA-59): phase and queue bound only, no rate token.
+func validate_system(cmd: Command, ended: bool, queued: int) -> CommandResult:
+	var r: CommandResult = CommandResult.new()
+	if ended:
+		r.code = CommandResult.Code.REJECTED_PHASE
+	elif queued >= QUEUE_MAX:
+		r.code = CommandResult.Code.REJECTED_RATE
+	else:
+		r.code = check(cmd) as CommandResult.Code
 	return r
 
 
@@ -139,6 +153,8 @@ func _commander(p: int) -> bool:
 func _check_order(cmd: Command) -> int:
 	if not CommandPayload.read_order(cmd, _spec, _ids):
 		return CommandResult.Code.REJECTED_MALFORMED
+	if cmd.player == SYSTEM:
+		return _check_system_order()
 	if not _commander(cmd.player):
 		return CommandResult.Code.REJECTED_NO_RIGHTS
 	if order_rules == null:
@@ -155,6 +171,21 @@ func _check_order(cmd: Command) -> int:
 			return CommandResult.Code.REJECTED_MALFORMED if OrderRules.malformed(v) else CommandResult.Code.REJECTED_INVALID_ORDER
 		if not _control.orders.room(s, _spec.flags):
 			return CommandResult.Code.REJECTED_CAP                               # 05 C3 guard: queue < 8
+	if _spec.target != 0 and not _store.alive(_spec.target):
+		return CommandResult.Code.REJECTED_INVALID_ORDER
+	return CommandResult.Code.ACCEPTED
+
+
+# System orders (TA-59): live targets and the class / structure rules (FLAG_PREPEND allowed), nothing about teams.
+func _check_system_order() -> int:
+	if order_rules == null:
+		return CommandResult.Code.REJECTED_INVALID_ORDER
+	for id: int in _ids:
+		if not _store.alive(id) or EntityId.is_wreck(id):
+			return CommandResult.Code.REJECTED_DEAD
+		var v: OrderRules.Verdict = order_rules.validate(_spec, _store.def_id[EntityId.slot(id)], false)
+		if v != OrderRules.Verdict.OK:
+			return CommandResult.Code.REJECTED_MALFORMED if OrderRules.malformed(v) else CommandResult.Code.REJECTED_INVALID_ORDER
 	if _spec.target != 0 and not _store.alive(_spec.target):
 		return CommandResult.Code.REJECTED_INVALID_ORDER
 	return CommandResult.Code.ACCEPTED

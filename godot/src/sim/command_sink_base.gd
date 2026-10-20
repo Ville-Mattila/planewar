@@ -20,6 +20,12 @@ func set_ai_tag(_id: int, _tag: int) -> void:
 	pass
 
 
+## Ends an AI-executed overlay (SAFETY / RECOVER_CEILING) in the replicated overlay byte of a live entity (TA-59);
+## LINK_BRIDGE is the sim's own and is left alone. The base does nothing.
+func end_overlay(_id: int) -> void:
+	pass
+
+
 ## The world's Pathing (R0 B.11 A-55): `sim_ai`'s only route to request / status / result / release. A request is a
 ## write (it queues work that step 3b advances under the tick budget), hence the sink and not the read-only SimView.
 ## The base has none (null).

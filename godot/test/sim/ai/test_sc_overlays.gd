@@ -63,9 +63,9 @@ func test_sc11_release_terrain_imminent() -> void:
 
 # SC-12 release_low_fuel_forces_return: possessed Dart at 15 % fuel with a saved PATROL; on release SAFETY asks for a
 # system RETURN in front of the resumed queue, once. Pass here: exactly one ORDER RETURN with FLAG_PREPEND for that
-# Dart, from the SAFETY overlay of the release tick, and PATROL still the resumed head. The sim verdict and the
-# queue after it are reported: SimSink.submit validates as a client (OrderRules from_client, issuer = cmd.player),
-# so FLAG_PREPEND / issuer -1 is refused (MODULE.md open item, needs sim); "docks" needs AI-09 / AI-13.
+# Dart, from the SAFETY overlay of the release tick (PATROL is the resumed head when it is sent). TA-59: the sink
+# accepts it as a system order (issuer -1) and RETURN becomes the head; the replicated overlay byte clears when the
+# overlay ends. "docks" needs AI-09 / AI-13.
 func test_sc12_release_low_fuel_forces_return() -> void:
 	var w: SimWorld = OverlayKit.world(12)
 	var d: AiDriver = OverlayKit.driver(w)
@@ -89,7 +89,7 @@ func test_sc12_release_low_fuel_forces_return() -> void:
 	var t_rel: int = w.tick()
 	assert_int(w.view().order_head(id).kind).is_equal(OrderSpec.Kind.PATROL)
 	assert_int(d.state.overlay[EntityId.slot(id)]).is_equal(Overlays.SAFETY)
-	for _k: int in 90:
+	for _k: int in 150:
 		w.step()
 	var orders: Array[Command] = rec.orders()
 	assert_int(orders.size()).is_equal(1)
@@ -101,8 +101,11 @@ func test_sc12_release_low_fuel_forces_return() -> void:
 	assert_int(spec.flags).is_equal(OrderSpec.FLAG_PREPEND)
 	assert_array(Array(ids)).is_equal([id])
 	assert_int(orders[0].player).is_equal(0)
-	print("SC-12: RETURN request verdict %d (needs sim: a system path for FLAG_PREPEND / issuer -1), head now %d" % [
-		rec.codes[0], w.view().order_head(id).kind])
+	assert_int(rec.codes[0]).is_equal(CommandResult.Code.ACCEPTED)
+	assert_int(w.view().order_head(id).kind).is_equal(OrderSpec.Kind.RETURN)
+	assert_int(w.view().order_issuer(id)).is_equal(-1)
+	assert_int(d.state.overlay[EntityId.slot(id)]).is_equal(Overlays.NONE)
+	assert_int(w.view().overlay(id)).is_equal(ControlMachine.Overlay.NONE)
 
 
 # SC-22 handover_during_dive: p (0) possesses a Dart in a 30 degree dive at 400 m AGL; q (3) requests, p hands over;
@@ -399,3 +402,6 @@ class RecordingSink extends CommandSinkBase:
 
 	func pathing() -> Pathing:
 		return inner.pathing()
+
+	func end_overlay(id: int) -> void:
+		inner.end_overlay(id)

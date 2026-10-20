@@ -23,11 +23,15 @@ lane-internal by decision (TA-18 / TA-43 follow-up): clients and `sim_ai` call `
 class_name CommandIntake extends RefCounted                                  # the pending queue (<= 256 / tick) + the one entry of apply_command and SimSink.submit
 var pending: Array[Command];  var economy: EconomyHub                        # (TA-19) BUILD / CANCEL_BUILD / PRODUCE / CANCEL_PRODUCE are routed to it in step 1
 func submit(cmd: Command) -> CommandResult;  func apply_all(tick: int) -> void
+func submit_system(cmd: Command) -> CommandResult                           # (TA-59) SimSink's path for ORDER + FLAG_PREPEND: queued with player SYSTEM (-1), issuer -1; survives S4
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
+class_name PoseReader extends RefCounted                                      # (TA-59, A-73) LocalSimView.read_poses body
+static func read(store: EntityStore, proj: ProjectileStore, ids: PackedInt32Array, pos: PackedVector3Array, rot: PackedVector4Array) -> int
 class_name CommandValidator extends RefCounted                               # S10 rate + state rules, S12
 const RATE_PER_S: int; const BURST: int; const QUEUE_MAX: int;  var order_rules: OrderRules
 var build: Build; var production: Production; var last_reject: int   # (TA-19) set by EconomyHub: BUILD -> can_place (REJECTED_PLACEMENT + reject), PRODUCE -> team factory, queue room, REJECTED_LOCKED, S12 by queuer
 func validate(cmd: Command, tick: int, ended: bool, queued: int) -> CommandResult   # rate (bucket charged), phase, then check()
+func validate_system(cmd: Command, ended: bool, queued: int) -> CommandResult        # (TA-59) system ORDER (player SYSTEM = -1): phase and queue bound, no token, no team check, FLAG_PREPEND allowed
 func check(cmd: Command) -> int                                              # pure state rules; CommandResult.Code; re-run in step 1
 func begin_tick() -> void;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name CommandApplier extends RefCounted                                 # step 1: control kinds and ORDER to ControlMachine, the rest here
