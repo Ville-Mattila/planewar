@@ -39,6 +39,31 @@ func test_steep_dive_same_seed_same_result_and_seeds_differ() -> void:
 	assert_bool(SweepScenarios.steep_dive(su, 606, 3).y == SweepScenarios.steep_dive(su, 606, 4).y).is_false()
 
 
+func test_dive_leg_is_long_and_the_legacy_line_keeps_the_start_state() -> void:
+	# AI-38: the steep-dive waypoint line is DIVE_LEG_M long (the AI-06 line, leg_m 0, could be shorter than the
+	# waypoint radius, ending the run at tick 0); the start state is the same either way.
+	var rules: RulesDef = FlightTestKit.rules()
+	var def: ShipDef = FlightTestKit.ship(&"dart")
+	for k: int in [0, 14, 104]:
+		var r_new: TerrainFlightRig = TerrainFlightRig.new(def, FlightTestKit.common(), rules, Terrain.new())
+		var r_old: TerrainFlightRig = TerrainFlightRig.new(def, FlightTestKit.common(), rules, Terrain.new())
+		var a: ShipState = SweepScenarios.dive_start(606, k, SweepScenarios.DIVE_DEG, SweepScenarios.DIVE_AGL, r_new)
+		var b: ShipState = SweepScenarios.dive_start(606, k, SweepScenarios.DIVE_DEG, SweepScenarios.DIVE_AGL, r_old, 0.0)
+		assert_vector(a.p).is_equal(b.p)
+		assert_vector(a.v).is_equal(b.v)
+		var last: Vector3 = r_new.waypoints[r_new.waypoints.size() - 1]
+		assert_float(Sphere.great_circle(a.p.normalized(), last)).is_equal_approx(SweepScenarios.DIVE_LEG_M, 1.0)
+		assert_bool(r_old.waypoints.size() <= r_new.waypoints.size()).is_true()
+
+
+func test_dive_bound_separates_unrecoverable_starts() -> void:
+	# Seed 104 (43 degrees down at 96 m/s from 101 m): no open-loop pull-up saves it under damping_only, a 20 degree
+	# pull-up does under speed_scaled; seed 0 is recoverable under both.
+	assert_bool(SweepScenarios.dive_recoverable(_setup(RulesDef.LIFT_DAMPING_ONLY), 606, 104)).is_false()
+	assert_bool(SweepScenarios.dive_recoverable(_setup(RulesDef.LIFT_SPEED_SCALED), 606, 104)).is_true()
+	assert_bool(SweepScenarios.dive_recoverable(_setup(RulesDef.LIFT_DAMPING_ONLY), 606, 0)).is_true()
+
+
 func test_landing_docks_under_speed_scaled_and_fills_every_column() -> void:
 	var out: Dictionary = {}
 	var ok: bool = SweepScenarios.landing(_setup(RulesDef.LIFT_SPEED_SCALED), 606, 0, out)

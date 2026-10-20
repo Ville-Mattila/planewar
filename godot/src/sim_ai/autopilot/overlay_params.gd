@@ -22,8 +22,9 @@ var v_cruise: float = 0.0              ## ShipDef.v_cruise: RECOVER_CEILING spee
 
 
 ## Ship-class parameters; null when a key is missing or not a number.
-static func for_ship(ap: Dictionary, def: ShipDef, rules: RulesDef, tick_hz: int) -> OverlayParams:
-	var bp: BridgeParams = BridgeParams.from_autopilot(ap, def, rules, tick_hz)
+static func for_ship(ap: Dictionary, def: ShipDef, rules: RulesDef, tick_hz: int,
+		flight_common: FlightCommonDef) -> OverlayParams:
+	var bp: BridgeParams = BridgeParams.from_autopilot(ap, def, rules, tick_hz, flight_common)
 	if bp == null or not _has_numbers(ap, KEYS):
 		return null
 	var r: OverlayParams = OverlayParams.new()

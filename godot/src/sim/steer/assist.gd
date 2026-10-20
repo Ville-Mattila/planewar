@@ -23,7 +23,7 @@ static func link_bridge(b: Basis, p: Vector3, v: Vector3, terrain: Terrain, bp: 
 	var up: Vector3 = p.normalized()
 	out.buttons = 0
 	if probe.tti_s < bp.pull_up_tti_s:
-		pull_up(b, up, bp.gains, out)
+		pull_up(b, v, up, bp.gains, out)
 	else:
 		var lift: float = TerrainProbe.drop_free_lift(probe, bp.probe, h_req, u)
 		hold_velocity(b, v, lift, up, bp.gains, trim_lead(v, up, bp), out)
@@ -39,11 +39,11 @@ static func link_bridge_ground(out: PilotInput) -> void:
 	out.buttons = 0
 
 
-## 05 s5.3 PULL_UP: nose (thrust axis) to the local up at the ship's own maximum rates, thrust 1, every button off.
-static func pull_up(b: Basis, up_local: Vector3, g: FlightGains, out: PilotInput) -> void:
+## 05 s5.3 PULL_UP through `FlightController.pull_up` (AI-38: nose to the best-climb elevation of the lift law in
+## the velocity's vertical plane at the ship's own rates, wings level, thrust 1 above the horizon), every button off.
+static func pull_up(b: Basis, v: Vector3, up_local: Vector3, g: FlightGains, out: PilotInput) -> void:
 	out.buttons = 0
-	FlightController.track_thrust_vector(b, up_local, 1.0, up_local, g, out)
-	out.thrust = 1.0
+	FlightController.pull_up(b, v, up_local, g, out)
 
 
 ## Hold velocity `v` as it is now (no snap to a new heading): `track_velocity` toward `v` with the radial speed

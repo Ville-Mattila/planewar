@@ -37,7 +37,7 @@ static func ap(id: StringName) -> Dictionary:
 
 static func overlay_params(id: StringName) -> OverlayParams:
 	var c: ContentSet = content()
-	return OverlayParams.for_ship(ap(id), ship(id), c.rules, c.rules.tick_hz)
+	return OverlayParams.for_ship(ap(id), ship(id), c.rules, c.rules.tick_hz, c.flight_common)
 
 
 static func world(seed_value: int = 7, map_id: StringName = &"") -> SimWorld:

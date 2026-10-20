@@ -19,7 +19,7 @@ func before() -> void:
 
 
 func _bp(id: StringName, rules: RulesDef) -> BridgeParams:
-	return BridgeParams.from_autopilot(OverlayKit.ap(id), FlightTestKit.ship(id), rules, rules.tick_hz)
+	return BridgeParams.from_autopilot(OverlayKit.ap(id), FlightTestKit.ship(id), rules, rules.tick_hz, FlightTestKit.common())
 
 
 func test_from_autopilot_reads_the_keys_and_refuses_gaps() -> void:
@@ -33,8 +33,8 @@ func test_from_autopilot_reads_the_keys_and_refuses_gaps() -> void:
 	for k: String in ["safety_pull_up_tti_s", "flight", "probe_times_s", "min_clearance_m"]:
 		var ap: Dictionary = OverlayKit.ap(&"dart").duplicate(true)
 		var _e: bool = ap.erase(k)
-		assert_object(BridgeParams.from_autopilot(ap, FlightTestKit.ship(&"dart"), rules, 30)).override_failure_message(k).is_null()
-	assert_object(BridgeParams.from_autopilot({}, FlightTestKit.ship(&"dart"), rules, 30)).is_null()
+		assert_object(BridgeParams.from_autopilot(ap, FlightTestKit.ship(&"dart"), rules, 30, FlightTestKit.common())).override_failure_message(k).is_null()
+	assert_object(BridgeParams.from_autopilot({}, FlightTestKit.ship(&"dart"), rules, 30, FlightTestKit.common())).is_null()
 
 
 func test_table_follows_content_ships_and_nulls_classes_without_a_def() -> void:
@@ -56,8 +56,14 @@ func test_pulls_up_below_the_threshold() -> void:
 	var probe: ProbeResult = ProbeResult.new()
 	Assist.link_bridge(Ai05Kit.basis(s), s.p, s.v, Terrain.new(), _bp(&"dart", rules), probe, out)
 	assert_float(probe.tti_s).is_less(2.0)
-	assert_float(out.thrust).is_equal(1.0)
+	assert_float(out.thrust).is_equal(0.0)       # AI-38: nose below the horizon, thrust would steepen the dive
 	assert_float(out.pitch).is_greater(0.0)      # nose up
+	assert_int(out.buttons).is_equal(0)
+	var climb: ShipState = _dive(def, Vector3(1, 0, 0), Vector3(0, 1, 0), 60.0, -10.0, def.v_cruise)   # nose 10 deg up
+	var sink: Vector3 = climb.v - Vector3(1, 0, 0) * 70.0    # but sinking hard: still a pull-up
+	Assist.link_bridge(Ai05Kit.basis(climb), climb.p, sink, Terrain.new(), _bp(&"dart", rules), probe, out)
+	assert_float(probe.tti_s).is_less(2.0)
+	assert_float(out.thrust).is_equal(1.0)       # nose above the horizon: full thrust
 	assert_int(out.buttons).is_equal(0)
 
 

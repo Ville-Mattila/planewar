@@ -17,10 +17,13 @@ const TILT_MAX_DEG: float = 10.0
 const R: float = Sphere.PLANET_RADIUS
 const DIVE_DEG: Vector2 = Vector2(10.0, 45.0)
 const DIVE_AGL: Vector2 = Vector2(100.0, 300.0)
+const DIVE_LEG_M: float = 2000.0         ## waypoint line: longer than 12 s at 1.1 v_cruise plus the waypoint radius
+const BOUND_ELEVATIONS: int = 19        ## fixed pull-up elevations of the bound: 0, 5, ..., 90 degrees
 const OUTCOMES: PackedStringArray = ["flying", "landed", "damaged", "crashed", "off_pad"]
 ## Per-landing diagnostics `landing` writes into its `out` dictionary.
 const LANDING_COLS: PackedStringArray = ["outcome", "gate_to_dock_s", "go_arounds", "scrapes", "phase_end", "speed_end",
-	"agl_end", "thrust_min_approach", "thrust_low_ticks", "td_sink", "td_hspeed", "td_tilt"]
+	"agl_end", "thrust_min_approach", "thrust_low_ticks", "td_sink", "td_hspeed", "td_tilt", "thrust_zero_run",
+	"thrust_zero_unsupported_run"]
 
 
 ## One candidate under one lift model.
@@ -35,7 +38,7 @@ class Setup extends RefCounted:
 	func gains(def: ShipDef, rules_def: RulesDef) -> FlightGains:
 		var d: Dictionary = Ai05Kit.block("flight").duplicate()
 		d.merge(flight, true)
-		return FlightGains.from_dict(d, def, rules_def.tick_hz)
+		return FlightGains.from_dict(d, def, rules_def.tick_hz, rules_def, FlightTestKit.common())
 
 	func pilot(def: ShipDef, world: LandingWorld) -> LandingPilot:
 		var d: Dictionary = Ai09Kit.block("landing").duplicate()
@@ -95,25 +98,77 @@ static func _advance(s: ShipState, inp: PilotInput, def: ShipDef, common: Flight
 # region steep low dive
 ## One steep low dive from seed `k`: returns Vector3(contacts, min AGL m, pull-ups). Start 100-300 m above flat
 ## ground, 10-45 degrees nose-down along the heading at 0.7-1.1 v_cruise, a straight waypoint line, 12 s.
-## `dive_deg` / `agl_m` override the (min, max) ranges.
-static func steep_dive(su: Setup, base_seed: int, k: int, dive_deg: Vector2 = DIVE_DEG, agl_m: Vector2 = DIVE_AGL) -> Vector3:
-	var rng: Rng = Rng.new(base_seed + 7919 * k)
+## `dive_deg` / `agl_m` override the (min, max) ranges. AI-38: the waypoint line is DIVE_LEG_M long (AI-06 drew
+## 63-600 m, so the rig reached its last waypoint, and the run stopped, before many dives had met the ground or
+## recovered: about 40 of 200 runs were 0 ticks long). Start states (position, heading, speed, dive) are unchanged.
+## `leg_m` <= 0 replays the AI-06 line (5 % of the way to the far point) for before / after comparisons.
+static func steep_dive(su: Setup, base_seed: int, k: int, dive_deg: Vector2 = DIVE_DEG, agl_m: Vector2 = DIVE_AGL,
+		leg_m: float = DIVE_LEG_M) -> Vector3:
 	var def: ShipDef = FlightTestKit.ship(&"dart")
 	var rules: RulesDef = su.rules()
 	var rig: TerrainFlightRig = TerrainFlightRig.new(def, FlightTestKit.common(), rules, Terrain.new())
 	rig.g = su.gains(def, rules)
-	var a: Vector3 = Ai05Kit.geo(PAD_LAT, rng.range_f(0.0, 360.0))
-	var b: Vector3 = Sphere.slerp_dir(a, Ai05Kit.geo(PAD_LAT - 12.0, rng.range_f(0.0, 360.0)), 0.05)
-	rig.waypoints = TerrainFlightRig.polyline(PackedVector3Array([a, b]), 200.0)
-	var speed: float = def.v_cruise * rng.range_f(0.7, 1.1)
 	rig.speed_cmd = def.v_cruise
-	var first: Vector3 = rig.waypoints[0]
-	var fwd: Vector3 = (first - a * first.dot(a)).normalized()
-	var dive: float = deg_to_rad(rng.range_f(dive_deg.x, dive_deg.y))
-	var heading: Vector3 = fwd * cos(dive) - a * sin(dive)
-	var s: ShipState = FlightTestKit.spawn(def, a * (R + rng.range_f(agl_m.x, agl_m.y)), heading, a, heading * speed)
+	var s: ShipState = dive_start(base_seed, k, dive_deg, agl_m, rig, leg_m)
 	var _ok: bool = rig.fly(s, 12 * rules.tick_hz)
 	return Vector3(float(rig.stats_contacts), rig.stats_min_agl, float(rig.stats_pull_ups))
+
+
+## Start state of steep dive `k` (the Dart); fills `rig.waypoints` (a `leg_m` line, <= 0: the AI-06 line) when
+## `rig` is not null.
+static func dive_start(base_seed: int, k: int, dive_deg: Vector2, agl_m: Vector2, rig: TerrainFlightRig,
+		leg_m: float = DIVE_LEG_M) -> ShipState:
+	var rng: Rng = Rng.new(base_seed + 7919 * k)
+	var def: ShipDef = FlightTestKit.ship(&"dart")
+	var a: Vector3 = Ai05Kit.geo(PAD_LAT, rng.range_f(0.0, 360.0))
+	var far: Vector3 = Ai05Kit.geo(PAD_LAT - 12.0, rng.range_f(0.0, 360.0))
+	var fwd: Vector3 = (far - a * far.dot(a)).normalized()
+	if rig != null:
+		var b: Vector3 = a * cos(leg_m / R) + fwd * sin(leg_m / R) if leg_m > 0.0 else Sphere.slerp_dir(a, far, 0.05)
+		rig.waypoints = TerrainFlightRig.polyline(PackedVector3Array([a, b]), 200.0)
+	var speed: float = def.v_cruise * rng.range_f(0.7, 1.1)
+	var dive: float = deg_to_rad(rng.range_f(dive_deg.x, dive_deg.y))
+	var heading: Vector3 = fwd * cos(dive) - a * sin(dive)
+	return FlightTestKit.spawn(def, a * (R + rng.range_f(agl_m.x, agl_m.y)), heading, a, heading * speed)
+
+
+## Physical bound of steep dive `k` (AI-38): true when some open-loop pull-up from tick 0 avoids terrain contact:
+## a fixed nose elevation 0, 5, ..., 90 degrees in the velocity's vertical plane, wings level, held through
+## `track_thrust_vector` at the ship's own rates with thrust 1 above the horizon (0 below), or `Assist.pull_up`.
+## A start no such pull-up saves meets the ground under any wings-level autopilot; the sweep counts them apart.
+static func dive_recoverable(su: Setup, base_seed: int, k: int, dive_deg: Vector2 = DIVE_DEG,
+		agl_m: Vector2 = DIVE_AGL) -> bool:
+	var def: ShipDef = FlightTestKit.ship(&"dart")
+	var g: FlightGains = su.gains(def, su.rules())
+	for j: int in BOUND_ELEVATIONS + 1:
+		if not bound_hits(su, g, dive_start(base_seed, k, dive_deg, agl_m, null), j):
+			return true
+	return false
+
+
+## One open-loop pull-up of the bound for the Dart in `s`: elevation `j` x 5 degrees, j == BOUND_ELEVATIONS =
+## Assist.pull_up. True on contact; stops (no contact) once climbing with the nose above the horizon, or after 6 s.
+static func bound_hits(su: Setup, g: FlightGains, s: ShipState, j: int) -> bool:
+	var def: ShipDef = FlightTestKit.ship(&"dart")
+	var rules: RulesDef = su.rules()
+	var common: FlightCommonDef = FlightTestKit.common()
+	var flat: Terrain = Terrain.new()
+	var inp: PilotInput = PilotInput.new()
+	var th: float = deg_to_rad(5.0 * float(j))
+	for i: int in 6 * rules.tick_hz:
+		var n: Vector3 = s.p.normalized()
+		if j == BOUND_ELEVATIONS:
+			Assist.pull_up(Ai05Kit.basis(s), s.v, n, g, inp)
+		else:
+			var h: Vector3 = (s.v - n * s.v.dot(n)).normalized()
+			FlightController.track_thrust_vector(Ai05Kit.basis(s), h * cos(th) + n * sin(th), 1.0, n, g, inp)
+			inp.thrust = 1.0 if s.fwd.dot(n) > 0.0 else 0.0
+		Ai05Kit.step(s, inp, def, common, rules, flat)
+		if s.terrain_hit:
+			return true
+		if s.v.dot(n) > 0.0 and s.fwd.dot(n) > 0.0:
+			return false
+	return false
 # endregion
 
 
@@ -138,7 +193,10 @@ static func _heading(p: Vector3, to: Vector3, off_deg: float) -> Vector3:
 ## One SC-04 style landing from seed `k`. Fills `out` (LANDING_COLS) and returns true when it docked within the
 ## R0 B.5 safe limits, thrust axis within 10 degrees of the pad normal, without a terrain scrape (A-70).
 ## `thrust_min_approach` / `thrust_low_ticks`: lowest throttle and ticks below 0.2 in APPROACH / TRANSITION (the
-## "thrust cut while decelerating" suspicion).
+## "thrust cut while decelerating" suspicion). AI-38: `thrust_zero_run` = longest run of consecutive APPROACH /
+## TRANSITION ticks at throttle 0; `thrust_zero_unsupported_run` = longest APPROACH run (the velocity phase, where
+## `track_velocity` and its floor fly; TRANSITION is the L4 thrust-vector law) at throttle 0 while the lift alone
+## does not carry the weight (`FlightController.weight_support_throttle` > 0), i.e. longer than the floor allows.
 static func landing(su: Setup, base_seed: int, k: int, out: Dictionary) -> bool:
 	var rng: Rng = Rng.new(base_seed + 104729 * k)
 	var sc: LandingScenario = LandingScenario.new(Terrain.new(), su.model)
@@ -151,15 +209,20 @@ static func landing(su: Setup, base_seed: int, k: int, out: Dictionary) -> bool:
 	var thr_min: float = INF
 	var low_ticks: int = 0
 	var phase_end: int = 0
+	var runs: Vector4i = Vector4i.ZERO   # (zero run, longest, unsupported zero run, longest)
 	for t: int in 180 * sc.world.rules.tick_hz:
 		if not sc.world.flying(0):
 			break
+		var s0: ShipState = sc.world.ss[0]
+		var ws: float = FlightController.weight_support_throttle(Ai05Kit.basis(s0), s0.v, s0.p.normalized(),
+			sc.pilots[0].gains)
 		sc.step()
 		phase_end = sc.phase(0)
 		if phase_end == LandingController.Phase.APPROACH or phase_end == LandingController.Phase.TRANSITION:
 			thr_min = minf(thr_min, sc.inputs[0].thrust)
 			if sc.inputs[0].thrust < 0.2:
 				low_ticks += 1
+		runs = _zero_runs(runs, phase_end, sc.inputs[0].thrust, ws)
 	var w: LandingWorld = sc.world
 	var td: Vector4 = w.touchdown[0]
 	var s: ShipState = w.ss[0]
@@ -176,5 +239,14 @@ static func landing(su: Setup, base_seed: int, k: int, out: Dictionary) -> bool:
 	out["td_sink"] = td.x
 	out["td_hspeed"] = td.y
 	out["td_tilt"] = td.z
+	out["thrust_zero_run"] = runs.y
+	out["thrust_zero_unsupported_run"] = runs.w
 	return ok
+
+
+static func _zero_runs(r: Vector4i, phase: int, thrust: float, ws: float) -> Vector4i:
+	var on: bool = phase == LandingController.Phase.APPROACH or phase == LandingController.Phase.TRANSITION
+	var x: int = r.x + 1 if on and thrust <= 0.0 else 0
+	var z: int = r.z + 1 if phase == LandingController.Phase.APPROACH and thrust <= 0.0 and ws > 0.0 else 0
+	return Vector4i(x, maxi(r.y, x), z, maxi(r.w, z))
 # endregion

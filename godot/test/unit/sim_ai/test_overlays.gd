@@ -118,7 +118,7 @@ func test_params_parse_and_refuse_gaps() -> void:
 	for k: String in OverlayParams.KEYS:
 		var ap: Dictionary = OverlayKit.ap(&"dart").duplicate(true)
 		var _e: bool = ap.erase(k)
-		assert_object(OverlayParams.for_ship(ap, OverlayKit.ship(&"dart"), OverlayKit.content().rules, 30)).override_failure_message(k).is_null()
+		assert_object(OverlayParams.for_ship(ap, OverlayKit.ship(&"dart"), OverlayKit.content().rules, 30, OverlayKit.content().flight_common)).override_failure_message(k).is_null()
 	var g: OverlayParams = OverlayParams.for_ground({"safety_min_hold_s": 0.5}, OverlayKit.content().rules, 30)
 	assert_bool(g.ground).is_true()
 	assert_int(g.min_hold_ticks).is_equal(15)
@@ -167,7 +167,8 @@ func test_pull_up_below_two_seconds_held_until_clear_then_hold_recaptured() -> v
 	Overlays.enter(_id(), v, _st, _p, 0)
 	assert_bool(_run(v, 0)).is_false()
 	assert_int(_st.ov_flags[5] & AiState.OV_PULL_UP).is_equal(AiState.OV_PULL_UP)
-	assert_float(_rec.last.thrust).is_equal(1.0)
+	assert_float(_rec.last.thrust).is_equal(0.0)   # AI-38 PULL_UP: nose along the dive, below the horizon: no thrust
+	assert_float(_rec.last.pitch).is_greater(0.0)
 	v.v = Vector3(-30.0, 110.0, 0.0)        # better, TTI between 2 and 4 s: still pulling (hysteresis)
 	assert_bool(_run(v, 1)).is_false()
 	assert_int(_st.ov_flags[5] & AiState.OV_PULL_UP).is_equal(AiState.OV_PULL_UP)

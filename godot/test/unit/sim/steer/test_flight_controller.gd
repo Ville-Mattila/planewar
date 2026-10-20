@@ -197,7 +197,7 @@ func test_only_axes_and_brake_bit_are_written() -> void:
 func test_gains_from_dict_requires_every_key() -> void:
 	var def: ShipDef = FlightTestKit.ship(&"dart")
 	var flight: Dictionary = Ai05Kit.block("flight")
-	var g: FlightGains = FlightGains.from_dict(flight, def, 30)
+	var g: FlightGains = FlightGains.from_dict(flight, def, 30, FlightTestKit.rules(), FlightTestKit.common())
 	assert_object(g).is_not_null()
 	assert_float(g.dt).is_equal_approx(1.0 / 30.0, 1e-9)
 	assert_float(g.pitch_rate).is_equal_approx(deg_to_rad(def.pitch_rate_dps), 1e-9)
@@ -205,8 +205,8 @@ func test_gains_from_dict_requires_every_key() -> void:
 	for k: String in FlightGains.KEYS:
 		var broken: Dictionary = flight.duplicate()
 		var _e: bool = broken.erase(k)
-		assert_object(FlightGains.from_dict(broken, def, 30)).override_failure_message(k).is_null()
-	assert_object(FlightGains.from_dict(flight, def, 0)).is_null()
+		assert_object(FlightGains.from_dict(broken, def, 30, FlightTestKit.rules(), FlightTestKit.common())).override_failure_message(k).is_null()
+	assert_object(FlightGains.from_dict(flight, def, 0, FlightTestKit.rules(), FlightTestKit.common())).is_null()
 
 
 func test_shape_rate_stops_in_time() -> void:
