@@ -47,6 +47,9 @@ static func build() -> SimViewScene:
 	var order: OrderSpec = OrderSpec.make(OrderSpec.Kind.MOVE, 0, MOVE_POINT)
 	var res: CommandResult = w.apply_command(Command.order(0, PackedInt32Array([s.a]), order))
 	assert(res.code == CommandResult.Code.ACCEPTED)
+	# GD-17: player 0 wants 2 Harvesters (no Vehicle Bay in the scene, so nothing is queued and production_queue stays empty)
+	var roster: PackedInt32Array = PackedInt32Array([WorldTestKit.def_id(&"harvester"), 2])
+	assert(w.apply_command(Command.toggle_auto_replenish(0, s.yard, true, roster)).code == CommandResult.Code.ACCEPTED)
 	s.wreck = s._make_wreck(WorldTestKit.at(100.0, 500.0))
 	s.rocket = WorldTestKit.projectile(w, &"rocket", WorldTestKit.at(300.0), Vector3(0, 10, 0), 1, 5.0)
 	for _i: int in EXTRA_STEPS:
