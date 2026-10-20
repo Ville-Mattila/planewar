@@ -2,8 +2,8 @@
 
 Contract for `godot/src/input/**` (06 s2-s3; UX-03). A change to "Public API" or "Invariants" is a contract change:
 update the contract tests first, in the same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines.
-UX-03 lands the router, class detection, glyph selection and the intent catalogue. Mappers, gesture recognizer,
-assist stack and remap are later tasks (see "Open items").
+UX-03 lands the router, class detection, glyph selection and the intent catalogue; UX-05 the gamepad and KBM
+DIRECT flight mappers. Touch mapper, gesture recognizer, assist stack and remap are later tasks ("Open items").
 
 | Field | Value |
 |---|---|
@@ -12,7 +12,7 @@ assist stack and remap are later tasks (see "Open items").
 | May depend on | `core`; the sim public type `PilotInput` only (`tools/deps.json`) |
 | Must never touch | `sim` beyond `PilotInput`, `net`, `ui`, `camera`, `presentation`, `content` loaders, `app` |
 | Autoloads used | none |
-| Status | UX-03 implemented (router, class, monitor, intents); mappers and assists planned |
+| Status | UX-03 (router, class, monitor, intents) and UX-05 (gamepad and KBM DIRECT mappers) implemented; touch mapper and assists planned |
 
 ## Public API
 
@@ -45,7 +45,9 @@ signal pilot_input(input: PilotInput)                  # once per sim tick in FL
 signal intent(kind: StringName, payload: Dictionary)   # s2.5
 signal input_class_changed(kind: int)
 signal glyph_set_changed(glyphs: StringName)           # &"kbm" &"xbox" &"ps" &"nintendo" &"deck" &"generic"
-var sampler: Callable                                  # Callable() -> PilotInput raw sample; invalid = neutral
+var sampler: Callable                                  # Callable() -> PilotInput raw sample; overrides the mappers when valid
+var gamepad_mapper: GamepadFlightMapper                # sampled while the active class is GAMEPAD
+var kbm_mapper: KbmFlightMapper                        # sampled while POINTER; fed MouseMotion.relative in flight modes; TOUCH = neutral until UX-04
 func route_event(event: InputEvent, now_ms: int) -> void
 func emit_tick() -> bool                               # emits pilot_input once in a flight mode; returns whether it did
 static func is_flight_mode(m: Mode) -> bool
@@ -76,6 +78,39 @@ const K_ANCHOR: StringName; const K_RAD: StringName; const K_VEC: StringName; co
 const K_ENTITY: StringName; const K_ON: StringName; const K_SLOT: StringName; const K_OPEN: StringName
 const K_PING: StringName; const K_LANE: StringName
 static func all_kinds() -> Array[StringName]
+
+class_name FlightMath extends RefCounted       # pure 06 s3.5 math and feel constants
+const PAD_DEAD_ZONE: float; const PAD_GAMMA: float; const TRIGGER_DEAD_ZONE: float; const BRAKE_TRIGGER: float   # 0.15, 1.8, 0.05, 0.5
+const YAW_RAMP_S: float; const POWER_KEY_RATE: float; const LEVER_STEP: float                                     # 0.15, 4.0, 0.25
+const MOUSE_STICK_TAU_S: float; const MOUSE_STICK_PER_PX: float                                                   # 0.15, 0.005
+static func stick(v: Vector2, d0: float, gamma: float) -> Vector2              # radial dead zone then s^gamma
+static func trigger(v: float, d0: float) -> float
+static func ramp(cur: float, target: float, rate: float, dt: float) -> float
+
+class_name FlightMapper extends RefCounted     # base: one raw PilotInput per tick
+var invert_pitch: bool
+func sample(_dt: float) -> PilotInput
+
+class_name PadState extends RefCounted         # gamepad snapshot (LS, RT, LT, LB, RB, L3, A, B, X, Y, D-pad Down)
+static func poll(device: int) -> PadState
+
+class_name GamepadFlightMapper extends FlightMapper   # DIRECT: LS roll/pitch, LB/RB yaw ramp 0.15 s, RT thrust, LT > 0.5 BRAKE
+var device: int
+var poller: Callable                           # test seam: Callable() -> PadState
+func sample(dt: float) -> PilotInput
+func map(st: PadState, dt: float) -> PilotInput   # BOOST (L3), FLIP (Y), RELEASE (D-pad Down) fire one tick per press
+
+class_name KbmState extends RefCounted         # keyboard and mouse snapshot (W S A D Q E Shift Space F R, LMB, RMB, mouse_delta)
+static func poll(mouse_delta_px: Vector2) -> KbmState
+
+class_name KbmFlightMapper extends FlightMapper       # DIRECT: mouse virtual stick (tau 0.15 s), Q/E and A/D yaw
+enum ThrottleMode { POWER_KEY, LEVER }         # POWER_KEY: W ramps 4/s, S = BRAKE; LEVER: W/S +-0.25 sticky, S at 0 = BRAKE
+var throttle_mode: ThrottleMode
+var poller: Callable                           # test seam: Callable() -> KbmState
+func add_mouse_motion(rel: Vector2) -> void
+func current_thrust() -> float
+func sample(dt: float) -> PilotInput
+func map(st: KbmState, dt: float) -> PilotInput
 
 # planned: AssistProfile, AssistContext, AssistStack, GestureRecognizer, BindingStore, Glyphs
 ```
@@ -115,6 +150,10 @@ except the key-bound InputMap scan on key presses (only on press). Not on a sim 
 - `godot/test/unit/input/test_device_monitor.gd` (s2.4 table, emulation, glyphs, layout persistence)
 - `godot/test/unit/input/test_input_router.gd` (once per tick, mode gating, PEEK, signals)
 - `godot/test/unit/input/test_intents.gd` (catalogue complete and unique)
+- `godot/test/unit/input/test_flight_math.gd` (dead zone, curve, trigger, ramp)
+- `godot/test/unit/input/test_gamepad_flight_mapper.gd` (axes, yaw ramp, RT, LT brake, edge buttons)
+- `godot/test/unit/input/test_kbm_flight_mapper.gd` (power-key 4/s, lever, mouse stick, buttons)
+- `godot/test/unit/input/test_input_router_mappers.gd` (router samples the mapper of the active class)
 
 ## How to add X (recipes for the cheapest tier)
 
@@ -123,5 +162,7 @@ except the key-bound InputMap scan on key presses (only on press). Not on a sim 
 
 ## Open items
 
-- UX-04+ mappers (`{Touch,Gamepad,Pointer}FlightMapper`) replace `sampler`; `AssistStack` runs between mapper and emit.
+- UX-04 `TouchFlightMapper` (TOUCH is neutral until then); UX-07 `AssistStack` runs between mapper and emit and adds
+  ARCADE and MOUSE_AIM steering; remap (`BindingStore`) replaces the fixed keys in `KbmState.poll` / `PadState.poll`.
+- Mapper feel constants are consts in `FlightMath` (06 names no input def; they are client-only and not hashed).
 - `intent` has no emitter until the RTS mappers and `GestureRecognizer` land.
