@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://test/perf/bench_supply.gd" id="1"]
+
+[node name="BenchSupply" type="Node"]
+script = ExtResource("1")

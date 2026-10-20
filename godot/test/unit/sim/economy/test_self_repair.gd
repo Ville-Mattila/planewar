@@ -97,21 +97,22 @@ func test_pauses_without_ore_and_resumes() -> void:
 func test_unsupplied_and_unfinished_do_not_repair() -> void:
 	var w: SimWorld = K.solo_world()
 	var s: int = _hurt(w, &"refinery", 100.0)
-	var home: Vector3 = w.store().pos[s]
-	w.store().pos[s] = WorldTestKit.at(0.0, 3000.0)                     # far outside the Core's 600 m: no supply (GD-18)
-	w.economy().economy.mark_dirty()                                    # a hand-made change: the epoch tells the network
+	var core: int = K.find(w, &"core")
+	var at: Vector3 = w.store().pos[s]
+	var _gone: bool = w.store().free_slot(core, 0)                     # no root: nothing is supplied (GD-18)
 	var hz: int = _tick_hz(w)
 	var _a: Array[SimEvent] = K.run(w, 14 * hz)
 	assert_bool(w.economy().supply.is_supplied(s)).is_false()
 	assert_float(w.store().hp[s]).is_equal(100.0)
-	w.store().pos[s] = home
-	w.economy().economy.mark_dirty()
-	w.store().flags[s] |= EntityStore.F_BUILDING
+	w.store().flags[s] |= EntityStore.F_BUILDING                        # a site, even once a root returns
+	var _old: Array[SimEvent] = w.drain_events()
+	var _o: int = WorldTestKit.spawn(w, &"outpost", 0, 0, at)
 	var _b: Array[SimEvent] = K.run(w, 3 * hz)
-	assert_float(w.store().hp[s]).is_equal(100.0)                       # supplied again, but a site
+	assert_float(w.store().hp[s]).is_equal(100.0)
 	w.store().flags[s] &= ~EntityStore.F_BUILDING
-	w.economy().economy.mark_dirty()
+	w.economy().economy.mark_dirty()                                    # BUILD_DONE does this
 	var _c: Array[SimEvent] = K.run(w, 3 * hz)
+	assert_bool(w.economy().supply.is_supplied(s)).is_true()
 	assert_float(w.store().hp[s]).is_greater(100.0)                     # finished and supplied: repairs
 
 

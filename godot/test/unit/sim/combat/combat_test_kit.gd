@@ -27,7 +27,7 @@ static func power(w: SimWorld, owner: int, team: int) -> void:
 ## Without a root every tower is outside the network and fires at the unsupplied rate (02 s5.4).
 ## The refill is switched off: the fire tests count shots by ammo drops, which a +10 per s refill would blur.
 static func feed(w: SimWorld, owner: int, team: int, p: Vector3) -> int:
-	w.economy().supply._milli.fill(0)
+	w.economy().supply.refill = false
 	return WorldTestKit.spawn(w, &"outpost", owner, team, p)
 
 

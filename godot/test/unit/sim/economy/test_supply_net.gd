@@ -216,6 +216,19 @@ func test_rebuilds_only_when_the_structure_set_changes() -> void:
 	assert_int(_net(w).rebuilds).is_equal(n + 1)
 
 
+func test_a_tower_dying_or_finishing_does_not_rebuild_the_graph_and_flags_itself() -> void:
+	var c: Dictionary = _chain()
+	var w: SimWorld = c["w"]
+	var n: int = _net(w).rebuilds
+	_kill(w, c["tw"])
+	var tw2: int = _put(w, &"autocannon_turret", 1100.0)
+	var far: int = _put(w, &"autocannon_turret", 2500.0)
+	w.step()
+	assert_int(_net(w).rebuilds).is_equal(n)                   # consumers never rebuild the graph
+	assert_bool(_ok(w, tw2)).is_true()
+	assert_bool(_ok(w, far)).is_false()
+
+
 func test_s4_and_determinism_with_a_cut_chain() -> void:
 	var ca: Dictionary = _chain()
 	var cb: Dictionary = _chain()
@@ -233,3 +246,57 @@ func test_s4_and_determinism_with_a_cut_chain() -> void:
 	assert_bool(r.serialize() == a.serialize()).is_true()
 	assert_bool(r.economy().supply.unsupplied == a.economy().supply.unsupplied).is_true()
 	assert_bool(r.economy().supply.is_supplied(EntityId.slot(ca["tw"]))).is_false()
+
+
+func _refill_world() -> Dictionary:
+	var w: SimWorld = K.solo_world()
+	var gun: int = _put(w, &"autocannon_turret", 300.0)
+	var mis: int = _put(w, &"missile_tower", 350.0)
+	w.step()
+	w.store().ammo[EntityId.slot(gun)] = 100
+	w.store().ammo[EntityId.slot(mis)] = 1
+	return {"w": w, "gun": gun, "mis": mis}
+
+
+# Saved mid-refill: the autocannon is below its pool and the missile tower is partway (tick 17 of 120) through its 4 s
+# round interval. The refill is a function of the tick, so the restored world continues byte for byte.
+func test_s4_save_mid_refill_continues_byte_for_byte() -> void:
+	var c: Dictionary = _refill_world()
+	var a: SimWorld = c["w"]
+	var _pre: Array[SimEvent] = K.run(a, 17)
+	var ammo_gun: int = a.store().ammo[EntityId.slot(c["gun"])]
+	var ammo_mis: int = a.store().ammo[EntityId.slot(c["mis"])]
+	assert_int(ammo_gun).is_between(101, 120)                         # refilling, not at the pool
+	var r: SimWorld = SimWorld.deserialize(a.serialize(), WorldTestKit.content(), null)
+	assert_object(r).is_not_null()
+	assert_int(r.store().ammo[EntityId.slot(c["gun"])]).is_equal(ammo_gun)
+	assert_int(r.store().ammo[EntityId.slot(c["mis"])]).is_equal(ammo_mis)
+	for _k: int in 10:
+		var _ea: Array[SimEvent] = K.run(a, 37)                      # off the 30 Hz second and the 120-tick interval
+		var _er: Array[SimEvent] = K.run(r, 37)
+		assert_bool(r.serialize() == a.serialize()).is_true()
+	assert_int(a.store().ammo[EntityId.slot(c["mis"])]).is_greater(ammo_mis)    # the missile tower did gain rounds
+	assert_int(a.store().ammo[EntityId.slot(c["gun"])]).is_greater(ammo_gun + 100)   # 370 ticks x 10 per s
+
+
+# A cut chain saved and restored: the flags come back on the first tick, and the replacement Pylon built after the
+# restore re-supplies the tower exactly as in the uninterrupted world (refill resumes on the same tick).
+func test_s4_supply_regained_after_restore() -> void:
+	var c: Dictionary = _chain()
+	var a: SimWorld = c["w"]
+	_kill(a, c["p2"])
+	a.store().ammo[EntityId.slot(c["tw"])] = 50
+	var _pre: Array[SimEvent] = K.run(a, 11)
+	var r: SimWorld = SimWorld.deserialize(a.serialize(), WorldTestKit.content(), null)
+	assert_object(r).is_not_null()
+	var _r1: Array[SimEvent] = K.run(r, 1)
+	var _a1: Array[SimEvent] = K.run(a, 1)
+	assert_bool(_ok(r, c["tw"])).is_false()                          # still cut after the restore
+	assert_int(r.store().ammo[EntityId.slot(c["tw"])]).is_equal(50)  # and not refilling
+	var _na: int = _put(a, &"relay_pylon", 700.0)
+	var _nr: int = _put(r, &"relay_pylon", 700.0)
+	var _e: Array[SimEvent] = K.run(a, 23)
+	var _f: Array[SimEvent] = K.run(r, 23)
+	assert_bool(_ok(r, c["tw"])).is_true()
+	assert_int(r.store().ammo[EntityId.slot(c["tw"])]).is_greater(50)
+	assert_bool(r.serialize() == a.serialize()).is_true()

@@ -41,7 +41,8 @@ func _init(store: EntityStore, defs: WorldDefs, economy: Economy, hz: int)
 func rate_hp_s(max_hp: float) -> float;  func step(tick: int) -> void   # whole sim seconds only
 class_name SupplyNet extends RefCounted                                      # GD-18, 02 s5.4; EconomyHub.supply, run in step 10 before SelfRepair
 var unsupplied: PackedByteArray                                              # per entity slot: 1 = finished structure outside the network (derived, sized InputSlots.ENTITY_SLOTS)
-var rebuilds: int                                                            # graph rebuilds so far (diagnostic)
+var rebuilds: int                                                            # full graph rebuilds so far (diagnostic)
+var refill: bool                                                             # false stops the tower refill (test fixtures)
 func _init(store: EntityStore, defs: WorldDefs, hz: int)
 func step(tick: int, epoch: int) -> void                                     # rebuild when `epoch` (Economy.structure_epoch) or the structure count moved, then refill supplied towers
 func is_supplied(slot: int) -> bool                                          # unsupplied[slot] == 0
@@ -63,7 +64,7 @@ Constants come from `economy.json` (`core_trickle_ore_per_s`, `solar_band_deg`, 
 - E6 `add_player` adds `start_ore` / `start_ice` per player to the team pool (C2-14).
 - E7 Self-repair (GD-16): a finished, supplied structure with `tick - last_damage_tick >= self_repair_delay_s` heals `min(missing, max(self_repair_min_hp_s, self_repair_frac_per_s * hp))` (A-80) HP on each whole sim second and pays `ceil(missing * repair_ore_per_hp) - ceil((missing - heal) * repair_ore_per_hp)` Ore through `try_spend` (a whole repair costs `ceil(total HP * repair_ore_per_hp)`, never more); an unpayable second is skipped (pause). Sites, dead and unsupplied structures never repair. No accumulator and no saved state: the result is a function of the store and the tick (S4).
 - E8 Supply network (GD-18, 02 s5.4): roots are finished, living Cores and Outposts; a finished Relay Pylon links when its centre is within its team's connected node's `build_radius` (great-circle on the datum sphere, `dot >= cos(r / R)`, node radius from the owner's resolved def). A finished structure is supplied when a connected node of its team covers its centre (a root or linked Pylon covers itself; a teammate's network counts, an enemy's never). Sites and dead structures are never nodes and read 0. `unsupplied` is derived from the store, never saved (S4); `SimWorld` copies it into `fire.unsupplied` (saved with Combat, the same bytes) each step 10, so the cut shows in the fire pass of the next tick.
-- E9 The graph is rebuilt in step 10 only when `Economy.structure_epoch` moved (every `mark_dirty`: BUILD_DONE, deaths, start kit) or the structure count changed, so a Pylon killed in step 9 unsupplies its downstream on that tick's step 10. Code that flips a structure's finished state or team by hand (tests) calls `mark_dirty` itself. Cost: O(nodes x nodes + structures x nodes) per rebuild, zero otherwise.
+- E9 Updates run in step 10 only when `Economy.structure_epoch` moved (every `mark_dirty`: BUILD_DONE, deaths, start kit) or the structure count changed. The finished live structures are diffed against the last pass: a node (Core, Outpost, Pylon) added or removed rebuilds the graph (nodes sorted by team and x, band search; ~1.0 ms at the 02 s5.4 limit of 296 nodes + 504 structures), a consumer added or removed only evaluates or clears its own flag (~0.1 ms). So a Pylon killed in step 9 unsupplies its downstream on that tick's step 10. Contract: any code that changes a structure finished state, team, owner or position (capture, sell, relocation, tests) must call `Economy.mark_dirty` itself and, if it changes a node, do so for the node; an in-place change that keeps entity id and finished state is not seen.
 - E10 Refill: a supplied, finished tower gains `floor(m (t + 1) / (hz 1000)) - floor(m t / (hz 1000))` rounds on tick `t` (m = `ammo_refill_per_s` x 1000 rounded), capped at `ammo_pool`; unsupplied towers keep their pool and never refill. No accumulator. Unsupplied towers fire at `economy.unsupplied_rate_mult` (WeaponFire), the Shield Projector reads `is_supplied` (GD-10), `SelfRepair` skips unsupplied structures. `SimView.supply01(id)` = tower `ammo / ammo_pool` (0 for sites, non-towers, dead ids).
 
 ## Data owned
@@ -76,7 +77,7 @@ Emits LOW_POWER, ALERT (LOW_POWER, STORAGE_FULL). Consumes nothing; `Constructio
 
 ## Performance budget
 
-03 s4.2 row "economy" 0.8 ms p95: a no-op between refreshes (array reads for 8 players); the refresh is O(structures) when the structure set changes. GD-18 adds one O(structures) signature pass and the tower refill per tick (a few hundred array reads) and a graph rebuild only on change.
+03 s4.2 row "economy" 0.8 ms p95: a no-op between refreshes (array reads for 8 players); the refresh is O(structures) when the structure set changes. GD-18 adds the tower refill per tick (supplied towers only, ~50 us at 140 towers), a change diff (~90 us at 504 structures) when the structure set changes and a node rebuild (~1.0 ms at the limit) when a node changes (bench_supply.gd).
 
 ## Test entry points
 
