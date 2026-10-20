@@ -6901,7 +6901,10 @@
       "03 s4.2",
       "R0 B.11 A-56"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 63,
+    "merged": "2026-10-20",
+    "note": "PoseStager extracted; local 800-view sync p95 3.00/2.75/2.55 ms (was 4.37/3.12/2.87); 2.4 ms gate deferred to TA-42 (A-62). Next lever if over: per-view transform writes."
   },
   {
     "id": "TA-56",
