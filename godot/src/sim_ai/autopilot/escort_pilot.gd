@@ -32,6 +32,13 @@ func _init(ship_def: ShipDef, params: FormationParams, flight_gains: FlightGains
 ## Drops the escort state of `id` (order ended or replaced by another kind).
 func release(id: int, st: AiState) -> void:
 	var s: int = EntityId.slot(id)
+	var k: int = st.form_slot[s]
+	if k < AiState.ROSTER_WIDTH and st.aux_id[s] != 0:
+		var at: int = EntityId.slot(st.aux_id[s]) * AiState.ROSTER_WIDTH + k
+		if st.form_roster[at] == id:
+			st.form_roster[at] = 0
+	st.sep_age[s] = 0
+	st.sep_push[s] = Vector3.ZERO
 	st.form_slot[s] = AiState.NO_SLOT
 	st.form_state[s] = FORM
 	st.form_order[s] = 0
@@ -65,7 +72,7 @@ func think(id: int, view: SimView, st: AiState, tick: int, threat: int = 0, util
 	var p: Vector3 = view.pos(id)
 	var lp: Vector3 = view.pos(leader)
 	if wslot < 0 and st.form_slot[s] == AiState.NO_SLOT:
-		st.form_slot[s] = _assign(id, leader, lp, view, st)
+		st.form_slot[s] = _assign(id, leader, view, st)
 	if _update_engage(id, s, p, lp, mode, focus, threat, utility, tick, view, st):
 		return Outcome.ENGAGING
 	_guide(id, s, p, lp, leader, wslot, view, st)
@@ -108,42 +115,49 @@ func _guide(id: int, s: int, p: Vector3, lp: Vector3, leader: int, wslot: int, v
 	var lv: Vector3 = view.vel(leader)
 	var slot_pos: Vector3 = Formation.slot_world(lp, lv, view.basis(leader), idx, wing, prm)
 	var v: Vector3 = Formation.v_cmd(p, slot_pos, lv, def.v_cruise, prm)
-	v += Separation.push(id, p, view.vel(id), view.team(id), view, prm)
-	st.guidance_vel[s] = v
+	if st.sep_age[s] == 0:   # the neighbour query runs every second think (05 s10 think row); the term is held in between
+		st.sep_push[s] = Separation.push(id, p, view.vel(id), view.team(id), view, prm)
+		st.sep_age[s] = 1
+	else:
+		st.sep_age[s] = 0
+	st.guidance_vel[s] = v + st.sep_push[s]
 	st.guidance_point[s] = slot_pos
 
 
-# Lowest free class slot among the escorts of `leader` near the escortee; once per assignment, not per think.
-func _assign(id: int, leader: int, lp: Vector3, view: SimView, st: AiState) -> int:
+# Lowest free class slot in the escortee's roster row (AiState.form_roster: no spatial query); stale entries (dead, released
+# or re-ordered escorts) are dropped on the way. With every slot taken the escort doubles up (modulo) without a roster entry.
+func _assign(id: int, leader: int, view: SimView, st: AiState) -> int:
+	var n: int = mini(prm.slot_count(false), AiState.ROSTER_WIDTH)
+	var row: int = EntityId.slot(leader) * AiState.ROSTER_WIDTH
 	var used: int = 0
 	var count: int = 0
-	var team: int = view.team(id)
-	for j: int in view.ids_near(lp, float(prm.slot_scan_m), Spatial.MASK_SHIP):
-		var js: int = EntityId.slot(j)
-		if j == id or st.cls[js] == AiState.NO_CLASS or st.aux_id[js] != leader or st.form_slot[js] == AiState.NO_SLOT \
-				or not view.alive(j) or view.team(j) != team or not _escorts(j, leader, view):
-			continue
-		used |= 1 << st.form_slot[js]
-		count += 1
-	var idx: int = Formation.free_slot(used, prm.slot_count(false))
-	return idx if idx != AiState.NO_SLOT else count % prm.slot_count(false)
+	for k: int in n:
+		if _holds(st.form_roster[row + k], leader, k, view, st):
+			used |= 1 << k
+			count += 1
+		else:
+			st.form_roster[row + k] = 0
+	var idx: int = Formation.free_slot(used, n)
+	if idx == AiState.NO_SLOT:
+		return count % prm.slot_count(false)
+	st.form_roster[row + idx] = id
+	return idx
 
 
-func _escorts(j: int, leader: int, view: SimView) -> bool:
-	var o: OrderSpec = view.order_head(j)
-	return o != null and o.kind == OrderSpec.Kind.ESCORT and o.target == leader and o.escort_slot < 0
+func _holds(occ: int, leader: int, k: int, view: SimView, st: AiState) -> bool:
+	if occ == 0 or not view.alive(occ):
+		return false
+	var os: int = EntityId.slot(occ)
+	return st.cls[os] != AiState.NO_CLASS and st.aux_id[os] == leader and st.form_slot[os] == k
 
 
-# Number of class-slot escorts of the leader near the escortee, this one included.
-func _group_size(id: int, leader: int, lp: Vector3, view: SimView, st: AiState) -> int:
-	var n: int = 1
-	var team: int = view.team(id)
-	for j: int in view.ids_near(lp, float(prm.slot_scan_m), Spatial.MASK_SHIP):
-		var js: int = EntityId.slot(j)
-		if j != id and st.cls[js] != AiState.NO_CLASS and st.aux_id[js] == leader and view.alive(j) \
-				and view.team(j) == team and _escorts(j, leader, view):
-			n += 1
-	return n
+# Number of class-slot escorts holding a roster entry of the leader (this one included when it has one), at least 1.
+func _group_size(leader: int, view: SimView, st: AiState) -> int:
+	var row: int = EntityId.slot(leader) * AiState.ROSTER_WIDTH
+	var n: int = 0
+	for k: int in mini(prm.slot_count(false), AiState.ROSTER_WIDTH):
+		n += 1 if _holds(st.form_roster[row + k], leader, k, view, st) else 0
+	return maxi(n, 1)
 
 
 # FORM <-> ENGAGE machine; true while engaging. Sets st.target on entering.
@@ -180,7 +194,7 @@ func _may_start(id: int, mode: int, lp: Vector3, tgt: int, utility: float, view:
 	if utility <= prm.break_utility or d > prm.engage_radius_m:
 		return false
 	var s: int = EntityId.slot(id)
-	return Formation.may_break(st.form_slot[s], _group_size(id, st.aux_id[s], lp, view, st), prm)
+	return Formation.may_break(st.form_slot[s], _group_size(st.aux_id[s], view, st), prm)
 
 
 func _keep_engaging(s: int, p: Vector3, lp: Vector3, mode: int, tgt: int, tick: int, view: SimView, st: AiState) -> bool:

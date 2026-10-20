@@ -34,8 +34,11 @@ func _run(seed_value: int, wing: bool) -> Dictionary:
 	for id: int in darts:
 		assert_bool(d.register(id, FormationKit.CLS_ESCORT)).is_true()
 	FormationKit.move_order(w, bomber, leader.goal)
-	FormationKit.escort_order(w, PackedInt32Array([darts[0]]), bomber, 0 if wing else -1)
-	FormationKit.escort_order(w, PackedInt32Array([darts[1]]), bomber, 1 if wing else -1)
+	if wing:   # SL-2 fields are not on the ORDER wire yet (needs sim): straight into the queue
+		FormationKit.escort_order(w, PackedInt32Array([darts[0]]), bomber, 0)
+		FormationKit.escort_order(w, PackedInt32Array([darts[1]]), bomber, 1)
+	else:
+		FormationKit.escort_command(w, darts, bomber)
 	var in_slot: int = 0
 	var samples: int = 0
 	var min_sep: float = INF

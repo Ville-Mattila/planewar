@@ -7,7 +7,7 @@ class_name FormationParams extends RefCounted
 
 const SEP_KEYS: PackedStringArray = ["radius_m", "gain", "push_mps", "lookahead_s", "lookahead_miss_m", "lookahead_lag_s", "lookahead_eff", "lookahead_min_s", "lookahead_max_mps", "lookahead_brake", "query_radius_m"]
 const FORM_KEYS: PackedStringArray = ["class_slots_m", "k_form", "speed_cap_mult", "engage_radius_m", "rejoin_radius_m",
-	"break_utility", "max_break_frac", "slot_scan_m", "min_heading_speed_mps"]
+	"break_utility", "max_break_frac", "min_heading_speed_mps"]
 
 var sep_radius_m: float = 0.0          ## neighbours inside this radius push
 var sep_gain: float = 0.0
@@ -28,7 +28,6 @@ var engage_radius_m: float = 0.0       ## FORM: threats within this of the escor
 var rejoin_radius_m: float = 0.0       ## FORM: an engaging escort farther than this from the escortee rejoins
 var break_utility: float = 0.0         ## a threat must exceed this utility to break formation
 var max_break_frac: float = 0.0        ## at most this share of the escorts (at least one) engage at once
-var slot_scan_m: int = 0               ## neighbourhood of the escortee scanned for free slots
 var min_heading_speed: float = 0.0     ## below this escortee speed the nose is the formation forward
 var wing_tolerance_m: float = 0.0      ## SL-2 slot tolerance
 var focus_timeout_s: float = 0.0       ## SL-2 FOCUS: attack the focus target this long, then FORM
@@ -38,7 +37,8 @@ var break_s: float = 0.0
 var ceiling_m: float = 0.0             ## wingmen never follow above rules.ceiling_soft_m
 
 
-static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_soft_m: float) -> FormationParams:
+## `ring2_m`: the collision hash's `Spatial.ring2_m`; `query_radius_m` is clamped to it so the neighbour query stays on the ring path.
+static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_soft_m: float, ring2_m: float = INF) -> FormationParams:
 	for k: String in SEP_KEYS:
 		if not _is_num(sep.get(k)):
 			return null
@@ -56,20 +56,19 @@ static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_
 	p.look_min_s = _f(sep, "lookahead_min_s")
 	p.look_max_mps = _f(sep, "lookahead_max_mps")
 	p.look_brake = _f(sep, "lookahead_brake")
-	p.query_radius_m = _f(sep, "query_radius_m")
+	p.query_radius_m = minf(_f(sep, "query_radius_m"), ring2_m)
 	p.k_form = _f(form, "k_form")
 	p.speed_cap_mult = _f(form, "speed_cap_mult")
 	p.engage_radius_m = _f(form, "engage_radius_m")
 	p.rejoin_radius_m = _f(form, "rejoin_radius_m")
 	p.break_utility = _f(form, "break_utility")
 	p.max_break_frac = _f(form, "max_break_frac")
-	p.slot_scan_m = roundi(_f(form, "slot_scan_m"))
 	p.min_heading_speed = _f(form, "min_heading_speed_mps")
 	p.ceiling_m = ceiling_soft_m
 	if typeof(form["class_slots_m"]) != TYPE_ARRAY:
 		return null
 	var cs: Array = form["class_slots_m"]
-	if cs.is_empty() or cs.size() >= AiState.NO_SLOT:
+	if cs.is_empty() or cs.size() > AiState.ROSTER_WIDTH:
 		return null
 	for row: Variant in cs:
 		if typeof(row) != TYPE_ARRAY:

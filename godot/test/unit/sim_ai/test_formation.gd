@@ -30,6 +30,15 @@ func test_params_build_and_reject_a_missing_key() -> void:
 	assert_object(FormationParams.from_dict(FormationKit.block("separation"), form, null, 1500.0)).is_null()
 
 
+func test_query_radius_stays_on_the_hash_ring_path() -> void:
+	var ring2: float = FormationKit.ring2_m()
+	assert_float(FormationKit.params().query_radius_m).is_less_equal(ring2)
+	var wide: Dictionary = FormationKit.block("separation").duplicate()
+	wide["query_radius_m"] = 500
+	var clamped: FormationParams = FormationParams.from_dict(wide, FormationKit.block("formation"), null, 1500.0, ring2)
+	assert_float(clamped.query_radius_m).is_equal(ring2)
+
+
 func test_wing_slots_convert_back_right_up_to_right_forward_up() -> void:
 	var prm: FormationParams = FormationKit.params()
 	# wing.json rows are (back, right, up); the table keeps (right, forward, up), so forward = -back
@@ -153,7 +162,7 @@ func test_coincident_ships_split_in_opposite_directions() -> void:
 
 
 func test_look_ahead_splits_a_head_on_pair_sideways_before_the_ring() -> void:
-	var w: SwarmWorld = _pair(_lead_p(), Vector3(0, 100, 0), _lead_p() + Vector3(0, 190, 4), Vector3(0, -100, 0))
+	var w: SwarmWorld = _pair(_lead_p(), Vector3(0, 100, 0), _lead_p() + Vector3(0, 170, 4), Vector3(0, -100, 0))
 	var a: Vector3 = Separation.push(w.ids[0], w.pos(w.ids[0]), w.vel(w.ids[0]), 0, w, w.prm)
 	var b: Vector3 = Separation.push(w.ids[1], w.pos(w.ids[1]), w.vel(w.ids[1]), 0, w, w.prm)
 	var up: Vector3 = Vector3(1, 0, 0)
@@ -162,7 +171,7 @@ func test_look_ahead_splits_a_head_on_pair_sideways_before_the_ring() -> void:
 	assert_float(absf(a.z)).is_greater(5.0)        # sideways, not only along the line of closing
 	assert_float(a.z * b.z).is_less(0.0)           # opposite sides
 	assert_float(a.y).is_less(0.0)                 # and it sheds speed: the neighbour is ahead and closing
-	# the pair is 190 m apart: only the look-ahead can have produced it
+	# the pair is 170 m apart: only the look-ahead can have produced it
 	assert_float(w.pos(w.ids[0]).distance_to(w.pos(w.ids[1]))).is_greater(w.prm.sep_radius_m)
 
 
@@ -172,5 +181,5 @@ func test_diverging_pair_gets_no_look_ahead_push() -> void:
 
 
 func test_pair_that_will_pass_wide_gets_no_look_ahead_push() -> void:
-	var w: SwarmWorld = _pair(_lead_p(), Vector3(0, 100, 0), _lead_p() + Vector3(0, 190, 120), Vector3(0, -100, 0))
+	var w: SwarmWorld = _pair(_lead_p(), Vector3(0, 100, 0), _lead_p() + Vector3(0, 170, 120), Vector3(0, -100, 0))
 	assert_vector(Separation.push(w.ids[0], w.pos(w.ids[0]), w.vel(w.ids[0]), 0, w, w.prm)).is_equal(Vector3.ZERO)

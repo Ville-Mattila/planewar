@@ -18,9 +18,19 @@ static func content() -> ContentSet:
 	return WorldTestKit.content()
 
 
+static var _ring2: float = -1.0
+
+
+## `Spatial.ring2_m` of the collision hash (the neighbour query's ring path limit).
+static func ring2_m() -> float:
+	if _ring2 < 0.0:
+		_ring2 = Spatial.new(EntityStore.new(), ProjectileStore.new(16)).ring2_m
+	return _ring2
+
+
 static func params() -> FormationParams:
 	var c: ContentSet = content()
-	var p: FormationParams = FormationParams.from_dict(block("separation"), block("formation"), c.wing, c.rules.ceiling_soft_m)
+	var p: FormationParams = FormationParams.from_dict(block("separation"), block("formation"), c.wing, c.rules.ceiling_soft_m, ring2_m())
 	assert(p != null, "ai11_params.json must build FormationParams")
 	return p
 
@@ -62,6 +72,12 @@ static func escort_order(w: SimWorld, ids: PackedInt32Array, leader: int, slot: 
 		spec.issue_tick = w.tick()
 		var res: int = q.push(EntityId.slot(id), OrderQueue.STANDING, spec)
 		assert(res == OrderQueue.Push.OK, "ESCORT order refused: %d" % res)
+
+
+## A class-slot ESCORT through the command path (the wire payload carries the target only).
+static func escort_command(w: SimWorld, ids: PackedInt32Array, leader: int) -> void:
+	var res: CommandResult = w.apply_command(Command.order(0, ids, OrderSpec.make(OrderSpec.Kind.ESCORT, leader)))
+	assert(res.code == CommandResult.Code.ACCEPTED, "ESCORT order refused: %d" % res.code)
 
 
 static func move_order(w: SimWorld, id: int, to: Vector3) -> void:

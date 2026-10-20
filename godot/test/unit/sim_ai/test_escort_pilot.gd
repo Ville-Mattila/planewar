@@ -22,6 +22,7 @@ class Rig extends RefCounted:
 			var id: int = WorldTestKit.spawn(w, &"dart", 0, 0, WorldTestKit.at(ALT, -behind_m - 20.0 * k), vb)
 			var _p: bool = darts.push_back(id)
 			st.cls[EntityId.slot(id)] = 0
+			st.eid[EntityId.slot(id)] = id
 		st.cls[EntityId.slot(bomber)] = 1
 
 	func order(id: int, slot: int = -1, mode: int = 0, focus: int = 0) -> void:
@@ -213,6 +214,67 @@ func test_escort_state_round_trips_through_the_s4_bytes() -> void:
 		assert_int(copy.form_order[s]).is_equal(r.st.form_order[s])
 		assert_float(copy.timer[s]).is_equal(r.st.timer[s])
 	assert_array(copy.serialize()).is_equal(bytes)
+
+
+func test_a_dead_escorts_roster_entry_is_reused() -> void:
+	var r: Rig = Rig.new(3)
+	for i: int in 2:
+		r.order(r.darts[i])
+		var _o: EscortPilot.Outcome = r.think(i)
+	assert_int(r.slot_of(1)).is_equal(1)
+	assert_int(r.w.apply_command(CommandPayload.debug_set(0, r.darts[0], CommandPayload.SET_HP, 0.0)).code).is_equal(CommandResult.Code.ACCEPTED)
+	r.w.step()
+	var _e: Array[SimEvent] = r.w.drain_events()
+	r.order(r.darts[2])
+	var _o2: EscortPilot.Outcome = r.think(2)
+	assert_int(r.slot_of(2)).is_equal(0)   # slot 0 was freed by the death; no spatial query involved
+
+
+func test_released_escort_frees_its_roster_entry() -> void:
+	var r: Rig = Rig.new(2)
+	r.order(r.darts[0])
+	var _a: EscortPilot.Outcome = r.think(0)
+	r.pilot.release(r.darts[0], r.st)
+	r.order(r.darts[1])
+	var _b: EscortPilot.Outcome = r.think(1)
+	assert_int(r.slot_of(1)).is_equal(0)
+
+
+func test_separation_runs_every_second_think_and_is_held_in_between() -> void:
+	var r: Rig = Rig.new(2, 80.0)
+	r.order(r.darts[0])
+	var s: int = EntityId.slot(r.darts[0])
+	var _a: EscortPilot.Outcome = r.think(0)           # refresh
+	assert_int(r.st.sep_age[s]).is_equal(1)
+	var held: Vector3 = r.st.sep_push[s]
+	r.st.sep_push[s] = Vector3(1, 2, 3)                # a marker: the next think must keep it
+	var _b: EscortPilot.Outcome = r.think(0)
+	assert_vector(r.st.sep_push[s]).is_equal(Vector3(1, 2, 3))
+	assert_int(r.st.sep_age[s]).is_equal(0)
+	var _c: EscortPilot.Outcome = r.think(0)           # refresh again
+	assert_vector(r.st.sep_push[s]).is_equal_approx(held, Vector3(0.001, 0.001, 0.001))
+
+
+func test_format_3_bytes_are_refused() -> void:
+	var r: Rig = Rig.new(1)
+	r.order(r.darts[0])
+	var _o: EscortPilot.Outcome = r.think(0)
+	var bytes: PackedByteArray = r.st.serialize()
+	bytes[0] = AiState.FORMAT - 1
+	var copy: AiState = AiState.new()
+	assert_bool(copy.deserialize(bytes)).is_false()
+	assert_int(copy.registered_count()).is_equal(0)
+
+
+func test_roster_is_rebuilt_from_the_s4_bytes() -> void:
+	var r: Rig = Rig.new(2)
+	r.order(r.darts[0])
+	r.order(r.darts[1])
+	var _a: EscortPilot.Outcome = r.think(0)
+	var _b: EscortPilot.Outcome = r.think(1)
+	var copy: AiState = AiState.new()
+	assert_bool(copy.deserialize(r.st.serialize())).is_true()
+	assert_array(copy.form_roster).is_equal(r.st.form_roster)
 
 
 func test_slot_error_is_inf_without_an_escort_order() -> void:

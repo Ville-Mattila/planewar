@@ -10,7 +10,8 @@ const WAKE_NEVER: int = -1000000
 const LAND_BUSY: int = 1                ## land_flags: the pad is occupied, queued or claimed by another ship
 const LAND_THREAT: int = 2              ## land_flags: an enemy projectile is inbound to the pad
 const LAND_FOREIGN: int = 4             ## land_flags: the pad is no longer this ship's team's
-const RECORD_MIN: int = 155             ## slot u32, 11 u8, 10 i32, 18 f32 (6 Vector3), 6 f32, path count i32
+const RECORD_MIN: int = 168             ## slot u32, 12 u8, 10 i32, 21 f32 (7 Vector3), 6 f32, path count i32
+const ROSTER_WIDTH: int = 8             ## form_roster entries per escortee (class slots are at most this many)
 const NO_SLOT: int = 255                ## form_slot: no formation slot assigned
 ## `ov_flags` bits (AI-08): PULL_UP running, system RETURN already requested, POSSESSED at the last check.
 const OV_PULL_UP: int = 1
@@ -46,6 +47,9 @@ var land_mark: PackedVector3Array = PackedVector3Array()      ## LandingState.ma
 var land_ga_dir: PackedVector3Array = PackedVector3Array()    ## LandingState.ga_dir
 var form_slot: PackedByteArray = PackedByteArray()        ## AI-11: escort formation slot index, NO_SLOT when unassigned
 var form_state: PackedByteArray = PackedByteArray()       ## AI-11: EscortPilot.FORM / ENGAGE
+var sep_age: PackedByteArray = PackedByteArray()          ## AI-11: thinks since the separation term was refreshed (it runs every second think)
+var sep_push: PackedVector3Array = PackedVector3Array()   ## AI-11: the cached Separation.push term
+var form_roster: PackedInt32Array = PackedInt32Array()    ## AI-11: by escortee slot * ROSTER_WIDTH + class slot: EntityId of the escort holding it (derived, not in the S4 bytes; checked on use)
 var form_order: PackedInt32Array = PackedInt32Array()      ## AI-11: issue_tick of the ESCORT order the escort state belongs to
 var integ: PackedVector2Array = PackedVector2Array()      ## FlightController.track_velocity integrators
 var ground_h: PackedFloat32Array = PackedFloat32Array()   ## terrain height under the ship at the last think (m)
@@ -68,10 +72,10 @@ func ensure_capacity(slots: int) -> void:
 		aux_id.resize(slots), guidance_vel.resize(slots), guidance_point.resize(slots), aim_lead.resize(slots),
 		tti.resize(slots), timer.resize(slots), fire_mask.resize(slots), path_ticket.resize(slots), cls.resize(slots),
 		eid.resize(slots), stagger.resize(slots), last_wake.resize(slots), wake_pending.resize(slots), overlay.resize(slots),
-		ov_flags.resize(slots), form_slot.resize(slots), form_state.resize(slots), form_order.resize(slots),
+		ov_flags.resize(slots), form_slot.resize(slots), form_state.resize(slots), form_order.resize(slots), sep_age.resize(slots), sep_push.resize(slots),
 		land_phase.resize(slots), land_attempts.resize(slots), land_abort.resize(slots), land_flags.resize(slots),
 		land_bearing.resize(slots), land_mark.resize(slots), land_ga_dir.resize(slots), integ.resize(slots),
-		ground_h.resize(slots), lift.resize(slots), pad_claim.resize(slots)]
+		ground_h.resize(slots), lift.resize(slots), pad_claim.resize(slots), form_roster.resize(slots * ROSTER_WIDTH)]
 	capacity = slots
 	for s: int in range(old, slots):
 		clear_slot(s)
@@ -101,6 +105,10 @@ func clear_slot(s: int) -> void:
 	form_slot[s] = NO_SLOT
 	form_state[s] = 0
 	form_order[s] = 0
+	sep_age[s] = 0
+	sep_push[s] = Vector3.ZERO
+	for k: int in ROSTER_WIDTH:
+		form_roster[s * ROSTER_WIDTH + k] = 0
 	land_phase[s] = 0
 	land_attempts[s] = 0
 	land_abort[s] = 0
@@ -161,12 +169,13 @@ func _write_slot(b: StreamPeerBuffer, s: int) -> void:
 	b.put_u8(ov_flags[s])
 	b.put_u8(form_slot[s])
 	b.put_u8(form_state[s])
+	b.put_u8(sep_age[s])
 	for v: int in [land_phase[s], land_attempts[s], land_abort[s], land_flags[s]]:
 		b.put_u8(v)
 	for v: int in [mode[s], mode_since[s], overlay_since[s], target[s], aux_id[s], path_ticket[s], eid[s], stagger[s],
 			last_wake[s], form_order[s]]:
 		b.put_32(v)
-	for p: Vector3 in [guidance_vel[s], guidance_point[s], aim_lead[s], land_bearing[s], land_mark[s], land_ga_dir[s]]:
+	for p: Vector3 in [guidance_vel[s], guidance_point[s], aim_lead[s], land_bearing[s], land_mark[s], land_ga_dir[s], sep_push[s]]:
 		b.put_float(p.x)
 		b.put_float(p.y)
 		b.put_float(p.z)
@@ -209,7 +218,18 @@ func deserialize(bytes: PackedByteArray) -> bool:
 		if s >= capacity:
 			return _fail()
 		pad_claim[s] = b.get_32()
+	_rebuild_roster()
 	return true
+
+
+# The escort rosters are derived from the records: every registered escort with a slot goes back to its escortee's row.
+func _rebuild_roster() -> void:
+	for s: int in capacity:
+		var k: int = form_slot[s]
+		if cls[s] != NO_CLASS and k < ROSTER_WIDTH and aux_id[s] != 0:
+			var row: int = EntityId.slot(aux_id[s])
+			if row < capacity:
+				form_roster[row * ROSTER_WIDTH + k] = eid[s]
 
 
 func _fail() -> bool:
@@ -231,6 +251,7 @@ func _read_slot(b: StreamPeerBuffer) -> bool:
 	ov_flags[s] = b.get_u8()
 	form_slot[s] = b.get_u8()
 	form_state[s] = b.get_u8()
+	sep_age[s] = b.get_u8()
 	land_phase[s] = b.get_u8()
 	land_attempts[s] = b.get_u8()
 	land_abort[s] = b.get_u8()
@@ -251,6 +272,7 @@ func _read_slot(b: StreamPeerBuffer) -> bool:
 	land_bearing[s] = _get_v3(b)
 	land_mark[s] = _get_v3(b)
 	land_ga_dir[s] = _get_v3(b)
+	sep_push[s] = _get_v3(b)
 	tti[s] = b.get_float()
 	timer[s] = b.get_float()
 	var ix: float = b.get_float()

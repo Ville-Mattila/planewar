@@ -81,6 +81,7 @@ func _fly(sv: int, spread: float, gain: float = -1.0) -> SwarmWorld:
 					w.leg[i] += 1
 				w.waypoint[i] = legs[w.leg[i] % legs.size()] + offs[i]
 				w.think(i, w.defs[i].v_cruise)
+			w.thinks += 1
 		for i: int in w.ids.size():
 			w.act_and_step(i)
 		w.now += 1

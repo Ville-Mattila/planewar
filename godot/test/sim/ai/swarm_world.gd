@@ -1,7 +1,7 @@
 class_name SwarmWorld extends SimView
 ## AI-11 swarm rig: N free-flying ships stepped by Kinematics.step_ship over a flat datum, each flown by
 ## FlightController on a guidance velocity = waypoint heading + Separation (the think / act split of 05 s4.3, think every
-## `think_period` ticks). A SimView with the accessors Separation reads (brute-force `ids_near`); collisions are
+## `think_period` ticks; the separation term is refreshed every second think, as EscortPilot does). A SimView with the accessors Separation reads (brute-force `ids_near` in index order, so this rig does not exercise the hash order or the ring path); collisions are
 ## centre distances below the sum of the bounding radii (what Collision.ram tests). Not a contract.
 
 var common: FlightCommonDef
@@ -17,6 +17,8 @@ var gains: Array[FlightGains] = []
 var teams: PackedInt32Array = PackedInt32Array()
 var goal: PackedVector3Array = PackedVector3Array()      ## guidance velocity per ship (think output)
 var integ: PackedVector2Array = PackedVector2Array()
+var sep_term: PackedVector3Array = PackedVector3Array()  ## cached Separation.push, refreshed every second think like EscortPilot
+var thinks: int = 0
 var waypoint: PackedVector3Array = PackedVector3Array()  ## current waypoint (a point at the flight level)
 var leg: PackedInt32Array = PackedInt32Array()           ## waypoint index per ship
 var min_gap: float = INF                                 ## smallest surface gap between two same-team ships so far
@@ -37,7 +39,7 @@ func _init(flight_common: FlightCommonDef, rules_def: RulesDef, params: Formatio
 func add_ship(def: ShipDef, g: FlightGains, s: ShipState, team_id: int = 0) -> int:
 	var id: int = EntityId.make(1 + ids.size(), 1)
 	var _r: Array[bool] = [ids.push_back(id), teams.push_back(team_id), goal.push_back(Vector3.ZERO),
-		integ.push_back(Vector2.ZERO), waypoint.push_back(s.p), leg.push_back(0)]
+		integ.push_back(Vector2.ZERO), sep_term.push_back(Vector3.ZERO), waypoint.push_back(s.p), leg.push_back(0)]
 	ss.append(s)
 	defs.append(def)
 	gains.append(g)
@@ -51,7 +53,9 @@ func think(i: int, speed: float) -> void:
 	var to: Vector3 = waypoint[i] - s.p
 	var tang: Vector3 = (to - up * to.dot(up)).normalized()
 	var vz: float = clampf(0.5 * (waypoint[i].length() - s.p.length()), -10.0, 10.0)
-	goal[i] = tang * speed + up * vz + Separation.push(ids[i], s.p, s.v, teams[i], self, prm)
+	if (thinks + i) % 2 == 0:   # the neighbour query runs every second think (05 s10 think row)
+		sep_term[i] = Separation.push(ids[i], s.p, s.v, teams[i], self, prm)
+	goal[i] = tang * speed + up * vz + sep_term[i]
 
 
 func act_and_step(i: int) -> void:
