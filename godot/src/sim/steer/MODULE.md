@@ -108,6 +108,8 @@ var bearing_count: int; var bearing_samples: int; var bearing_clear_m: float; va
 
 class_name LandingState extends RefCounted                                   # per-landing memory; the caller keeps it per entity
 var phase: int; var attempts: int; var abort_reason: int; var bearing: Vector3; var mark: Vector3; var ga_dir: Vector3; var integ: Vector2
+var assist_off: bool; var assist_near: bool                                  # AI-10: auto-dock gave up (until DOCK released); acted within auto_dock_radius_m = AUTO landing
+func release() -> void                                                       # DOCK released: L1, assist re-armed, assist_near kept
 func reset() -> void                                                         # L1, no bearing, no attempts, no abort
 class_name ShipSnapshot extends RefCounted                                   # reused input scratch
 var b: Basis; var p: Vector3; var v: Vector3; var a_thrust: float; var eff_fade_start: float; var bounding_radius: float
@@ -277,11 +279,14 @@ through `SimWorld` step 4).
 - A-69 (05 s5.3 erratum): lift callers use the drop-free clearance `c_k + 0.5 g t_k^2` and add the lift to the current radial speed; TTI / PULL_UP keep the ballistic probe. `probe()` is unchanged; AI-13 owns the brain side. `LandingPilot` (AI-09) already does both.
 - A-70 (05 s5.5 erratum): implemented by AI-09 (`LandingController.thrust_vector`, floor = `landing.hover_agl_m`; LC2); `Assist.auto_dock()` (AI-10) inherits it.
 
-**Assist.auto_dock (AI-10).** `inp` is the possessed ship's input (human, or the net-predicted copy). With DOCK held, a valid free pad,
-the ship above the pad plane and its horizontal distance in the pad frame <= `radius_m` (`flight_common.auto_dock_radius_m`, A-33) it
-enters L4 and `LandingController.step_assist` overwrites thrust / pitch / yaw / roll / BRAKE (BOOST and FLIP cleared, other buttons
-kept); once engaged it holds out to `radius_m * latch_mult` (A-34, x5); L4 is limited to `transition_max_tilt_deg` (75 degrees) while
-braking. DOCK released or out of the latch hands the stick back (`st` reset); the pad lost or taken sets `st.phase` = GO_AROUND, which
-blocks re-engagement until DOCK is released. No abort for horizontal error, sink or TTI (a human has no go-around). The caller (`AssistStep` / `Prediction`) keeps one
-`LandingState` per possessed ship, fills the snapshots (`tti_s` INF, `pad.threat` false), counts true returns for the 150 m
-manual-landing rule and sets `LANDING_ASSIST`; wiring into `AssistStep` waits for GD-15 docking and NET-18.
+**Assist.auto_dock (AI-10).** `inp` is the possessed ship's input (human, or the net-predicted copy). The caller keeps one `LandingState`
+per possessed ship and at possession **passes the autopilot's own state** (copied from AiState: phase, attempts, bearing, integ) when
+the ship was landing: a ship possessed in L5/L6 continues in that phase (05:237, SC-16); with no landing in progress (any phase before
+L4, or a fresh state) the assist cold-starts in L4 TRANSITION. With DOCK held, a valid free pad, the ship above the pad plane and its
+horizontal distance in the pad frame <= `radius_m` (`flight_common.auto_dock_radius_m`, A-33) it overwrites thrust / pitch / yaw / roll
+/ BRAKE via `LandingController.step_assist` (BOOST and FLIP cleared, other buttons kept); once in L4-L6 it holds out to
+`radius_m * latch_mult` (A-34, x5); L4 is limited to `transition_max_tilt_deg` (75 degrees) while braking. DOCK released or out of
+the latch: `st.release()`. The pad lost or taken sets `st.assist_off` until DOCK is released. No abort for horizontal error, sink or
+TTI (a human has no go-around). `LandingState.assist_near` is set by every acting tick within `radius_m` of the pad and survives
+`release()`: the sim reads it at the LANDING event (set = grade AUTO, unset = manual) and then calls `reset()`. Fill the snapshots with
+`tti_s` INF and `pad.threat` false. Wiring into `AssistStep`, `LANDING_ASSIST` and the grade itself wait for GD-15 and NET-18.

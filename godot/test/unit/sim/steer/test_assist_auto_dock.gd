@@ -108,6 +108,8 @@ func test_latch_holds_out_to_five_radii_then_releases() -> void:
 	# disengaged: back inside the engage radius it engages afresh; outside it (but inside the latch) it does not
 	_place(RADIUS * 2.0, 60.0, Vector3.UP * 30.0)
 	assert_bool(_dock()).is_false()
+	_place(RADIUS - 30.0, 60.0, Vector3.UP * 30.0)
+	assert_bool(_dock()).is_true()
 
 
 func test_abort_hands_the_stick_back_until_dock_is_released() -> void:
@@ -117,6 +119,7 @@ func test_abort_hands_the_stick_back_until_dock_is_released() -> void:
 	_inp = FlightTestKit.input(0.6, 0.1, 0.2, 0.3, PilotInput.DOCK)
 	assert_bool(_dock()).is_false()
 	assert_float(_inp.pitch).is_equal(0.1)
+	assert_bool(_st.assist_off).is_true()
 	_pad.busy = false
 	assert_bool(_dock()).is_false()   # stays off while DOCK is held
 	_inp.buttons = 0
@@ -183,3 +186,47 @@ func test_no_abort_for_tti_or_sink_a_human_has_no_go_around() -> void:
 	_ship.tti_s = 0.1
 	assert_bool(_dock()).is_true()
 	assert_int(_st.phase).is_not_equal(LandingController.Phase.GO_AROUND)
+
+
+func test_continues_the_autopilots_phase_and_never_drops_to_l4() -> void:
+	# possessed in L5 (autopilot state passed in): the assist stays in L5, it does not restart in TRANSITION
+	_st.phase = LandingController.Phase.HOVER
+	_place(8.0, 20.0, Vector3.DOWN * 3.0, Vector3.RIGHT)
+	assert_bool(_dock()).is_true()
+	assert_int(_st.phase).is_equal(LandingController.Phase.HOVER)
+	_st.phase = LandingController.Phase.FLARE
+	_place(2.0, 6.0, Vector3.DOWN * 2.0, Vector3.RIGHT)
+	assert_bool(_dock()).is_true()
+	assert_int(_st.phase).is_equal(LandingController.Phase.FLARE)
+
+
+func test_other_phases_cold_start_in_transition_and_done_is_off() -> void:
+	_st.phase = LandingController.Phase.APPROACH
+	_place(100.0, 60.0, Vector3.UP * 30.0)
+	assert_bool(_dock()).is_true()
+	assert_int(_st.phase).is_equal(LandingController.Phase.TRANSITION)
+	_st.phase = LandingController.Phase.DONE
+	assert_bool(_dock()).is_false()
+
+
+func test_assist_near_marks_acting_ticks_within_the_radius_and_survives_release() -> void:
+	_place(RADIUS * 2.0, 60.0, Vector3.UP * 30.0)
+	assert_bool(_dock()).is_false()
+	assert_bool(_st.assist_near).is_false()
+	_place(RADIUS - 30.0, 60.0, Vector3.UP * 30.0)
+	assert_bool(_dock()).is_true()
+	_place(RADIUS * 2.0, 60.0, Vector3.UP * 30.0)   # latched, outside the grading radius: no new mark, old one stays
+	assert_bool(_dock()).is_true()
+	assert_bool(_st.assist_near).is_true()
+	_inp.buttons = 0
+	assert_bool(_dock()).is_false()
+	assert_bool(_st.assist_near).is_true()          # a manual finish after assisted approach is still AUTO
+	_st.reset()
+	assert_bool(_st.assist_near).is_false()
+	# an engagement only outside the grading radius leaves it unset
+	_inp.buttons = PilotInput.DOCK
+	_place(RADIUS - 30.0, 60.0, Vector3.UP * 30.0)
+	_st.phase = LandingController.Phase.TRANSITION
+	_place(RADIUS * 3.0, 60.0, Vector3.UP * 30.0)
+	assert_bool(_dock()).is_true()
+	assert_bool(_st.assist_near).is_false()

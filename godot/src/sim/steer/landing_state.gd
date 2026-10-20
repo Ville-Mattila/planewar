@@ -10,6 +10,8 @@ var bearing: Vector3 = Vector3.ZERO    ## approach bearing: unit tangent at the 
 var mark: Vector3 = Vector3.ZERO       ## L3: unit direction over the planet where the go-around started
 var ga_dir: Vector3 = Vector3.ZERO     ## L3: unit tangent at the pad along which the go-around extends
 var integ: Vector2 = Vector2.ZERO      ## FlightController.track_velocity integrators (reset on a phase change)
+var assist_off: bool = false           ## Assist.auto_dock gave up (pad lost or taken): off until DOCK is released
+var assist_near: bool = false          ## Assist.auto_dock acted within auto_dock_radius_m of the pad: the landing is AUTO (05 s5.5)
 
 
 ## Back to L1 TRANSIT with no bearing, no attempts and no abort (a new RETURN or a new pad).
@@ -21,3 +23,13 @@ func reset() -> void:
 	mark = Vector3.ZERO
 	ga_dir = Vector3.ZERO
 	integ = Vector2.ZERO
+	assist_off = false
+	assist_near = false
+
+
+## DOCK released (or the latch lost): back to L1 and the assist re-armed, but `assist_near` survives so a manual
+## finish after an assisted approach inside the grading radius still grades AUTO; `reset()` clears it per landing.
+func release() -> void:
+	phase = 0
+	integ = Vector2.ZERO
+	assist_off = false
