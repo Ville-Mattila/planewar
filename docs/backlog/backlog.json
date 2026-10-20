@@ -1818,7 +1818,7 @@
     "status": "done",
     "pr": 64,
     "merged": "2026-10-20",
-    "note": "Recommended damping_only set docks 200/200 (baseline 0/200, 87 crash) and also passes under speed_scaled: AI-19 should adopt that single set (A-68). Dominant limit lead_max_deg 80 (128 alone docks 10/24). Steep-low-dive terrain contacts ~5.5% under damping_only at every set -> AI-38. Nits left: dead reports/*.csv.import files, OUTCOMES copy of LandingWorld.Outcome, CSV header drift test."
+    "note": "Recommended damping_only set docks 200/200 (baseline 0/200, 87 crash) and also passes under speed_scaled: AI-19 should adopt that single set (A-68). Dominant limit lead_max_deg 80 (128 alone docks 10/24). Steep-low-dive terrain contacts ~5.5% under damping_only at every set -> AI-38. Nits left: dead reports/*.csv.import files, OUTCOMES copy of LandingWorld.Outcome, CSV header drift test. the steep-dive scenario is the AI-38 2 km leg from now on (A-88 (2)); --dive-leg-m=0 replays the AI-06 line for comparison only; the ~5.5 % figure was measured on runs that mostly ended at the first waypoint and is superseded"
   },
   {
     "id": "AI-07",
@@ -2398,7 +2398,7 @@
       " 05 AI-13"
     ],
     "status": "todo",
-    "acceptance_append": "; the terrain lift uses the drop-free clearance (c_k + 0.5 g t_k^2) and is added to the current radial speed, while TTI / PULL_UP keep the ballistic probe; SC-09 and SC-10 asserted under speed_scaled (R0 B.12 A-69)"
+    "acceptance_append": "; the terrain lift uses the drop-free clearance (c_k + 0.5 g t_k^2) and is added to the current radial speed, while TTI / PULL_UP keep the ballistic probe; SC-09 and SC-10 asserted under speed_scaled (R0 B.12 A-69); PULL_UP at act also starts when the visible clearance (AGL or the probe's worst drop-free clearance) is below FlightController.pull_up_loss, ORed with the 1.0 s re-sample, in Overlays.run_safety and the Dart brain (R0 B.15 A-89); on cradle in SC-09, SC-10 and SC-11 the Dart never enters a state SweepScenarios.dive_recoverable classifies as unrecoverable (A-88 (3)); OverlayParams.for_ship / FlightGains.from_dict built with ContentSet's FlightCommonDef (A-90)"
   },
   {
     "id": "AI-14",
@@ -7068,14 +7068,14 @@
       "AI-06"
     ],
     "milestone": "M2",
-    "acceptance": "gain_sweep with the recommended set: damping_only steep low dives terrain contacts <= 1 % of 200 (was ~5.5 %), landings still 200/200 docked, step responses within A-68 under both lift models; no throttle-at-0 run longer than the weight-support floor allows in landing_failures.csv",
+    "acceptance": "gain_sweep --given=recommended_gains.json --stages=confirm, 200 seeds, seed 606, 2 km dive leg (SweepScenarios.DIVE_LEG_M): damping_only steep-low-dive terrain contacts among recoverable starts (dive_hits_recoverable) <= 1 % of the recoverable starts (<= 1 of 183), dive_unrecoverable <= 17 of 200 reported beside it (unrecoverable iff SweepScenarios.dive_recoverable is false: none of the 19 fixed-elevation open-loop pull-ups 0..90 deg nor Assist.pull_up from tick 0 avoids contact; R0 B.15 A-88); speed_scaled dive_hits 0 of 200; landings still 200/200 docked under both lift models; step responses within A-68 under both lift models; no APPROACH throttle-0 run while the wing cannot carry the weight (land_thrust_zero_unsupported_run_max 0) in landing_failures.csv; 05 s5.3 PULL_UP is the best-climb law and pull_up_loss the pull-up budget (A-89); flight_common signatures per A-90",
     "docs": [
       "05 s5.2",
       "R0 B.12 A-67, A-68",
       "godot/test/tuning/README"
     ],
     "status": "todo",
-    "note": "Follow-up from AI-06 PR #64."
+    "note": "Follow-up from AI-06 PR #64. acceptance re-baselined per R0 B.15 A-88 (17/200 starts unrecoverable under damping_only by the open-loop bound; 0/183 recoverable contacts after); 05 s5.3 PULL_UP amended to the best-climb law + pull_up_loss (A-89); flight_common / v signature changes ratified (A-90); gain_sweep.py --dive-leg-m -> AI-39; SAFETY / brain budget wiring -> AI-13"
   },
   {
     "id": "TA-60",
@@ -7116,5 +7116,37 @@
     "note": "Unblocks UX-03 #73 (check_deps D1 name collision). Owner chose a net-lane rename task 2026-10-20.",
     "pr": 74,
     "merged": "2026-10-20"
+  },
+  {
+    "id": "AI-39",
+    "title": "tools: gain_sweep.py forwards --dive-leg-m and --given to gain_sweep.tscn and summarises dive_unrecoverable / dive_hits_recoverable / land_thrust_zero_*; dead reports/*.csv.import files removed (R0 B.15 A-88, A-90)",
+    "lane": "test+tools",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "AI-38"
+    ],
+    "milestone": "M2",
+    "acceptance": "python tools/gain_sweep.py --given godot/test/tuning/recommended_gains.json --stages confirm --dive-leg-m 0 reproduces reports/ai38/after_legacy_sweep.csv confirm rows (dive_hits, dive_unrecoverable) and without --dive-leg-m the after_new_sweep.csv rows; --summarise prints the four AI-38 columns; a wrapper test asserts every scene flag of gain_sweep.gd's usage line is forwarded (header-drift pattern); no .csv.import under test/tuning/reports",
+    "docs": [
+      "godot/test/tuning/README",
+      "R0-amendments-08 A-88"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-61",
+    "title": "spikes: rename S-FLIGHT-1 inner enum SfInput.InputClass -> SfInputClass so it no longer shadows the input lane's global InputClass (web_spike_flight export)",
+    "lane": "spikes",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [],
+    "milestone": "M3",
+    "acceptance": "godot/spikes/s_flight_1/sf_input.gd declares enum SfInputClass (members unchanged) and every use (sf_input.gd, flight_spike.gd) is updated; the web_spike_flight export and the S-FLIGHT-1 scene still run; verified against branch task/UX-03-input-router (export/import with the global InputClass present has no 'Could not resolve' error)",
+    "docs": [
+      "06 s2.1"
+    ],
+    "status": "todo",
+    "note": "Unblocks UX-03 #73 (export web_spike_flight). Same pattern as NET-53 (owner choice 2026-10-20)."
   }
 ]
