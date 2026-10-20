@@ -7148,7 +7148,9 @@
     "docs": [
       "06 s2.1"
     ],
-    "status": "todo",
-    "note": "Unblocks UX-03 #73 (export web_spike_flight). Same pattern as NET-53 (owner choice 2026-10-20)."
+    "status": "done",
+    "note": "Unblocks UX-03 #73 (export web_spike_flight). Same pattern as NET-53 (owner choice 2026-10-20).",
+    "pr": 77,
+    "merged": "2026-10-20"
   }
 ]
