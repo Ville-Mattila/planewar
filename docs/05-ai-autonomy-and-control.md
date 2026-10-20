@@ -210,7 +210,7 @@ static func run_safety(id: int, v: SimView, st: AiState, p: AutopilotParams, sin
     # 2. Terrain: time to impact on the current trajectory (s5.3).
     var tti: float = TerrainProbe.time_to_impact(v.pos(id), v.vel(id), p.probe)
     if tti < p.safety_pull_up_tti_s:                      # 2.0 s (01 s4.4)
-        st.set_mode(id, Mode.PULL_UP)                      # nose to local up at max rate, thrust 1, no brake
+        st.set_mode(id, Mode.PULL_UP)                      # best-climb PULL_UP (s5.3, R0 B.15 A-89), no brake
         return
     # 3. Fuel: below 20 % force a RETURN order issued by the system (issuer -1); the resumed queue stays behind it.
     if v.fuel01(id) < p.safety_force_rtb_fuel01 and not st.has_return(id):   # 0.20 (01 s4.4)
@@ -471,7 +471,7 @@ static func terrain_lift(p: Vector3, v: Vector3, probe: ProbeParams, h_req: floa
 
 - **Required clearance** `h_req = min_clearance_m + clearance_per_mps * u` (Dart at 110 m/s: 25 + 27.5 = 52.5 m).
 - **Lift**: the ballistic path is the pessimistic truth for TTI and PULL_UP, but a ship holding its vertical speed does not fall `0.5 g t^2` (48 m at 4 s), so the lift term uses the **drop-free clearance** `c_k' = c_k + 0.5 g t_k^2`: for the worst sample, `lift = max(0, h_req - c_k') / max(t_k, lift_min_time_s)` m/s, capped at `lift_max_frac` x u (0.6), and the brain commands `v_cmd.radial = v_r + lift`, the current radial speed plus the lift, never lift added to an altitude-hold command (otherwise a level ship climbs out of the deck band over flat ground; R0 B.12 A-69, AI-05 finding). This produces smooth ridge hopping; rilles and crater rims are flown over, not through.
-- **TTI**: the first sample with `c_k <= 0`, linearly refined between samples. Cached in `AiState.tti` at think; at act, every 3rd tick the probe re-samples only the 1.0 s point; if it is below 0, the emergency **PULL_UP** mode starts that tick (nose to local up at max rate, thrust 1, brake off) until TTI >= 4 s.
+- **TTI**: the first sample with `c_k <= 0`, linearly refined between samples. Cached in `AiState.tti` at think; at act, every 3rd tick the probe re-samples only the 1.0 s point; if it is below 0, **or** the visible clearance (AGL, or the worst drop-free clearance) is below the pull-up budget `FlightController.pull_up_loss` (the height lost before PULL_UP arrests the sink: nose turn at the pitch-rate cap under gravity, then the best climb; 0 while climbing), the emergency **PULL_UP** mode starts that tick until TTI >= 4 s. PULL_UP (R0 B.15 A-89, AI-38; `FlightController.pull_up` via `Assist.pull_up`): the nose goes at the class's own rates to the elevation in the velocity's vertical plane that maximises the radial acceleration available now (`climb_accel`: the lift law's speed-dependent lift plus thrust along the nose, minus gravity; one Newton step per tick), wings level, thrust 1 while the nose is above the horizon and 0 below it, brake off. "Nose to local up" is the degenerate case at zero speed-dependent lift; as a law it kills the `speed_scaled` lift (AI-08 finding, AI-38 measurement). The budget is a second, earlier trigger beside `safety_pull_up_tti_s` (s2.4), never a later one.
 - **Altitude band clamp**: guidance never commands above `max_alt_m` = 1,450 m (below the 1,500 m soft ceiling) and never below `deck_alt_agl_m` except in landing.
 - **Cost**: 6 bilinear samples per think, 1 per 3 ticks at act. At 400 AI ships: 400 x (6 x 3 + 10) = 11,200 samples/s, about 375 per tick.
 
