@@ -102,7 +102,7 @@ func _process(delta: float) -> void:
 		return
 	var alpha: float = Engine.get_physics_interpolation_fraction()
 	view.sync(world, alpha, delta)
-	var aim: Vector3 = inp.aim if inp.input_class == SfInput.InputClass.POINTER else Vector3.ZERO
+	var aim: Vector3 = inp.aim if inp.input_class == SfInput.SfInputClass.POINTER else Vector3.ZERO
 	cam.follow(view.render_p, view.render_fwd, view.render_up, world.s.v, aim, world.s.boost_time > 0.0, delta)
 	_frame_stats(delta)
 	hud.hint = _hint()
@@ -237,9 +237,9 @@ func _notification(what: int) -> void:
 
 func _hint() -> String:
 	match inp.input_class:
-		SfInput.InputClass.GAMEPAD:
+		SfInput.SfInputClass.GAMEPAD:
 			return "RT thrust  LS pitch/roll  LB/RB yaw  LT brake  L3 boost  A gun  B bomb  Y flip  X dock (hold)  Back: FULL/RAW  Start: respawn  D-pad up: panel"
-		SfInput.InputClass.TOUCH:
+		SfInput.SfInputClass.TOUCH:
 			return "Left: slider (thrust/speed) + stick (flick up = flip).  Right: FIRE BOMB BOOST BRAKE DOCK"
 	var mouse: String = "click to capture mouse (aim)" if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED else "mouse aim (Esc frees)"
 	return "W thrust  S brake  %s  arrows pitch/roll  A/D roll  Q/E yaw  Shift boost  Space flip  LMB/Ctrl gun  RMB/V bomb  F dock  F1 panel  F2 lift  F3 FULL/RAW  Backspace respawn" % mouse
