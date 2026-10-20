@@ -6959,7 +6959,9 @@
       "R0-amendments-05 A-72",
       "01 ADR-10"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-20",
+    "pr": "public#54"
   },
   {
     "id": "NET-51",
