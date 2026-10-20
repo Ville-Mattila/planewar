@@ -1711,7 +1711,7 @@
     "status": "done",
     "merged": "2026-10-13",
     "pr": 49,
-    "note": "04 s2.5 already states 15 points; NET-04 acceptance corrected (R0 B.11 A-60)"
+    "note": "04 s2.5 already states 15 points; NET-04 acceptance corrected (R0 B.11 A-60) A-60's '15 points' was the erratum: the original 14 stands (R0 B.16 A-91)."
   },
   {
     "id": "AI-02",
@@ -2808,10 +2808,11 @@
     "tier": "Sonnet",
     "size_days": 1.5,
     "depends_on": [
-      "NET-01"
+      "NET-01",
+      "TA-62"
     ],
     "milestone": "M3",
-    "acceptance": "Encode/decode test per kind; a 32-id, 15-point ORDER round-trips and a 16-point one is refused (04 s2.5 formula, R0 B.11 A-60); malformed payload returns null",
+    "acceptance": "Encode/decode test per kind; a 32-id, 14-point ORDER round-trips (249 B) and a 15-point one is refused by order_fits and decode_payload (257 B > 256; 04 s2.5 as corrected by R0 B.16 A-91); CommandCodec.ORDER_HEADER_BYTES == OrderSpec.WIRE_HEADER_BYTES and CommandCodec.order_wire_size(32, 0, true) == OrderSpec.wire_size(32, 0, OrderSpec.Kind.ESCORT) asserted so the net and sim constants cannot drift; net bytes equal Command.order's bytes for every non-positional kind and are a fixed point for positional kinds; malformed payload returns null",
     "docs": [
       "04 s2.5",
       " R0 C2-06",
@@ -2819,7 +2820,7 @@
       " 04 NET-04"
     ],
     "status": "todo",
-    "note": "depends on A-27 deps.json edit (SimEvent, CommandResult named for net; owner default approve)",
+    "note": "depends on A-27 deps.json edit (SimEvent, CommandResult named for net; owner default approve) A-60's 15 points and A-85's 142 B came from 04 s2.5's printed `8 +` formula; the field list sums to 9 and the merged sim writes 9 (R0 B.16 A-91). Merges after TA-62 so the drift assertions pass on main.",
     "acceptance_append": "; the ORDER codec writes / reads the 6-byte ESCORT trailer (present iff order_kind 3): an ESCORT with slot 1, FOCUS and a focus id round-trips, a 32-id ESCORT is 142 B, a MOVE with 6 trailing bytes returns null (R0 B.14 A-85); SET_RALLY (3 x f64 position) and TOGGLE_AUTO_REPLENISH (u8 flag + up to 8 x (u16 def, u8 count)) payloads round-trip as GD-17 applies them; ESCORT escort_mode > BREAK decodes to null (mirrors sim read_order, TA-60)"
   },
   {
@@ -7107,7 +7108,7 @@
     "status": "done",
     "pr": 72,
     "merged": "2026-10-20",
-    "note": "read_order also refuses escort_mode > BREAK (NET-04 decoder must return null); out-of-range escort_slot is REJECTED_INVALID_ORDER via O9 BAD_ESCORT."
+    "note": "read_order also refuses escort_mode > BREAK (NET-04 decoder must return null); out-of-range escort_slot is REJECTED_INVALID_ORDER via O9 BAD_ESCORT. the recorded '32-id ESCORT is 142 B' figure is superseded by 143 B (R0 B.16 A-91); the trailer bytes and every REJECTED_MALFORMED rule stand; the constant fix is TA-62."
   },
   {
     "id": "NET-53",
@@ -7206,5 +7207,22 @@
     "note": "No code bug: input mismatch (recommended_gains.json speed_scaled block vs the damping_only set ai38 used for both models). Added ai38_given.json, bit-exact equivalence test vs frozen ded8b4e track_velocity, re-baselined reports/ai38 (wall_s only). Nits: frozen copy still calls live helpers/FlightGains tables; boundary mutations lead_floor*1.01, floor_u_max*0.97 survive.",
     "pr": 80,
     "merged": "2026-10-21"
+  },
+  {
+    "id": "TA-62",
+    "title": "sim: OrderSpec.WIRE_HEADER_BYTES 8 -> 9 (the 04 s2.5 field list sums to 9; R0 B.16 A-91); wire_size / fits_wire re-baselined (32 ids: 14 points = 249 B, 15 refused; 32-id ESCORT 143 B); Command.order and CommandPayload.read_order derive the header from the constant; sim/orders/MODULE.md open item rewritten",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "TA-60"
+    ],
+    "milestone": "M3",
+    "acceptance": "OrderSpec.WIRE_HEADER_BYTES == 9; test_wire_size_arithmetic_matches_04 asserts wire_size(1, 0) == 13, wire_size(32, 14) == 249, fits_wire(32, 14) true, fits_wire(32, 15) false, fits_wire(1, 16) true (141 B), fits_wire(29, 16) true (253 B), fits_wire(30, 16) false, wire_size(32, 0, ESCORT) == 143, fits_wire(32, 15, ESCORT) false; no literal 9 header offset remains in command.gd / command_payload.gd (derived from OrderSpec.WIRE_HEADER_BYTES; bytes written unchanged, every existing payload test untouched); sim/orders/MODULE.md constant line reads 9 and its NET-04 / NET-16 open item cites R0 B.16 A-91 instead of the 14-vs-15 arithmetic note; gen_module_api --check green",
+    "docs": [
+      "R0-amendments-09 A-91",
+      "04 s2.5"
+    ],
+    "status": "todo"
   }
 ]
