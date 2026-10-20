@@ -1,0 +1,12 @@
+{
+  "_doc": "ART-22 fixture: falling square chirp over filtered noise; 07 s8.4.",
+  "schema_version": 1,
+  "id": "test_zap",
+  "seed": 4242,
+  "normalize_peak_db": -3,
+  "targets": {"duration_s": [0.2, 2.0]},
+  "layers": [
+    {"wave": "square", "f0": 1200, "f_slope": -2.0, "attack": 0.005, "sustain": 0.1, "decay": 0.2, "lowpass": 5000, "gain": 0.6},
+    {"wave": "noise", "attack": 0.0, "sustain": 0.05, "decay": 0.15, "highpass": 800, "bitcrush": 6, "gain": 0.3, "delay": 0.02}
+  ]
+}

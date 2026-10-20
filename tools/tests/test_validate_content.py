@@ -26,6 +26,8 @@ CANON = FIX / "canonical"
 CONTRACT0 = sorted("ships ground_units weapons projectiles structures towers doctrines economy match_rules modes "
                    "bot_promises bot_profiles autopilots map_recipe rules scoring order_rules quality_tiers "
                    "wing callsigns barks commander_verbs biome_ramps sim_scenario".split())
+# Tools-only schemas: validated by their own tool, not def files; ART-22 sfx_recipe (tools/audio/recipes/*.json).
+TOOLS_ONLY = ["sfx_recipe"]
 SINGLETONS = {"rules", "economy", "match_rules", "map_recipe", "scoring", "order_rules", "wing", "callsigns", "biome_ramps"}
 
 
@@ -64,8 +66,8 @@ class Tree(unittest.TestCase):
 class SchemaSet(unittest.TestCase):
     def test_exactly_the_contract0_set(self) -> None:
         got = sorted(p.name[: -len(".schema.json")] for p in (TOOLS / "schemas").glob("*.schema.json"))
-        self.assertEqual(got, CONTRACT0)
-        self.assertEqual(len(got), 24)
+        self.assertEqual([g for g in got if g not in TOOLS_ONLY], CONTRACT0)
+        self.assertEqual(len(got) - len(TOOLS_ONLY), 24)
 
     def test_meta_clean(self) -> None:
         store = SchemaStore(TOOLS / "schemas")
@@ -240,7 +242,7 @@ class Repo(unittest.TestCase):
     def test_real_repo_passes(self) -> None:
         code, out = run(REPO)
         self.assertEqual(code, 0, out)
-        self.assertIn("24 schemas", out)
+        self.assertIn(f"{24 + len(TOOLS_ONLY)} schemas", out)
 
 
 class Canonical(Tree):
