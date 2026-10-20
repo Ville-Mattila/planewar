@@ -53,7 +53,7 @@ Constants come from `economy.json` (`core_trickle_ore_per_s`, `solar_band_deg`, 
 - E4 The Core trickle is `core_trickle_ore_per_s` per finished Core to its owner, accumulated in Ore-ticks (exact for whole rates), credited through `credit` (so the cap clamps it and the ledger counts it).
 - E5 The early share lock has one definition, `Build.lock_blocks`; `try_pay` consults it, so BUILD starts, PRODUCE starts and `can_place` agree.
 - E6 `add_player` adds `start_ore` / `start_ice` per player to the team pool (C2-14).
-- E7 Self-repair (GD-16): a finished, supplied structure with `tick - last_damage_tick >= self_repair_delay_s` heals `min(missing, max(self_repair_min_hp_s, self_repair_frac_per_s * hp))` (A-80) HP on each whole sim second and pays `ceil(heal * repair_ore_per_hp)` Ore through `try_spend`; an unpayable second is skipped (pause). Sites, dead and unsupplied structures never repair. No accumulator and no saved state: the result is a function of the store and the tick (S4).
+- E7 Self-repair (GD-16): a finished, supplied structure with `tick - last_damage_tick >= self_repair_delay_s` heals `min(missing, max(self_repair_min_hp_s, self_repair_frac_per_s * hp))` (A-80) HP on each whole sim second and pays `ceil(missing * repair_ore_per_hp) - ceil((missing - heal) * repair_ore_per_hp)` Ore through `try_spend` (a whole repair costs `ceil(total HP * repair_ore_per_hp)`, never more); an unpayable second is skipped (pause). Sites, dead and unsupplied structures never repair. No accumulator and no saved state: the result is a function of the store and the tick (S4).
 
 ## Data owned
 

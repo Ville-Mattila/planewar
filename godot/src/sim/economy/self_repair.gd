@@ -1,7 +1,7 @@
 class_name SelfRepair extends RefCounted
 ## Structure self-repair (02 s6.3, GD-16): a finished, supplied structure that has taken no damage for
 ## `economy.self_repair_delay_s` repairs `max(self_repair_min_hp_s, self_repair_frac_per_s * hp)` HP per second and pays `repair_ore_per_hp` Ore per HP
-## (rounded up per sim second, the ship-repair idiom of 02 s2.3); it pauses while the team cannot pay. Whole sim seconds
+## (the ship-repair idiom of 02 s2.3: each second charges `ceil(missing * k) - ceil(missing_after * k)`, so a whole repair totals one ceil); it pauses while the team cannot pay. Whole sim seconds
 ## only (tick % tick_hz == 0), so there is no accumulator and nothing to save (S4): the result is a function of the store.
 ## Runs in step 10 after `Economy.step`. Healing writes `hp` directly; damage still goes only through `DamageSink`.
 
@@ -50,5 +50,6 @@ func step(tick: int) -> void:
 		if missing <= 0.0:
 			continue
 		var heal: float = minf(rate_hp_s(top), missing)
-		if _economy.try_spend(_store.team[s], ceili(heal * _ore_per_hp), 0):
+		var cost: int = ceili(missing * _ore_per_hp) - ceili((missing - heal) * _ore_per_hp)   # one ceil over the whole repair
+		if _economy.try_spend(_store.team[s], cost, 0):
 			_store.hp[s] += heal

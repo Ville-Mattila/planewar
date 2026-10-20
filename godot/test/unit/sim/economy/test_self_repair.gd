@@ -37,10 +37,25 @@ func test_repairs_after_the_delay_and_pays_ore() -> void:
 	var _b: Array[SimEvent] = K.run(w, 2 * hz)
 	var top: float = _top(w, s)
 	var rate: float = w.economy().repair.rate_hp_s(top)
-	assert_float(w.store().hp[s]).is_greater(100.0)
-	assert_float(w.store().hp[s]).is_less_equal(100.0 + 2.0 * rate)
-	assert_int(K.ore(w)).is_less(ore0)                                  # paid
+	var k: float = 0.1                                                  # repair_ore_per_hp
+	var n: float = (w.store().hp[s] - 100.0) / rate
+	assert_float(n).is_greater(0.0)
+	assert_float(n).is_equal(roundf(n))                                 # whole seconds of `rate` HP each
+	var healed: float = w.store().hp[s] - 100.0
+	var missing: float = top - 100.0
+	assert_int(ore0 - K.ore(w)).is_equal(ceili(missing * k) - ceili((missing - healed) * k))   # exact, one ceil in total
 	assert_bool(w.economy().repair != null).is_true()
+
+
+func test_a_whole_repair_costs_one_ceil_of_total_hp_times_k() -> void:
+	var w: SimWorld = K.solo_world()
+	var s: int = K.find(w, &"refinery")
+	w.store().hp[s] = _top(w, s) - 12.0
+	var _gone: bool = w.store().free_slot(K.find(w, &"core"), 0)         # no trickle
+	var ore0: int = K.ore(w)
+	var _a: Array[SimEvent] = K.run(w, 30 * _tick_hz(w))
+	assert_float(w.store().hp[s]).is_equal(_top(w, s))
+	assert_int(ore0 - K.ore(w)).is_equal(2)                              # ceil(12 * 0.1); per-second ceils (5 + 5 + 2 HP) would charge 3
 
 
 func test_a_hit_restarts_the_delay() -> void:
@@ -64,7 +79,7 @@ func test_pauses_without_ore_and_resumes() -> void:
 	var hz: int = _tick_hz(w)
 	var _a: Array[SimEvent] = K.run(w, 14 * hz)
 	var stuck: float = w.store().hp[s]
-	assert_float(stuck).is_equal(100.0)
+	assert_float(stuck).is_equal(100.0 + w.economy().repair.rate_hp_s(_top(w, s)))   # only the first second is free: its ceil boundary is not crossed (900 HP x 0.1 = 90 Ore, 894 HP still 90)
 	w.economy().economy.credit(0, 500, 0)
 	var _b: Array[SimEvent] = K.run(w, 3 * hz)
 	assert_float(w.store().hp[s]).is_greater(stuck)
