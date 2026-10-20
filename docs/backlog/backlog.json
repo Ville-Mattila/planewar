@@ -7136,7 +7136,10 @@
       "godot/test/tuning/README",
       "R0-amendments-08 A-88"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 79,
+    "merged": "2026-10-21",
+    "note": "Reproduction mismatch on speed_scaled was an input mismatch (recommended_gains.json has its own speed_scaled set; ai38 reports used the damping_only set for both) — AI-41 adds ai38_given.json and fixes the README command."
   },
   {
     "id": "TA-61",
