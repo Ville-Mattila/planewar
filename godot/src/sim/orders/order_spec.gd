@@ -25,6 +25,8 @@ const WIRE_HEADER_BYTES: int = 8
 const WIRE_MAX_BYTES: int = 256
 const WIRE_MAX_POINTS: int = 16
 const WIRE_MAX_IDS: int = 32
+const ESCORT_TRAILER_BYTES: int = 6        # u8 escort_mode, u8 escort_slot (0xFF = -1), u32 focus; ESCORT only (R0 B.14 A-85)
+const ESCORT_SLOT_NONE_WIRE: int = 0xFF
 
 var kind: Kind = Kind.MOVE
 var target: int = 0                     # EntityId or 0 (ESCORT: the leader / escortee)
@@ -63,13 +65,14 @@ static func is_reserved(k: int) -> bool:
 
 
 ## Bytes of the 04 ORDER payload for `count` selected ids and `point_count` points.
-static func wire_size(count: int, point_count: int) -> int:
-	return WIRE_HEADER_BYTES + 4 * count + 8 * point_count
+## `order_kind` ESCORT adds the 6-byte trailer (R0 B.14 A-85); the default -1 means no trailer.
+static func wire_size(count: int, point_count: int, order_kind: int = -1) -> int:
+	return WIRE_HEADER_BYTES + 4 * count + 8 * point_count + (ESCORT_TRAILER_BYTES if order_kind == Kind.ESCORT else 0)
 
 
-static func fits_wire(count: int, point_count: int) -> bool:
+static func fits_wire(count: int, point_count: int, order_kind: int = -1) -> bool:
 	return count >= 1 and count <= WIRE_MAX_IDS and point_count >= 0 and point_count <= WIRE_MAX_POINTS \
-			and wire_size(count, point_count) <= WIRE_MAX_BYTES
+			and wire_size(count, point_count, order_kind) <= WIRE_MAX_BYTES
 
 
 func copy_from(o: OrderSpec) -> void:

@@ -60,7 +60,7 @@ class_name Command extends RefCounted
 enum Kind { ORDER, BUILD, CANCEL_BUILD, PRODUCE, CANCEL_PRODUCE, SET_RALLY, POSSESS, RELEASE, REQUEST_POSSESS, HANDOVER,
             PILOT_INPUT, TOGGLE_AUTO_REPLENISH, SURRENDER, SET_ADJUTANT, DEBUG_SPAWN, DEBUG_SET }   # 0-15 frozen; DEBUG_* only when rules.debug_commands
 var tick: int; var player: int; var kind: Kind; var target: int; var payload: PackedByteArray   # 04 s2.5 order; positions / pilot axes f64 (sim/world/command_payload.gd)
-static func order(player: int, ids: PackedInt32Array, spec: OrderSpec) -> Command                  # (03) builders
+static func order(player: int, ids: PackedInt32Array, spec: OrderSpec) -> Command                  # (03) builders; ESCORT appends u8 mode, u8 slot (0xFF = -1), u32 focus (A-85)
 static func build(player: int, def_id: int, cell: int, rotation: int) -> Command;  static func produce(player: int, factory: int, def_id: int, count: int) -> Command
 static func set_rally(player: int, factory: int, pos: Vector3) -> Command   # (GD-17) 3 x f64
 static func toggle_auto_replenish(player: int, factory: int, enabled: bool, roster: PackedInt32Array) -> Command   # (GD-17) roster = [def_id, count, ...], at most 8 pairs; replaces the player's targets, disabled clears

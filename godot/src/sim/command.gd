@@ -16,14 +16,17 @@ var payload: PackedByteArray = PackedByteArray()
 
 
 ## ORDER for `ids` (1-32 entities): u8 order kind, u8 flags, u8 haul_mode, u8 count, u32 ids[count], u32 target,
-## u8 point_count, f64 x 3 per point. PATROL sends `spec.points`; other kinds send `spec.point` when non-zero.
+## u8 point_count, f64 x 3 per point, then for ESCORT only the 6-byte trailer u8 escort_mode, u8 escort_slot
+## (0xFF = -1), u32 focus (R0 B.14 A-85). PATROL sends `spec.points`; other kinds send `spec.point` when non-zero.
 static func order(_player: int, ids: PackedInt32Array, spec: OrderSpec) -> Command:
 	var pts: PackedVector3Array = spec.points
 	if spec.kind != OrderSpec.Kind.PATROL:
 		pts = PackedVector3Array() if spec.point == Vector3.ZERO else PackedVector3Array([spec.point])
 	var n: int = ids.size()
 	var b: PackedByteArray = PackedByteArray()
-	var _r: int = b.resize(9 + 4 * n + 24 * pts.size())
+	var esc: bool = spec.kind == OrderSpec.Kind.ESCORT
+	var base: int = 9 + 4 * n + 24 * pts.size()
+	var _r: int = b.resize(base + (OrderSpec.ESCORT_TRAILER_BYTES if esc else 0))
 	b.encode_u8(0, spec.kind)
 	b.encode_u8(1, spec.flags)
 	b.encode_u8(2, spec.haul_mode)
@@ -34,6 +37,10 @@ static func order(_player: int, ids: PackedInt32Array, spec: OrderSpec) -> Comma
 	b.encode_u8(8 + 4 * n, pts.size())
 	for k: int in pts.size():
 		_put_v3(b, 9 + 4 * n + 24 * k, pts[k])
+	if esc:
+		b.encode_u8(base, spec.escort_mode)
+		b.encode_u8(base + 1, OrderSpec.ESCORT_SLOT_NONE_WIRE if spec.escort_slot < 0 else spec.escort_slot)
+		b.encode_u32(base + 2, spec.focus)
 	return _make(_player, Kind.ORDER, 0, b)
 
 
