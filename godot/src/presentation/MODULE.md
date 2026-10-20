@@ -280,7 +280,7 @@ Entity sync 2.4 ms at 800 views PC-mid, 0.8 ms on 200 + far pools (03 s10.2); po
 
 ## Test entry points
 
-`godot/test/unit/presentation/test_entity_view_pool.gd`, `godot/test/unit/presentation/test_vfx_router.gd`, `godot/test/unit/presentation/test_pools.gd`, `godot/test/unit/presentation/test_unit_material_cache.gd`, `godot/test/unit/presentation/test_shader_library.gd`. Demo: `godot/scenes/presentation/entities/entity_demo.tscn` (`-- --tier=low|medium|high --n=400 --cam=chase|base|wide --frames=N --shot=<png>`).
+`godot/test/unit/presentation/test_entity_view_pool.gd`, `godot/test/unit/presentation/test_pose_stager.gd`, `godot/test/unit/presentation/test_vfx_router.gd`, `godot/test/unit/presentation/test_pools.gd`, `godot/test/unit/presentation/test_unit_material_cache.gd`, `godot/test/unit/presentation/test_shader_library.gd`. Demo: `godot/scenes/presentation/entities/entity_demo.tscn` (`-- --tier=low|medium|high --n=400 --cam=chase|base|wide --frames=N --shot=<png>`).
 
 ## How to add X
 
