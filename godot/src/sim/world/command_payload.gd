@@ -18,15 +18,15 @@ const SET_KILL: int = 2
 ## Fills `spec` and `ids` from an ORDER payload; false when malformed (count 0 or > 32, > 16 points, short).
 static func read_order(cmd: Command, spec: OrderSpec, ids: PackedInt32Array) -> bool:
 	var b: PackedByteArray = cmd.payload
-	if b.size() < 9:
+	if b.size() < OrderSpec.WIRE_HEADER_BYTES:
 		return false
 	var n: int = b.decode_u8(3)
-	if n < 1 or n > ORDER_MAX_IDS or b.size() < 9 + 4 * n:
+	if n < 1 or n > ORDER_MAX_IDS or b.size() < OrderSpec.WIRE_HEADER_BYTES + 4 * n:
 		return false
-	var np: int = b.decode_u8(8 + 4 * n)
+	var np: int = b.decode_u8(OrderSpec.WIRE_HEADER_BYTES - 1 + 4 * n)
 	var k: int = b.decode_u8(0)
 	var esc: bool = k == OrderSpec.Kind.ESCORT
-	var base: int = 9 + 4 * n + 24 * np
+	var base: int = OrderSpec.WIRE_HEADER_BYTES + 4 * n + 24 * np
 	if np > ORDER_MAX_POINTS or b.size() != base + (OrderSpec.ESCORT_TRAILER_BYTES if esc else 0):
 		return false
 	var hm: int = b.decode_u8(2)
