@@ -26,6 +26,14 @@ GODOT = os.environ.get("GODOT_BIN") or shutil.which("godot")
 SKIP_GODOT = "no Godot 4.7.2 editor binary ($GODOT_BIN / PATH)"
 
 
+def real_debug_section() -> str:
+    """The [debug] section (warnings as errors, level 2) of the real godot/project.godot, read, not copied by hand."""
+    text = (REPO / "godot" / "project.godot").read_text(encoding="utf-8")
+    start = text.index("[debug]")
+    end = text.find("\n[", start + 1)
+    return text[start:end if end != -1 else len(text)].strip() + "\n"
+
+
 class Render(unittest.TestCase):
     def test_template_keys_match_the_import_dock(self):
         text = W.render("res://assets/models/ships/ship_dart.glb")
@@ -87,7 +95,8 @@ class GodotImport(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.tmp = tempfile.TemporaryDirectory()
         cls.proj = Path(cls.tmp.name)
-        (cls.proj / "project.godot").write_text('config_version=5\n[application]\nconfig/name="art_import_test"\n')
+        (cls.proj / "project.godot").write_text(
+            'config_version=5\n[application]\nconfig/name="art_import_test"\n\n' + real_debug_section())
         shutil.copytree(REPO / "godot" / "assets" / "_pipeline", cls.proj / "assets" / "_pipeline")
         (cls.proj / "tools").mkdir()
         shutil.copy(REPO / "godot" / "tools" / "check_post_import.gd", cls.proj / "tools" / "check_post_import.gd")
@@ -109,6 +118,12 @@ class GodotImport(unittest.TestCase):
     def check(self, res: str):
         return subprocess.run([GODOT, "--headless", "--path", str(self.proj), "-s", "res://tools/check_post_import.gd",
                                "--", res], capture_output=True, text=True, timeout=120)
+
+    def test_project_uses_the_real_warning_settings_and_import_log_is_clean(self):
+        self.assertIn("unsafe_cast=2", (self.proj / "project.godot").read_text())
+        log = self.imported.stdout + self.imported.stderr
+        for bad in ("SCRIPT ERROR", "Parse Error", "Failed to load script"):
+            self.assertNotIn(bad, log)
 
     def test_post_import_converts_hardpoints_and_sets_far_ranges(self):
         self.assertIn("post_import_asset: ship_dart 166 tris", self.imported.stdout + self.imported.stderr)

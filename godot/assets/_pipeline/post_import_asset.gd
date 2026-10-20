@@ -7,6 +7,7 @@ extends EditorScenePostImport
 #  - The shared unit_lit.tres is assigned when it exists (the v1 path is UnitMaterialCache, ART-03; harmless otherwise).
 #  - Prints the triangle count and warns above the class budget of tools/art/asset_budgets.json (the validator is
 #    the gate; this is the editor-time heads-up).
+# No class_name: an EditorScenePostImport script is referenced by path from every .glb.import.
 # Test: python tools/tests/test_art_import.py (needs GODOT_BIN), godot/tools/check_post_import.gd.
 
 const UNIT_LIT_PATH: String = "res://assets/materials/unit_lit.tres"
@@ -98,32 +99,51 @@ func _triangles(mi: MeshInstance3D) -> int:
 	var total: int = 0
 	for s: int in mi.mesh.get_surface_count():
 		var arrays: Array = mi.mesh.surface_get_arrays(s)
-		var idx: Variant = arrays[Mesh.ARRAY_INDEX]
-		if idx is PackedInt32Array:
-			total += (idx as PackedInt32Array).size() / 3
-		else:
+		var idx: PackedInt32Array = PackedInt32Array()
+		var raw_idx: Variant = arrays[Mesh.ARRAY_INDEX]
+		if raw_idx is PackedInt32Array:
+			idx = raw_idx
+		var count: int = idx.size()
+		if count == 0:
 			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-			total += verts.size() / 3
+			count = verts.size()
+		total += int(floorf(float(count) / 3.0))
 	return total
 
 
 func _warn_budget(asset_id: String, cls: String, tris: int) -> void:
-	var text: String = FileAccess.get_file_as_string(ProjectSettings.globalize_path("res://").path_join("../tools/art/asset_budgets.json"))
+	var path: String = ProjectSettings.globalize_path("res://").path_join("../tools/art/asset_budgets.json")
+	var text: String = FileAccess.get_file_as_string(path)
 	if text.is_empty():
 		return  # exported builds and CI checkouts without tools/ skip the heads-up
-	var data: Variant = JSON.parse_string(text)
-	if not (data is Dictionary):
-		return
-	var dict: Dictionary = data as Dictionary
-	var assets: Dictionary = dict.get("assets", {}) as Dictionary
-	var classes: Dictionary = dict.get("classes", {}) as Dictionary
+	var root: Dictionary = _dict(JSON.parse_string(text))
+	var assets: Dictionary = _dict(root.get("assets", {}))
+	var classes: Dictionary = _dict(root.get("classes", {}))
 	var limit: int = 0
 	if assets.has(asset_id):
-		limit = int((assets[asset_id] as Dictionary).get("max_tris", 0))
+		limit = _max_tris(_dict(assets[asset_id]))
 	elif classes.has(cls):
-		limit = int((classes[cls] as Dictionary).get("max_tris", 0))
+		limit = _max_tris(_dict(classes[cls]))
 	if limit > 0 and tris > limit:
 		push_warning("%s: %d triangles exceed the budget %d (tools/art/validate_glb.py is the gate)" % [asset_id, tris, limit])
+
+
+func _dict(v: Variant) -> Dictionary:
+	if v is Dictionary:
+		var d: Dictionary = v
+		return d
+	return {}
+
+
+func _max_tris(entry: Dictionary) -> int:
+	var v: Variant = entry.get("max_tris", 0)
+	if v is float:
+		var f: float = v
+		return roundi(f)
+	if v is int:
+		var i: int = v
+		return i
+	return 0
 
 
 func _pascal(asset_id: String) -> String:
