@@ -1812,7 +1812,10 @@
       "05 s5",
       " 05 AI-06"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 64,
+    "merged": "2026-10-20",
+    "note": "Recommended damping_only set docks 200/200 (baseline 0/200, 87 crash) and also passes under speed_scaled: AI-19 should adopt that single set (A-68). Dominant limit lead_max_deg 80 (128 alone docks 10/24). Steep-low-dive terrain contacts ~5.5% under damping_only at every set -> AI-38. Nits left: dead reports/*.csv.import files, OUTCOMES copy of LandingWorld.Outcome, CSV header drift test."
   },
   {
     "id": "AI-07",
@@ -2505,7 +2508,7 @@
       " 05 AI-19"
     ],
     "status": "todo",
-    "acceptance_append": "; every ap_* flight block carries the 16 FlightGains keys of R0 B.12 A-67 with the AI-05 anchors and lift_max_frac / lift_min_time_s (A-67); AiDriver reads think_period_ticks from the def instead of its constructor default (A-71)"
+    "acceptance_append": "; every ap_* flight block carries the 16 FlightGains keys of R0 B.12 A-67 with the AI-05 anchors and lift_max_frac / lift_min_time_s (A-67); AiDriver reads think_period_ticks from the def instead of its constructor default (A-71); adopt the single AI-06 damping_only recommended set (godot/test/tuning/recommended_gains.json) for every ap_* flight block (A-68)"
   },
   {
     "id": "AI-20",
@@ -7047,5 +7050,24 @@
     "pr": 60,
     "merged": "2026-10-20",
     "note": "System path RETURN-only, own team, no rate token; marker Command.target == -1; class table not in S4. Review nits: SC-12 PATROL-behind-RETURN check, exact reject codes, inactive-slot system test."
+  },
+  {
+    "id": "AI-38",
+    "title": "sim/steer: FlightController damping_only fixes from the AI-06 sweep: throttle floor for weight support, speed-dependent lift in the pull-up budget",
+    "lane": "sim/steer",
+    "tier": "Opus",
+    "size_days": 1,
+    "depends_on": [
+      "AI-06"
+    ],
+    "milestone": "M2",
+    "acceptance": "gain_sweep with the recommended set: damping_only steep low dives terrain contacts <= 1 % of 200 (was ~5.5 %), landings still 200/200 docked, step responses within A-68 under both lift models; no throttle-at-0 run longer than the weight-support floor allows in landing_failures.csv",
+    "docs": [
+      "05 s5.2",
+      "R0 B.12 A-67, A-68",
+      "godot/test/tuning/README"
+    ],
+    "status": "todo",
+    "note": "Follow-up from AI-06 PR #64."
   }
 ]
