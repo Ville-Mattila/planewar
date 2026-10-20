@@ -61,4 +61,4 @@ func cells(anchor: int, w: int, h: int, rotation: int) -> PackedInt32Array;  fun
 
 ## Tests
 
-`godot/test/unit/sim/build/test_build.gd`: every Reject, cross-edge and corner footprints, Outpost presence and spacing, rotation, determinism, `place`. `godot/test/unit/sim/build/test_construction.gd`: B7-B9, S12 on real sites, S4 mid-construction.
+`godot/test/unit/sim/build/test_build.gd`: every Reject (PREREQ is team-wide, alive and finished: GD-16), cross-edge and corner footprints, Outpost presence and spacing, rotation, determinism, `place`. `godot/test/unit/sim/build/test_construction.gd`: B7-B9, S12 on real sites, S4 mid-construction.

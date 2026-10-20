@@ -86,7 +86,7 @@ func test_produce_checks_owner_shape_cap_and_cost() -> void:
 	assert_int(_code(w, Command.produce(0, yard, dart, 1))).is_equal(C.ACCEPTED)
 	assert_int(_code(w, Command.produce(2, yard, dart, 1))).is_equal(C.ACCEPTED)            # queues are team-shared (02 s6.4)
 	assert_int(_code(w, Command.produce(0, enemy_yard, dart, 1))).is_equal(C.REJECTED_NOT_OWNER)
-	assert_int(_code(w, Command.produce(0, yard, bomber, 1))).is_equal(C.REJECTED_NO_RIGHTS)     # needs a Hangar
+	assert_int(_code(w, Command.produce(0, yard, bomber, 1))).is_equal(C.REJECTED_PREREQ)     # needs a Hangar
 	assert_int(_code(w, Command.produce(0, yard, dart, 0))).is_equal(C.REJECTED_MALFORMED)
 	assert_int(_code(w, Command.produce(0, yard, WorldTestKit.def_id(&"pad"), 1))).is_equal(C.REJECTED_MALFORMED)
 	var pool: Vector2i = w.economy().economy.stockpile(0)

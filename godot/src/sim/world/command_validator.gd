@@ -189,7 +189,7 @@ func _check_produce(cmd: Command) -> int:
 	if not _commander(cmd.player):
 		return CommandResult.Code.REJECTED_NO_RIGHTS
 	if not TeamStats.tech_available(_store, _defs, _players.team[cmd.player], d):
-		return CommandResult.Code.REJECTED_NO_RIGHTS
+		return CommandResult.Code.REJECTED_PREREQ   # A-79.4: "requires Hangar" for the HUD
 	var units: int = TeamStats.count_owned(_store, cmd.player, _store.ships) + TeamStats.count_owned(_store, cmd.player, _store.ground)
 	if units + n > _rules.caps.units or (production != null and production.length(EntityId.slot(cmd.target)) + n > qmax):
 		return CommandResult.Code.REJECTED_CAP   # S13: queue_max items per queue

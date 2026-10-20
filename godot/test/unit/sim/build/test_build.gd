@@ -76,6 +76,24 @@ func test_prereq_missing_structure() -> void:
 	assert_int(_place(&"outpost", 1000.0)).is_equal(Build.Reject.PREREQ)
 
 
+## GD-16 / 02 s6.2 rule 1: the prerequisite is team-wide and alive: a teammate's finished structure counts, an enemy's,
+## an unfinished site and a dead one do not (B1).
+func test_prereq_is_team_wide_alive_and_finished() -> void:
+	_players.active[2] = 1
+	_players.team[2] = 0
+	var site: int = _spawn(&"shipyard", 0, _dir(100.0), 0.0, true)
+	assert_int(_place(&"outpost", 300.0)).is_equal(Build.Reject.PREREQ)            # a site is not a Shipyard
+	var _en: int = _spawn(&"shipyard", 1, _dir(5000.0), 0.0)
+	assert_int(_place(&"outpost", 300.0)).is_equal(Build.Reject.PREREQ)            # an enemy Shipyard is not ours
+	var mate: int = _spawn(&"shipyard", 0, _dir(150.0), 0.0)
+	_store.owner[mate] = 2                                                         # owned by a teammate
+	assert_int(_place(&"outpost", 300.0)).is_not_equal(Build.Reject.PREREQ)        # team-wide
+	var _freed: bool = _store.free_slot(mate, 0)
+	assert_int(_place(&"outpost", 300.0)).is_equal(Build.Reject.PREREQ)            # dead again
+	_store.flags[site] &= ~EntityStore.F_BUILDING
+	assert_int(_place(&"outpost", 300.0)).is_not_equal(Build.Reject.PREREQ)        # finished
+
+
 func test_prereq_unbuildable_def() -> void:
 	assert_int(_place(&"core", 300.0)).is_equal(Build.Reject.PREREQ)
 
