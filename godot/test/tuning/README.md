@@ -8,11 +8,15 @@ report, and the best gain set per model. Test code only: it reads `test/sim/ai/a
 ```sh
 python tools/gain_sweep.py --out reports/gain_sweep                  # full sweep, ~15-25 min on a laptop
 python tools/gain_sweep.py --out reports/quick --stages base,confirm --seeds 20   # smoke, seconds
-python tools/gain_sweep.py --summarise godot/test/tuning/reports                  # print a stored run
+python tools/gain_sweep.py --summarise godot/test/tuning/reports                  # print a stored run (or one sweep CSV)
+python tools/gain_sweep.py --given godot/test/tuning/recommended_gains.json --stages confirm --dive-leg-m 0   # A-88 replay (AI-39)
 "$GODOT_BIN" --headless --path godot res://test/tuning/gain_sweep.tscn -- --out=/abs/dir [options]
 ```
 
-Run `--import` once on a fresh checkout (the wrapper does it with `--import`).
+Run `--import` once on a fresh checkout (the wrapper does it with `--import`). Every flag of the scene's usage line
+(`gain_sweep.gd`) is forwarded by the wrapper; `--dive-leg-m` and `--given` (AI-39) are two of them. `--summarise`
+prints the AI-38 columns (`dive_unrecoverable`, `dive_hits_recoverable`, `land_thrust_zero_*`) and prints `n/a` for a
+run whose CSV predates them (the committed `reports/sweep.csv` is the AI-06 layout).
 
 ## What is measured per candidate
 
