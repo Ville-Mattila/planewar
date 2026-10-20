@@ -341,3 +341,82 @@ func _cv(a: PackedFloat64Array) -> float:
 	for x: float in a:
 		s += (x - m) * (x - m)
 	return sqrt(s / float(a.size())) / m
+
+
+## TA-55: moves every entity by `dx` along +Y (the stub keeps positions in a Dictionary).
+func _shift_all(v: StubSimView, dx: float) -> void:
+	for id: int in v.ids:
+		v.positions[id] = (v.positions[id] as Vector3) + Vector3(0.0, dx, 0.0)
+
+
+## TA-55: the tick frame commits half the poses; once the tail frame ran, every view sits exactly where an unstaggered read puts it.
+func test_staggered_read_settles_to_the_interpolated_pose() -> void:
+	var pool: EntityViewPool = _pool(_cfg(300))
+	var v: StubSimView = StubSimView.new()
+	_fill(v, 200, NEAR_M)
+	pool.sync(v, 0.0)
+	pool.sync(v, 0.0)
+	var before: Dictionary = {}
+	for id: int in v.ids:
+		before[id] = v.positions[id]
+	v.advance()
+	_shift_all(v, 10.0)
+	var rt: float = 1.5 / pool.tick_hz
+	pool.sync(v, rt)   # tick frame: tail pending
+	pool.sync(v, rt)   # tail frame: settled
+	var alpha: float = clampf(rt * pool.tick_hz - float(v.tick() - 1), 0.0, 1.0)
+	for id: int in v.ids:
+		var want: Vector3 = (before[id] as Vector3).lerp(v.positions[id], alpha)
+		assert_vector(pool.view_for(id).position).is_equal_approx(want, Vector3(1.0e-3, 1.0e-3, 1.0e-3))
+
+
+## TA-55: on the tick frame an entity whose pose is not yet read draws at its old current pose (no pop), then moves on.
+func test_staggered_tail_entities_do_not_pop_on_the_tick_frame() -> void:
+	var pool: EntityViewPool = _pool(_cfg(300))
+	var v: StubSimView = StubSimView.new()
+	_fill(v, 200, NEAR_M)
+	pool.sync(v, 0.0)
+	pool.sync(v, 0.0)
+	var last: int = v.ids[199]
+	var start: Vector3 = v.positions[last]
+	v.advance()
+	_shift_all(v, 10.0)
+	pool.sync(v, 1.0 / pool.tick_hz)   # alpha 0 of the new pair == old current pose
+	assert_vector(pool.view_for(last).position).is_equal_approx(start, Vector3(1.0e-3, 1.0e-3, 1.0e-3))
+	pool.sync(v, 1.5 / pool.tick_hz)
+	assert_float(pool.view_for(last).position.y - start.y).is_greater(1.0)
+
+
+## TA-55: no per-frame allocation: scratch capacities hold across many ticks at a steady n.
+func test_staggered_read_keeps_scratch_capacity_steady() -> void:
+	var pool: EntityViewPool = _pool(_cfg(300))
+	var v: StubSimView = StubSimView.new()
+	_fill(v, 200, NEAR_M)
+	pool.sync(v, 0.0)
+	pool.sync(v, 0.0)
+	var caps: Array[int] = [pool._pose_pos.size(), pool._pose_hi.size(), pool._d2.size()]
+	for k: int in 12:
+		v.advance()
+		pool.sync(v, float(k) / pool.tick_hz)
+		pool.sync(v, float(k) / pool.tick_hz)
+	assert_array([pool._pose_pos.size(), pool._pose_hi.size(), pool._d2.size()]).is_equal(caps)
+
+
+## TA-55: a tick that arrives before the tail ran (frame rate below the tick rate) reads everything at once and still settles.
+func test_tick_before_tail_reads_all_at_once() -> void:
+	var pool: EntityViewPool = _pool(_cfg(300))
+	var v: StubSimView = StubSimView.new()
+	_fill(v, 200, NEAR_M)
+	pool.sync(v, 0.0)
+	pool.sync(v, 0.0)
+	v.advance()
+	_shift_all(v, 10.0)
+	pool.sync(v, 1.0 / pool.tick_hz)   # staggered, tail pending
+	assert_bool(pool._tail_pending).is_true()
+	v.advance()
+	_shift_all(v, 10.0)
+	pool.sync(v, 2.0 / pool.tick_hz)   # new tick with the tail pending: full read
+	assert_bool(pool._tail_pending).is_false()
+	pool.sync(v, 3.0 / pool.tick_hz)
+	for id: int in v.ids:
+		assert_vector(pool.view_for(id).position).is_equal_approx(v.positions[id], Vector3(1.0e-3, 1.0e-3, 1.0e-3))

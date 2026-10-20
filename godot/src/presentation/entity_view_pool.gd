@@ -5,7 +5,7 @@ extends Node3D
 ## `sync(view, render_time)` draws every entity the viewer team sees: the nearest `view_cap` within their `_Far`
 ## switch distance get a pooled mesh node (nearest first, hysteresis-free: re-ranked per tick), the rest draw as
 ## `_Far` meshes through `FarPools`, and anything past the icon band as an `IconPool` glyph (~8 draws in total).
-## SimView is read once per sim tick (ids, then one `SimView.read_poses` bulk call, R0 B.11 A-56); between ticks the pool interpolates the last two ticks
+## SimView is read once per sim tick (ids, then `SimView.read_poses` bulk calls, R0 B.11 A-56, half on the tick frame and half on the next, TA-55); between ticks the pool interpolates the last two ticks
 ## with `render_time` (offline: LocalSimView; online: the same call over NetSimView, R0 C1-01). The possessed
 ## unit is driven by `set_local_override` every `_process` frame instead (R0 C1-07).
 ##
@@ -16,6 +16,8 @@ const MODE_FAR: int = 1
 const MODE_ICON: int = 2
 ## A bound view re-reads team and damage state every this many ticks (staggered by slot).
 const STATE_REFRESH_TICKS: int = 4
+## Fewer entities than this read in one frame.
+const STAGGER_MIN: int = 64
 const DEFAULT_TICK_HZ: float = 30.0
 const DEFAULT_PX_PER_M: float = 704.0   ## 1080 p, 75 degree vertical fov
 const FAR_CAPACITY: int = 1280          ## 03 s7.10 icon / far capacity, Standard profile
@@ -39,6 +41,12 @@ var _free: PackedInt32Array = PackedInt32Array()
 var _ids: PackedInt32Array = PackedInt32Array()
 var _pose_pos: PackedVector3Array = PackedVector3Array()   ## SimView.read_poses scratch, sized with _d2 (no per-frame allocation)
 var _pose_rot: PackedVector4Array = PackedVector4Array()
+var _pose_hi: PackedVector3Array = PackedVector3Array()   ## second-half scratch (TA-55)
+var _rot_hi: PackedVector4Array = PackedVector4Array()
+var _ids_lo: PackedInt32Array = PackedInt32Array()
+var _ids_hi: PackedInt32Array = PackedInt32Array()
+var _tail_pending: bool = false
+var _split: int = 0   ## entries at index >= _split have not had this tick's pose committed yet
 var _last_tick: int = -1
 var _frame: int = 0
 var _ov_id: int = EntityId.NULL_ID
@@ -119,6 +127,7 @@ func clear_local_override() -> void:
 ## Forces the next sync to re-read the SimView (viewer team change, world swap).
 func invalidate() -> void:
 	_last_tick = -1
+	_tail_pending = false
 
 
 func view_capacity() -> int:
@@ -146,6 +155,8 @@ func sync(view: SimView, render_time: float) -> void:
 	var tick: int = view.tick()
 	if tick != _last_tick:
 		_read_tick(view, tick)
+	elif _tail_pending:
+		_read_tail(view)
 	var alpha: float = clampf(render_time * tick_hz - float(tick - 1), 0.0, 1.0)
 	var threshold: float = _classify(alpha)
 	_draw(alpha, threshold)
@@ -164,7 +175,7 @@ func _classify(alpha: float) -> float:
 		var d2: float = 0.0
 		var mode: int = MODE_VIEW
 		if id != _ov_id:
-			d2 = cam_pos.distance_squared_to(_s_prev[s].lerp(_s_cur[s], alpha))
+			d2 = cam_pos.distance_squared_to(_s_prev[s].lerp(_s_cur[s], alpha if i < _split else 1.0))
 			var fd: float = _s_radius[s] * far_k
 			if d2 >= fd * fd:
 				mode = MODE_ICON if d2 >= icon_m2 else MODE_FAR
@@ -193,6 +204,7 @@ func _draw(alpha: float, threshold: float) -> void:
 		var s: int = EntityId.slot(id)
 		var mode: int = _mode[i]
 		var r: float = _s_radius[s]
+		var a: float = alpha if i < _split else 1.0
 		if mode == MODE_VIEW:
 			var v: EntityView = _bind(s, id) if _d2[i] <= threshold else null
 			if v != null:
@@ -202,11 +214,11 @@ func _draw(alpha: float, threshold: float) -> void:
 				if id == _ov_id:
 					_place(v, _ov_pos, _ov_basis, r)
 				else:
-					_place(v, _s_prev[s].lerp(_s_cur[s], alpha), Basis(_s_pq[s].slerp(_s_cq[s], alpha)), r)
+					_place(v, _s_prev[s].lerp(_s_cur[s], a), Basis(_s_pq[s].slerp(_s_cq[s], a)), r)
 				continue
 			mode = MODE_FAR
 		_unbind(s)
-		var p: Vector3 = _s_prev[s].lerp(_s_cur[s], alpha)
+		var p: Vector3 = _s_prev[s].lerp(_s_cur[s], a)
 		var col: Color = _wreck_color[_s_team[s]] if _s_wreck[s] != 0 else _team_color[_s_team[s]]
 		if mode == MODE_ICON:
 			var _i: bool = icons.add(p, IconPool.icon_size(r, cam_pos.distance_to(p), px_per_m), col, _classes.group_kind(_s_group[s]))
@@ -219,7 +231,10 @@ func _draw(alpha: float, threshold: float) -> void:
 	last_icons = icons.count
 
 
-## Reads ids and the new tick's pose into the per-slot cache; shifts cur -> prev.
+## Reads ids and the first half of the new tick's poses into the per-slot cache (shifts cur -> prev); the second half
+## follows in the next `sync` frame (`_read_tail`, TA-55). Entities not yet committed draw at alpha 1.0 of their old pair,
+## which is exactly where the new pair starts, so nothing pops. A tick that arrives while a tail is still pending
+## (frame rate below the tick rate) reads everything at once.
 func _read_tick(view: SimView, tick: int) -> void:
 	_last_tick = tick
 	_ids = view.visible_ids(viewer_team)
@@ -227,20 +242,65 @@ func _read_tick(view: SimView, tick: int) -> void:
 	if _d2.size() < n:
 		var _r13: int = _d2.resize(n + (n >> 1) + 16)
 		var _r14: int = _mode.resize(_d2.size())
-	if _pose_pos.size() < n:
-		var _r15: int = _pose_pos.resize(_d2.size())
-		var _r16: int = _pose_rot.resize(_d2.size())
-	var _alive: int = view.read_poses(_ids, _pose_pos, _pose_rot)
-	for i: int in n:
-		var id: int = _ids[i]
+	var split: int = n if (_tail_pending or n < STAGGER_MIN) else n >> 1
+	_tail_pending = split < n
+	_split = split
+	var _r17: int = _ids_lo.resize(split)
+	var _r18: int = _ids_hi.resize(n - split)
+	for i: int in split:
+		_ids_lo[i] = _ids[i]
+	for i: int in n - split:
+		_ids_hi[i] = _ids[split + i]
+	_grow_pose(split, n - split)
+	var _alive: int = view.read_poses(_ids_lo, _pose_pos, _pose_rot)
+	_commit(view, _ids_lo, _pose_pos, _pose_rot, tick)
+	if _tail_pending:
+		_prime_fresh(view)
+
+
+func _read_tail(view: SimView) -> void:
+	_tail_pending = false
+	_split = _ids.size()
+	var _alive: int = view.read_poses(_ids_hi, _pose_hi, _rot_hi)
+	_commit(view, _ids_hi, _pose_hi, _rot_hi, _last_tick)
+
+
+func _grow_pose(lo: int, hi: int) -> void:
+	if _pose_pos.size() < lo:
+		var _a1: int = _pose_pos.resize(lo + (lo >> 1) + 16)
+		var _a2: int = _pose_rot.resize(_pose_pos.size())
+	if _pose_hi.size() < hi:
+		var _a3: int = _pose_hi.resize(hi + (hi >> 1) + 16)
+		var _a4: int = _rot_hi.resize(_pose_hi.size())
+
+
+## New ids in the pending half: adopt now with a single settled pose.
+func _prime_fresh(view: SimView) -> void:
+	for i: int in _ids_hi.size():
+		var id: int = _ids_hi[i]
+		var s: int = EntityId.slot(id)
+		if _s_id[s] == id:
+			continue
+		_adopt(view, id, s)
+		var p: Vector3 = view.pos(id)
+		var q: Quaternion = Quaternion(view.basis(id))
+		_s_prev[s] = p
+		_s_cur[s] = p
+		_s_pq[s] = q
+		_s_cq[s] = q
+
+
+func _commit(view: SimView, ids: PackedInt32Array, pos: PackedVector3Array, rot: PackedVector4Array, tick: int) -> void:
+	for i: int in ids.size():
+		var id: int = ids[i]
 		var s: int = EntityId.slot(id)
 		var fresh: bool = _s_id[s] != id
 		if fresh:
 			_adopt(view, id, s)
 		elif (s + tick) % STATE_REFRESH_TICKS == 0:
 			_refresh_state(view, id, s)
-		var p: Vector3 = _pose_pos[i]
-		var rv: Vector4 = _pose_rot[i]
+		var p: Vector3 = pos[i]
+		var rv: Vector4 = rot[i]
 		var q: Quaternion = Quaternion(rv.x, rv.y, rv.z, rv.w)
 		_s_prev[s] = p if fresh else _s_cur[s]
 		_s_cur[s] = p
