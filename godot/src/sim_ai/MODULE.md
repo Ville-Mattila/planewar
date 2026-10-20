@@ -52,11 +52,15 @@ func phase(id: int, st: AiState) -> int
 func think(id: int, view: SimView, st: AiState) -> void      # pad validity / divert, one probe, busy / threat flags, bearing, claim
 func act(id: int, view: SimView, st: AiState, out: PilotInput) -> int   # LandingController.step into `out`; the brain drives it
 func select_pad(id: int, view: SimView, exclude: int, st: AiState) -> int   # 05 s5.5 score, fuel rejection, nearest fallback
+class_name AiClassTable extends RefCounted          # AI-37: def id -> class batch; ships then ground units in def order, NONE (255) for the rest
+const NONE: int
+static func from_content(c: ContentSet) -> PackedByteArray;  static func class_of(table: PackedByteArray, def_id: int) -> int
 class_name AiDriver extends SimAiHook              # AI-04
 func _init(rng: Rng = null, think_period_ticks: int = 10, cut_period_ticks: int = 15, bot_periods: PackedInt32Array = PackedInt32Array([90, 30, 30, 30])) -> void
 func think_period() -> int;  func set_offline_profile(lite: bool) -> void;  func set_cut_rung1(on: bool) -> void;  func ai_rng() -> Rng
 func set_brain(cls: int, brain: AiBrain, bot: bool = false) -> void;  func register(id: int, cls: int) -> bool;  func unregister(id: int) -> bool
-func wake(id: int, tick: int) -> bool;  func on_event(ev: SimEvent) -> void          # HIT wakes; DEATH unregisters and wakes hunters
+func wake(id: int, tick: int) -> bool;  func on_event(ev: SimEvent) -> void          # SPAWN registers by def class (AI-37, A-71); HIT wakes; DEATH unregisters and wakes hunters
+func set_class_table(table: PackedByteArray) -> void                         # AI-37: def id -> class byte (AiClassTable); empty: SPAWN registers nothing
 func schedule_bot(slot: int, tier: int) -> void;  func unschedule_bot(slot: int) -> void;  func bot_due(slot: int, tier: int, tick: int) -> bool
 func on_tick(tick: int, view: SimView, sink: CommandSinkBase) -> void;  func serialize() -> PackedByteArray;  func deserialize(bytes: PackedByteArray) -> void
 func stats() -> Dictionary;  func reset_stats() -> void                     # stats: + "overlay_ticks" (AI-08)

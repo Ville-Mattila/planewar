@@ -29,6 +29,7 @@ var _brains: Array[AiBrain] = []
 var _bot_slot: PackedInt32Array = PackedInt32Array()
 var _bot_tier: PackedInt32Array = PackedInt32Array()
 var _bot_brain: AiBrain = null
+var _class_table: PackedByteArray = PackedByteArray()   ## def id -> class (AiClassTable); empty: SPAWN registers nothing
 var _dead: PackedInt32Array = PackedInt32Array()
 var _stats_thinks: int = 0
 var _stats_bot_thinks: int = 0
@@ -129,10 +130,21 @@ func wake(id: int, tick: int) -> bool:
 	return true
 
 
-## Feeds one drained sim event: HIT on an AI entity wakes it; DEATH unregisters the dead and wakes whoever targeted it;
+## The def -> class table SPAWN registration reads (`AiClassTable.from_content`); the session sets it after `load_map`.
+## Empty (the default): SPAWN registers nothing, rigs call `register` themselves.
+func set_class_table(table: PackedByteArray) -> void:
+	_class_table = table
+
+
+## Feeds one drained sim event: SPAWN of an AI-driven def registers it in that def's class (A-71, AI-37); HIT on an AI
+## entity wakes it; DEATH unregisters the dead and wakes whoever targeted it;
 ## POSSESSED marks the entity for the per-tick release check (AI-08) and drops a running overlay.
 func on_event(ev: SimEvent) -> void:
-	if ev.kind == SimEvent.Kind.HIT:
+	if ev.kind == SimEvent.Kind.SPAWN:
+		var c: int = AiClassTable.class_of(_class_table, ev.b)
+		if c != AiClassTable.NONE:
+			var _r: bool = register(ev.a, c)
+	elif ev.kind == SimEvent.Kind.HIT:
 		var _w: bool = wake(ev.a, ev.tick)
 	elif ev.kind == SimEvent.Kind.POSSESSED:
 		var s: int = EntityId.slot(ev.a)

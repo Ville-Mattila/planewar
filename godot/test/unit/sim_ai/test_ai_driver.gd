@@ -238,3 +238,128 @@ func test_world_hook_bytes_round_trip() -> void:
 	a.step()
 	b.step()
 	assert_bool(a.serialize() == b.serialize()).is_true()
+
+
+# AI-37 (R0 B.12 A-71): SPAWN registers a unit in its def's class, DEATH unregisters; driven through SimWorld.step.
+const _MIX: Array[StringName] = [&"dart", &"lancer", &"bomber", &"scout", &"hauler", &"harvester", &"siege_crawler"]
+
+var _world: SimWorld = null
+
+
+func _mixed_world(d: AiDriver, n: int) -> PackedInt32Array:
+	var w: SimWorld = WorldTestKit.world(37)
+	w.set_ai_hook(d)
+	d.set_class_table(AiClassTable.from_content(WorldTestKit.content()))
+	for k: int in n:
+		var def: StringName = _MIX[k % _MIX.size()]
+		var p: int = k % 3
+		var alt: float = 300.0 + 60.0 * float(k) if k % _MIX.size() < 5 else 0.0
+		var pos: Vector3 = WorldTestKit.at(alt, 40.0 * float(k))
+		var c: Command = CommandPayload.debug_spawn(p, WorldTestKit.def_id(def), p, 1 if p == 1 else 0, pos, Vector3.ZERO, Vector3(0, 1, 0))
+		assert_int(w.apply_command(c).code).is_equal(CommandResult.Code.ACCEPTED)
+	_world = w
+	var ids: PackedInt32Array = PackedInt32Array()
+	w.step()
+	for e: SimEvent in w.drain_events():
+		if e.kind == SimEvent.Kind.SPAWN:
+			var _a: bool = ids.push_back(e.a)
+	return ids
+
+
+func test_class_table_maps_ships_then_ground_and_skips_structures() -> void:
+	var t: PackedByteArray = AiClassTable.from_content(WorldTestKit.content())
+	for k: int in _MIX.size():
+		assert_int(AiClassTable.class_of(t, WorldTestKit.def_id(_MIX[k]))).is_equal(k)
+	assert_int(AiClassTable.class_of(t, DefRanges.STRUCTURE_BASE)).is_equal(AiClassTable.NONE)
+	assert_int(AiClassTable.class_of(t, -1)).is_equal(AiClassTable.NONE)
+	assert_int(AiClassTable.class_of(PackedByteArray(), 3)).is_equal(AiClassTable.NONE)
+
+
+func test_spawn_registers_50_mixed_units_in_their_class_and_death_unregisters() -> void:
+	var d: AiDriver = AiDriver.new(Rng.new(37))
+	var ids: PackedInt32Array = _mixed_world(d, 50)
+	assert_int(ids.size()).is_equal(50)
+	assert_int(d.state.registered_count()).is_equal(0)         # events reach the hook at step 3 of the next tick
+	_world.step()
+	var _ev: Array[SimEvent] = _world.drain_events()
+	assert_int(d.state.registered_count()).is_equal(50)
+	var per: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 0, 0, 0])
+	for k: int in ids.size():
+		var s: int = EntityId.slot(ids[k])
+		assert_int(d.state.eid[s]).is_equal(ids[k])
+		assert_int(d.state.cls[s]).is_equal(k % _MIX.size())
+		per[d.state.cls[s]] += 1
+	assert_int(per[0]).is_equal(8)
+	assert_int(per[6]).is_equal(7)
+	var left: PackedInt32Array = ids.duplicate()      # the 04 s11.3 bucket spaces 50 + 50 commands out over a few ticks
+	var guard: int = 0
+	while not left.is_empty() and guard < 120:
+		var rest: PackedInt32Array = PackedInt32Array()
+		for k: int in left.size():
+			var kill: Command = CommandPayload.debug_set(EntityId.slot(left[k]) % 3, left[k], CommandPayload.SET_KILL, 0.0)
+			if _world.apply_command(kill).code != CommandResult.Code.ACCEPTED:
+				var _p: bool = rest.push_back(left[k])
+		left = rest
+		_world.step()
+		var _e2: Array[SimEvent] = _world.drain_events()
+		guard += 1
+	for _t: int in 3:
+		_world.step()
+		var _e3: Array[SimEvent] = _world.drain_events()
+	assert_int(d.state.registered_count()).is_equal(0)
+
+
+func test_possessed_unit_stays_registered_and_is_skipped() -> void:
+	var d: AiDriver = AiDriver.new(Rng.new(38), 10, 10)
+	var cb: AiTestKit.CountBrain = AiTestKit.CountBrain.new()
+	for c: int in 7:
+		d.set_brain(c, cb)
+	var ids: PackedInt32Array = _mixed_world(d, 7)
+	var dart: int = ids[0]
+	var lancer: int = ids[1]
+	assert_int(_world.apply_command(Command.possess(0, dart)).code).is_equal(CommandResult.Code.ACCEPTED)
+	for _t: int in 60:
+		_world.step()
+		var _e: Array[SimEvent] = _world.drain_events()
+	assert_int(d.state.registered_count()).is_equal(7)
+	assert_int(cb.thinks[EntityId.slot(dart)]).is_equal(0)
+	assert_int(cb.thinks[EntityId.slot(lancer)]).is_greater(0)
+
+
+func test_spawn_registration_is_deterministic_and_empty_table_registers_nothing() -> void:
+	var a: AiDriver = AiDriver.new(Rng.new(5))
+	var _ia: PackedInt32Array = _mixed_world(a, 20)
+	_world.step()
+	var wa: SimWorld = _world
+	var b: AiDriver = AiDriver.new(Rng.new(5))
+	var _ib: PackedInt32Array = _mixed_world(b, 20)
+	_world.step()
+	assert_bool(a.serialize() == b.serialize()).is_true()
+	assert_bool(wa.serialize() == _world.serialize()).is_true()
+	var e: AiDriver = AiDriver.new(Rng.new(5))
+	var spawn: SimEvent = SimEvent.new()
+	spawn.kind = SimEvent.Kind.SPAWN
+	spawn.a = EntityId.make(3, 1)
+	spawn.b = WorldTestKit.def_id(&"dart")
+	e.on_event(spawn)
+	assert_int(e.state.registered_count()).is_equal(0)
+
+
+# S4: a world saved between a SPAWN and its forwarding registers the unit after restore exactly as the original does.
+func test_spawn_registration_survives_save_and_restore() -> void:
+	var a: AiDriver = AiDriver.new(Rng.new(9))
+	var ids: PackedInt32Array = _mixed_world(a, 12)
+	var wa: SimWorld = _world
+	var b: AiDriver = AiDriver.new(Rng.new(9))
+	b.set_class_table(AiClassTable.from_content(WorldTestKit.content()))
+	var wb: SimWorld = SimWorld.deserialize(wa.serialize(), WorldTestKit.content(), b)
+	assert_object(wb).is_not_null()
+	for _t: int in 5:
+		wa.step()
+		wb.step()
+		assert_bool(wa.serialize() == wb.serialize()).is_true()
+		var _ea: Array[SimEvent] = wa.drain_events()
+		var _eb: Array[SimEvent] = wb.drain_events()
+	assert_int(a.state.registered_count()).is_equal(ids.size())
+	assert_int(b.state.registered_count()).is_equal(ids.size())
+	assert_bool(a.serialize() == b.serialize()).is_true()
