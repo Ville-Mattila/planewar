@@ -89,7 +89,7 @@ Emits HIT (target, attacker, damage as value, target team), BOMB_IMPACT (attacke
 
 ## Test entry points
 
-`godot/test/unit/sim/combat/test_combat_rules.gd` (CB1-CB3, roll distribution, doctrine fold), `godot/test/unit/sim/combat/test_combat_world.gd` (every rule through `SimWorld.step`, scenario C-09), `godot/test/unit/sim/combat/test_combat_determinism.gd` (CB1, S4 resume), `godot/test/unit/sim/combat/test_weapon_fire.gd` (CB10-CB13: 10 rps, ammo and empty, bombs, load-out, bursts, unsupplied 50 %, salvo, lock timing), `godot/test/unit/sim/combat/test_fuses.gd` (CB14), `godot/test/unit/sim/combat/test_fire_determinism.gd` (CB1 with spread, S4 mid-lock / mid-burst, fire-state bytes); fixtures `fire_test_kit.gd`.
+`godot/test/unit/sim/combat/test_combat_rules.gd` (CB1-CB3, roll distribution, doctrine fold), `godot/test/unit/sim/combat/test_combat_world.gd` (every rule through `SimWorld.step`, scenario C-09), `godot/test/unit/sim/combat/test_combat_determinism.gd` (CB1, S4 resume), `godot/test/unit/sim/combat/test_weapon_fire.gd` (CB10-CB13: 10 rps, ammo and empty, bombs, load-out, bursts, unsupplied 50 %, salvo, lock timing), `godot/test/unit/sim/combat/test_seeker_scan.gd` (SeekerScan score), `godot/test/unit/sim/combat/test_fuses.gd` (CB14), `godot/test/unit/sim/combat/test_fire_determinism.gd` (CB1 with spread, S4 mid-lock / mid-burst, fire-state bytes); fixtures `fire_test_kit.gd`.
 
 ## How to add X (recipes for the cheapest tier)
 

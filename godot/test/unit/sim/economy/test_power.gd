@@ -51,12 +51,14 @@ func test_plateau_membership_uses_the_arc_radius() -> void:
 func test_plateau_raises_a_solar_array_supply_in_the_world() -> void:
 	var w: SimWorld = K.solo_world()
 	var e: Economy = w.economy().economy
-	var _a: int = WorldTestKit.spawn(w, &"shipyard", 0, 0, Vector3(0.0, 0.0, R))
-	var _b: int = WorldTestKit.spawn(w, &"solar_array", 0, 0, Vector3(0.0, 0.0, R))   # north pole: factor 1
-	var base: float = e.power_ratio(0)
+	var _a: int = WorldTestKit.spawn(w, &"shipyard", 0, 0, Vector3(0.0, R, 0.0))
+	var _a2: int = WorldTestKit.spawn(w, &"shipyard", 0, 0, Vector3(0.0, R, 200.0))      # demand 20 + 20
+	var _b: int = WorldTestKit.spawn(w, &"solar_array", 0, 0, Vector3(0.0, 0.0, R))      # north pole: factor 1
+	assert_float(e.power_ratio(0)).is_equal_approx(32.0 / 40.0, 0.0001)                  # 0.8 without the Plateau
 	e.set_plateaus(PackedVector3Array([Vector3.BACK]))
-	assert_float(e.power_ratio(0)).is_greater_equal(base)
-	assert_float(e.power_ratio(0)).is_less_equal(1.0)
+	assert_float(e.power_ratio(0)).is_equal_approx((20.0 + 12.0 * 1.5) / 40.0, 0.0001)   # 0.95 on it
+	e.set_plateaus(PackedVector3Array([Vector3.FORWARD]))                                # a Plateau elsewhere: back to 0.8
+	assert_float(e.power_ratio(0)).is_equal_approx(32.0 / 40.0, 0.0001)
 
 
 # --- moving sun ------------------------------------------------------------------------------------------------
@@ -187,17 +189,25 @@ func test_low_power_wire_round_trip() -> void:
 
 func test_s4_round_trip_with_a_moving_sun_and_determinism() -> void:
 	var r: MatchRules = WorldTestKit.rules()
-	r.sun_period_s = 120.0
+	r.sun_period_s = 120.0                                            # sun on the horizon at t = 30 s (tick 900)
+	var hz: int = r.tick_hz
 	var a: SimWorld = K.solo_world(true, 7, r)
 	var b: SimWorld = K.solo_world(true, 7, r)
 	for w: SimWorld in [a, b]:
 		var _s: int = WorldTestKit.spawn(w, &"solar_array", 0, 0, Vector3(0.0, 0.0, R))
-		var _y: int = WorldTestKit.spawn(w, &"shipyard", 0, 0, Vector3(0.0, R, 0.0))
-	var _x1: Array[SimEvent] = K.run(a, 1000)
-	var _x2: Array[SimEvent] = K.run(b, 1000)
+		var _y: int = WorldTestKit.spawn(w, &"shipyard", 0, 0, Vector3(0.0, R, 0.0))   # demand 30
+	var _x1: Array[SimEvent] = K.run(a, 25 * hz - a.tick())
+	var _x2: Array[SimEvent] = K.run(b, 25 * hz - b.tick())
 	assert_bool(a.serialize() == b.serialize()).is_true()
 	var copy: SimWorld = SimWorld.deserialize(a.serialize(), WorldTestKit.content(), null)
-	assert_bool(copy.serialize() == a.serialize()).is_true()
-	var _x3: Array[SimEvent] = K.run(a, 400)
-	var _x4: Array[SimEvent] = K.run(copy, 400)
+	assert_bool(copy.serialize() == a.serialize()).is_true()          # snapshot before the terminator crossing
+	for w: SimWorld in [a, b, copy]:
+		var _x3: Array[SimEvent] = K.run(w, 30 * hz - 1 - w.tick())
+		assert_float(w.economy().economy.power_ratio(0)).is_equal_approx(1.0, 0.0001)   # still lit one tick before
+		var _x4: Array[SimEvent] = K.run(w, 1)
+		assert_float(w.economy().economy.power_ratio(0)).is_equal_approx((20.0 + 12.0 * 0.5) / 30.0, 0.01)   # crossing tick
+	var _x5: Array[SimEvent] = K.run(a, 300)
+	var _x6: Array[SimEvent] = K.run(b, 300)
+	var _x7: Array[SimEvent] = K.run(copy, 300)
+	assert_bool(a.serialize() == b.serialize()).is_true()
 	assert_bool(copy.serialize() == a.serialize()).is_true()
