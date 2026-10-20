@@ -7174,5 +7174,24 @@
     ],
     "status": "todo",
     "note": "Found 2026-10-20 by UX-03 #73 CI and main run on 645b064 (act mean 12.7 / p95 13.0 us)."
+  },
+  {
+    "id": "AI-41",
+    "title": "sim/steer: AI-38 review-round code changes (5961ff9 perf rework, 94c0272 floor guard) changed speed_scaled landing output vs the committed reports/ai38 CSVs (ded8b4e), contrary to the PR's 'identical apart from wall time' claim; find the cause, fix if unintended, re-baseline reports/ai38",
+    "lane": "sim/steer",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-38",
+      "AI-39"
+    ],
+    "milestone": "M2",
+    "acceptance": "The divergence (speed_scaled recommended-set best row: score 2.525 vs 3.165, land_thrust_zero_run_max 246 vs 179, median gate-to-dock 24.8 vs 30.6 s) is bisected to a specific change and explained; if unintended, track_velocity output equals the ded8b4e math bit for bit on an equivalence test covering speed_scaled; reports/ai38 regenerated at the final code with the AI-39 wrapper and the AI-38 acceptance rows still pass (0/183 recoverable contacts, landings 200/200, steps within A-68); track_velocity CI cost stays <= the 6 us act row",
+    "docs": [
+      "R0-amendments-08 A-88..A-90",
+      "godot/test/tuning/README.md"
+    ],
+    "status": "todo",
+    "note": "Found by AI-39 #79 reproduction 2026-10-20; deterministic (two identical reruns at HEAD)."
   }
 ]
