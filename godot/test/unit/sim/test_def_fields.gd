@@ -72,6 +72,7 @@ func test_structure_bomb_mult_scales_the_bomb_damage_on_a_structure() -> void:
 func _flak_burst_ticks() -> PackedInt32Array:
 	var w: SimWorld = CombatTestKit.world()
 	var flak: int = CombatTestKit.spawn(w, &"flak_battery", 1, 1, _at(0.0))
+	CombatTestKit.power(w, 1, 1)
 	var _t: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(400.0, 600.0))
 	FireTestKit.hook(w).hold(flak, PilotInput.FIRE1)
 	w.step()
@@ -98,6 +99,7 @@ func test_fuse_delay_s_moves_the_flak_burst_tick() -> void:
 func _unsupplied_spent(ticks: int) -> int:
 	var w: SimWorld = CombatTestKit.world()
 	var cut: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0))
+	CombatTestKit.power(w, 1, 1)
 	FireTestKit.combat(w).fire.unsupplied[EntityId.slot(cut)] = 1
 	FireTestKit.hook(w).hold(cut, PilotInput.FIRE1)
 	var s: int = EntityId.slot(cut)
@@ -156,6 +158,7 @@ func _fight() -> SimWorld:
 	var flak: int = CombatTestKit.spawn(w, &"flak_battery", 1, 1, _at(0.0))
 	var cut: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0, 0.0, 300.0))
 	var _t: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(400.0, 600.0))
+	CombatTestKit.power(w, 1, 1)
 	FireTestKit.combat(w).fire.unsupplied[EntityId.slot(cut)] = 1
 	var hook: FireTestKit.TriggerHook = FireTestKit.hook(w)
 	hook.hold(flak, PilotInput.FIRE1)
