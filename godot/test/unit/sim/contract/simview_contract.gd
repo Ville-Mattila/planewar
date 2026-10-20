@@ -90,6 +90,7 @@ func _vitals() -> void:
 	_t(&"control_state", _v.control_state(s.a) == SimViewScene.CONTROL and _v.control_state(s.dead) == 0)
 	_t(&"possessor", _v.possessor(s.a) == 0 and _v.possessor(s.b) == -1 and _v.possessor(s.dead) == -1)
 	_t(&"ai_tag", _v.ai_tag(s.a) == SimViewScene.AI_TAG and _v.ai_tag(s.b) == 0 and _v.ai_tag(s.dead) == 0)
+	_t(&"overlay", _v.overlay(s.a) == SimViewScene.OVERLAY and _v.overlay(s.b) == 0 and _v.overlay(s.dead) == 0)
 	_t(&"cargo", _near(_v.cargo(s.a), SimViewScene.CARGO) and _v.cargo(s.b) == 0.0 and _v.cargo(s.dead) == 0.0)
 	_t(&"cargo_kind", _v.cargo_kind(s.a) == SimViewScene.CARGO_KIND and _v.cargo_kind(s.b) == 0 and _v.cargo_kind(s.dead) == 0)
 	_t(&"link", _v.link(s.c) == s.pad and _v.link(s.a) == 0 and _v.link(s.dead) == 0)

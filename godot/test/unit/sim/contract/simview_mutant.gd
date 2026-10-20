@@ -193,6 +193,10 @@ func path_grid_version(_face: int) -> int:
 	return _i(&"path_grid_version", _inner.path_grid_version(_face))
 
 
+func overlay(id: int) -> int:
+	return _i(&"overlay", _inner.overlay(id))
+
+
 func stockpile_cap(_team: int) -> Vector2i:
 	return _v2i(&"stockpile_cap", _inner.stockpile_cap(_team))
 

@@ -11,6 +11,7 @@ const BOMBS: int = 3
 const ROCKETS: int = 2
 const CONTROL: int = 5
 const AI_TAG: int = 4
+const OVERLAY: int = 2              ## ControlMachine.Overlay.RECOVER_CEILING (sim/MODULE.md)
 const CARGO: float = 12.5
 const CARGO_KIND: int = 1
 const HP01: float = 0.5
@@ -70,6 +71,7 @@ func _script_state() -> void:
 	st.rockets[sa] = ROCKETS
 	st.control_state[sa] = CONTROL
 	st.ai_tag[sa] = AI_TAG
+	st.overlay[sa] = OVERLAY
 	st.cargo[sa] = CARGO
 	st.cargo_kind[sa] = CARGO_KIND
 	st.possessor[sa] = 0
