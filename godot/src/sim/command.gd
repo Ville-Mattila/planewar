@@ -25,7 +25,7 @@ static func order(_player: int, ids: PackedInt32Array, spec: OrderSpec) -> Comma
 	var n: int = ids.size()
 	var b: PackedByteArray = PackedByteArray()
 	var esc: bool = spec.kind == OrderSpec.Kind.ESCORT
-	var base: int = 9 + 4 * n + 24 * pts.size()
+	var base: int = OrderSpec.WIRE_HEADER_BYTES + 4 * n + 24 * pts.size()
 	var _r: int = b.resize(base + (OrderSpec.ESCORT_TRAILER_BYTES if esc else 0))
 	b.encode_u8(0, spec.kind)
 	b.encode_u8(1, spec.flags)
@@ -34,9 +34,9 @@ static func order(_player: int, ids: PackedInt32Array, spec: OrderSpec) -> Comma
 	for i: int in n:
 		b.encode_u32(4 + 4 * i, ids[i])
 	b.encode_u32(4 + 4 * n, spec.target)
-	b.encode_u8(8 + 4 * n, pts.size())
+	b.encode_u8(OrderSpec.WIRE_HEADER_BYTES - 1 + 4 * n, pts.size())
 	for k: int in pts.size():
-		_put_v3(b, 9 + 4 * n + 24 * k, pts[k])
+		_put_v3(b, OrderSpec.WIRE_HEADER_BYTES + 4 * n + 24 * k, pts[k])
 	if esc:
 		b.encode_u8(base, spec.escort_mode)
 		b.encode_u8(base + 1, OrderSpec.ESCORT_SLOT_NONE_WIRE if spec.escort_slot < 0 else spec.escort_slot)

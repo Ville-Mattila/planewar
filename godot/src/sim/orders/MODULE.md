@@ -23,7 +23,7 @@ enum HaulMode { FERRY = 0, TOW = 1, CAPTURE = 2 }
 enum EscortMode { FORM = 0, FOCUS = 1, BREAK = 2 }                           # SL-2
 const FLAG_QUEUE := 1; const FLAG_PREPEND := 2; const FLAG_LOW := 4; const FLAGS_CLIENT := 5   # PREPEND is system-only
 const KIND_COUNT := 12; const KIND_RESERVED_FIRST := 10; const KIND_NAMES: PackedStringArray   # lower-case JSON names by ordinal
-const WIRE_HEADER_BYTES := 8; const WIRE_MAX_BYTES := 256; const WIRE_MAX_POINTS := 16; const WIRE_MAX_IDS := 32; const ESCORT_TRAILER_BYTES := 6; const ESCORT_SLOT_NONE_WIRE := 0xFF   # 04 s2.5 ORDER layout
+const WIRE_HEADER_BYTES := 9; const WIRE_MAX_BYTES := 256; const WIRE_MAX_POINTS := 16; const WIRE_MAX_IDS := 32; const ESCORT_TRAILER_BYTES := 6; const ESCORT_SLOT_NONE_WIRE := 0xFF   # 04 s2.5 ORDER layout
 var kind: Kind; var target: int; var point: Vector3; var points: PackedVector3Array
 var haul_mode: HaulMode; var escort_slot: int; var focus: int; var escort_mode: EscortMode   # escort_* = SL-2 (08), -1 / 0 / FORM by default
 var flags: int; var issuer: int; var issue_tick: int; var progress: int
@@ -111,6 +111,6 @@ Not on the tick path by itself: calls happen on commands and brain completions. 
 
 ## Open items
 
-- NET-04 / NET-16: ORDER codec and `ProtocolValidator` call `OrderRules.validate`. 04 s2.5 says a 32-id selection carries at most 14 points; the arithmetic of its own formula gives 15 (8 + 128 + 120 = 256). `fits_wire` follows the formula.
+- NET-04 / NET-16: ORDER codec and `ProtocolValidator` call `OrderRules.validate`. The wire header is 9 bytes (04 s2.5 field list; R0 B.16 A-91 corrects the printed `8 +`): a 32-id selection carries at most 14 points (249 B), 15 is refused (257 B); a 32-id ESCORT is 143 B.
 - Content: `OrderRulesDef` could expose typed fields instead of `raw`.
 - AI-15: ORDER intake in SimWorld (apply to the queue, `REJECTED_*` mapping, ghost-age and visibility checks).

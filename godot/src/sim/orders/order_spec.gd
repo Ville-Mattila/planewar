@@ -21,7 +21,7 @@ const KIND_RESERVED_FIRST: int = 10
 const KIND_NAMES: PackedStringArray = ["move", "patrol", "attack", "escort", "harvest_here", "haul", "return", "hold",
 		"guard", "supply_drop", "patrol_route", "attack_via"]
 ## 04 s2.5 ORDER layout: 8 bytes of header, 4 per id, 8 per point; at most 256 bytes.
-const WIRE_HEADER_BYTES: int = 8
+const WIRE_HEADER_BYTES: int = 9
 const WIRE_MAX_BYTES: int = 256
 const WIRE_MAX_POINTS: int = 16
 const WIRE_MAX_IDS: int = 32
