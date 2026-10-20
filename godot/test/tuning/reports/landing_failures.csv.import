@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dt0i86edrvnsk"
+
+[deps]
+
+files=["res://test/tuning/reports/landing_failures.cand.translation", "res://test/tuning/reports/landing_failures.seed.translation", "res://test/tuning/reports/landing_failures.eval.translation", "res://test/tuning/reports/landing_failures.outcome.translation", "res://test/tuning/reports/landing_failures.gate.translation", "res://test/tuning/reports/landing_failures.go.translation", "res://test/tuning/reports/landing_failures.scrapes.translation", "res://test/tuning/reports/landing_failures.phase.translation", "res://test/tuning/reports/landing_failures.speed.translation", "res://test/tuning/reports/landing_failures.agl.translation", "res://test/tuning/reports/landing_failures.thrust.translation", "res://test/tuning/reports/landing_failures.thrust.translation", "res://test/tuning/reports/landing_failures.td.translation", "res://test/tuning/reports/landing_failures.td.translation", "res://test/tuning/reports/landing_failures.td.translation"]
+
+source_file="res://test/tuning/reports/landing_failures.csv"
+dest_files=["res://test/tuning/reports/landing_failures.cand.translation", "res://test/tuning/reports/landing_failures.seed.translation", "res://test/tuning/reports/landing_failures.eval.translation", "res://test/tuning/reports/landing_failures.outcome.translation", "res://test/tuning/reports/landing_failures.gate.translation", "res://test/tuning/reports/landing_failures.go.translation", "res://test/tuning/reports/landing_failures.scrapes.translation", "res://test/tuning/reports/landing_failures.phase.translation", "res://test/tuning/reports/landing_failures.speed.translation", "res://test/tuning/reports/landing_failures.agl.translation", "res://test/tuning/reports/landing_failures.thrust.translation", "res://test/tuning/reports/landing_failures.thrust.translation", "res://test/tuning/reports/landing_failures.td.translation", "res://test/tuning/reports/landing_failures.td.translation", "res://test/tuning/reports/landing_failures.td.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

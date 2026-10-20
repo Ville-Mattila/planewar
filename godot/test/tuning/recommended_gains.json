@@ -1,0 +1,20 @@
+{
+	"_doc": "AI-06 recommended overrides on top of ai05_params.json 'flight' and ai09_params.json 'landing', per lift model (rounded from reports/best_gains.json; verified with gain_sweep --given at 200 landings + 200 dives + all-class steps, numbers in reports/verify.csv). 'damping_only' is also a safe default under speed_scaled (cross-check in the PR); 'speed_scaled' fails every landing under damping_only. Not applied anywhere: AI-19 decides what goes into autopilots.json. A-68 prefers one gain set for both models, so 'damping_only' is the candidate for that.",
+	"damping_only": {
+		"flight": {
+			"ki_path": 0.24, "ki_speed": 0.004, "kp_att": 3.6, "kp_speed": 0.025, "kp_turn_thrust": 2.5, "lead_max_deg": 128.0
+		},
+		"landing": {
+			"approach_min_speed_mps": 41.0, "glide_deg": 9.6, "kd_pos": 0.9, "sink_gain": 0.26
+		}
+	},
+	"speed_scaled": {
+		"flight": {
+			"ki_speed": 0.003, "kp_att": 6.3, "kp_speed": 0.025, "kp_turn_thrust": 2.3, "kp_yaw": 5.3, "lead_max_deg": 48.0
+		},
+		"landing": {
+			"kd_pos": 1.23, "kp_alt": 0.53, "kp_pos": 0.45, "sink_gain": 0.47, "transition_dist_m": 150.0,
+			"transition_exit_hspeed_mps": 17.0
+		}
+	}
+}

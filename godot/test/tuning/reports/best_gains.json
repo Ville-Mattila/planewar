@@ -1,0 +1,40 @@
+{
+	"damping_only": {
+		"flight": {
+			"ki_path": 0.24,
+			"ki_speed": 0.0040580718754897,
+			"kp_att": 3.6,
+			"kp_speed": 0.0245377428849456,
+			"kp_turn_thrust": 2.52813314778192,
+			"lead_max_deg": 128.0
+		},
+		"landing": {
+			"approach_min_speed_mps": 41.0405521927858,
+			"glide_deg": 9.62873905763239,
+			"kd_pos": 0.906552209676465,
+			"sink_gain": 0.264556842161414
+		},
+		"score": 6.16397942900658,
+		"score_under_speed_scaled": 3.65054501593113
+	},
+	"speed_scaled": {
+		"flight": {
+			"ki_speed": 0.00306345808459451,
+			"kp_att": 6.3425988804331,
+			"kp_speed": 0.0245377428849456,
+			"kp_turn_thrust": 2.32507066265326,
+			"kp_yaw": 5.33462185101504,
+			"lead_max_deg": 48.0
+		},
+		"landing": {
+			"kd_pos": 1.22682339905902,
+			"kp_alt": 0.534224900620373,
+			"kp_pos": 0.446061856514959,
+			"sink_gain": 0.472903972249138,
+			"transition_dist_m": 148.521197544361,
+			"transition_exit_hspeed_mps": 17.1751201676789
+		},
+		"score": 2.77614372596145,
+		"score_under_damping_only": 136.403016418219
+	}
+}
