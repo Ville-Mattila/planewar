@@ -24,17 +24,26 @@ static func read_order(cmd: Command, spec: OrderSpec, ids: PackedInt32Array) -> 
 	if n < 1 or n > ORDER_MAX_IDS or b.size() < 9 + 4 * n:
 		return false
 	var np: int = b.decode_u8(8 + 4 * n)
-	if np > ORDER_MAX_POINTS or b.size() != 9 + 4 * n + 24 * np:
-		return false
 	var k: int = b.decode_u8(0)
+	var esc: bool = k == OrderSpec.Kind.ESCORT
+	var base: int = 9 + 4 * n + 24 * np
+	if np > ORDER_MAX_POINTS or b.size() != base + (OrderSpec.ESCORT_TRAILER_BYTES if esc else 0):
+		return false
 	var hm: int = b.decode_u8(2)
 	if k >= OrderSpec.KIND_COUNT or hm > OrderSpec.HaulMode.CAPTURE:
+		return false
+	if esc and b.decode_u8(base) > OrderSpec.EscortMode.BREAK:
 		return false
 	spec.kind = k as OrderSpec.Kind
 	spec.flags = b.decode_u8(1)
 	spec.haul_mode = hm as OrderSpec.HaulMode
 	spec.target = b.decode_u32(4 + 4 * n)
 	spec.point = Vector3.ZERO
+	spec.escort_mode = OrderSpec.EscortMode.FORM
+	spec.escort_slot = -1
+	spec.focus = 0
+	if esc:
+		_read_escort_trailer(b, base, spec)
 	var _r: int = spec.points.resize(0)
 	var _s: int = ids.resize(n)
 	for i: int in n:
@@ -46,6 +55,13 @@ static func read_order(cmd: Command, spec: OrderSpec, ids: PackedInt32Array) -> 
 		elif q == 0:
 			spec.point = v
 	return true
+
+
+static func _read_escort_trailer(b: PackedByteArray, off: int, spec: OrderSpec) -> void:
+	spec.escort_mode = b.decode_u8(off) as OrderSpec.EscortMode
+	var sl: int = b.decode_u8(off + 1)
+	spec.escort_slot = -1 if sl == OrderSpec.ESCORT_SLOT_NONE_WIRE else sl
+	spec.focus = b.decode_u32(off + 2)
 
 
 ## Fills `out` from a PILOT_INPUT payload; false when short.

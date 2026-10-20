@@ -132,6 +132,32 @@ func test_order_validation() -> void:
 	assert_int(w.view().order_issuer(mate)).is_equal(0)
 
 
+func test_escort_order_round_trips_to_order_head() -> void:
+	var w: SimWorld = WorldTestKit.world()
+	var own: int = WorldTestKit.spawn(w, &"dart", 0, 0, WorldTestKit.at(500.0))
+	var leader: int = WorldTestKit.spawn(w, &"lancer", 0, 0, WorldTestKit.at(500.0, 60.0))
+	var foe: int = WorldTestKit.spawn(w, &"dart", 1, 1, WorldTestKit.at(500.0, 100.0))
+	var e: OrderSpec = OrderSpec.make(OrderSpec.Kind.ESCORT, leader)
+	e.escort_slot = 1
+	e.escort_mode = OrderSpec.EscortMode.FOCUS
+	e.focus = foe
+	assert_int(_code(w, Command.order(0, PackedInt32Array([own]), e))).is_equal(C.ACCEPTED)
+	w.step()
+	var head: OrderSpec = w.view().order_head(own)
+	assert_int(head.kind).is_equal(OrderSpec.Kind.ESCORT)
+	assert_int(head.escort_slot).is_equal(1)
+	assert_int(head.escort_mode).is_equal(OrderSpec.EscortMode.FOCUS)
+	assert_int(head.focus).is_equal(foe)
+	var bad: Command = Command.order(0, PackedInt32Array([own]), e)
+	bad.payload = bad.payload.slice(0, bad.payload.size() - 6)
+	assert_int(_code(w, bad)).is_equal(C.REJECTED_MALFORMED)
+	var mv: Command = Command.order(0, PackedInt32Array([own]), OrderSpec.make(OrderSpec.Kind.MOVE, 0, WorldTestKit.at(600.0)))
+	mv.payload.append_array(PackedByteArray([1, 0xFF, 0, 0, 0, 0]))
+	assert_int(_code(w, mv)).is_equal(C.REJECTED_MALFORMED)
+	e.escort_slot = 9                                                      # beyond escort_slot_max
+	assert_int(_code(w, Command.order(0, PackedInt32Array([own]), e))).is_equal(C.REJECTED_INVALID_ORDER)
+
+
 func test_set_adjutant_rights() -> void:
 	var r: MatchRules = WorldTestKit.rules()
 	var w: SimWorld = WorldTestKit.world(7, r)

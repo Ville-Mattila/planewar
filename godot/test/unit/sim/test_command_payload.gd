@@ -41,6 +41,46 @@ func test_order_malformed_payloads() -> void:
 	assert_bool(CommandPayload.read_order(big, spec, ids)).is_false()
 
 
+func test_escort_trailer_round_trip_and_sentinel() -> void:
+	var e: OrderSpec = OrderSpec.make(OrderSpec.Kind.ESCORT, EntityId.make(4, 2))
+	e.escort_slot = 1
+	e.escort_mode = OrderSpec.EscortMode.FOCUS
+	e.focus = EntityId.make(77, 5)
+	var cmd: Command = Command.order(0, PackedInt32Array([5, 6]), e)
+	assert_int(cmd.payload.size()).is_equal(9 + 8 + OrderSpec.ESCORT_TRAILER_BYTES)
+	var spec: OrderSpec = OrderSpec.new()
+	var ids: PackedInt32Array = PackedInt32Array()
+	assert_bool(CommandPayload.read_order(cmd, spec, ids)).is_true()
+	assert_int(spec.escort_slot).is_equal(1)
+	assert_int(spec.escort_mode).is_equal(OrderSpec.EscortMode.FOCUS)
+	assert_int(spec.focus).is_equal(EntityId.make(77, 5))
+	assert_int(spec.target).is_equal(EntityId.make(4, 2))
+	assert_int(cmd.payload.decode_u8(cmd.payload.size() - 5)).is_equal(1)   # slot byte as written
+	e.escort_slot = -1
+	assert_bool(CommandPayload.read_order(Command.order(0, PackedInt32Array([5]), e), spec, ids)).is_true()
+	assert_int(spec.escort_slot).is_equal(-1)
+	assert_int(Command.order(0, PackedInt32Array([5]), e).payload.decode_u8(9 + 4 + 1)).is_equal(0xFF)
+	assert_bool(spec.equals(e)).is_true()
+	# a following non-ESCORT read resets the scratch spec's trailer fields
+	assert_bool(CommandPayload.read_order(Command.order(0, PackedInt32Array([5]), OrderSpec.make(OrderSpec.Kind.HOLD)), spec, ids)).is_true()
+	assert_int(spec.focus).is_equal(0)
+	assert_int(spec.escort_mode).is_equal(OrderSpec.EscortMode.FORM)
+
+
+func test_escort_trailer_malformed_variants() -> void:
+	var spec: OrderSpec = OrderSpec.new()
+	var ids: PackedInt32Array = PackedInt32Array()
+	var esc: Command = Command.order(0, PackedInt32Array([5]), OrderSpec.make(OrderSpec.Kind.ESCORT, 9))
+	var no_trailer: Command = CommandPayload.simple(0, Command.Kind.ORDER, 0)
+	no_trailer.payload = esc.payload.slice(0, esc.payload.size() - OrderSpec.ESCORT_TRAILER_BYTES)
+	assert_bool(CommandPayload.read_order(no_trailer, spec, ids)).is_false()
+	var mv: Command = Command.order(0, PackedInt32Array([5]), OrderSpec.make(OrderSpec.Kind.MOVE))
+	mv.payload.append_array(PackedByteArray([0, 0, 0, 0, 0, 0]))
+	assert_bool(CommandPayload.read_order(mv, spec, ids)).is_false()
+	esc.payload[esc.payload.size() - 6] = 3                                # escort_mode beyond BREAK
+	assert_bool(CommandPayload.read_order(esc, spec, ids)).is_false()
+
+
 func test_pilot_round_trip_is_exact() -> void:
 	var inp: PilotInput = PilotInput.new()
 	inp.thrust = 0.123456789

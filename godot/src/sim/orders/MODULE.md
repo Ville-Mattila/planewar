@@ -23,14 +23,14 @@ enum HaulMode { FERRY = 0, TOW = 1, CAPTURE = 2 }
 enum EscortMode { FORM = 0, FOCUS = 1, BREAK = 2 }                           # SL-2
 const FLAG_QUEUE := 1; const FLAG_PREPEND := 2; const FLAG_LOW := 4; const FLAGS_CLIENT := 5   # PREPEND is system-only
 const KIND_COUNT := 12; const KIND_RESERVED_FIRST := 10; const KIND_NAMES: PackedStringArray   # lower-case JSON names by ordinal
-const WIRE_HEADER_BYTES := 8; const WIRE_MAX_BYTES := 256; const WIRE_MAX_POINTS := 16; const WIRE_MAX_IDS := 32   # 04 s2.5 ORDER layout
+const WIRE_HEADER_BYTES := 8; const WIRE_MAX_BYTES := 256; const WIRE_MAX_POINTS := 16; const WIRE_MAX_IDS := 32; const ESCORT_TRAILER_BYTES := 6; const ESCORT_SLOT_NONE_WIRE := 0xFF   # 04 s2.5 ORDER layout
 var kind: Kind; var target: int; var point: Vector3; var points: PackedVector3Array
 var haul_mode: HaulMode; var escort_slot: int; var focus: int; var escort_mode: EscortMode   # escort_* = SL-2 (08), -1 / 0 / FORM by default
 var flags: int; var issuer: int; var issue_tick: int; var progress: int
 static func make(order_kind: Kind, order_target: int = 0, order_point: Vector3 = Vector3.ZERO, order_flags: int = 0) -> OrderSpec
 static func kind_name(k: int) -> String;  static func kind_from_name(n: String) -> int      # -1 when unknown
 static func is_reserved(k: int) -> bool                                      # 10, 11
-static func wire_size(count: int, point_count: int) -> int;  static func fits_wire(count: int, point_count: int) -> bool
+static func wire_size(count: int, point_count: int, order_kind: int = -1) -> int;  static func fits_wire(count: int, point_count: int, order_kind: int = -1) -> bool   # ESCORT adds ESCORT_TRAILER_BYTES (R0 B.14 A-85)
 func copy_from(o: OrderSpec) -> void;  func equals(o: OrderSpec) -> bool
 
 class_name OrderQueue extends RefCounted                                     # the `orders` side table + head cache; one per SimWorld

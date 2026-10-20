@@ -179,6 +179,10 @@ func test_wire_size_arithmetic_matches_04() -> void:
 	assert_bool(OrderSpec.fits_wire(33, 0)).is_false()
 	assert_bool(OrderSpec.fits_wire(1, 16)).is_true()
 	assert_bool(OrderSpec.fits_wire(1, 17)).is_false()
+	assert_int(OrderSpec.wire_size(32, 0, OrderSpec.Kind.ESCORT)).is_equal(142)            # R0 B.14 A-85
+	assert_int(OrderSpec.wire_size(32, 0, OrderSpec.Kind.MOVE)).is_equal(OrderSpec.wire_size(32, 0))
+	assert_bool(OrderSpec.fits_wire(32, 0, OrderSpec.Kind.ESCORT)).is_true()
+	assert_bool(OrderSpec.fits_wire(32, 15, OrderSpec.Kind.ESCORT)).is_false()             # 262 B
 
 
 func test_spec_copy_and_equals() -> void:
