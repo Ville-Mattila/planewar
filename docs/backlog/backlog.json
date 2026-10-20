@@ -6910,7 +6910,10 @@
       "02 s5.4",
       "03 s3.7"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-20",
+    "pr": "public#58",
+    "note": "typed Def classes lack the four fields; read via Def.raw in WorldDefs (content follow-up)"
   },
   {
     "id": "TA-57",
@@ -6929,7 +6932,9 @@
       "05 s1.3",
       "03 s4.1"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-20",
+    "pr": "public#56"
   },
   {
     "id": "AI-37",
