@@ -68,6 +68,7 @@ func load_map(map: MapDef, _seed: int, rules: MatchRules) -> Result:
 		if err != OK:
 			return Result.failure(err, "SimWorld: path grid of %s failed to load" % _map_id)
 	collision.configure(_defs.projectile_radius, _defs.pad_radius_by_def, _defs.common, rules.tick_hz)
+	collision.launch_pad = _defs.launch_pad_by_def
 	_match_seed = _seed
 	rng = Rng.new(_seed)
 	return Result.success()

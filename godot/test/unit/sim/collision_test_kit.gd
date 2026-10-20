@@ -7,6 +7,7 @@ class_name CollisionTestKit extends RefCounted
 const DEFS_DIR: String = "../tools/tests/fixtures/content/canonical/godot/content/defs/"
 const PAD_DEF: int = 1
 const PLAIN_DEF: int = 2
+const LAUNCH_DEF: int = 3     ## a `launch_pad: true` structure (A-19, A-87)
 
 var store: EntityStore
 var proj: ProjectileStore
@@ -40,6 +41,7 @@ func _init(map_dir: String = "") -> void:
 	pad_radius = _fixture_pad_radius()
 	var pads: PackedFloat32Array = PackedFloat32Array([0.0, pad_radius, 0.0])
 	collision.configure(radii, pads, common, rules.tick_hz)
+	collision.launch_pad = PackedByteArray([0, 0, 0, 1])
 
 
 static func load_json(file: String) -> Dictionary:

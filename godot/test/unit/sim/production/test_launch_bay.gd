@@ -92,6 +92,7 @@ func test_dart_is_airborne_23_s_after_its_start_at_full_power() -> void:
 				airborne = w.tick()
 			else:
 				assert_float(w.store().hp[ship]).is_equal(float(dart.hp))       # the launch costs no damage (no ram, no terrain hit)
+	# Tolerance: +-3 ticks (0.1 s) on the 20 s build, the same slack as test_production's build-time test (float32 progress sum).
 	assert_int(spawned - start).is_between(int(dart.build_time_s) * hz - 3, int(dart.build_time_s) * hz + 3)
 	# 02 s2.3 / A-82: "airborne (> 20 m AGL) about 3 s after completion"; the window is [completion + 1 tick, completion + 4 s]
 	# (about 3 s plus 1 s slack). The measured climb goes into the PR perf note.
@@ -123,8 +124,10 @@ func test_ship_waits_on_the_pad_then_leaves_along_the_normal() -> void:
 	assert_int(w.store().flags[ship] & EntityStore.F_DOCKED).is_equal(0)
 	assert_float(w.store().vel[ship].length()).is_equal_approx(common.launch_speed_mps, 0.5)   # the launch step itself
 	assert_float(w.store().vel[ship].normalized().dot(w.store().up[ys])).is_greater(0.99)
-	assert_int(w.store().link[ship]).is_equal(yard)                     # still leaving: no ram against its own Shipyard
-	assert_int(_pending(w)).is_equal(1)
+	assert_int(w.store().link[ship]).is_equal(0)                        # A-87: a flying ship never carries link
+	assert_int(_pending(w)).is_equal(0)                                 # forgotten at LAUNCHED
+	var after: Array[SimEvent] = K.run(w, 3)
+	assert_int(K.count_kind(after, SimEvent.Kind.DEATH)).is_equal(0)    # not rammed by its own Shipyard
 
 
 func test_a_shipyard_is_never_a_service_pad() -> void:

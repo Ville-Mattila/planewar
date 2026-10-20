@@ -11,7 +11,7 @@ contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check` must p
 | May depend on | `core`, `content`, `sim` (incl. `sim/world/`; `sim/economy/` `Economy`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads, RNG |
 | Autoloads used | None |
-| Status | implemented (TA-19, 2026-10-14; GD-17 2026-10-20: launch delay, rally, auto-replenish); `EconomyHub` steps it, `LocalSimView.production_queue` / `production_progress01` read it |
+| Status | implemented (TA-19, 2026-10-14; GD-17 2026-10-20: pad launch, rally, auto-replenish); `EconomyHub` steps it, `LocalSimView.production_queue` / `production_progress01` read it |
 
 ## Public API
 
@@ -31,11 +31,11 @@ func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPee
 ```
 
 ```gdscript
-class_name LaunchBay extends RefCounted                                      # GD-17: rally points + the launch delay
+class_name LaunchBay extends RefCounted                                      # GD-17: rally points + the pad launch
 func set_rally(factory: int, p: Vector3) -> void;  func has_rally(factory: int) -> bool;  func rally_of(factory: int) -> Vector3;  func pending() -> int
 func forget(factory: int) -> void;  func dock(u: int, f: int) -> void;  func send_ground(u: int, f: int, owner: int, tick: int) -> void
 func step(t: int) -> void;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
-var rally: PackedVector3Array;  var rally_set: PackedByteArray;  var l_ship: PackedInt32Array;  var l_pad: PackedInt32Array;  var l_out: PackedByteArray
+var rally: PackedVector3Array;  var rally_set: PackedByteArray;  var l_ship: PackedInt32Array;  var l_pad: PackedInt32Array
 class_name AutoReplenish extends RefCounted                                  # GD-17: TOGGLE_AUTO_REPLENISH targets
 const SPAN: int;  const PAYLOAD_PAIR: int;  const PAYLOAD_PAIRS_MAX: int;  var target: PackedByteArray   # [player * SPAN + def_id]
 func payload_ok(payload: PackedByteArray) -> bool;  func apply(player: int, payload: PackedByteArray) -> void;  func target_of(player: int, def_id: int) -> int
@@ -52,7 +52,7 @@ Queue items are `[factory_slot * queue_max + i]`; head progress is the factory's
 - P4 A head that would exceed `caps.units` for its queuer (at start or at completion) blocks the queue: one CAP_REACHED event (`a` = player, `b` = `CAP_UNITS` 0, team -1; 04 s3.6 cap kind) and one ALERT PRODUCTION_BLOCKED_CAP per block; nothing is paid while blocked at start.
 - P5 (S12) Cancel rights follow the queuer: `queuer(factory, i)` is the owner, a teammate may cancel when that player is disconnected, eliminated or a bot. Cancelling item 0 after its start refunds `cancel_refund_assembly` of the payment; unpaid items refund nothing; the spent-Ore ledger falls with the refund.
 - P6 A destroyed factory drops its queue without refund (`forget`, from `EconomyHub.on_death`) and its rally point.
-- P7 A produced ship spawns DOCKED on the Shipyard's launch pad (`link` = the factory, nose along the factory `up`, zero velocity, resting on the pad plane at the factory `pos`) and leaves on the next step by the normal launch rule: DOCKED cleared, velocity `launch_speed_mps` along the pad normal, one LAUNCHED event (`a` ship, `b` factory). It keeps `link` while it is inside the factory's bounding sphere (Collision never rams a ship against its `link` structure) and drops it once clear. A ship that dies while parked never launches; a possessed one stays docked and its velocity is untouched (the pilot's own launch is GD-15's). "Airborne (> 20 m AGL) about 3 s after completion" (02 s2.3) is the climb under the ship's thrust, not a timer; a Shipyard is never a service pad (`pad_occupant` is 0).
+- P7 A produced ship spawns DOCKED on the Shipyard's launch pad (`link` = the factory, nose along the factory `up`, zero velocity, resting on the pad plane at the factory `pos`) and leaves on the next step by the normal launch rule: DOCKED and `link` cleared in the same tick (a flying ship never carries `link`), velocity `launch_speed_mps` along the pad normal, one LAUNCHED event (`a` ship, `b` factory); `LaunchBay` then forgets it. Collision never rams a ship against an own-team `launch_pad` structure (R0 A-87), docked or not; a ship that does not climb falls back to the terrain rule. A ship that dies while parked never launches; a possessed one stays docked and its velocity is untouched (the pilot's own launch is GD-15's). "Airborne (> 20 m AGL) about 3 s after completion" (02 s2.3) is the climb under the ship's thrust, not a timer; a Shipyard is never a service pad (`pad_occupant` is 0).
 - P8 Rally: SET_RALLY (a finished factory of the issuer's team, finite non-zero position; team-shared, R0 A-81) stores a point; the produced unit then takes a standing `MOVE` to it issued by its owner (ground units at spawn, ships at launch), else it keeps AUTO.
 - P9 Auto-replenish: every `auto_replenish_period_s` a player whose alive + queued count of a def is below the target gets one item appended to the least-loaded finished factory of the team that makes it (lowest slot on ties); nothing is appended into a full queue or at the unit cap, and the next item is checked against the paid early-share ledger only (`Economy.spend_locked`), so a head may still wait on the lock: `try_pay` at its start enforces it. TOGGLE_AUTO_REPLENISH is team-shared (R0 A-81): the factory it names only proves the team, its roster replaces the issuer's own targets; at most 8 pairs. S4 writes the targets and rally points sparsely.
 

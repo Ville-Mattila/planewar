@@ -13,10 +13,11 @@ class_name Collision extends RefCounted
 ##   landing (A-31): every tick a not-DOCKED ship is inside a friendly pad's volume (offset in the pad frame <=
 ##      pad_radius_m, |altitude above the pad plane| <= radius + 0.5) -> C_PAD with the landing band; its terrain
 ##      contact is then the landing's, not a scrape or damage (kill speed still destroys);
-##   ship vs ship (each pair once) and ship vs structure (from the ship side) sphere-sphere -> C_RAM; a ship is exempt
-##      against the structure in its `link` (docked on it, or departing from a Shipyard launch pad, A-19); a docked ship
+##   ship vs ship (each pair once) and ship vs structure (from the ship side) sphere-sphere -> C_RAM; a docked ship
 ##      is exempt against its own pad, a ship in a friendly pad's approach column (A-53: offset <= pad_radius_m, altitude
 ##      >= -(radius + 0.5)) against that pad.
+## A-87: a ship is never RAM-tested against an own-team structure whose def has `launch_pad: true` (the Shipyard), docked
+## or not; enemy ships still ram it.
 ## The pad plane passes through the structure's `pos` with normal `up` (GD-15 may add a deck offset).
 ## Per-slot state (`ep_gen`, `ep_last`, `born_gen`, `born_tick`) is sim state for serialization (S4, TA-18).
 
@@ -38,6 +39,7 @@ const _RAM_CAP: int = 64                                 # rams per ship per tic
 ## Contact records, index < contact_count. a / b: EntityIds. value: HIT entry t, GROUND terrain height,
 ## TERRAIN hit_normal_speed, RAM centre distance, PAD horizontal offset. point: HIT entry point, GROUND surface
 ## point, else the ship position. vec: PAD (v_vert, v_hor, tilt_deg). cls: TERRAIN class or PAD band.
+var launch_pad: PackedByteArray = PackedByteArray()   ## by EntityStore.def_id: 1 = `launch_pad: true` structure (A-19, A-87); set by SimWorld
 var contact_count: int = 0
 var c_kind: PackedByteArray = PackedByteArray()
 var c_class: PackedByteArray = PackedByteArray()
@@ -237,27 +239,10 @@ func _ground(i: int, b: Vector3, pr: float, cell: int) -> void:
 		_emit(C_GROUND, 0, _proj.id_of(i), EntityId.NULL_ID, h, b.normalized() * (Sphere.PLANET_RADIUS + h), Vector3.ZERO)
 
 
-# Highest baked height (m) over every texel height_at can read for a point of GRID_HASH `cell`, one texel of margin.
+# Highest baked height over the hash cell, cached (`TerrainCellMax`).
 func _fill_hmax(cell: int) -> void:
-	var tn: int = _terrain.face_resolution
 	_hmax_ok[cell] = 1
-	if tn == 0:
-		_hmax[cell] = 0.0                                    # flat datum until load_map
-		return
-	var n: int = Spatial.N
-	var f: int = cell >> (Spatial.SHIFT + Spatial.SHIFT)
-	var ci: int = cell & (n - 1)
-	var cj: int = (cell >> Spatial.SHIFT) & (n - 1)
-	var span: float = float(tn - 1) / float(n)
-	var x0: int = maxi(int(float(ci) * span) - 1, 0)
-	var x1: int = mini(int(float(ci + 1) * span) + 2, tn - 1)
-	var y0: int = maxi(int(float(cj) * span) - 1, 0)
-	var y1: int = mini(int(float(cj + 1) * span) + 2, tn - 1)
-	var m: int = 0
-	for y: int in range(y0, y1 + 1):
-		for x: int in range(x0, x1 + 1):
-			m = maxi(m, _terrain.height_texel(f, x, y))
-	_hmax[cell] = Sphere.RELIEF_MIN + float(m) * (Sphere.RELIEF_MAX - Sphere.RELIEF_MIN) / float(Terrain.U16_MAX)
+	_hmax[cell] = TerrainCellMax.of_cell(_terrain, cell)
 
 
 # Ship pass: pads, rams, then the terrain episode for one live ship slot. Candidates are rejected by centre
@@ -300,22 +285,25 @@ func _ship(s: int, tick: int) -> void:
 
 
 func _ship_structure(s: int, o: int, p: Vector3, r: float, docked: bool) -> void:
-	if _store.link[s] == _store.id_of(o):
-		return                                           # docked on, or departing from, its own pad / launch pad (A-19): no ram
+	var d: int = _store.def_id[o]
+	if d < launch_pad.size() and launch_pad[d] != 0 and _store.team[o] == _store.team[s]:
+		return
 	var in_pad: bool = false
 	var in_col: bool = false
-	var d: int = _store.def_id[o]
 	var pad_r: float = _pad_radius[d] if d < _pad_radius.size() else 0.0
-	if pad_r > 0.0 and not docked and _store.team[o] == _store.team[s]:
-		var up_p: Vector3 = _store.up[o]
-		var rel: Vector3 = p - _store.pos[o]
-		var alt: float = rel.dot(up_p)
-		var off: float = (rel - up_p * alt).length()
-		in_col = alt >= -(r + 0.5) and off <= pad_r
-		in_pad = in_col and alt <= r + 0.5
-		if in_pad and (_pad_slot < 0 or off < _pad_off):
-			_pad_slot = o
-			_pad_off = off
+	if pad_r > 0.0 and _store.team[o] == _store.team[s]:
+		if docked:
+			in_pad = _store.link[s] == _store.id_of(o)
+		else:
+			var up_p: Vector3 = _store.up[o]
+			var rel: Vector3 = p - _store.pos[o]
+			var alt: float = rel.dot(up_p)
+			var off: float = (rel - up_p * alt).length()
+			in_col = alt >= -(r + 0.5) and off <= pad_r
+			in_pad = in_col and alt <= r + 0.5
+			if in_pad and (_pad_slot < 0 or off < _pad_off):
+				_pad_slot = o
+				_pad_off = off
 	if not (in_pad or in_col) and p.distance_to(_store.pos[o]) <= r + _store.radius[o]:
 		_add_ram(o)
 

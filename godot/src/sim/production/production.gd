@@ -1,5 +1,5 @@
 class_name Production extends RefCounted
-## Production queues of 02 s6.4 (TA-19; GD-17: `LaunchBay` rally + 3 s launch, `AutoReplenish`): one queue of at most
+## Production queues of 02 s6.4 (TA-19; GD-17: `LaunchBay` rally + pad launch, `AutoReplenish`): one queue of at most
 ## `economy.queue_max` (5, S13) items per Shipyard / Vehicle Bay, shared by the team; every item remembers the player
 ## who queued it (the unit is that player's, with that player's doctrine; owner-only cancel, S12). The head item is paid
 ## when it STARTS (waiting for Ore / Ice / the early share lock otherwise, one alert per wait), then runs for
@@ -21,7 +21,7 @@ var started: PackedByteArray = PackedByteArray()       ## per factory slot: 1 on
 var paid_ore: PackedInt32Array = PackedInt32Array()    ## per factory slot: what the head paid
 var paid_ice: PackedInt32Array = PackedInt32Array()
 
-var launch: LaunchBay                                  ## rally points, pad parking and the launch delay (GD-17)
+var launch: LaunchBay                                  ## rally points and pad parking / launch (GD-17)
 var replenish: AutoReplenish                           ## per-player unit targets (GD-17)
 
 var _store: EntityStore

@@ -1,5 +1,4 @@
 # sim - MODULE.md
-
 Contract for `godot/src/sim/**`. Committed by CONTRACT-0 from R0 Part B (B.3 enumerations, B.4 deps, B.5 motion, tick order,
 signatures) and 03 s15.4; supersedes 01 s9.4's signatures. A change to "Public API", "Enumerations" or "Invariants" is a contract
 change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines (ADR-14). Subsystems
@@ -62,9 +61,8 @@ enum Kind { ORDER, BUILD, CANCEL_BUILD, PRODUCE, CANCEL_PRODUCE, SET_RALLY, POSS
             PILOT_INPUT, TOGGLE_AUTO_REPLENISH, SURRENDER, SET_ADJUTANT, DEBUG_SPAWN, DEBUG_SET }   # 0-15 frozen; DEBUG_* only when rules.debug_commands
 var tick: int; var player: int; var kind: Kind; var target: int; var payload: PackedByteArray   # 04 s2.5 order; positions / pilot axes f64 (sim/world/command_payload.gd)
 static func order(player: int, ids: PackedInt32Array, spec: OrderSpec) -> Command                  # (03) builders
-static func build(player: int, def_id: int, cell: int, rotation: int) -> Command
-static func produce(player: int, factory: int, def_id: int, count: int) -> Command
-static func set_rally(player: int, factory: int, pos: Vector3) -> Command                  # (GD-17) 3 x f64
+static func build(player: int, def_id: int, cell: int, rotation: int) -> Command;  static func produce(player: int, factory: int, def_id: int, count: int) -> Command
+static func set_rally(player: int, factory: int, pos: Vector3) -> Command   # (GD-17) 3 x f64
 static func toggle_auto_replenish(player: int, factory: int, enabled: bool, roster: PackedInt32Array) -> Command   # (GD-17) roster = [def_id, count, ...], at most 8 pairs; replaces the player's targets, disabled clears
 static func possess(player: int, id: int) -> Command;  static func release(player: int) -> Command
 static func pilot(player: int, tick: int, input: PilotInput) -> Command
@@ -192,11 +190,11 @@ class_name Spatial extends RefCounted                                        # s
 func rebuild() -> void;  func ids_near(p: Vector3, radius: float, mask: int) -> PackedInt32Array;  func ids_in_hash_cell(cell: int) -> PackedInt32Array
 static func cell_of(p: Vector3) -> int;  func item_id(item: int) -> int;  func ring_cells(cell: int, k: int) -> int   # (TA-14) = Sphere.cell_of(p, 64); ring k in {1, 2} into var `ring`
     # mask bits 1 << EntityStore.kind (1 STRUCTURE .. 8 WRECK) | 16 PROJECTILE; centre distance <= radius; ring 1 ~94 m, ring 2 ~188 m (proof: spatial.gd)
-class_name Collision extends RefCounted                                      # sim/collision.gd (TA-14), step 8 + 8b; _init(store, projectiles, spatial, terrain)
+class_name TerrainCellMax extends RefCounted;  static func of_cell(terrain: Terrain, cell: int) -> float   # (A-73) Collision 8b: highest baked height over a GRID_HASH cell
+class_name Collision extends RefCounted                                      # sim/collision.gd (TA-14), step 8 + 8b; _init(store, projectiles, spatial, terrain); `var launch_pad: PackedByteArray` (A-87, by def_id, SimWorld sets it)
 func configure(projectile_radius: PackedFloat32Array, pad_radius_by_def: PackedFloat32Array, common: FlightCommonDef, tick_hz: int) -> void
 func report_terrain(slot: int, tick: int, hit_normal_speed: float) -> void;  func step(tick: int) -> void   # step 5 reports ShipState.terrain_hit; ep_* / born_* in SimWorld.serialize (S4)
-static func classify_terrain(hit_normal_speed: float, common: FlightCommonDef) -> int;  static func landing_band(v_vert: float, v_hor: float, tilt_deg: float, common: FlightCommonDef) -> int
-static func sweep_sphere(a: Vector3, b: Vector3, c: Vector3, r: float) -> float                 # entry t in [0, 1], -1.0 on a miss
+static func classify_terrain(hit_normal_speed: float, common: FlightCommonDef) -> int;  static func landing_band(v_vert: float, v_hor: float, tilt_deg: float, common: FlightCommonDef) -> int;  static func sweep_sphere(a: Vector3, b: Vector3, c: Vector3, r: float) -> float   # entry t in [0, 1], -1.0 on a miss
     # Contact records c_kind/c_class/c_a/c_b/c_value/c_point/c_vec[0, contact_count): kind 0 HIT, 1 GROUND, 2 TERRAIN (class 0 SCRAPE,
     # 1 DAMAGE, 2 DESTROY), 3 RAM, 4 PAD (band 0 SAFE, 1 DAMAGE, 2 DESTROY); consumed by Combat (9) and Docking (10); collision.gd header
 class_name OrderSpec extends RefCounted                                      # 05 owns fields (kind, flags, haul_mode, target, points, issuer, progress; escort_slot, focus, escort_mode for SL-2)
@@ -295,12 +293,8 @@ TA-18: `godot/test/unit/sim/test_sim_world.gd` (S1, S3, S5, S11, hook, profile, 
 TA-50: `godot/test/sim/test_path_scenario.gd` (step 3b, `pathing()` via `godot/test/unit/sim/path_brain_stub.gd`), S4 with pending tickets in `test_serialize.gd`, `godot/test/perf/perf_path_load.gd` (row 3b). TA-37: `godot/test/unit/sim/vision/test_vision.gd`, `godot/test/unit/sim/vision/test_vision_lists.gd`, `godot/test/perf/perf_vision.gd` (sim/vision/MODULE.md V1-V9).
 GD-36: `test_projectile_store.gd` (`spawn`); weapon fire and fuse tests are listed by the combat subsystem contract. TA-19: `godot/test/unit/sim/economy/test_economy.gd`, `godot/test/unit/sim/production/test_production.gd`, `godot/test/unit/sim/build/test_construction.gd` (S4 economy, S12, S13). Planned (plain text until on disk, D10): test_landing.gd; godot/test/sim/scenarios/*.json (Outpost presence, victory, Core shield, caps).
 
-## How to add X
-
-Recipes (SimEvent kind, order kind, AlertKind / Command.Kind / CommandResult.Code / Build.Reject, def field) live in 03 s15.4 (R0 B.10 A-47).
-
 ## Open items
-
+- How to add X (SimEvent kind, order kind, AlertKind / Command.Kind / CommandResult.Code / Build.Reject, def field): 03 s15.4 (R0 B.10 A-47).
 - R0 B.8-B.12 applied (A-1/3/7/8, A-11..14, A-20/21 with TA-43/44/45/48, A-41/42/46/47, A-49..A-56, A-64..A-79; `docs/reviews/R0-amendments-05.md`). Pending code:
   TA-56 (A-66 fields, A-76 sites do not sense), `REJECTED_PREREQ` 15 (A-79, TA-19 PR #47); A-73: extract before adding to a file >= 360 lines.
 - Interim stand-ins (step-9 frees, validated-only kinds): `sim/world/MODULE.md`; control transitions: `sim/control/MODULE.md` (AI-02, A-61). Owners: TA-11 store, TA-12 kinematics, TA-14 collision, TA-18 tick driver, TA-21 serialize format, TA-22 S-SIM-1, TA-37 vision, TA-38 ground; 05: steer/orders/control.
