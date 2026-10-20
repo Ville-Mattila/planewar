@@ -16,8 +16,6 @@ const MODE_FAR: int = 1
 const MODE_ICON: int = 2
 ## A bound view re-reads team and damage state every this many ticks (staggered by slot).
 const STATE_REFRESH_TICKS: int = 4
-## Fewer entities than this read in one frame.
-const STAGGER_MIN: int = 64
 const DEFAULT_TICK_HZ: float = 30.0
 const DEFAULT_PX_PER_M: float = 704.0   ## 1080 p, 75 degree vertical fov
 const FAR_CAPACITY: int = 1280          ## 03 s7.10 icon / far capacity, Standard profile
@@ -39,14 +37,7 @@ var _materials: UnitMaterialCache = null
 var _views: Array[EntityView] = []
 var _free: PackedInt32Array = PackedInt32Array()
 var _ids: PackedInt32Array = PackedInt32Array()
-var _pose_pos: PackedVector3Array = PackedVector3Array()   ## SimView.read_poses scratch, sized with _d2 (no per-frame allocation)
-var _pose_rot: PackedVector4Array = PackedVector4Array()
-var _pose_hi: PackedVector3Array = PackedVector3Array()   ## second-half scratch (TA-55)
-var _rot_hi: PackedVector4Array = PackedVector4Array()
-var _ids_lo: PackedInt32Array = PackedInt32Array()
-var _ids_hi: PackedInt32Array = PackedInt32Array()
-var _tail_pending: bool = false
-var _split: int = 0   ## entries at index >= _split have not had this tick's pose committed yet
+var _stager: PoseStager = PoseStager.new()
 var _last_tick: int = -1
 var _frame: int = 0
 var _ov_id: int = EntityId.NULL_ID
@@ -127,7 +118,7 @@ func clear_local_override() -> void:
 ## Forces the next sync to re-read the SimView (viewer team change, world swap).
 func invalidate() -> void:
 	_last_tick = -1
-	_tail_pending = false
+	_stager.reset()
 
 
 func view_capacity() -> int:
@@ -155,7 +146,7 @@ func sync(view: SimView, render_time: float) -> void:
 	var tick: int = view.tick()
 	if tick != _last_tick:
 		_read_tick(view, tick)
-	elif _tail_pending:
+	elif _stager.pending:
 		_read_tail(view)
 	var alpha: float = clampf(render_time * tick_hz - float(tick - 1), 0.0, 1.0)
 	var threshold: float = _classify(alpha)
@@ -175,7 +166,7 @@ func _classify(alpha: float) -> float:
 		var d2: float = 0.0
 		var mode: int = MODE_VIEW
 		if id != _ov_id:
-			d2 = cam_pos.distance_squared_to(_s_prev[s].lerp(_s_cur[s], alpha if i < _split else 1.0))
+			d2 = cam_pos.distance_squared_to(_s_prev[s].lerp(_s_cur[s], alpha if i < _stager.split else 1.0))
 			var fd: float = _s_radius[s] * far_k
 			if d2 >= fd * fd:
 				mode = MODE_ICON if d2 >= icon_m2 else MODE_FAR
@@ -204,7 +195,7 @@ func _draw(alpha: float, threshold: float) -> void:
 		var s: int = EntityId.slot(id)
 		var mode: int = _mode[i]
 		var r: float = _s_radius[s]
-		var a: float = alpha if i < _split else 1.0
+		var a: float = alpha if i < _stager.split else 1.0
 		if mode == MODE_VIEW:
 			var v: EntityView = _bind(s, id) if _d2[i] <= threshold else null
 			if v != null:
@@ -242,42 +233,22 @@ func _read_tick(view: SimView, tick: int) -> void:
 	if _d2.size() < n:
 		var _r13: int = _d2.resize(n + (n >> 1) + 16)
 		var _r14: int = _mode.resize(_d2.size())
-	var split: int = n if (_tail_pending or n < STAGGER_MIN) else n >> 1
-	_tail_pending = split < n
-	_split = split
-	var _r17: int = _ids_lo.resize(split)
-	var _r18: int = _ids_hi.resize(n - split)
-	for i: int in split:
-		_ids_lo[i] = _ids[i]
-	for i: int in n - split:
-		_ids_hi[i] = _ids[split + i]
-	_grow_pose(split, n - split)
-	var _alive: int = view.read_poses(_ids_lo, _pose_pos, _pose_rot)
-	_commit(view, _ids_lo, _pose_pos, _pose_rot, tick)
-	if _tail_pending:
+	_stager.begin(_ids)
+	_stager.read_head(view)
+	_commit(view, _stager.ids_lo, _stager.pos_lo, _stager.rot_lo, tick)
+	if _stager.pending:
 		_prime_fresh(view)
 
 
 func _read_tail(view: SimView) -> void:
-	_tail_pending = false
-	_split = _ids.size()
-	var _alive: int = view.read_poses(_ids_hi, _pose_hi, _rot_hi)
-	_commit(view, _ids_hi, _pose_hi, _rot_hi, _last_tick)
-
-
-func _grow_pose(lo: int, hi: int) -> void:
-	if _pose_pos.size() < lo:
-		var _a1: int = _pose_pos.resize(lo + (lo >> 1) + 16)
-		var _a2: int = _pose_rot.resize(_pose_pos.size())
-	if _pose_hi.size() < hi:
-		var _a3: int = _pose_hi.resize(hi + (hi >> 1) + 16)
-		var _a4: int = _rot_hi.resize(_pose_hi.size())
+	_stager.read_tail(view)
+	_commit(view, _stager.ids_hi, _stager.pos_hi, _stager.rot_hi, _last_tick)
 
 
 ## New ids in the pending half: adopt now with a single settled pose.
 func _prime_fresh(view: SimView) -> void:
-	for i: int in _ids_hi.size():
-		var id: int = _ids_hi[i]
+	for i: int in _stager.ids_hi.size():
+		var id: int = _stager.ids_hi[i]
 		var s: int = EntityId.slot(id)
 		if _s_id[s] == id:
 			continue

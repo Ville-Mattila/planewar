@@ -86,6 +86,21 @@ func view_for(id: int) -> EntityView
 func draw_calls() -> int
 func sync(view: SimView, render_time: float) -> void
 
+class_name PoseStager extends RefCounted
+const STAGGER_MIN: int = 64
+var ids_lo: PackedInt32Array = PackedInt32Array()
+var ids_hi: PackedInt32Array = PackedInt32Array()
+var pos_lo: PackedVector3Array = PackedVector3Array()
+var rot_lo: PackedVector4Array = PackedVector4Array()
+var pos_hi: PackedVector3Array = PackedVector3Array()
+var rot_hi: PackedVector4Array = PackedVector4Array()
+var pending: bool = false
+var split: int = 0
+func begin(ids: PackedInt32Array) -> void
+func read_head(view: SimView) -> void
+func read_tail(view: SimView) -> void
+func reset() -> void
+
 class_name PlaceholderMeshes extends RefCounted
 const TEAM_PAINT_CELL: int = 18
 const ATLAS_COLS: int = 16
@@ -255,7 +270,7 @@ Consumes drained `SimEvent`s through `VfxRouter.drain`. Emits nothing.
 
 ## Performance budget
 
-Entity sync 2.4 ms at 800 views PC-mid, 0.8 ms on 200 + far pools (03 s10.2); pools 1.0 ms. Measured with `scenes/presentation/entities/entity_demo.tscn` (TA-26, dev laptop with the planet drawn): 800 views sync p50 1.1 ms between ticks, **p95 7.7 ms on tick frames** (the once-per-tick `SimView` read through per-id `pos` / `basis`). TA-52: `sync` now reads poses through `SimView.read_poses` (R0 B.11 A-56, scratch arrays preallocated); same-session re-measure (windowed, 800 views, planet drawn, dev laptop, 3 runs each, machine load varied between runs): before p50 0.97-1.13 ms, p95 3.15-3.38 ms; after p50 1.12-1.62 ms, p95 2.91-3.42 ms, i.e. no measurable change (the per-id calls were not the dominant cost; the 3 ms is the per-view transform writes and slerp on the tick frame). Row still unmet at p95 on this laptop: follow-up to stagger the tick read across two frames. TA-55: the tick read is staggered across two frames (ids and the first half of `read_poses` on the tick frame, the second half next frame; uncommitted entities draw at alpha 1.0 of their old pair, which equals the new pair at alpha 0, so no pop; a tick arriving before the tail reads everything at once; fewer than `STAGGER_MIN` = 64 entities read in one frame; scratch arrays reused, no per-frame allocation). Same-session windowed A/B, 800 views, `--all-views --cam=base`, 3 alternating runs, dev laptop: before p95 4.37 / 3.12 / 2.87 ms, after p95 3.00 / 2.75 / 2.55 ms (about -10 to -30 %), p50 unchanged within noise. The 2.4 ms p95 gate is deferred to the pinned runner (TA-42, A-62 measure-first); the remaining cost is the per-view transform writes, which run every frame.
+Entity sync 2.4 ms at 800 views PC-mid, 0.8 ms on 200 + far pools (03 s10.2); pools 1.0 ms. Measured with `scenes/presentation/entities/entity_demo.tscn` (TA-26, dev laptop with the planet drawn): 800 views sync p50 1.1 ms between ticks, **p95 7.7 ms on tick frames** (the once-per-tick `SimView` read through per-id `pos` / `basis`). TA-52: `sync` now reads poses through `SimView.read_poses` (R0 B.11 A-56, scratch arrays preallocated); same-session re-measure (windowed, 800 views, planet drawn, dev laptop, 3 runs each, machine load varied between runs): before p50 0.97-1.13 ms, p95 3.15-3.38 ms; after p50 1.12-1.62 ms, p95 2.91-3.42 ms, i.e. no measurable change (the per-id calls were not the dominant cost; the 3 ms is the per-view transform writes and slerp on the tick frame). Row still unmet at p95 on this laptop: follow-up to stagger the tick read across two frames. TA-55: the tick read is staggered across two frames (ids and the first half of `read_poses` on the tick frame, the second half next frame; uncommitted entities draw at alpha 1.0 of their old pair, which equals the new pair at alpha 0, so no pop. Known one-frame hold: when `alpha > 0` on the tick frame the tail half is drawn at its old current pose while the head half is already at lerp(old, new, alpha), a one-frame lag of at most one tick of motion that the tail frame removes; a tick arriving before the tail reads everything at once; fewer than `STAGGER_MIN` = 64 entities read in one frame; scratch arrays reused, no per-frame allocation; the split and scratch live in `PoseStager`). Same-session windowed A/B, 800 views, `--all-views --cam=base`, 3 alternating runs, dev laptop: before p95 4.37 / 3.12 / 2.87 ms, after p95 3.00 / 2.75 / 2.55 ms (about -10 to -30 %), p50 unchanged within noise. The 2.4 ms p95 gate is deferred to the pinned runner (TA-42, A-62 measure-first); the remaining cost is the per-view transform writes, which run every frame.
 
 ## Open items
 
