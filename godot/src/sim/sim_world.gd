@@ -136,6 +136,7 @@ func step() -> void:
 	_profiler.lap(TickProfiler.ROW_COMMANDS)
 	_control.control_check()                                 # 3: C11, C18, C17, then the hook
 	if _hook != null:
+		_events.forward(_hook)                               # 3: A-71, then the think slice
 		_hook.on_tick(t, _view, _sink)
 	_profiler.lap(TickProfiler.ROW_AI)
 	_pathing.expansions_per_tick = path_expansions_per_tick()   # 3b: cut rung 8 reaches the budget (TA-49)
@@ -170,7 +171,7 @@ func view() -> SimView:
 
 
 func drain_events() -> Array[SimEvent]:
-	return _events.drain()
+	return _events.drain(_hook != null)
 
 
 ## The whole match state (S4) as `SimSerialize` lays it out; events are not included (the caller drains them every tick).
