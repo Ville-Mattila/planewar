@@ -3,8 +3,8 @@ class_name TerrainFlightRig extends RefCounted
 ## order, reduced to what the scenarios exercise. Think (every think_period_ticks): waypoint heading, deck-band
 ## altitude hold, TerrainProbe.probe once (6 samples) for the lift and the cached TTI. Act (every tick):
 ## FlightController.track_velocity on the cached guidance velocity; every pull_up_check_ticks one
-## TerrainProbe.sample_clearance at 1.0 s and, below 0, PULL_UP (nose to local up through track_thrust_vector,
-## thrust 1) until the think's TTI is >= pull_up_clear_tti_s. Not a contract: the Dart brain ports this.
+## TerrainProbe.sample_clearance at 1.0 s and, below 0, PULL_UP (`Assist.pull_up`, AI-38) until the think's TTI
+## is >= pull_up_clear_tti_s. Not a contract: the Dart brain ports this.
 
 var def: ShipDef
 var common: FlightCommonDef
@@ -22,6 +22,7 @@ var stats_ticks: int = 0
 var stats_pull_ups: int = 0
 var low_band_m: float = INF
 var trace: bool = false                ## print a line every think (debugging the scenarios)
+var pull_up_budget: bool = true        ## AI-38: also PULL_UP when the AGL is below `FlightController.pull_up_loss`
 var _gd: Dictionary
 var _probe: ProbeResult = ProbeResult.new()
 var _v_cmd: Vector3 = Vector3.ZERO
@@ -139,13 +140,14 @@ func _flown_lift(gravity: float) -> float:
 func act(s: ShipState, inp: PilotInput) -> void:
 	var n: Vector3 = s.p.normalized()
 	if not _pull_up and _tick % int(_n("pull_up_check_ticks")) == 0:
-		if TerrainProbe.sample_clearance(terrain, s.p, s.v, rules.gravity, _n("pull_up_sample_s")) < 0.0:
+		var budget: float = Ai05Kit.agl(s, terrain) - FlightController.pull_up_loss(Ai05Kit.basis(s), s.v, n, g)
+		var low: bool = TerrainProbe.sample_clearance(terrain, s.p, s.v, rules.gravity, _n("pull_up_sample_s")) < 0.0
+		if low or (pull_up_budget and budget < 0.0):
 			_pull_up = true
 			_pull_up_tick = _tick
 			stats_pull_ups += 1
-	if _pull_up:   # 05 s5.3 PULL_UP: nose to local up at max rate, thrust 1, brake off
-		FlightController.track_thrust_vector(Ai05Kit.basis(s), n, 1.0, n, g, inp)
-		inp.thrust = 1.0
+	if _pull_up:   # 05 s5.3 PULL_UP (AI-38: best-climb attitude of the lift law), brake off
+		Assist.pull_up(Ai05Kit.basis(s), s.v, n, g, inp)
 		return
 	_integ = FlightController.track_velocity(Ai05Kit.basis(s), s.v, _v_cmd, n, g, _integ, inp)
 

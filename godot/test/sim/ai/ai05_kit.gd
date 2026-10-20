@@ -23,7 +23,7 @@ static func num(d: Dictionary, key: String) -> float:
 
 
 static func gains(def: ShipDef, rules: RulesDef) -> FlightGains:
-	return FlightGains.from_dict(block("flight"), def, rules.tick_hz)
+	return FlightGains.from_dict(block("flight"), def, rules.tick_hz, rules, FlightTestKit.common())
 
 
 ## SimView.basis(id) convention: Basis(right, up, -fwd), right = fwd x up.

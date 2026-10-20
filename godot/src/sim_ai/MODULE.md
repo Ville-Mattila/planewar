@@ -73,7 +73,7 @@ class_name OverlayParams extends RefCounted        # AI-08: per-class overlay nu
 const KEYS: PackedStringArray                      # safety_clear/min_hold/max_hold/force_rtb_fuel01, recover_ceiling_gamma_deg / _exit_alt_m
 var bridge: BridgeParams; var ground: bool; var clear_tti_s: float; var min_hold_ticks: int; var max_hold_ticks: int
 var force_rtb_fuel01: float; var rc_gamma_rad: float; var rc_exit_alt_m: float; var ceiling_hard_m: float; var v_cruise: float
-static func for_ship(ap: Dictionary, def: ShipDef, rules: RulesDef, tick_hz: int) -> OverlayParams   # null on a missing key
+static func for_ship(ap: Dictionary, def: ShipDef, rules: RulesDef, tick_hz: int, flight_common: FlightCommonDef) -> OverlayParams   # null on a missing key
 static func for_ground(ap: Dictionary, rules: RulesDef, tick_hz: int) -> OverlayParams              # safety_min_hold_s only
 class_name Overlays extends RefCounted             # AI-08: 05 s2.4 overlays executed in step 3, static
 const NONE: int; const SAFETY: int; const RECOVER_CEILING: int   # = ControlMachine.Overlay ordinals

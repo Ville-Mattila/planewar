@@ -13,7 +13,9 @@ class_name GainSweep extends Node
 ##
 ## Options (after `--`): --out=DIR (required)  --models=speed_scaled,damping_only  --seeds=N (confirm landing seeds,
 ## default 200)  --dive-seeds=N (default 200)  --quick=N (landing and dive seeds in the search stages, default 24)
-## --random=N (default 24)  --given=FILE (evaluate {model:{flight,landing}} at confirm size)  --seed=N (default 606)  --stages=base,oat,greedy,random,confirm,cross  --failures=N (max rows
+## --random=N (default 24)  --given=FILE (evaluate {model:{flight,landing}} at confirm size)  --seed=N (default 606)
+## --stages=base,oat,greedy,random,confirm,cross  --dive-leg-m=M (AI-38 steep-dive waypoint line, default 2000;
+## 0 = the AI-06 line)  --failures=N (max rows
 ## of landing_failures.csv per evaluation, default 12)
 ## Files: sweep.csv, landing_failures.csv, best_gains.json (recommended flight / landing overrides per model).
 
@@ -32,7 +34,8 @@ const OVERSHOOT_MAX_DIVE_DAMPING: float = 0.20
 const CSV_COLS: PackedStringArray = ["model", "stage", "cand", "classes", "land_seeds", "dive_seeds", "score",
 	"step_fail", "step_worst_t_s", "step_worst_overshoot", "dive_worst_t_s", "dive_worst_overshoot", "dive_hits",
 	"dive_min_agl_m", "land_docked", "land_crashed", "land_other", "land_median_gate_dock_s", "land_max_go_arounds",
-	"land_thrust_low_mean", "step_fail_detail", "wall_s", "flight_overrides", "landing_overrides"]
+	"land_thrust_low_mean", "step_fail_detail", "wall_s", "flight_overrides", "landing_overrides",
+	"dive_unrecoverable", "dive_hits_recoverable", "land_thrust_zero_run_max", "land_thrust_zero_unsupported_run_max"]
 
 var _out_dir: String = ""
 var _models: Array[StringName] = [RulesDef.LIFT_SPEED_SCALED, RulesDef.LIFT_DAMPING_ONLY]
@@ -46,6 +49,7 @@ var _max_fail_rows: int = 12
 var _given: Dictionary = {}   ## --given=FILE: {model: {flight, landing}} evaluated at the confirm size (no search)
 var _dive_deg: Vector2 = SweepScenarios.DIVE_DEG
 var _dive_agl: Vector2 = SweepScenarios.DIVE_AGL
+var _dive_leg_m: float = SweepScenarios.DIVE_LEG_M   ## --dive-leg-m=M (AI-38); 0 = the AI-06 waypoint line
 var _csv: PackedStringArray = PackedStringArray()
 var _fail_csv: PackedStringArray = PackedStringArray()
 var _best_out: Dictionary = {}
@@ -100,6 +104,8 @@ func _parse(arg: String) -> void:
 		_dive_deg = _range(arg.substr(11))
 	elif arg.begins_with("--dive-agl="):
 		_dive_agl = _range(arg.substr(11))
+	elif arg.begins_with("--dive-leg-m="):
+		_dive_leg_m = float(arg.substr(13))
 	elif arg.begins_with("--failures="):
 		_max_fail_rows = int(arg.substr(11))
 
@@ -254,10 +260,16 @@ func _eval(model: StringName, stage: String, c: Cand, land_n: int, dive_n: int, 
 	# steep dives
 	var hits: int = 0
 	var min_agl: float = INF
+	var unrec: int = -1 if not full else 0   # AI-38 physical bound: only on the full (confirm / given) evaluations
+	var hits_rec: int = -1 if not full else 0
 	for k: int in dive_n:
-		var d: Vector3 = SweepScenarios.steep_dive(su, _seed, k, _dive_deg, _dive_agl)
+		var d: Vector3 = SweepScenarios.steep_dive(su, _seed, k, _dive_deg, _dive_agl, _dive_leg_m)
 		hits += 1 if d.x > 0.0 else 0
 		min_agl = minf(min_agl, d.y)
+		if full:
+			var rec: bool = SweepScenarios.dive_recoverable(su, _seed, k, _dive_deg, _dive_agl)
+			unrec += 0 if rec else 1
+			hits_rec += 1 if rec and d.x > 0.0 else 0
 	# landings
 	var docked: int = 0
 	var crashed: int = 0
@@ -266,9 +278,11 @@ func _eval(model: StringName, stage: String, c: Cand, land_n: int, dive_n: int, 
 	var max_ga: int = 0
 	var fail_rows: int = 0
 	var low_sum: int = 0
+	var zero_run: Vector2i = Vector2i.ZERO
 	for k: int in land_n:
 		var o: Dictionary = {}
 		var ok: bool = SweepScenarios.landing(su, _seed, k, o)
+		zero_run = Vector2i(maxi(zero_run.x, int(o["thrust_zero_run"])), maxi(zero_run.y, int(o["thrust_zero_unsupported_run"])))
 		max_ga = maxi(max_ga, int(o["go_arounds"]))
 		low_sum += int(o["thrust_low_ticks"])
 		if ok:
@@ -293,7 +307,8 @@ func _eval(model: StringName, stage: String, c: Cand, land_n: int, dive_n: int, 
 		str(hits), "%.1f" % (min_agl if min_agl != INF else -1.0), str(docked), str(crashed), str(other),
 		"%.1f" % median, str(max_ga),
 		"%.0f" % (float(low_sum) / float(maxi(land_n, 1))), " ".join(fail_detail), "%.2f" % (float(Time.get_ticks_msec() - t0) / 1000.0),
-		_q(JSON.stringify(c.flight)), _q(JSON.stringify(c.landing))]
+		_q(JSON.stringify(c.flight)), _q(JSON.stringify(c.landing)), str(unrec), str(hits_rec), str(zero_run.x),
+		str(zero_run.y)]
 	var _a: bool = _csv.push_back(",".join(row))
 	return score
 

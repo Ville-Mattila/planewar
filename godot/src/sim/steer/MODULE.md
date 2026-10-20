@@ -23,12 +23,23 @@ var dt: float; var pitch_rate: float; var yaw_rate: float; var roll_rate: float;
 var kp_path: float; var ki_path: float; var integ_max: float; var integ_band: float; var lead_max: float  # path loop (rad)
 var kp_att: float; var kp_yaw: float; var kp_roll: float; var kp_bank: float; var bank_threshold: float; var bank_max: float
 var t_trim: float; var kp_speed: float; var ki_speed: float; var kp_turn_thrust: float; var brake_overspeed: float
-static func from_dict(flight: Dictionary, def: ShipDef, tick_hz: int) -> FlightGains   # null if a KEYS entry is missing / not a number
+var ship: ShipDef; var rules: RulesDef; var common: FlightCommonDef; var stop_angle: float; var lead_best: PackedFloat32Array; var lead_du: float; var lead_de: float; var lift_best: PackedFloat32Array   # AI-38
+const LEAD_TABLE_SIZE: int; const LEAD_ERR_SIZE: int; const LEAD_SEARCH_STEPS: int   # lead_best [speed][path error] resolution
+static func from_dict(flight: Dictionary, def: ShipDef, tick_hz: int, rules_def: RulesDef, flight_common: FlightCommonDef) -> FlightGains   # null: key / def missing
 
 class_name FlightController extends RefCounted                               # 05 s5.2, static only
 static func track_velocity(b: Basis, v: Vector3, v_cmd: Vector3, up_local: Vector3, g: FlightGains, integ: Vector2, out: PilotInput) -> Vector2
 static func track_thrust_vector(b: Basis, t_dir: Vector3, t_mag01: float, up_local: Vector3, g: FlightGains, out: PilotInput) -> void
 static func shape_rate(e: float, kp: float, accel: float) -> float           # stop-in-time rate: sign(e) min(kp |e|, sqrt(2 accel |e|))
+static func weight_support_throttle(b: Basis, v: Vector3, up_local: Vector3, g: FlightGains) -> float   # AI-38 throttle floor
+static func lead_cap(u: float, err: float, e_s: float, g: FlightGains) -> float   # best_lead, opening to lead_max with overspeed
+static func best_lead(u: float, err: float, g: FlightGains) -> float; static func lift_best(u: float, g: FlightGains) -> float   # table lookups
+static func turn_accel(u: float, alpha: float, err: float, g: FlightGains) -> float   # thrust + lift along the chord to the command
+static func pull_up(b: Basis, v: Vector3, up_local: Vector3, g: FlightGains, out: PilotInput) -> void   # best-climb PULL_UP; axes + thrust
+static func pull_up_loss(b: Basis, v: Vector3, up_local: Vector3, g: FlightGains) -> float   # height lost before PULL_UP arrests the sink
+static func pull_up_plane(b: Basis, v: Vector3, up_local: Vector3) -> Vector3   # unit horizontal of the pull-up plane
+static func pull_up_elevation(v: Vector3, h: Vector3, up_local: Vector3, th0: float, g: FlightGains) -> float   # Newton step to the best climb
+static func climb_accel(v: Vector3, h: Vector3, up_local: Vector3, theta: float, g: FlightGains) -> float   # radial accel at elevation theta
 
 class_name ProbeParams extends RefCounted                                    # 05 s5.3 parameter struct, one per autopilot profile, read-only
 var min_clearance_m: float; var clearance_per_mps: float                     # autopilots def (Dart): 25, 0.25
@@ -51,7 +62,7 @@ class_name BridgeParams extends RefCounted                                   # A
 const KEYS: PackedStringArray                                                # required top-level autopilot keys (+ the `flight` block)
 var gains: FlightGains; var probe: ProbeParams; var pull_up_tti_s: float     # safety_pull_up_tti_s (05 s2.4: 2.0 s)
 var ship: ShipDef; var rules: RulesDef                                       # base class def + world rules: the trim feed-forward's lift law
-static func from_autopilot(ap: Dictionary, def: ShipDef, rules_def: RulesDef, tick_hz: int) -> BridgeParams   # null on a missing key
+static func from_autopilot(ap: Dictionary, def: ShipDef, rules_def: RulesDef, tick_hz: int, flight_common: FlightCommonDef) -> BridgeParams
 static func table(content: ContentSet, rules_def: RulesDef, tick_hz: int) -> Array[BridgeParams]   # by local ship index; null: no autopilot def
 static func autopilot_raw(content: ContentSet, id: StringName) -> Dictionary # AutopilotDef.raw of `id`, {} when absent
 
@@ -59,7 +70,7 @@ class_name Assist extends RefCounted                                         # R
 static func link_bridge(b: Basis, p: Vector3, v: Vector3, terrain: Terrain, bp: BridgeParams, probe: ProbeResult, out: PilotInput) -> void
 static func auto_dock(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams, g: FlightGains, radius_m: float, latch_mult: float, inp: PilotInput) -> bool   # true = assist overwrote inp
 static func link_bridge_ground(out: PilotInput) -> void                      # ground unit: stop (thrust 0, no BRAKE: no reverse)
-static func pull_up(b: Basis, up_local: Vector3, g: FlightGains, out: PilotInput) -> void   # 05 s5.3 PULL_UP: nose to local up, thrust 1, buttons 0
+static func pull_up(b: Basis, v: Vector3, up_local: Vector3, g: FlightGains, out: PilotInput) -> void   # buttons 0 + FlightController.pull_up (AI-38)
 static func hold_velocity(b: Basis, v: Vector3, lift_mps: float, up_local: Vector3, g: FlightGains, lead: float, out: PilotInput) -> void   # v_cmd = v + up * lift, pitch integrator = lead
 static func trim_lead(v: Vector3, up_local: Vector3, bp: BridgeParams) -> float   # steady nose lead: sin = g_perp / (u k_up_effective), <= integ_max
 
@@ -127,9 +138,7 @@ the steady nose lead fed forward from the lift law (`trim_lead`, no new def key)
 `TerrainProbe.drop_free_lift` (append) is A-69 for every lift caller; the worst sample is the ballistic one (`probe`
 unchanged). `SimWorld` step 4 calls `AssistStep.run` (one line, A-73): every possessed entity under LINK_BRIDGE, ships
 with a `BridgeParams` entry (not DOCKED / LANDED) fly `link_bridge`, ground units get `link_bridge_ground`, structures keep
-the decayed input. Findings for AI-06 / S-FLIGHT-1: 05 s5.3's PULL_UP (nose to local up) kills the lift (k_up_effective
-falls with forward speed), so dives steeper than 30 degrees below ~250 m AGL can still meet the ground; a nose lead of
-40-50 degrees off the velocity removed those contacts in a trial (not adopted: 05 law kept). `BridgeParams` comes from the
+the decayed input. PULL_UP is the AI-38 best-climb law (05's nose-to-up killed the speed_scaled lift). `BridgeParams` comes from the
 class's autopilot def; **needs content (AI-19):** `autopilots.json` with the `flight`, probe and `safety_*` keys (fixture
 `test/sim/ai/ai08_autopilots.json`); until then every table entry is null and step 4 leaves the decayed input in place.
 
@@ -174,15 +183,16 @@ L5 sinks only as far as the ship is centred including its drift, and L5 -> L6 li
 most `turn_cmd_max_deg` off the track (bank-to-turn, no loops).
 
 **Contract impact (AI-09):** 05's `step(phase, ship, pad, prm, out) -> Phase` takes the per-landing memory `LandingState`
-(phase, attempts, bearing, go-around geometry, integrators) and the `FlightGains`; `choose_bearing` takes the `Terrain`
-and a per-candidate threat penalty array (no `ThreatSampler` exists yet); `should_abort` takes `st`. **Needs content
-(AI-19):** the `landing` block gains `cruise_alt_agl_m` (the profile's), `glide_tol_m` 25, `approach_min_speed_mps` 40,
-`approach_lookahead_m` 400, `approach_capture_deg` 30, `kp_alt` 0.5, `vz_max_mps` 60, `turn_cmd_max_deg` 60,
-`hold_radius_m` 400, `hold_agl_m` 150, `hold_speed_mps` 50, `goaround_agl_m` 200, `goaround_extend_m` 1500,
-`transition_max_tilt_deg` 75 (A-34), `transition_nose_deg` 45, `transition_exit_hspeed_mps` 15, `transition_exit_dist_m` 30,
-`transition_speed_cap_mps` 30, `kp_floor` 1, `floor_tilt_deg` 45, `sink_gain` 0.25, `sink_min_mps` 1.5,
-`sink_max_mps` 6, `flare_tilt_deg` 10, `abort_horiz_agl_m` 15, `abort_vz_agl_m` 10, `abort_tti_s` 1, `bearing_count` 8,
-`bearing_samples` 6, `bearing_clear_m` 60, `bearing_terrain_weight` 0.05 (fixture `test/sim/ai/ai09_params.json`).
+and the `FlightGains`; `choose_bearing` takes the `Terrain` and a per-candidate threat penalty array. The `landing` block
+keys are `LandingParams.KEYS` (anchors in the fixture `test/sim/ai/ai09_params.json`; AI-19 writes them).
+
+**AI-38 (05 s5.2 / s5.3 amended; A-68: one law, the lift model read from `Kinematics`, no def key).** `track_velocity`:
+throttle >= `weight_support_throttle` (the gravity the best wing lift at that speed cannot carry; faded out over
+`integ_band` below the path; the throttle integrator holds while it flies); nose lead <= `lead_cap` (`best_lead`, ~40
+degrees for a cruising Dart under speed_scaled, opening to `lead_max` with overspeed: braking needs the bigger lead).
+`pull_up` (via `Assist.pull_up`): nose to the best-climb elevation of the lift law, wings level, thrust above the horizon
+only. `pull_up_loss` is the pull-up budget callers compare with their clearance (AI-06 rig; brains AI-13). Evidence:
+`godot/test/tuning/README.md`.
 
 ## Invariants
 
@@ -190,11 +200,10 @@ and a per-candidate threat penalty array (no `ThreatSampler` exists yet); `shoul
   only writes are `out` and the `probe` scratch, so `net` Prediction reproduces the server's step 4 bit for bit
   (`test_source_has_no_state`, `test_pure_and_deterministic`, `test_sc25_input_starvation_bridge`).
 - AS2: `link_bridge` clears every button (FIRE, FLIP, DOCK, RELEASE, BOOST; BRAKE only as `track_velocity` sets it); a
-  pull-up writes thrust 1 (`test_pulls_up_below_the_threshold`, `test_holds_velocity_when_clear`).
+  pull-up writes thrust 1 with the nose above the horizon, 0 below it (AI-38; `test_pulls_up_below_the_threshold`).
 - AS3: On cradle, every ship class under the bridge alone has no terrain contact for 2 s (the 10-tick A-45 window and on)
   from 100 random starts at 150-600 m AGL, 0-30 degree dives, v_cruise, and for 15 s from 0-10 degree descents
   (`test_bridge_window_no_terrain_contact_on_cradle`, `test_long_bridge_no_terrain_contact_on_cradle`).
-
 - FC1: `FlightController` is static and reads only its arguments: no member or static `var`, no RNG, clock, Node or autoload
   (S8, 03 s5.6). Identical arguments give identical outputs; 3,000 closed-loop ticks of two ships replay bit-identically
   (`test_pure_and_deterministic`, `test_source_has_no_state`).
@@ -204,6 +213,8 @@ and a per-candidate threat penalty array (no `ThreatSampler` exists yet); `shoul
   5 degrees in <= 2.0 s with < 15 % overshoot for all five ship classes under `speed_scaled`; under `damping_only` turns and
   climbs do, 15 degree dives take <= 2.6 s with < 20 % overshoot (thrust-limited; `test_step_response_*`,
   `test_damping_only_dive_is_thrust_limited`); any attitude recovers to the command within 15 s.
+- FC5 (AI-38): floor = lift law, never undercut on a level command; `best_lead` / PULL_UP within 2 / 3 degrees of brute force;
+  `pull_up_loss` bounds the height lost (`test_flight_controller_lift.gd`).
 - FC4: `track_thrust_vector` holds a tail-down hover for every class, Bomber (a_thrust 14) included; the TA-30 L4-L6 law
   flown through it lands 200/200 Dart and 200/200 Bomber from the spike's dock and fast-dock sets inside R0 B.5
   (`test_auto_dock_landing.gd`).
@@ -217,7 +228,6 @@ and a per-candidate threat penalty array (no `ThreatSampler` exists yet); `shoul
   (zero extra samples); the Architect may revisit. A path already under the surface at sample 0 gives a value in [0, t_0].
 - ST3: `lift_mps` is >= 0, 0 when the worst clearance is >= `h_req`, and <= `lift_max_frac * |v|`.
 - ST4: A vertical or stationary ship stays over one point (no NaN from a zero ground speed).
-
 - LC1: `LandingController` is static and reads only its arguments; it writes only `st` and `out` (`test_source_has_no_state`,
   `test_pure_and_deterministic`). FC2 holds for its output (it drives the stick through `FlightController`).
 - LC2: every autopilot touchdown meets R0 B.5 with the thrust axis within 10 degrees of the pad normal (05 AI-09). From the
@@ -239,7 +249,8 @@ AI-08 (`test_overlays_perf.gd`, best of 6, owner's desktop): `Assist.link_bridge
 
 05 s10 "act" row: one `track_velocity` or `track_thrust_vector` per AI ship per tick, no allocation (Vector3 / float locals,
 writes into the caller's `PilotInput`); budget 6 us per ship. Measured by `test_perf_cost_per_call` (best of 6 batches, owner's
-desktop, 4.7.2, shared with other jobs): track_velocity 5.7-7.8 us/call, track_thrust_vector 2.0-2.5 us/call. At the top of
+desktop, 4.7.2, shared with other jobs): track_velocity 5.7-7.8 us/call, track_thrust_vector 2.0-2.5 us/call. AI-38: floor +
+lead cap 1.2 us (track_velocity 6.9 us); `pull_up` 7.5 us, `pull_up_loss` 7.2 us (pull-ups only); lead table built once per class. At the top of
 that range the act row is over budget; the 05 s10 governor's rung 2 (act at 15 Hz for far ships) halves it. A Dart think in
 `test_perf_think_and_act` (probe + test guidance) costs about 51 us against the 25 us row: the guidance, not this module.
 
@@ -268,13 +279,10 @@ through `SimWorld` step 4).
 
 - **A probe time:** edit `probe_times_s` in the autopilots def; nothing here changes.
 - **A new controller:** `static func` only, take a state struct and an output `PilotInput`; add a purity test like `test_source_has_no_state`.
-
 ## Open items
 
 - `ProbeParams.lift_max_frac` / `lift_min_time_s` are in `autopilots.schema.json` (optional); AI-19 writes them (0.6, 0.5) into every `ap_*` (R0 B.12 A-67).
-- Landing under the `damping_only` A/B lift model: the L4-L6 law lands every dock set, but the full L1-L6 scenarios crash
-  in L2 (thrustless descent while decelerating: `track_velocity` cuts thrust on overspeed, and under damping_only thrust
-  is the lift). Reported, not asserted, like AI-05's SC-09 / SC-10 (A-68); a FlightController / gain item for AI-06.
+- Landing under `damping_only`: L1-L6 docks 200/200 with the AI-06 recommended set (AI-19 adopts it); at the AI-05 anchors it still crashes (lead_max 80).
 - The structure bounding-sphere probe of 05 s5.4 and the 1.0 s re-sample at act (PULL_UP) are `sim_ai` callers of `TerrainProbe`.
 - A-69 (05 s5.3 erratum): lift callers use the drop-free clearance `c_k + 0.5 g t_k^2` and add the lift to the current radial speed; TTI / PULL_UP keep the ballistic probe. `probe()` is unchanged; AI-13 owns the brain side. `LandingPilot` (AI-09) already does both.
 - A-70 (05 s5.5 erratum): implemented by AI-09 (`LandingController.thrust_vector`, floor = `landing.hover_agl_m`; LC2); `Assist.auto_dock()` (AI-10) inherits it.

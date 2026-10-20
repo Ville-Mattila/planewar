@@ -5,8 +5,9 @@ class_name Overlays extends RefCounted
 ## tick at 30 Hz after the class's act so its input wins (`run`), and skips the entity's thinks until it ends.
 ## LINK_BRIDGE is not here: the entity stays POSSESSED, so `Assist.link_bridge` runs it in step 4.
 ##
-## SAFETY (ships): hold the velocity at the release (no snap to a new heading) plus the TerrainProbe lift; PULL_UP (nose to the local up, thrust
-## 1) when the time to impact drops below `safety_pull_up_tti_s`, until it is >= `safety_clear_tti_s`; a system
+## SAFETY (ships): hold the velocity at the release (no snap to a new heading) plus the TerrainProbe lift; PULL_UP
+## (`Assist.pull_up`: best-climb attitude of the lift law, AI-38) when the time to impact drops below
+## `safety_pull_up_tti_s`, until it is >= `safety_clear_tti_s`; a system
 ## RETURN (FLAG_PREPEND) once when fuel is below `safety_force_rtb_fuel01`; ends at TTI >= clear and >= min hold, or at
 ## max hold unless a PULL_UP is running. RECOVER_CEILING: keep the heading on a `recover_ceiling_gamma_deg` path at
 ## `v_cruise`, SAFETY checks still apply; ends at or below `recover_ceiling_exit_alt_m`. Ground SAFETY: stop with the
@@ -64,7 +65,7 @@ static func run_safety(id: int, v: SimView, st: AiState, p: OverlayParams, terra
 	var s: int = EntityId.slot(id)
 	var pulling: bool = _checks(id, v, st, p, terrain, sink, probe)
 	if pulling:
-		Assist.pull_up(v.basis(id), v.pos(id).normalized(), p.bridge.gains, out)
+		Assist.pull_up(v.basis(id), v.vel(id), v.pos(id).normalized(), p.bridge.gains, out)
 	else:
 		_track(id, v, st, p, _lifted(st.guidance_vel[s], v, id, p, probe), out)
 	var _d: bool = sink.drive(id, out)
@@ -85,7 +86,7 @@ static func run_recover_ceiling(id: int, v: SimView, st: AiState, p: OverlayPara
 	var up: Vector3 = pos.normalized()
 	var pulling: bool = _checks(id, v, st, p, terrain, sink, probe)
 	if pulling:
-		Assist.pull_up(v.basis(id), up, p.bridge.gains, out)
+		Assist.pull_up(v.basis(id), v.vel(id), up, p.bridge.gains, out)
 	else:
 		var h: Vector3 = _heading(v.vel(id), -v.basis(id).z, up)
 		var path: Vector3 = (h * cos(p.rc_gamma_rad) + up * sin(p.rc_gamma_rad)) * p.v_cruise

@@ -16,16 +16,17 @@ var ship: ShipDef = null            ## the base (not doctrine-resolved) class de
 var rules: RulesDef = null          ## gravity, lift_model
 
 
-## From one autopilot def dictionary (`AutopilotDef.raw`), the ship class and the world constants. Null when a key
-## is missing or not a number (a broken def is a load error, not a default), or the ship is null.
-static func from_autopilot(ap: Dictionary, def: ShipDef, rules_def: RulesDef, tick_hz: int) -> BridgeParams:
+## From one autopilot def dictionary (`AutopilotDef.raw`), the ship class, the world constants and flight_common.
+## Null when a key is missing or not a number (a broken def is a load error, not a default), or a def is null.
+static func from_autopilot(ap: Dictionary, def: ShipDef, rules_def: RulesDef, tick_hz: int,
+		flight_common: FlightCommonDef) -> BridgeParams:
 	if def == null or rules_def == null or not (ap.get("flight") is Dictionary) or not (ap.get("probe_times_s") is Array):
 		return null
 	for k: String in KEYS:
 		if k != "probe_times_s" and not (ap.get(k) is float or ap.get(k) is int):
 			return null
 	var flight: Dictionary = ap["flight"]
-	var g: FlightGains = FlightGains.from_dict(flight, def, tick_hz)
+	var g: FlightGains = FlightGains.from_dict(flight, def, tick_hz, rules_def, flight_common)
 	if g == null:
 		return null
 	var times: PackedFloat32Array = PackedFloat32Array()
@@ -51,7 +52,7 @@ static func from_autopilot(ap: Dictionary, def: ShipDef, rules_def: RulesDef, ti
 static func table(content: ContentSet, rules_def: RulesDef, tick_hz: int) -> Array[BridgeParams]:
 	var out: Array[BridgeParams] = []
 	for sd: ShipDef in content.ships:
-		out.append(from_autopilot(autopilot_raw(content, sd.autopilot), sd, rules_def, tick_hz))
+		out.append(from_autopilot(autopilot_raw(content, sd.autopilot), sd, rules_def, tick_hz, content.flight_common))
 	return out
 
 
