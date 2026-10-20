@@ -266,7 +266,7 @@ samples), once per approach at think. No allocation (struct fields, Vector3 / fl
 
 ## Test entry points
 `godot/test/unit/sim/steer/test_flight_controller.gd` (step response under both lift models, any-attitude recovery, hover,
-interface, purity, perf); `godot/test/sim/ai/test_auto_dock_landing.gd` (TA-30 spike landing numbers);
+interface, purity, perf; `test_flight_controller_equivalence.gd`: track_velocity bit-exact to the ded8b4e law, AI-41); `godot/test/sim/ai/test_auto_dock_landing.gd` (TA-30 spike landing numbers);
 `godot/test/sim/ai/test_sc_terrain_flight.gd` (SC-09, SC-10 on cradle); `godot/test/unit/sim/steer/test_aim_solver.gd`, `test_ballistics.gd`, `test_terrain_probe.gd`
 (closed forms on flat and sloped synthetic terrain, ridge, cradle crater rims against an independent Quaternion path, lift,
 cost, purity); `godot/test/unit/sim/steer/test_landing_controller.gd` (transitions, aborts, bearing, L4-L6 law, purity,

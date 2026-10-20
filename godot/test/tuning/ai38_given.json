@@ -1,0 +1,19 @@
+{
+	"_doc": "AI-38 / AI-41 baseline input: the recommended_gains.json 'damping_only' set for BOTH lift models (A-68 prefers one set). reports/ai38/after_*.csv are 'gain_sweep --given' on this file; --given recommended_gains.json instead gives speed_scaled its own set (a different candidate, score 2.525). test_flight_controller_equivalence.gd keeps both blocks equal to recommended_gains.json 'damping_only'.",
+	"damping_only": {
+		"flight": {
+			"ki_path": 0.24, "ki_speed": 0.004, "kp_att": 3.6, "kp_speed": 0.025, "kp_turn_thrust": 2.5, "lead_max_deg": 128.0
+		},
+		"landing": {
+			"approach_min_speed_mps": 41.0, "glide_deg": 9.6, "kd_pos": 0.9, "sink_gain": 0.26
+		}
+	},
+	"speed_scaled": {
+		"flight": {
+			"ki_path": 0.24, "ki_speed": 0.004, "kp_att": 3.6, "kp_speed": 0.025, "kp_turn_thrust": 2.5, "lead_max_deg": 128.0
+		},
+		"landing": {
+			"approach_min_speed_mps": 41.0, "glide_deg": 9.6, "kd_pos": 0.9, "sink_gain": 0.26
+		}
+	}
+}
