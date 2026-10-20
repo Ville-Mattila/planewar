@@ -7112,7 +7112,9 @@
       "04 HELLO",
       "06 s2.1"
     ],
-    "status": "todo",
-    "note": "Unblocks UX-03 #73 (check_deps D1 name collision). Owner chose a net-lane rename task 2026-10-20."
+    "status": "done",
+    "note": "Unblocks UX-03 #73 (check_deps D1 name collision). Owner chose a net-lane rename task 2026-10-20.",
+    "pr": 74,
+    "merged": "2026-10-20"
   }
 ]
