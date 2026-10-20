@@ -38,7 +38,7 @@ static func is_known(id: int) -> bool;  static func is_reserved(id: int) -> bool
 static func channel_of(id: int) -> int                # -1 when unknown
 static func max_bytes(id: int) -> int                 # parser limit incl. the id byte; 0 when unknown
 static func channel_allows(channel: int, id: int) -> bool;  static func name_of(id: int) -> String;  static func message_count() -> int
-# Wire enums owned by 04: Platform, InputClass, Role, ChatScope, LeaveReason, KeyframeRequest, RefuseReason,
+# Wire enums owned by 04: Platform, WireInputClass (04 HELLO.input_class; renamed in code so it does not shadow the input lane global InputClass, 06 s2.1), Role, ChatScope, LeaveReason, KeyframeRequest, RefuseReason,
 #   KeyframeScope, ChatStatus, PlayerStatus, MatchEndReason, RosterRemoveReason, AdminNotice, SessionPhase.
 # Wire mirrors of R0 B.3 sim enums: CommandKind, ResultCode, BuildReject, EventKind, ReleaseReason,
 #   ControlState, DockState, PlayerKind, QuickPingKind.
