@@ -200,6 +200,7 @@ func on_tick(tick: int, view: SimView, sink: CommandSinkBase) -> void:
 			brain.act_batch(b.ids, view, state, _sink)
 		for i: int in nov:
 			if Overlays.run(_ov_ids[i], view, state, op, _terrain, _sink, tick, _probe, _ov_in):
+				_sink.end_overlay(_ov_ids[i])
 				var _w: bool = wake(_ov_ids[i], tick)
 		_stats_overlay_ticks += nov
 	_bots(tick, view)

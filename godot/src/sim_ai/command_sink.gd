@@ -48,5 +48,10 @@ func set_ai_tag(id: int, tag: int) -> void:
 		_inner.set_ai_tag(id, tag)
 
 
+func end_overlay(id: int) -> void:
+	if _inner != null:
+		_inner.end_overlay(id)
+
+
 func pathing() -> Pathing:
 	return _inner.pathing() if _inner != null else null

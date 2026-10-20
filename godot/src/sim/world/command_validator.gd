@@ -11,6 +11,10 @@ const RATE_PER_S: int = 10
 const BURST: int = 30
 ## sim/MODULE.md "Data owned": pending command queue <= 256 per tick; overflow rejects with REJECTED_RATE.
 const QUEUE_MAX: int = 256
+## `Command.target` of a system ORDER (SimSink.submit with FLAG_PREPEND, TA-59): `player` stays the issuing AI's slot
+## (its team bounds the targets), the applier stamps issuer -1. A client ORDER always has target 0 and is refused
+## as malformed otherwise, so a client cannot forge the marker.
+const SYSTEM: int = -1
 const _STATE: PackedStringArray = ["_tokens", "_last", "_claimed"]
 
 var order_rules: OrderRules = null                    ## null: every ORDER is REJECTED_INVALID_ORDER
@@ -61,11 +65,27 @@ func validate(cmd: Command, tick: int, ended: bool, queued: int) -> CommandResul
 	if ended:
 		r.code = CommandResult.Code.REJECTED_PHASE
 		return r
-	r.code = check(cmd) as CommandResult.Code
+	r.code = (CommandResult.Code.REJECTED_MALFORMED if cmd.kind == Command.Kind.ORDER and cmd.target != 0
+		else check(cmd)) as CommandResult.Code
 	if r.code == CommandResult.Code.REJECTED_PLACEMENT:
 		r.reject = last_reject
 	if r.code == CommandResult.Code.ACCEPTED and cmd.kind == Command.Kind.POSSESS:
 		var _a: bool = _claimed.push_back(cmd.target)
+	return r
+
+
+## Verdict for a system ORDER (`target` == SYSTEM; TA-59): phase, queue bound and an active issuing slot; no rate token
+## (decision: forced RETURNs are the sim's safety net and must not starve the owner's own commands).
+func validate_system(cmd: Command, ended: bool, queued: int) -> CommandResult:
+	var r: CommandResult = CommandResult.new()
+	if ended:
+		r.code = CommandResult.Code.REJECTED_PHASE
+	elif queued >= QUEUE_MAX:
+		r.code = CommandResult.Code.REJECTED_RATE
+	elif cmd.player < 0 or cmd.player >= PlayerTable.SLOTS or not _players.is_active(cmd.player):
+		r.code = CommandResult.Code.REJECTED_MALFORMED
+	else:
+		r.code = check(cmd) as CommandResult.Code
 	return r
 
 
@@ -139,6 +159,8 @@ func _commander(p: int) -> bool:
 func _check_order(cmd: Command) -> int:
 	if not CommandPayload.read_order(cmd, _spec, _ids):
 		return CommandResult.Code.REJECTED_MALFORMED
+	if cmd.target == SYSTEM:
+		return _check_system_order(cmd.player)
 	if not _commander(cmd.player):
 		return CommandResult.Code.REJECTED_NO_RIGHTS
 	if order_rules == null:
@@ -155,6 +177,24 @@ func _check_order(cmd: Command) -> int:
 			return CommandResult.Code.REJECTED_MALFORMED if OrderRules.malformed(v) else CommandResult.Code.REJECTED_INVALID_ORDER
 		if not _control.orders.room(s, _spec.flags):
 			return CommandResult.Code.REJECTED_CAP                               # 05 C3 guard: queue < 8
+	if _spec.target != 0 and not _store.alive(_spec.target):
+		return CommandResult.Code.REJECTED_INVALID_ORDER
+	return CommandResult.Code.ACCEPTED
+
+
+# System orders (TA-59, 05 s2.4): RETURN only, on live units of the issuing slot's own team.
+func _check_system_order(issuer: int) -> int:
+	if order_rules == null or _spec.kind != OrderSpec.Kind.RETURN:
+		return CommandResult.Code.REJECTED_INVALID_ORDER
+	var tm: int = _players.team[issuer]
+	for id: int in _ids:
+		if not _store.alive(id) or EntityId.is_wreck(id):
+			return CommandResult.Code.REJECTED_DEAD
+		if _store.team[EntityId.slot(id)] != tm:
+			return CommandResult.Code.REJECTED_NOT_OWNER
+		var v: OrderRules.Verdict = order_rules.validate(_spec, _store.def_id[EntityId.slot(id)], false)
+		if v != OrderRules.Verdict.OK:
+			return CommandResult.Code.REJECTED_MALFORMED if OrderRules.malformed(v) else CommandResult.Code.REJECTED_INVALID_ORDER
 	if _spec.target != 0 and not _store.alive(_spec.target):
 		return CommandResult.Code.REJECTED_INVALID_ORDER
 	return CommandResult.Code.ACCEPTED
