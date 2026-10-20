@@ -6952,7 +6952,10 @@
       "R0-amendments-05 A-71",
       "05 s4.3"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-20",
+    "pr": "public#61",
+    "note": "class table not in S4: restored session must call set_class_table again; missing def shifts class numbers, >16 classes dropped silently"
   },
   {
     "id": "TA-58",
