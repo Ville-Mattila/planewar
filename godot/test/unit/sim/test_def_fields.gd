@@ -100,7 +100,7 @@ func _unsupplied_spent(ticks: int) -> int:
 	var w: SimWorld = CombatTestKit.world()
 	var cut: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0))
 	CombatTestKit.power(w, 1, 1)
-	FireTestKit.combat(w).fire.unsupplied[EntityId.slot(cut)] = 1
+	# no supply root in the world: GD-18's network flags the tower unsupplied by itself
 	FireTestKit.hook(w).hold(cut, PilotInput.FIRE1)
 	var s: int = EntityId.slot(cut)
 	var before: int = w.store().ammo[s]

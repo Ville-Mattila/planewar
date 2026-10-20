@@ -3,7 +3,7 @@ class_name SimViewContract extends RefCounted
 ## on the scripted scene and records the accessor names that failed (`failed`) and that were exercised
 ## (`covered`). It never asserts, so the same clauses judge a real view (must fail nothing) and a mutant (must fail
 ## the broken accessor). Accessors whose system has not landed (service / pad queue: GD-15; field_remaining,
-## supply01: Economy; player_score, landing_grade_last: scoring; path_grid_version: TA-50)
+## player_score, landing_grade_last: scoring; path_grid_version: TA-50)
 ## are held to the neutral default of the SimView base class; the clause changes when the system lands.
 
 const EPS: float = 1e-4
@@ -97,7 +97,8 @@ func _vitals() -> void:
 	_t(&"boost_state", _v.boost_state(s.a) == 2 and _v.boost_state(s.b) == 0 and _v.boost_state(s.dead) == 0)   # 2 cooling, 0 ready
 	_t(&"flip_cooldown01", _near(_v.flip_cooldown01(s.a), SimViewScene.FLIP_CD01) and _v.flip_cooldown01(s.b) == 0.0)
 	_t(&"landing_grade_last", _v.landing_grade_last(s.a) == -1)
-	_t(&"supply01", _v.supply01(s.a) == 0.0)
+	_t(&"supply01", _near(_v.supply01(s.tower), SimViewScene.TOWER_SUPPLY01) and _v.supply01(s.core) == 0.0
+			and _v.supply01(s.a) == 0.0 and _v.supply01(s.dead) == 0.0)
 
 
 func _lists() -> void:
@@ -108,9 +109,9 @@ func _lists() -> void:
 			and _same(_v.ids_near(_v.pos(s.a), 300.0, Spatial.MASK_SHIP), [s.a, s.b])
 			and _v.ids_near(_v.pos(s.a), 50.0, Spatial.MASK_STRUCTURE).is_empty())
 	_t(&"ships", _same(_v.ships(), [s.a, s.b, s.c]))
-	_t(&"structures", _same(_v.structures(), [s.core, s.pad, s.yard]))
+	_t(&"structures", _same(_v.structures(), [s.core, s.pad, s.yard, s.tower]))
 	_t(&"wrecks", _same(_v.wrecks(), [s.wreck]))
-	_t(&"visible_ids", _same(_v.visible_ids(0), [s.core, s.pad, s.yard, s.a, s.b, s.c]) and _v.visible_ids(7).is_empty())
+	_t(&"visible_ids", _same(_v.visible_ids(0), [s.core, s.pad, s.yard, s.tower, s.a, s.b, s.c]) and _v.visible_ids(7).is_empty())
 	_t(&"visible_to", _v.visible_to(0, s.a) and _v.visible_to(0, s.b) and not _v.visible_to(0, s.wreck)
 			and not _v.visible_to(0, s.dead) and not _v.visible_to(9, s.a))
 	_t(&"unit_count", _v.unit_count(0) == 2 and _v.unit_count(1) == 1 and _v.unit_count(2) == 0)
@@ -146,7 +147,7 @@ func _team_and_match() -> void:
 	var eco: EconomyDef = s.content.economy
 	var cap: Vector2i = Vector2i.ZERO
 	var power: Vector2 = Vector2.ZERO
-	for id: int in [s.core, s.pad, s.yard]:
+	for id: int in [s.core, s.pad, s.yard, s.tower]:
 		var sd: StructureDef = s.content.structures[_st.def_id[_slot(id)] - DefRanges.STRUCTURE_BASE]
 		cap += Vector2i(sd.storage_ore, sd.storage_ice)
 		power += Vector2(maxf(sd.power, 0.0), maxf(-sd.power, 0.0))
@@ -169,7 +170,7 @@ func _team_and_match() -> void:
 	var p0: PlayerStateView = _v.player_state(0)
 	var p1: PlayerStateView = _v.player_state(1)
 	_t(&"player_state", p0 != null and p1 != null and p0.team == 0 and p1.team == 1 and p0.unit_count == 2
-			and p0.structure_count == 3 and p1.doctrine == &"vanguard" and p1.connected
+			and p0.structure_count == 4 and p1.doctrine == &"vanguard" and p1.connected
 			and _v.player_state(2).kind == PlayerTable.KIND_BOT and _v.player_state(9) == null)
 	_t(&"match_arc", _v.match_arc() == MatchArc.Arc.OPEN)
 	_t(&"match_phase", _v.match_phase() == MatchRules.Phase.PLAYING)

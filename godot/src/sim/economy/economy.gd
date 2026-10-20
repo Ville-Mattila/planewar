@@ -30,6 +30,8 @@ var _n_struct: int = -1
 var _dirty: bool = true
 var _core_def: int = -1
 var sun_period_s: float = 0.0                            ## 0 = fixed sun +Z; > 0 = moving sun (MatchRules.sun_period_s, set by EconomyHub)
+## Counts `mark_dirty` calls (BUILD_DONE, deaths, start kit): `SupplyNet` rebuilds when it moves. Derived, not state.
+var structure_epoch: int = 0
 var _clock: int = 0                                      ## sim tick set by `set_clock`; derived, not state
 var _plateaus: PackedVector3Array = PackedVector3Array() ## unit centres of the solar Plateau(s), set at map load (planned: no map data yet)
 var _tower_rate: PackedFloat32Array = PackedFloat32Array()
@@ -180,6 +182,7 @@ func refund(player: int, ore: int, ice: int) -> void:
 ## The structure set or a structure's finished state changed: caps, power and Core counts refresh at the next read.
 func mark_dirty() -> void:
 	_dirty = true
+	structure_epoch += 1
 
 
 ## Step 10: cached values refresh, then the Core trickle (`core_trickle_ore_per_s` per finished Core, to its owner).

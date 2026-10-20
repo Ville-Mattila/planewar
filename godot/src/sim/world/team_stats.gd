@@ -78,3 +78,24 @@ static func count_owned(store: EntityStore, player: int, live: PackedInt32Array)
 		if store.owner[s] == player:
 			n += 1
 	return n
+
+
+## The whole `TeamStateView` of `team` refilled in place (no allocation; `members` is the view's own array).
+static func fill_team(v: TeamStateView, team: int, store: EntityStore, defs: WorldDefs, pl: PlayerTable,
+		rules: MatchRules, state: MatchState) -> void:
+	v.team = team
+	v.ore = pl.team_ore[team]
+	v.ice = pl.team_ice[team]
+	var cap: Vector2i = stockpile_cap(store, defs, team)
+	v.ore_cap = cap.x
+	v.ice_cap = cap.y
+	var pb: Vector2 = power_balance(store, defs, team)
+	v.power_supply = pb.x
+	v.power_demand = pb.y
+	v.unit_cap = rules.caps.units
+	v.structure_cap = rules.caps.structures
+	pl.members(team, v.members)
+	v.eliminated = false
+	v.flags = TeamStateView.CORE_EXPOSURE if state.exposure_tick >= 0 else 0
+	if pb.x < pb.y:
+		v.flags |= TeamStateView.LOW_POWER

@@ -12,6 +12,15 @@ func _hurt(w: SimWorld, id: StringName, hp: float) -> int:
 	return s
 
 
+# The Core goes (no trickle) and an Outpost on the Refinery takes over as the supply root (GD-18: unsupplied structures
+# never repair; the Refinery sits beyond an Outpost's 400 m from the Core).
+func _outpost_for_core(w: SimWorld) -> void:
+	var at: Vector3 = w.store().pos[K.find(w, &"refinery")]
+	var _gone: bool = w.store().free_slot(K.find(w, &"core"), 0)
+	var _old: Array[SimEvent] = w.drain_events()
+	var _o: int = WorldTestKit.spawn(w, &"outpost", 0, 0, at)
+
+
 func _top(w: SimWorld, s: int) -> float:
 	return WorldDefs.new(WorldTestKit.content()).hp_max(0, w.store().def_id[s])
 
@@ -30,7 +39,7 @@ func test_repairs_after_the_delay_and_pays_ore() -> void:
 	var w: SimWorld = K.solo_world()
 	var s: int = _hurt(w, &"refinery", 100.0)
 	var hz: int = _tick_hz(w)
-	var _gone: bool = w.store().free_slot(K.find(w, &"core"), 0)         # no Core, no trickle: Ore only falls
+	_outpost_for_core(w)                                                # no Core, no trickle: Ore only falls
 	var ore0: int = K.ore(w)
 	var _a: Array[SimEvent] = K.run(w, 9 * hz)
 	assert_float(w.store().hp[s]).is_equal(100.0)                       # 9 s: still inside the delay
@@ -51,7 +60,7 @@ func test_a_whole_repair_costs_one_ceil_of_total_hp_times_k() -> void:
 	var w: SimWorld = K.solo_world()
 	var s: int = K.find(w, &"refinery")
 	w.store().hp[s] = _top(w, s) - 12.0
-	var _gone: bool = w.store().free_slot(K.find(w, &"core"), 0)         # no trickle
+	_outpost_for_core(w)                                                # no trickle
 	var ore0: int = K.ore(w)
 	var _a: Array[SimEvent] = K.run(w, 30 * _tick_hz(w))
 	assert_float(w.store().hp[s]).is_equal(_top(w, s))
@@ -73,7 +82,7 @@ func test_a_hit_restarts_the_delay() -> void:
 func test_pauses_without_ore_and_resumes() -> void:
 	var w: SimWorld = K.solo_world()
 	var s: int = _hurt(w, &"refinery", 100.0)
-	var _gone: bool = w.store().free_slot(K.find(w, &"core"), 0)         # no Core, no trickle: the pool stays empty
+	_outpost_for_core(w)                                                # no Core, no trickle: the pool stays empty
 	var pool: int = K.ore(w)
 	assert_bool(w.economy().economy.try_spend(0, pool, 0)).is_true()
 	var hz: int = _tick_hz(w)
@@ -88,15 +97,22 @@ func test_pauses_without_ore_and_resumes() -> void:
 func test_unsupplied_and_unfinished_do_not_repair() -> void:
 	var w: SimWorld = K.solo_world()
 	var s: int = _hurt(w, &"refinery", 100.0)
-	w.economy().repair.unsupplied.resize(EntityId.WRECK_SLOT_MIN)
-	w.economy().repair.unsupplied[s] = 1
+	var home: Vector3 = w.store().pos[s]
+	w.store().pos[s] = WorldTestKit.at(0.0, 3000.0)                     # far outside the Core's 600 m: no supply (GD-18)
+	w.economy().economy.mark_dirty()                                    # a hand-made change: the epoch tells the network
 	var hz: int = _tick_hz(w)
 	var _a: Array[SimEvent] = K.run(w, 14 * hz)
+	assert_bool(w.economy().supply.is_supplied(s)).is_false()
 	assert_float(w.store().hp[s]).is_equal(100.0)
-	w.economy().repair.unsupplied[s] = 0
+	w.store().pos[s] = home
+	w.economy().economy.mark_dirty()
 	w.store().flags[s] |= EntityStore.F_BUILDING
 	var _b: Array[SimEvent] = K.run(w, 3 * hz)
-	assert_float(w.store().hp[s]).is_equal(100.0)
+	assert_float(w.store().hp[s]).is_equal(100.0)                       # supplied again, but a site
+	w.store().flags[s] &= ~EntityStore.F_BUILDING
+	w.economy().economy.mark_dirty()
+	var _c: Array[SimEvent] = K.run(w, 3 * hz)
+	assert_float(w.store().hp[s]).is_greater(100.0)                     # finished and supplied: repairs
 
 
 func test_s4_and_determinism() -> void:
