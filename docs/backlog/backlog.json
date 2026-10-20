@@ -2818,7 +2818,7 @@
     ],
     "status": "todo",
     "note": "depends on A-27 deps.json edit (SimEvent, CommandResult named for net; owner default approve)",
-    "acceptance_append": "; the ORDER codec writes / reads the 6-byte ESCORT trailer (present iff order_kind 3): an ESCORT with slot 1, FOCUS and a focus id round-trips, a 32-id ESCORT is 142 B, a MOVE with 6 trailing bytes returns null (R0 B.14 A-85)"
+    "acceptance_append": "; the ORDER codec writes / reads the 6-byte ESCORT trailer (present iff order_kind 3): an ESCORT with slot 1, FOCUS and a focus id round-trips, a 32-id ESCORT is 142 B, a MOVE with 6 trailing bytes returns null (R0 B.14 A-85); SET_RALLY (3 x f64 position) and TOGGLE_AUTO_REPLENISH (u8 flag + up to 8 x (u16 def, u8 count)) payloads round-trip as GD-17 applies them"
   },
   {
     "id": "NET-07",
