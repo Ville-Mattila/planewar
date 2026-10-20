@@ -1,5 +1,5 @@
 class_name Production extends RefCounted
-## Production queues of 02 s6.4 (TA-19; GD-17 adds auto-replenish, rally and the launch delay): one queue of at most
+## Production queues of 02 s6.4 (TA-19; GD-17: `LaunchBay` rally + 3 s launch, `AutoReplenish`): one queue of at most
 ## `economy.queue_max` (5, S13) items per Shipyard / Vehicle Bay, shared by the team; every item remembers the player
 ## who queued it (the unit is that player's, with that player's doctrine; owner-only cancel, S12). The head item is paid
 ## when it STARTS (waiting for Ore / Ice / the early share lock otherwise, one alert per wait), then runs for
@@ -10,6 +10,7 @@ class_name Production extends RefCounted
 
 const NO_ITEM: int = -1
 const CAP_UNITS: int = 0       ## CAP_REACHED `b` (04 s3.6 cap kind: 0 units, 1 structures, 2 projectiles)
+const PARK_CLEARANCE_M: float = 0.5   ## gap between the parked ship and the factory's bounding sphere
 const _FLAG_CAP: int = 1       ## CAP_REACHED already reported for this block
 const _FLAG_WAIT: int = 2      ## "waiting" alert already raised for this wait
 const _STATE: PackedStringArray = ["q_def", "q_player", "q_len", "started", "paid_ore", "paid_ice", "_flags", "_total"]
@@ -20,6 +21,9 @@ var q_len: PackedByteArray = PackedByteArray()         ## per factory slot
 var started: PackedByteArray = PackedByteArray()       ## per factory slot: 1 once the head has been paid
 var paid_ore: PackedInt32Array = PackedInt32Array()    ## per factory slot: what the head paid
 var paid_ice: PackedInt32Array = PackedInt32Array()
+
+var launch: LaunchBay                                  ## rally points, pad parking and the launch delay (GD-17)
+var replenish: AutoReplenish                           ## per-player unit targets (GD-17)
 
 var _store: EntityStore
 var _players: PlayerTable
@@ -59,6 +63,8 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	paid_ice.fill(0)
 	_flags.fill(0)
 	_units.fill(0)
+	launch = LaunchBay.new(store, defs, events, applier, rules.tick_hz)
+	replenish = AutoReplenish.new(store, players, defs, rules, self, economy)
 
 
 func queue_max() -> int:
@@ -88,6 +94,20 @@ func progress01(factory: int) -> float:
 		return 0.0
 	var bt: float = _build_time(q_player[factory * _qmax], q_def[factory * _qmax])
 	return clampf(_store.timer_a[factory] / bt, 0.0, 1.0) if bt > 0.0 else 1.0
+
+
+## True when structure def `factory_def` produces anything (a Shipyard or Vehicle Bay).
+func is_factory(factory_def: int) -> bool:
+	var f: StructureDef = _defs.base.structure(factory_def)
+	if f == null:
+		return false
+	for s: ShipDef in _defs.base.ships:
+		if s.produced_at == f.id:
+			return true
+	for g: GroundUnitDef in _defs.base.ground_units:
+		if g.produced_at == f.id:
+			return true
+	return false
 
 
 ## True when `unit_def` is made at structure def `factory_def` (its `produced_at`).
@@ -136,6 +156,7 @@ func cancel(factory: int, i: int) -> void:
 
 ## The factory died: its queue is lost without refund (nothing was promised after destruction).
 func forget(factory: int) -> void:
+	launch.forget(factory)
 	_total -= q_len[factory]
 	for i: int in q_len[factory]:
 		q_def[factory * _qmax + i] = NO_ITEM
@@ -145,6 +166,8 @@ func forget(factory: int) -> void:
 
 ## Step 10: every finished factory with a queue starts or advances its head.
 func step(t: int, dt: float) -> void:
+	launch.step(t)
+	replenish.step(t)
 	if _total <= 0:
 		return
 	for s: int in _store.structures:
@@ -154,10 +177,12 @@ func step(t: int, dt: float) -> void:
 
 func write_state(buf: StreamPeerBuffer) -> void:
 	StateIO.put_props(buf, self, _STATE)
+	launch.write_state(buf)
+	replenish.write_state(buf)
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
-	if not StateIO.get_props(buf, self, _STATE):
+	if not StateIO.get_props(buf, self, _STATE) or not launch.read_state(buf) or not replenish.read_state(buf):
 		return false
 	var n: int = EntityId.WRECK_SLOT_MIN
 	return q_def.size() == n * _qmax and q_player.size() == n * _qmax \
@@ -201,12 +226,20 @@ func _finish(s: int, player: int, unit: int, t: int) -> void:
 	if _at_cap(player, t):
 		_block(s, player)
 		return
-	var dir: Vector3 = _store.up[s] if _defs.entity_kind(unit) == EntityStore.K_SHIP else _store.fwd[s]
-	var at: Vector3 = _store.pos[s] + dir * _store.radius[s]
+	var ship: bool = _defs.entity_kind(unit) == EntityStore.K_SHIP
+	# A ship is parked on top of the Shipyard, just outside its bounding sphere (no ram on launch); a ground unit rolls out
+	# at the front.
+	var at: Vector3 = _store.pos[s] + _store.fwd[s] * _store.radius[s]
+	if ship:
+		at = _store.pos[s] + _store.up[s] * (_store.radius[s] + _defs.radius_of(unit) + PARK_CLEARANCE_M)
 	var u: int = _applier.spawn(unit, player, _players.team[player], at, Vector3.ZERO, _store.fwd[s], t)
 	if u < 0:
 		_block(s, player)
 		return
+	if ship:
+		launch.dock(u, s, t)
+	else:
+		launch.send_ground(u, s, player, t)
 	_units[player] += 1
 	_pop_head(s)
 

@@ -342,6 +342,10 @@ func production_progress01(factory: int) -> float:
 	return production.progress01(EntityId.slot(factory)) if production != null and _store.alive(factory) else 0.0
 
 
+func auto_replenish_target(player: int, _def_id: int) -> int:
+	return production.replenish.target_of(player, _def_id) if production != null else 0
+
+
 func terrain_height(dir: Vector3) -> float:
 	return _terrain.height_at(dir)
 

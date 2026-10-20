@@ -64,6 +64,8 @@ var tick: int; var player: int; var kind: Kind; var target: int; var payload: Pa
 static func order(player: int, ids: PackedInt32Array, spec: OrderSpec) -> Command                  # (03) builders
 static func build(player: int, def_id: int, cell: int, rotation: int) -> Command
 static func produce(player: int, factory: int, def_id: int, count: int) -> Command
+static func set_rally(player: int, factory: int, pos: Vector3) -> Command                  # (GD-17) 3 x f64
+static func toggle_auto_replenish(player: int, factory: int, enabled: bool, roster: PackedInt32Array) -> Command   # (GD-17) roster = [def_id, count, ...], at most 8 pairs; replaces the player's targets, disabled clears
 static func possess(player: int, id: int) -> Command;  static func release(player: int) -> Command
 static func pilot(player: int, tick: int, input: PilotInput) -> Command
 static func set_adjutant(player: int, enabled: bool, profile: int, toggles: int) -> Command      # profile 0 assist, 1 caretaker, 2 economy

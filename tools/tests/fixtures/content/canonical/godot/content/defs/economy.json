@@ -23,6 +23,8 @@
  "refinery_docks": 2,
  "hauler_transfer_per_s": 40,
  "queue_max": 5,
+ "launch_delay_s": 3,
+ "auto_replenish_period_s": 1,
  "construction_slots_base": 2,
  "construction_slots_max": 4,
  "cancel_refund_queued": 1.0,

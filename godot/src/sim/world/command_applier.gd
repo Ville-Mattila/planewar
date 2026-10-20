@@ -3,9 +3,8 @@ class_name CommandApplier extends RefCounted
 ## that fails it has no effect, S10). Control commands (POSSESS, RELEASE, REQUEST_POSSESS, HANDOVER) and ORDER
 ## intake go to 05's `ControlMachine` (`sim/control/`, AI-02); SET_ADJUTANT and the DEBUG kinds are applied here.
 ## Also the spawn path and the deferred death list of step 9 (C15 release through `ControlMachine.on_death`).
-## BUILD, CANCEL_BUILD, PRODUCE and CANCEL_PRODUCE are routed to `EconomyHub` by `CommandIntake` (TA-19); the kinds
-## whose system has not landed (SET_RALLY, TOGGLE_AUTO_REPLENISH, SURRENDER) are validated and then left to their
-## owners (Production GD-17, Economy GD-20).
+## BUILD, CANCEL_BUILD, PRODUCE, CANCEL_PRODUCE, SET_RALLY and TOGGLE_AUTO_REPLENISH are routed to `EconomyHub` by
+## `CommandIntake` (TA-19, GD-17); SURRENDER is validated and then left to its owner (Economy GD-20).
 
 const DEATH_CAUSE_DEBUG: int = 0
 
@@ -60,6 +59,21 @@ func apply(cmd: Command, tick: int) -> void:
 			_debug_spawn(cmd, tick)
 		Command.Kind.DEBUG_SET:
 			_debug_set(cmd)
+
+
+## A standing MOVE to `point` for entity slot `s`, issued by `issuer` (GD-17 rally: "ORDERED: move to rally, then AUTO").
+func order_move(s: int, issuer: int, point: Vector3, tick: int) -> void:
+	_spec.kind = OrderSpec.Kind.MOVE
+	_spec.flags = 0
+	_spec.haul_mode = OrderSpec.HaulMode.FERRY
+	_spec.target = 0
+	_spec.point = point
+	var _r: int = _spec.points.resize(0)
+	_spec.issuer = issuer
+	_spec.issue_tick = tick
+	var _n: int = _ids.resize(1)
+	_ids[0] = _store.id_of(s)
+	_control.orders.order(_spec, _ids)
 
 
 ## Marks `s` for the deferred free at the end of step 9 (03 s4.1 rule 6); idempotent within a tick.

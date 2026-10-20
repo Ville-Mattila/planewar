@@ -35,12 +35,14 @@ var outpost_spacing_enemy_m: float = 0.0       ## 02 s6.2 rule 5(c)
 var site_hp_fraction: float = 0.0              ## 02 s6.3: site hp = hp * max(site_hp_fraction, progress)
 var start_refinery_dist_m: float = 0.0         ## 02 s8.1 start kit geometry
 var start_adjacent_dist_m: float = 0.0
+var launch_delay_s: float = 0.0                ## 02 s2.3 / s6.4: completion -> the ship leaves its Shipyard pad
+var auto_replenish_period_s: float = 0.0       ## 02 s6.4: seconds between auto-replenish scans
 
 const SPEC: Dictionary = {
 	"i": "start_ore start_ice salvage_pod_max_ore refinery_docks queue_max construction_slots_base construction_slots_max early_share_ore",
-	"f": "core_trickle_ore_per_s repair_ore_per_hp wreck_fraction wreck_lifetime_s solar_band_deg solar_plateau_mult solar_plateau_radius_m tower_offline_ratio production_min_speed pipe_radius_m hauler_transfer_per_s cancel_refund_queued cancel_refund_assembly self_repair_delay_s self_repair_min_hp_s self_repair_frac_per_s early_share_lock_s unused_slot_yield build_max_slope_deg outpost_presence_radius_m outpost_spacing_friendly_m outpost_spacing_enemy_m site_hp_fraction start_refinery_dist_m start_adjacent_dist_m",
+	"f": "core_trickle_ore_per_s repair_ore_per_hp wreck_fraction wreck_lifetime_s solar_band_deg solar_plateau_mult solar_plateau_radius_m tower_offline_ratio production_min_speed pipe_radius_m hauler_transfer_per_s cancel_refund_queued cancel_refund_assembly self_repair_delay_s self_repair_min_hp_s self_repair_frac_per_s early_share_lock_s unused_slot_yield build_max_slope_deg outpost_presence_radius_m outpost_spacing_friendly_m outpost_spacing_enemy_m site_hp_fraction start_refinery_dist_m start_adjacent_dist_m launch_delay_s auto_replenish_period_s",
 	"a": "start_kit",
-	"req": "start_ore start_ice start_kit core_trickle_ore_per_s repair_ore_per_hp self_repair_min_hp_s self_repair_frac_per_s wreck_fraction wreck_lifetime_s salvage_pod_max_ore queue_max early_share_lock_s early_share_ore build_max_slope_deg outpost_presence_radius_m outpost_spacing_friendly_m outpost_spacing_enemy_m site_hp_fraction start_refinery_dist_m start_adjacent_dist_m",
+	"req": "start_ore start_ice start_kit core_trickle_ore_per_s repair_ore_per_hp self_repair_min_hp_s self_repair_frac_per_s wreck_fraction wreck_lifetime_s salvage_pod_max_ore queue_max early_share_lock_s early_share_ore build_max_slope_deg outpost_presence_radius_m outpost_spacing_friendly_m outpost_spacing_enemy_m site_hp_fraction start_refinery_dist_m start_adjacent_dist_m launch_delay_s auto_replenish_period_s",
 }
 
 
