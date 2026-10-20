@@ -34,7 +34,8 @@ const PILOT_INPUT_BYTES: int; const INPUT_MAX_COUNT: int; const COMMAND_PAYLOAD_
 const CATALOGUE_STRIDE: int; const CATALOGUE: PackedInt32Array   # rows [id, channel, max_bytes], 04 s2.3 order
 const NAMES: PackedStringArray                        # in CATALOGUE row order
 static func row_of(id: int) -> int                    # -1 when unknown or reserved
-static func is_known(id: int) -> bool;  static func is_reserved(id: int) -> bool;  static func is_client_to_server(id: int) -> bool;  static func channel_of(id: int) -> int                # -1 when unknown
+static func is_known(id: int) -> bool;  static func is_reserved(id: int) -> bool;  static func is_client_to_server(id: int) -> bool
+static func channel_of(id: int) -> int                # -1 when unknown
 static func max_bytes(id: int) -> int                 # parser limit incl. the id byte; 0 when unknown
 static func channel_allows(channel: int, id: int) -> bool;  static func name_of(id: int) -> String;  static func message_count() -> int
 # Wire enums owned by 04: Platform, WireInputClass (04 HELLO.input_class; renamed in code so it does not shadow the input lane global InputClass, 06 s2.1), Role, ChatScope, LeaveReason, KeyframeRequest, RefuseReason,
@@ -57,28 +58,36 @@ static func cell_centre(cell: int) -> Vector3;  static func cell_frame(cell: int
 static func quantize_pos(p: Vector3) -> int           # packed vec3q: cell | e << 16 | n << 32 | u << 48 (clamps)
 static func dequantize_pos(q: int) -> Vector3         # ZERO for an invalid cell
 static func pos_in_range(p: Vector3) -> bool          # false when quantize_pos would clamp; true -500 m..ceiling_hard_m
-static func pack_pos(cell: int, e: int, n: int, u: int) -> int;  static func pos_cell(q: int) -> int;  static func pos_e(q: int) -> int;  static func pos_n(q: int) -> int;  static func pos_u(q: int) -> int;  static func quantize_quat(q: Quaternion) -> int       # quat_s3, u32
+static func pack_pos(cell: int, e: int, n: int, u: int) -> int;  static func pos_cell(q: int) -> int;  static func pos_e(q: int) -> int;  static func pos_n(q: int) -> int;  static func pos_u(q: int) -> int
+static func quantize_quat(q: Quaternion) -> int       # quat_s3, u32
 static func dequantize_quat(bits: int) -> Quaternion  # unit for any input bits
 static func quantize_quat_coarse(q: Quaternion, spare7: int) -> int   # u24: 17 quaternion bits + 7 caller bits
 static func dequantize_quat_coarse(bits: int) -> Quaternion;  static func coarse_spare(bits: int) -> int
 const SPARE_LOW_MASK: int; const SPARE_CLASS_BIT: int; const SPARE_DYING: int; const FLAGS_DROPPED_BY_B: int   # 0x1F 0x20 0x40; 0x20
 static func flags_to_spare(f: int) -> int;  static func spare_to_flags(s: int) -> int   # tier-B flags (A-24); braking reads false
 static func quantize_vel(v: Vector3, cell: int) -> int   # 3 x i8 at 2 m/s in cell ENU; 0 for an invalid cell
-static func dequantize_vel(bits: int, cell: int) -> Vector3;  static func quantize_hp(hp01: float) -> int;  static func dequantize_hp(b: int) -> float;  static func make_flags(control_state: int, bits: int) -> int;  static func flags_control(f: int) -> int;  static func quantize_ai_tag(tag: int) -> int;  static func write_pos(buf: PackedByteArray, at: int, q: int) -> int;  static func read_pos(buf: PackedByteArray, at: int) -> int;  static func write_u32(buf: PackedByteArray, at: int, v: int) -> int;  static func read_u32(buf: PackedByteArray, at: int) -> int;  static func write_u24(buf: PackedByteArray, at: int, v: int) -> int;  static func read_u24(buf: PackedByteArray, at: int) -> int
+static func dequantize_vel(bits: int, cell: int) -> Vector3;  static func quantize_hp(hp01: float) -> int;  static func dequantize_hp(b: int) -> float
+static func make_flags(control_state: int, bits: int) -> int;  static func flags_control(f: int) -> int;  static func quantize_ai_tag(tag: int) -> int
+static func write_pos(buf: PackedByteArray, at: int, q: int) -> int;  static func read_pos(buf: PackedByteArray, at: int) -> int
+static func write_u32(buf: PackedByteArray, at: int, v: int) -> int;  static func read_u32(buf: PackedByteArray, at: int) -> int
+static func write_u24(buf: PackedByteArray, at: int, v: int) -> int;  static func read_u24(buf: PackedByteArray, at: int) -> int
     # writers return the next offset or -1 (nothing written); readers return -1 / POS_INVALID when short
 
 class_name Roster extends RefCounted                  # net/roster.gd (04 s3.1); roster index == sim slot, 1,536 entries (A-54)
 const CAPACITY: int; const REASON_COUNT: int; const NEVER: int   # 1536 (slots 0-1,535 incl. wrecks, A-54); 3; -1
 func add(slot: int, generation: int, def_id: int, owner: int, team: int, tag: String = "") -> bool   # replaces; false out of range
 func remove(slot: int, reason: int) -> bool           # reason = Protocol.RosterRemoveReason; false when absent/invalid
-func has(slot: int) -> bool;  func count() -> int;  func clear() -> void;  func state_hash() -> int;  func generation_of(slot: int) -> int;  func def_of(slot: int) -> int;  func owner_of(slot: int) -> int;  func team_of(slot: int) -> int;  func tag_of(slot: int) -> String;  func removal_reason_of(slot: int) -> int   # NEVER while present / never removed
+func has(slot: int) -> bool;  func count() -> int;  func clear() -> void;  func state_hash() -> int
+func generation_of(slot: int) -> int;  func def_of(slot: int) -> int;  func owner_of(slot: int) -> int;  func team_of(slot: int) -> int
+func tag_of(slot: int) -> String;  func removal_reason_of(slot: int) -> int   # NEVER while present / never removed
 
 class_name RosterCodec                                # net/roster_codec.gd; ENTITY_META 0x88, ROSTER_REMOVE 0x90, REQUEST_KEYFRAME
 const META_HEADER_BYTES: int; const META_FIXED_BYTES: int; const TAG_MAX_BYTES: int; const REMOVE_HEADER_BYTES: int
 const REMOVE_ENTRY_BYTES: int; const COUNT_MAX: int; const KEYFRAME_REQUEST_BYTES: int   # 2 9 16 2 3 255 2
 static func encode_meta(roster: Roster, slots: PackedInt32Array, out: Array[PackedByteArray]) -> int   # packets appended; split at 1,200 B
 static func decode_meta(bytes: PackedByteArray, roster: Roster, out_slots: PackedInt32Array) -> int   # count; -1 malformed, nothing applied
-static func encode_remove(slots: PackedInt32Array, reasons: PackedInt32Array, out: Array[PackedByteArray]) -> int;  static func decode_remove(bytes: PackedByteArray, roster: Roster, out_slots: PackedInt32Array) -> int   # absent slots ignored
+static func encode_remove(slots: PackedInt32Array, reasons: PackedInt32Array, out: Array[PackedByteArray]) -> int
+static func decode_remove(bytes: PackedByteArray, roster: Roster, out_slots: PackedInt32Array) -> int   # absent slots ignored
 static func encode_request_keyframe(reason: int) -> PackedByteArray
 
 class_name RosterSync extends RefCounted              # net/roster_sync.gd; client roster + held-record logic (04 s3.1)
@@ -213,19 +222,12 @@ var accepted: int;  var duplicates: int;  var late: int;  var rejected_window: i
 func begin_epoch(new_epoch: int) -> void                # possession change: clears, starts in bridge, A is never replayed for B
 func submit(packet: PackedByteArray, current_tick: int) -> int   # inputs stored; -1 whole packet rejected; per input window [tick - 2, tick + 8]
 func take(tick: int) -> PilotInput                      # stored input, else decayed previous (axes x 0.5 per tick, thrust held) <= 10 ticks, then bridge (once)
-
-class_name CommandCodec                               # net/command_codec.gd: COMMAND 0x03 (NET-04); static; sim-form Command.payload (f64 positions) <-> wire (vec3q)
-const HEADER_BYTES: int; const MESSAGE_MAX_BYTES: int; const KIND_COUNT: int; const ORDER_HEADER_BYTES: int; const ORDER_MAX_IDS: int; const ORDER_MAX_POINTS: int; const ESCORT_TRAILER_BYTES: int   # 14 270 16 9 32 16 6
-static func encode_payload(cmd: Command, out: PackedByteArray) -> bool   # false (out empty) for PILOT_INPUT, malformed/oversize, non-finite or out-of-range point
-static func decode_payload(kind: int, target: int, wire: PackedByteArray) -> Command   # null when malformed; shape only (legality stays with the sim validator)
-static func encode_message(seq: int, tick: int, cmd: Command) -> PackedByteArray;  static func decode_message(bytes: PackedByteArray) -> Command;  static func seq_of(bytes: PackedByteArray) -> int
-static func order_wire_size(count: int, point_count: int, is_escort: bool) -> int;  static func order_fits(count: int, point_count: int, is_escort: bool) -> bool
 ```
 
 Link semantics (04 s15.1; deterministic: each pipe draws from `Rng.new(seed_value).fork("s2c:<conn>" | "c2s:<conn>")`): CH_CONTROL / CH_EVENTS (reliable ordered) are delayed, never lost, in send order, held to the end of a burst or stall window. CH_INPUT may be lost, duplicated, reordered. CH_SNAPSHOT (unreliable sequenced) additionally drops anything older than the newest delivered. A stall holds both directions and releases the backlog at its end.
 Bandwidth limit: serialisation delay, then unreliable packets queued > 250 ms are dropped. Presets (one-way): LAN 0/0/0; GOOD 40 ms +-5, 0.5 %; TARGET 100 ms +-15, 3 %, 1 % reorder; BAD 250 ms +-40, 5 %, 2 % reorder, 0.5 % dup; MOBILE_SWITCH = TARGET + loss window ticks 900-1019; TAB_STALL = GOOD + 45 s stall at tick 1,200. The 04 name `seed` is `seed_value` (`seed` is a GDScript global); presets are `FaultModel.preset()`, not `test/net/presets.gd`.
 
-Planned (04 s19): `KEYFRAME` + rolling refresh (NET-07), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10, done: `net/events/MODULE.md`), `Interest` (NET-08, done: `net/interest/MODULE.md`), `ReplayWriter`/`ReplayReader` (NET-25, done: `net/replay/MODULE.md`).
+COMMAND payload codecs (`CommandCodec`, NET-04): see `commands/MODULE.md`. Planned (04 s19): `KEYFRAME` + rolling refresh (NET-07), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10, done: `net/events/MODULE.md`), `Interest` (NET-08, done: `net/interest/MODULE.md`), `ReplayWriter`/`ReplayReader` (NET-25, done: `net/replay/MODULE.md`).
 
 ## Wire layout
 
@@ -241,7 +243,7 @@ Coarse = u24 LE: index bits 0-1, 5-bit codes (scale 15 * sqrt(2)) at bits 2, 7, 
 step one code to its other neighbour when that lowers the angular error (decoder unchanged). Velocity = i8 e, n, u at
 2 m/s in the ENU frame of the record's position cell (04 s3.5 `37 00 F4` = (110, 0, -24) m/s). hp = round(hp01 * 255).
 Flags = control state bits 0-1, then DOCKED, FIRING, BOOSTING, BRAKING, CLASS_BIT, DYING (bits 2-7). Tier-B coarse spare bits (A-24): spare 0-4 = flags 0-4, spare 5 = flags bit 6, spare 6 = flags bit 7; BRAKING is dropped.
-`CHAT_RELAY` (0x8C) Max is 222, as in 04 s2.3 (A-26). `SessionPhase` is defined only in `Protocol` (A-28). COMMAND (NET-04, `CommandCodec`): header id, seq u16, tick u32, kind u8, target u32, len u16, payload <= 256 B in the 04 s2.5 layouts; the sim form differs only in f64 positions. ORDER header is 9 bytes (kind, flags, haul_mode, count, target, point_count): 32 ids carry <= 14 points (249 B) and a 32-id ESCORT is 143 B, not the 15 / 142 of A-60 / A-85 (04's `8 +` omits point_count; contract question open).
+`CHAT_RELAY` (0x8C) Max is 222, as in 04 s2.3 (A-26). `SessionPhase` is defined only in `Protocol` (A-28).
 
 SNAPSHOT (04 s3.4, s3.5; NET-06): header id, tick u32, baseline_tick u32 (0 = no baseline, FULL only), flags (bits 6-7 = packet index 0-3, LAST on the highest index, R0 B.10 A-36, NET-48); sections
 A, B, C in that order, each a u8 count (1-255) then records. A record starts with the roster-index gap: u8 1-254 from the
@@ -286,7 +288,7 @@ per tick). A/B deltas stay per client. NET-08 (real Interest, same scene, dev bo
 
 `test/unit/net/test_protocol.gd` (NET-01 catalogue vs 04 s2.1/s2.3, enum ordinals, PROTOCOL_VERSION); `test/unit/net/test_codec_roundtrip.gd` (NET-02 codec_roundtrip_test: 10,000 points, cell corners, A-23 envelope, A-24 flags, quaternions, velocity, hp, sizes); `test/net/test_codec_full_records.gd`; `test/perf/bench_codec.gd` (BENCH_CODEC). NET-08: `godot/test/unit/net/test_interest.gd`, `godot/test/net/test_interest_codec.gd` (list in net/interest/MODULE.md). Planned: fuzz_test.gd (NET-23).
 NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example, masks, dead reckoning, blip, pilot block, A-24), `test_snapshot_malformed.gd` (20,000 mutations; NET-48 index rules), `test/net/test_snapshot_delta.gd` (3,000 ticks, random splits), `test_snapshot_budget.gd` (splitting, lost middle packet never acked, bandwidth, determinism, NET-49 cache bytes identical, rolling refresh); `test/perf/bench_snapshot.gd` (BENCH_SNAPSHOT canonical + all_tiers, `--history`); helper `test/net/snap_rig.gd`.
-NET-03: `test/unit/net/test_pilot_wire.gd` (all byte values round trip, reserved bytes, V-INP shape, 20,000 mutations), `test_input_buffer.gd` (window, duplicates, stale epoch, strikes, 10-tick decay then one bridge, hand-off, determinism), `test/net/test_input_link.gd` (LocalTransport: BAD preset recovers single/double loss, triple loss drops one tick, silence bridge once, slow client, determinism).; NET-04: `test/unit/net/test_command_codec.gd` (all 16 kinds, sim-builder cross-check, ESCORT trailer, 32-id boundary, malformed -> null)
+NET-03: `test/unit/net/test_pilot_wire.gd` (all byte values round trip, reserved bytes, V-INP shape, 20,000 mutations), `test_input_buffer.gd` (window, duplicates, stale epoch, strikes, 10-tick decay then one bridge, hand-off, determinism), `test/net/test_input_link.gd` (LocalTransport: BAD preset recovers single/double loss, triple loss drops one tick, silence bridge once, slow client, determinism).; NET-04: `test/unit/net/test_command_codec.gd`, `test/perf/test_command_codec_perf.gd` (see commands/MODULE.md)
 `godot/test/unit/net/test_roster.gd` + `godot/test/net/test_roster_sync.gd` (NET-05: add/remove with every reason, meta/remove round trips and sizes, malformed rejected, held record applied after meta, timeout at exactly 30 ticks with one REQUEST_KEYFRAME, re-add in the hold window, determinism, LocalTransport pair); `godot/test/unit/net/test_roster_wrecks.gd` (NET-50, A-54: slot 1,535, wreck events to a filtered client, meta / remove / snapshot at 1,535, non-wreck bytes pinned); `godot/test/unit/net/test_transport_local.gd` (NET-11: channel ordering/reliability, determinism per seed, burst, stall, bandwidth, close, stats); `godot/test/net/test_fault_presets.gd` (NET-11: loss/latency/reorder/dup statistics per preset over 6,000 packets, MOBILE_SWITCH, TAB_STALL).
 
 ## How to add X

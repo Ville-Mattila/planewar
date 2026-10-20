@@ -161,10 +161,9 @@ func test_build_produce_cancel_handover() -> void:
 	bad_rot[6] = 4
 	assert_object(CommandCodec.decode_payload(Command.Kind.BUILD, 0, bad_rot)).is_null()
 	var cnt: PackedByteArray = _wire(Command.produce(1, 5, 7, 1))
-	cnt[2] = 0
-	assert_object(CommandCodec.decode_payload(Command.Kind.PRODUCE, 5, cnt)).is_null()
-	cnt[2] = 6
-	assert_object(CommandCodec.decode_payload(Command.Kind.PRODUCE, 5, cnt)).is_null()
+	cnt[2] = 9   # count legality (queue_max) belongs to the sim validator, not the codec
+	assert_object(CommandCodec.decode_payload(Command.Kind.PRODUCE, 5, cnt)).is_not_null()
+	assert_object(CommandCodec.decode_payload(Command.Kind.PRODUCE, 5, cnt.slice(0, 2))).is_null()
 	assert_object(CommandCodec.decode_payload(Command.Kind.CANCEL_PRODUCE, 5, PackedByteArray())).is_null()
 
 
@@ -213,6 +212,8 @@ func test_toggle_auto_replenish() -> void:
 func test_set_adjutant() -> void:
 	var _a: Command = _round_trip(Command.set_adjutant(1, true, 2, 0x0F))
 	var w: PackedByteArray = _wire(Command.set_adjutant(1, true, 1, 3))
+	w[0] = 7   # any non-zero byte is enabled, as in the sim
+	assert_object(CommandCodec.decode_payload(13, 0, w)).is_not_null()
 	w[1] = 3
 	assert_object(CommandCodec.decode_payload(13, 0, w)).is_null()
 	assert_object(CommandCodec.decode_payload(13, 0, w.slice(0, 2))).is_null()
@@ -283,7 +284,116 @@ func test_every_sim_builder_matches_net_bytes() -> void:
 	assert_int(seen.size()).is_equal(CommandCodec.KIND_COUNT)
 
 
-## Mutation sweep (NET-23 owns the 100,000-per-id fuzz): arbitrary bytes never throw.
+
+
+## ORDER points keep the 04 s3.2 bounds (N7: e, n <= 2.0 cm, u <= 3.1 cm per axis, so < 0.05 m in 3D) over raw positions.
+func test_raw_order_point_error_bound() -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 11
+	var worst: float = 0.0
+	for i: int in 400:
+		var dir: Vector3 = Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0)).normalized()
+		var raw: Vector3 = dir * (Sphere.PLANET_RADIUS + rng.randf_range(-400.0, 3000.0))
+		var spec: OrderSpec = OrderSpec.make(OrderSpec.Kind.MOVE, 0, raw)
+		var back: Command = CommandCodec.decode_payload(0, 0, _wire(Command.order(1, _ids(1), spec)))
+		assert_object(back).is_not_null()
+		worst = maxf(worst, CommandPayload.v3_at(back.payload, 13).distance_to(raw))
+	assert_float(worst).is_less(0.05)
+
+
+func _valid_commands() -> Array[Command]:
+	var esc: OrderSpec = OrderSpec.make(OrderSpec.Kind.ESCORT, 3)
+	esc.escort_mode = OrderSpec.EscortMode.FOCUS
+	esc.focus = 0x20001
+	var cmds: Array[Command] = [
+		Command.order(1, _ids(4), OrderSpec.make(OrderSpec.Kind.ATTACK, 9, _q(Vector3(1.0, 0.2, 0.1), 500.0))),
+		Command.order(1, _ids(32), _patrol(5)), Command.order(1, _ids(3), esc),
+		Command.build(1, 5, 77, 2), Command.produce(1, 6, 8, 3), CommandPayload.cancel_build(1, 6),
+		CommandPayload.cancel_produce(1, 6, 1), Command.set_rally(1, 6, _q(Vector3.ONE, 100.0)),
+		Command.possess(1, 8), Command.release(1), CommandPayload.simple(1, Command.Kind.REQUEST_POSSESS, 9),
+		CommandPayload.handover(1, 9, 2), Command.toggle_auto_replenish(1, 6, true, PackedInt32Array([3, 2, 4, 1])),
+		CommandPayload.simple(1, Command.Kind.SURRENDER, 0), Command.set_adjutant(1, true, 0, 5),
+		CommandPayload.debug_spawn(0, 3, 1, 1, Vector3.ONE, Vector3.ZERO, Vector3.UP), CommandPayload.debug_set(0, 9, 1, 2.0),
+	]
+	return cmds
+
+
+## Equal sim commands; positions within 0.1 m (a point on a cell border may re-quantise into the neighbour cell).
+func _assert_same_command(a: Command, b: Command) -> void:
+	assert_object(b).is_not_null()
+	assert_int(b.payload.size()).is_equal(a.payload.size())
+	if a.kind != Command.Kind.ORDER and a.kind != Command.Kind.SET_RALLY:
+		assert_array(b.payload).is_equal(a.payload)
+		return
+	var head: int = 0
+	var np: int = 1
+	if a.kind == Command.Kind.ORDER:
+		head = 9 + 4 * a.payload[3]
+		np = a.payload[head - 1]
+	assert_array(b.payload.slice(0, head)).is_equal(a.payload.slice(0, head))
+	for k: int in np:
+		assert_float(CommandPayload.v3_at(a.payload, head + 24 * k).distance_to(CommandPayload.v3_at(b.payload, head + 24 * k))).is_less(0.1)
+	var tail: int = head + 24 * np
+	assert_array(b.payload.slice(tail)).is_equal(a.payload.slice(tail))
+
+
+func _mutate(rng: RandomNumberGenerator, src: PackedByteArray) -> PackedByteArray:
+	var b: PackedByteArray = src.duplicate()
+	match rng.randi_range(0, 3):
+		0:
+			for _k: int in rng.randi_range(1, 3):
+				if b.size() > 0:
+					b[rng.randi_range(0, b.size() - 1)] = rng.randi() & 0xFF
+		1:
+			var _r: int = b.resize(rng.randi_range(0, b.size()))
+		2:
+			for _k: int in rng.randi_range(1, 8):
+				var _a: bool = b.push_back(rng.randi() & 0xFF)
+		_:
+			if b.size() > 0:
+				var at: int = rng.randi_range(0, b.size() - 1)
+				b[at] = b[at] ^ (1 << rng.randi_range(0, 7))
+	return b
+
+
+## Seeded mutation sweep per kind (NET-23 owns the 100,000-per-id run): byte flips, truncations and extensions of valid
+## payloads and messages never throw; every non-null result re-encodes, and the re-encoding is a fixed point.
+func test_mutation_sweep_per_kind() -> void:
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = 20260421
+	var accepted: int = 0
+	var rejected: int = 0
+	for cmd: Command in _valid_commands():
+		var wire: PackedByteArray = _wire(cmd)
+		var msg: PackedByteArray = CommandCodec.encode_message(7, 100, cmd)
+		for i: int in 2000:
+			var c: Command = null
+			if (i & 1) == 1:
+				c = CommandCodec.decode_message(_mutate(rng, msg))
+			else:
+				c = CommandCodec.decode_payload(cmd.kind, cmd.target, _mutate(rng, wire))
+			if c == null:
+				rejected += 1
+				continue
+			accepted += 1
+			var w2: PackedByteArray = PackedByteArray()
+			assert_bool(CommandCodec.encode_payload(c, w2)).is_true()
+			assert_bool(w2.size() <= Protocol.COMMAND_PAYLOAD_MAX).is_true()
+			var c2: Command = CommandCodec.decode_payload(c.kind, c.target, w2)
+			assert_object(c2).is_not_null()
+			assert_int(c2.kind).is_equal(c.kind)
+			assert_int(c2.target).is_equal(c.target)
+			assert_int(c2.payload.size()).is_equal(c.payload.size())
+			if c.kind != Command.Kind.ORDER and c.kind != Command.Kind.SET_RALLY:
+				assert_array(c2.payload).is_equal(c.payload)
+			var w3: PackedByteArray = PackedByteArray()
+			assert_bool(CommandCodec.encode_payload(c2, w3)).is_true()
+			_assert_same_command(c2, CommandCodec.decode_payload(c2.kind, c2.target, w3))
+	assert_int(accepted).is_greater(1000)
+	assert_int(rejected).is_greater(1000)
+
+
+## Raw random bytes, with the COMMAND id forced on half of them, never throw.
 func test_random_bytes_never_throw() -> void:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 4
@@ -292,5 +402,7 @@ func test_random_bytes_never_throw() -> void:
 		var _r: int = b.resize(rng.randi_range(0, 300))
 		for j: int in b.size():
 			b[j] = rng.randi() & 0xFF
+		if b.size() > 0 and (i & 1) == 0:
+			b[0] = Protocol.COMMAND
 		var _c: Command = CommandCodec.decode_payload(rng.randi_range(-2, 18), rng.randi(), b)
 		var _m: Command = CommandCodec.decode_message(b)

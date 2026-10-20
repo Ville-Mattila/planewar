@@ -27,7 +27,6 @@ const SET_RALLY_SIM_BYTES: int = 24
 const SET_ADJUTANT_BYTES: int = 3
 const REPLENISH_PAIR_BYTES: int = 3
 const REPLENISH_PAIRS_MAX: int = 8
-const PRODUCE_COUNT_MAX: int = 5
 const DEBUG_SPAWN_BYTES: int = 76
 const DEBUG_SET_BYTES: int = 9
 const DEBUG_SET_FIELD_MAX: int = 2
@@ -137,7 +136,7 @@ static func _shape_ok(kind: int, b: PackedByteArray) -> bool:
 		Command.Kind.BUILD:
 			return n == BUILD_BYTES and b[6] <= 3
 		Command.Kind.PRODUCE:
-			return n == PRODUCE_BYTES and b[2] >= 1 and b[2] <= PRODUCE_COUNT_MAX
+			return n == PRODUCE_BYTES
 		Command.Kind.CANCEL_BUILD, Command.Kind.POSSESS, Command.Kind.RELEASE, Command.Kind.REQUEST_POSSESS, \
 				Command.Kind.SURRENDER:
 			return n == 0
@@ -146,7 +145,7 @@ static func _shape_ok(kind: int, b: PackedByteArray) -> bool:
 		Command.Kind.TOGGLE_AUTO_REPLENISH:
 			return n >= 1 and (n - 1) % REPLENISH_PAIR_BYTES == 0 and n <= 1 + REPLENISH_PAIR_BYTES * REPLENISH_PAIRS_MAX and b[0] <= 1
 		Command.Kind.SET_ADJUTANT:
-			return n == SET_ADJUTANT_BYTES and b[0] <= 1 and b[1] <= 2
+			return n == SET_ADJUTANT_BYTES and b[1] <= 2   # enabled: any byte, non-zero = on (as the sim)
 		Command.Kind.DEBUG_SPAWN:
 			return n == DEBUG_SPAWN_BYTES
 		Command.Kind.DEBUG_SET:
@@ -156,7 +155,7 @@ static func _shape_ok(kind: int, b: PackedByteArray) -> bool:
 
 ## Converts the point at `src_at` of `src` into `dst` at `dst_at` (growing dst). `to_wire`: src is f64 x 3, dst gets
 ## vec3q (false when non-finite, at the origin, or outside the codable range). Otherwise src is vec3q and dst gets
-## f64 x 3 (false for an invalid cell).
+## f64 x 3 (false for an invalid cell or a point outside the codable band).
 static func _put_point(dst: PackedByteArray, dst_at: int, src: PackedByteArray, src_at: int, to_wire: bool) -> bool:
 	if to_wire:
 		var v: Vector3 = Vector3(src.decode_double(src_at), src.decode_double(src_at + 8), src.decode_double(src_at + 16))
@@ -169,6 +168,8 @@ static func _put_point(dst: PackedByteArray, dst_at: int, src: PackedByteArray, 
 	if (q & 0xFFFF) >= Codec.CELL_COUNT:
 		return false
 	var p: Vector3 = Codec.dequantize_pos(q)
+	if p.length_squared() < 1.0 or not Codec.pos_in_range(p):
+		return false   # outside the codable altitude band: would not re-encode
 	var _s: int = dst.resize(dst_at + POINT_SIM_BYTES)
 	dst.encode_double(dst_at, p.x)
 	dst.encode_double(dst_at + 8, p.y)
