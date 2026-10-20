@@ -30,7 +30,7 @@ pw.export_glb("ship_dart", out_dir)
   dissolves coplanar faces (1 degree, UV and material boundaries respected), flat-shades, adds a Triangulate modifier,
   and normalises the material slot to `PW_Atlas`.
 - `finalize()` reports V01, V03, V04, V06, V07, V09-V12, V14, V15. V02, V05, V08, V13 need the glb and the scale chart
-  and show `skip`. V03 is `skip` until a budget is passed (`finalize(id, budget=...)`; `asset_budgets.json` is ART-05).
+  and show `skip`. V03 uses `tools/art/asset_budgets.json` (the asset's own ceiling, else its class default) unless `finalize(id, budget=...)` overrides it. The authoritative gate on the exported glb is `tools/art/validate_glb.py` (ART-05).
 - `export_glb` creates the identity root node `PascalCase(id)` (V02), asserts every glTF exporter option it uses exists.
 - `landing_struts(length, foot_radius, around)`: one `around` point = single engine (feet on a circle of `foot_radius`);
   three points = boom/engine attach points (feet pushed outward by `length*sin 20`; `foot_radius` unused). One point with `foot_radius < length*sin 20` raises. 30 tris total.
@@ -41,5 +41,5 @@ pw.export_glb("ship_dart", out_dir)
 ```
 python -m unittest discover -s tools/tests -p "test_pw_*.py"
 ```
-`test_pw_core.py` is pure Python. `test_pw_blender.py` runs the selftest recipes in real Blender and re-reads the exported glb
-in pure Python; it skips when no Blender is found.
+`test_pw_core.py` is pure Python. `test_pw_blender.py` runs the selftest recipes in real Blender and compares `validate_glb.py` on the
+exported glb with the finalize() report; it skips when no Blender is found.

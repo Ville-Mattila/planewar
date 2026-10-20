@@ -26,8 +26,9 @@ CANON = FIX / "canonical"
 CONTRACT0 = sorted("ships ground_units weapons projectiles structures towers doctrines economy match_rules modes "
                    "bot_promises bot_profiles autopilots map_recipe rules scoring order_rules quality_tiers "
                    "wing callsigns barks commander_verbs biome_ramps sim_scenario".split())
-# Tools-only schemas: validated by their own tool, not def files; ART-22 sfx_recipe (tools/audio/recipes/*.json).
-TOOLS_ONLY = ["sfx_recipe"]
+# Tools-only schemas: validated by their own tool, not def files; ART-22 sfx_recipe (tools/audio/recipes/*.json),
+# ART-05 asset_budgets (tools/art/asset_budgets.json, loaded and schema-checked by validate_glb.py).
+TOOLS_ONLY = ["asset_budgets", "sfx_recipe"]
 SINGLETONS = {"rules", "economy", "match_rules", "map_recipe", "scoring", "order_rules", "wing", "callsigns", "biome_ramps"}
 
 
