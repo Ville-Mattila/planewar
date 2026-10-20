@@ -7152,5 +7152,25 @@
     "note": "Unblocks UX-03 #73 (export web_spike_flight). Same pattern as NET-53 (owner choice 2026-10-20).",
     "pr": 77,
     "merged": "2026-10-20"
+  },
+  {
+    "id": "AI-40",
+    "title": "sim_ai: main CI red after AI-11 merge: test_escort_perf.gd act mean 12.6-12.7 us vs its 12 us bound (05 s10 act row 6 us x2) on the CI runner; diagnose (runner variance vs a real act-cost regression from the merge with TA-60) and fix",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-11"
+    ],
+    "milestone": "M2",
+    "acceptance": "main CI green on three consecutive runs; the act measurement on CI is explained (cost breakdown, base-vs-head on the same job if a regression) and either the act path is brought under the bound or the bound is reworked to a robust statistic with a cited source (05 s11.1, A-62) without widening the row; no other perf bound loosened",
+    "docs": [
+      "05 s10",
+      "05 s11.1",
+      "R0 B.11 A-62",
+      "R0 B.14 A-84"
+    ],
+    "status": "todo",
+    "note": "Found 2026-10-20 by UX-03 #73 CI and main run on 645b064 (act mean 12.7 / p95 13.0 us)."
   }
 ]
