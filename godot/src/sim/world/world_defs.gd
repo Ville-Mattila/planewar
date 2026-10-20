@@ -13,6 +13,10 @@ var economy: EconomyDef
 var base: ResolvedDefs
 var projectile_radius: PackedFloat32Array = PackedFloat32Array()   ## by ProjectileStore.projectile_def (local index)
 var pad_radius_by_def: PackedFloat32Array = PackedFloat32Array()   ## by EntityStore.def_id; 0 = no pad
+var bomb_mult_by_def: PackedFloat32Array = PackedFloat32Array()    ## by EntityStore.def_id: structures.structure_bomb_mult (absent = 1.0), A-66
+var fuse_delay_s: PackedFloat32Array = PackedFloat32Array()        ## by projectile local index: projectiles.fuse_delay_s (absent = 0), A-66
+var unsupplied_rate_mult: float = 1.0                              ## economy.unsupplied_rate_mult (02 s5.4), A-66; 1.0 when the set has none
+var vision_hz: int = 1                                             ## rules.vision_hz (03 s3.7), A-66; every tick when the set has none
 var straight: PackedByteArray = PackedByteArray()                  ## by projectile local index: 1 = no gravity, no transport
 var turn_rad_per_s: PackedFloat32Array = PackedFloat32Array()      ## by weapon local index: guided re-aim limit
 
@@ -36,17 +40,25 @@ func _init(cs: ContentSet) -> void:
 	var np: int = cs.projectiles.size()
 	var e: int = projectile_radius.resize(np) | straight.resize(np) | turn_rad_per_s.resize(cs.weapons.size())
 	e |= pad_radius_by_def.resize(DefRanges.STRUCTURE_BASE + cs.structures.size())
+	e |= bomb_mult_by_def.resize(DefRanges.STRUCTURE_BASE + cs.structures.size()) | fuse_delay_s.resize(np)
 	assert(e == OK)
 	for i: int in np:
 		var pd: ProjectileDef = cs.projectiles[i]
 		projectile_radius[i] = pd.radius_m
 		straight[i] = 1 if not pd.gravity and not pd.transport else 0
+		fuse_delay_s[i] = Def.num(pd.raw.get("fuse_delay_s", 0.0))   # needs content: typed ProjectileDef field
 	for w: int in cs.weapons.size():
 		turn_rad_per_s[w] = deg_to_rad(cs.weapons[w].turn_rate_dps)
 	pad_radius_by_def.fill(0.0)
+	bomb_mult_by_def.fill(1.0)
 	for k: int in cs.structures.size():
 		var sd: StructureDef = cs.structures[k]
 		pad_radius_by_def[DefRanges.STRUCTURE_BASE + k] = sd.pad_radius_m if sd.pads > 0 else 0.0
+		bomb_mult_by_def[DefRanges.STRUCTURE_BASE + k] = Def.num(sd.raw.get("structure_bomb_mult", 1.0))   # needs content: typed field
+	if economy != null:
+		unsupplied_rate_mult = Def.num(economy.raw.get("unsupplied_rate_mult", 1.0))
+	if rules != null:
+		vision_hz = maxi(roundi(Def.num(rules.raw.get("vision_hz", 1.0))), 1)
 
 
 ## Resolves `doctrine` for player `slot`; false (base defs kept) for an unknown doctrine id.

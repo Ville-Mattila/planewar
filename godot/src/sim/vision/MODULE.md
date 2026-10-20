@@ -22,7 +22,7 @@ to "Public API" or "Invariants" is a contract change: contract tests first, same
 ```gdscript
 class_name Vision extends RefCounted                                         # step 11; the rule of 03 s3.7, exact (V1)
 const TEAMS: int; const OWNERS: int; const DEF_N: int                        # 8 teams; owner rows 0..7 + WorldDefs.NEUTRAL; def_id < 1024
-const VISION_HZ: int; const RUNG_2_VISION_HZ: int; const RUNG_VISION: int    # 10 Hz (no def yet, Open items), 5 Hz default of the def, rung 2
+const RUNG_2_VISION_HZ: int; const RUNG_VISION: int    # 5 Hz default of the def, rung 2; the base `hz` is rules.vision_hz via WorldDefs.vision_hz
 var grid: InterestGrid; var groups: SensorGroups; var tick_hz: int; var hz: int; var rung_2_hz: int
 var last_pass: PackedInt32Array                                              # per team: tick of its last pass, -1 before the first (not S4 state)
 var sensor_r: PackedFloat32Array; var reveal_r: PackedFloat32Array          # [owner * DEF_N + def_id]: sensor_radius / deck_reveal_radius, 0 = none
@@ -127,9 +127,8 @@ reveal, wrecks, neutrals, bit clearing, `sees` vs Sphere, random scenes vs brute
 
 ## Open items
 
-- `rules.json` `vision_hz` (10) exists (R0 B.12 A-66); **TA-56** reads it at `_init` and `VISION_HZ` becomes the documented
-  default (A-43 pattern). `rung_2_hz` reads `cut_ladder.rung_2_vision_hz` (TA-49).
-- A-76 (TA-56 implements, V1 gains the clause): a structure with `F_BUILDING` does **not** sense; an unpowered finished
+- `rules.json` `vision_hz` (10) is read by `WorldDefs` and `Vision._init` (TA-56, A-66); `rung_2_hz` reads `cut_ladder.rung_2_vision_hz` (TA-49).
+- A-76 (TA-56; `SensorGroups.gather` skips `F_BUILDING`, `VisionTestKit.brute` has the clause): a structure with `F_BUILDING` does **not** sense; an unpowered finished
   structure senses normally. 03 s4.2 row 11 now says ~400 sensors per pass; the 1.1 ms row is unchanged.
 - `needs net:` NET-08 / NET-15 may switch `Interest`'s per-team V from re-bucketing the mask to `SimWorld.interest_*` (same bits);
   `net/Interest` adds the one-period grace (03 s3.7).

@@ -2,5 +2,3 @@
 # path is relative to the repo root (godot/src/...); line may be * for the whole file.
 # Entries silence the D6 *warning* only; the error case (a 6000/8192 literal in an expression
 # with a position/length variable, in src/sim or src/presentation/planet) can never be allowed.
-godot/src/sim/combat/weapon_fire.gd:14 FLAK_FUSE_DELAY_S 0.3 (02 s4.2 flak fuse); needs content projectiles.json fuse_delay_s (GD-36)
-godot/src/sim/combat/blast.gd:9 ROOF_BOMB_MULT 0.25 (02 s4.3 rule 3); needs content structures.json structure_bomb_mult (GD-08)

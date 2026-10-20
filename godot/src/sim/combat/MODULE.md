@@ -27,7 +27,6 @@ func forget(s: int) -> void;  func write_state(buf: StreamPeerBuffer) -> void;  
 func detonate_bomb(pos: Vector3, owner_team: int, w: WeaponDef, p: ProjectileDef, attacker: int, tick: int, dice: Rng) -> void   # rules 2-3, as a fuse would fire it
 static func roll_gun_damage(w: WeaponDef, target_kind: int, dice: Rng, extra_mult: float = 1.0) -> int   # rule 1; target_kind is EntityStore.K_*
 class_name WeaponFire extends RefCounted                                     # GD-36 fire pipeline, run first in Combat.step
-const UNSUPPLIED_RATE_MULT: float;  const FLAK_FUSE_DELAY_S: float          # 0.5 (02 s5.4), 0.3 (02 s4.2); need content (Open items)
 var lock_target: PackedInt32Array; var lock_time: PackedFloat32Array; var unsupplied: PackedByteArray   # per main-range slot; serialized
 var tower_power: PackedFloat32Array                                          # GD-13: per team tower rate multiplier (0 = offline); set by SimWorld each tick, not state
 func step(tick: int, dice: Rng) -> void;  func forget(s: int) -> void
@@ -46,7 +45,6 @@ static func aim(fwd: Vector3, up: Vector3, spread_deg: float, dice: Rng) -> Vect
 static func fuse_ticks(rel_p: Vector3, rel_v: Vector3, pd: ProjectileDef, hz: int, delay_s: float) -> int   # flak closest approach + delay, clamped
 static func cone_cos(cone_deg: float) -> float                               # full apex angle -> half-angle cosine; 0 / 360 -> -1
 class_name Blast extends RefCounted                                          # area rules: bomb, flak, siege shell
-const ROOF_BOMB_MULT: float                                                  # 0.25 (needs content: structure_bomb_mult)
 var friendly_fire: bool
 func bomb(pos: Vector3, owner_team: int, attacker: int, w: WeaponDef, p: ProjectileDef, rng: Rng, tick: int) -> void
 func flak(pos: Vector3, owner_team: int, attacker: int, w: WeaponDef, p: ProjectileDef, rng: Rng, tick: int) -> void
@@ -99,5 +97,5 @@ Emits HIT (target, attacker, damage as value, target team), BOMB_IMPACT (attacke
 
 ## Open items
 
-- R0 B.12 (`docs/reviews/R0-amendments-05.md`): the def fields exist (`structures.structure_bomb_mult`, `projectiles.fuse_delay_s`, `economy.unsupplied_rate_mult`, A-66); **TA-56** reads them and deletes the `d6_allow.txt` entries; `ROOF_BOMB_MULT`, `UNSUPPLIED_RATE_MULT`, `FLAK_FUSE_DELAY_S` stay as documented defaults until then. A-74 ratified every GD-36 interpretation (burst tick in `target`, `ttl` = lifetime, `burst_interval_s` start-to-start, `lock_cone_deg` full apex, muzzle and velocity rules; 03 s3.3 corrected). A-75: a GROUND contact detonates unarmed (02 s4.3 rule 3); siege shells damage ships inside `blast_radius_m` (02 s4.3 rule 10); DEATH cause stays `DEATH_CAUSE_DEBUG` until GD-20 names causes.
+- R0 B.12 (`docs/reviews/R0-amendments-05.md`): the def fields exist (`structures.structure_bomb_mult`, `projectiles.fuse_delay_s`, `economy.unsupplied_rate_mult`, A-66); TA-56 reads them through `WorldDefs` (`bomb_mult_by_def`, `fuse_delay_s`, `unsupplied_rate_mult`; absent = 1.0 / 0 / 1.0) and deleted `ROOF_BOMB_MULT`, `UNSUPPLIED_RATE_MULT`, `FLAK_FUSE_DELAY_S` and their `d6_allow.txt` entries. `needs content:` typed `StructureDef.structure_bomb_mult`, `ProjectileDef.fuse_delay_s`, `EconomyDef.unsupplied_rate_mult`, `RulesDef.vision_hz` fields; the sim reads `Def.raw` once at `WorldDefs._init` until then. A-74 ratified every GD-36 interpretation (burst tick in `target`, `ttl` = lifetime, `burst_interval_s` start-to-start, `lock_cone_deg` full apex, muzzle and velocity rules; 03 s3.3 corrected). A-75: a GROUND contact detonates unarmed (02 s4.3 rule 3); siege shells damage ships inside `blast_radius_m` (02 s4.3 rule 10); DEATH cause stays `DEATH_CAUSE_DEBUG` until GD-20 names causes.
 - Tower aim and slew, envelopes, AGL floor, flip lock break, in-flight lock loss, target priority: GD-09. Supply graph and refill (writes `fire.unsupplied`): GD-18. Power-ratio scaling: GD-13. Shield domes (rule 6, `shield_intercept`): GD-10. Reactor explosion with its owner's structure death; terrain / landing damage with GD-15.

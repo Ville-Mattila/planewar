@@ -13,7 +13,6 @@ class_name Vision extends RefCounted
 ## last pass in between (consumers assume <= 200 ms latency, 03 s3.7). Pruning: SensorGroups (exact bounds only).
 
 const TEAMS: int = InterestGrid.TEAMS
-const VISION_HZ: int = 10          ## 03 s3.7 base rate; documented default until rules.json carries it (needs content)
 const RUNG_2_VISION_HZ: int = 5    ## default of rules.cut_ladder.rung_2_vision_hz (R0 B.11 A-51); `rung_2_hz` reads the def
 const RUNG_VISION: int = 2         ## the cut-ladder rung that lowers the rate (03 s4.3)
 const OWNERS: int = WorldDefs.NEUTRAL + 1
@@ -22,7 +21,7 @@ const DEF_N: int = DefRanges.WEAPON_BASE   ## entity def_ids are below the weapo
 var grid: InterestGrid = InterestGrid.new()
 var groups: SensorGroups = SensorGroups.new()
 var tick_hz: int = 0
-var hz: int = VISION_HZ
+var hz: int = 1                    ## rules.vision_hz (03 s3.7, A-66), set in _init
 var rung_2_hz: int = RUNG_2_VISION_HZ
 var last_pass: PackedInt32Array = PackedInt32Array()   ## per team: tick of its last pass, -1 before the first
 var sensor_r: PackedFloat32Array = PackedFloat32Array()   ## [owner * DEF_N + def_id]: sensor radius, 0 = none
@@ -37,6 +36,7 @@ var _seen: PackedInt32Array = PackedInt32Array()
 func _init(store: EntityStore, defs: WorldDefs, ticks_per_s: int) -> void:
 	_store = store
 	tick_hz = ticks_per_s
+	hz = defs.vision_hz
 	if defs.rules != null and defs.rules.rung_2_vision_hz > 0:
 		rung_2_hz = defs.rules.rung_2_vision_hz
 	var e: int = _seen.resize(EntityStore.SLOT_COUNT) | last_pass.resize(TEAMS)

@@ -26,6 +26,11 @@ func _shot(w: SimWorld, kind: int, proj: StringName, weapon: StringName, p: Vect
 	return w.projectiles().spawn(kind, w.tick(), p, v, life - age, pl, wl, 1, 1, 0, target, flags)
 
 
+func _flak_delay() -> float:
+	var c: ContentSet = WorldTestKit.content()
+	return Def.num(c.projectiles[_local(c.projectile_index, &"flak_shell", DefRanges.PROJECTILE_BASE)].raw.get("fuse_delay_s", 0.0))
+
+
 func _step(w: SimWorld) -> Array[SimEvent]:
 	w.step()
 	return w.drain_events()
@@ -117,7 +122,7 @@ func test_flak_battery_fuses_for_the_closest_approach_plus_delay() -> void:
 		var dp: Vector3 = w.store().pos[EntityId.slot(tgt)] - ps.pos[i]
 		var dv: Vector3 = w.store().vel[EntityId.slot(tgt)] - ps.vel[i]
 		var tc: float = -dp.dot(dv) / dv.length_squared()
-		var want: int = w.tick() + clampi(roundi((tc + WeaponFire.FLAK_FUSE_DELAY_S) * 30.0), 15, 149)
+		var want: int = w.tick() + clampi(roundi((tc + _flak_delay()) * 30.0), 15, 149)
 		assert_int(ps.target[i]).is_equal(want)
 		assert_int(ps.target[i]).is_greater(w.tick())
 
