@@ -1882,7 +1882,10 @@
       " R0 B.5",
       " 05 AI-10"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-20",
+    "pr": "public#57",
+    "note": "AssistStep wiring and AUTO grade wait for GD-15/NET-18; LandingState.assist_near carries the AUTO flag"
   },
   {
     "id": "AI-11",
