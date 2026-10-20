@@ -86,8 +86,9 @@ class_name TeamStats                                                         # L
 static func stockpile_cap(store: EntityStore, defs: WorldDefs, team: int) -> Vector2i;  static func power_balance(store: EntityStore, defs: WorldDefs, team: int) -> Vector2
 static func tech_available(store: EntityStore, defs: WorldDefs, team: int, def_id: int) -> bool;  static func has_structure(store: EntityStore, team: int, def_id: int) -> bool
 static func count_owned(store: EntityStore, player: int, live: PackedInt32Array) -> int;  static func fill_player(v: PlayerStateView, pl: PlayerTable, slot: int) -> void
+static func fill_team(v: TeamStateView, team: int, store: EntityStore, defs: WorldDefs, pl: PlayerTable, rules: MatchRules, state: MatchState) -> void   # (GD-18, A-73 extract)
 class_name EconomyHub extends RefCounted                                     # (TA-19) composes Build, Economy, Construction, Production; routes their commands, deaths and step 10
-var build: Build; var economy: Economy; var construction: Construction; var production: Production
+var build: Build; var economy: Economy; var construction: Construction; var production: Production; var supply: SupplyNet   # (GD-18) supply: step 10 after production
 static func handles(kind: Command.Kind) -> bool;  func apply(cmd: Command) -> void;  func begin_tick(t: int) -> void;  func step(t: int, dt: float) -> void;  func on_death(s: int) -> void
 func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3, tick: int) -> bool;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name StateIO                                                           # S4 bytes: named properties via put_var / get_var, type-checked

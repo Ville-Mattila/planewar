@@ -7,6 +7,8 @@ class_name SimViewScene extends RefCounted
 
 const TICK_HZ: float = 30.0             ## 01 s8: 30 Hz sim tick
 const AMMO: int = 37
+const TOWER_AMMO: int = 120         ## of the autocannon turret's 300-round pool: supply01 = 0.4
+const TOWER_SUPPLY01: float = 0.4
 const BOMBS: int = 3
 const ROCKETS: int = 2
 const CONTROL: int = 5
@@ -27,6 +29,7 @@ var c: int = 0              ## player 0 Dart docked on `pad`
 var pad: int = 0
 var core: int = 0
 var yard: int = 0
+var tower: int = 0          ## player 0 autocannon turret holding TOWER_AMMO rounds
 var wreck: int = 0
 var rocket: int = 0         ## team 1 rocket aimed at `a`
 var dead: int = 0           ## stale generation of `a`
@@ -41,6 +44,7 @@ static func build() -> SimViewScene:
 	s.core = WorldTestKit.spawn(w, &"core", 0, 0, WorldTestKit.at(0.0, 300.0))
 	s.pad = WorldTestKit.spawn(w, &"pad", 0, 0, WorldTestKit.at(0.0, 200.0))
 	s.yard = WorldTestKit.spawn(w, &"shipyard", 0, 0, WorldTestKit.at(0.0, 2000.0))
+	s.tower = WorldTestKit.spawn(w, &"autocannon_turret", 0, 0, WorldTestKit.at(0.0, 800.0))
 	s.a = WorldTestKit.spawn(w, &"dart", 0, 0, WorldTestKit.at(500.0), Vector3(0, 40, 0))
 	s.b = WorldTestKit.spawn(w, &"dart", 1, 1, WorldTestKit.at(500.0, 250.0), Vector3(0, 40, 0))
 	s.c = WorldTestKit.spawn(w, &"dart", 0, 0, WorldTestKit.at(20.0, 200.0))
@@ -70,6 +74,7 @@ func _script_state() -> void:
 	st.hp[sa] = st.hp[sa] * HP01          # spawned at full hp
 	st.fuel[sa] = dart.fuel_s * FUEL01
 	st.ammo[sa] = AMMO
+	st.ammo[EntityId.slot(tower)] = TOWER_AMMO
 	st.bombs[sa] = BOMBS
 	st.rockets[sa] = ROCKETS
 	st.control_state[sa] = CONTROL

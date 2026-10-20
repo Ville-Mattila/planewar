@@ -23,6 +23,14 @@ static func power(w: SimWorld, owner: int, team: int) -> void:
 	var _id: int = WorldTestKit.spawn(w, &"reactor", owner, team, Vector3(-R, 0.0, 0.0))
 
 
+## GD-18: an Outpost for `owner` / `team` at `p` is a supply root (radius 400 m, +5 power): towers within it are supplied.
+## Without a root every tower is outside the network and fires at the unsupplied rate (02 s5.4).
+## The refill is switched off: the fire tests count shots by ammo drops, which a +10 per s refill would blur.
+static func feed(w: SimWorld, owner: int, team: int, p: Vector3) -> int:
+	w.economy().supply.refill = false
+	return WorldTestKit.spawn(w, &"outpost", owner, team, p)
+
+
 ## Spawns `def` and pins it at `p` at rest (up = radial). Returns the EntityId.
 static func spawn(w: SimWorld, def: StringName, owner: int, team: int, p: Vector3) -> int:
 	var id: int = WorldTestKit.spawn(w, def, owner, team, p)

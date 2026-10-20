@@ -330,6 +330,7 @@ func _step_match(t: int) -> void:
 	if _state.ended():
 		return
 	_econ.step(t, _dt)
+	_combat.fire.unsupplied = _econ.supply.unsupplied   # GD-18: step 9 of the next tick reads this tick's flags
 	var ph: MatchRules.Phase = _rules.phase(t)
 	var clock: float = float(t) / float(_rules.tick_hz)
 	if ph != MatchRules.Phase.PLAYING and _state.exposure_tick < 0:

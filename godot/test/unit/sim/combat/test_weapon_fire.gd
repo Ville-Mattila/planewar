@@ -159,6 +159,7 @@ func test_tower_fires_5_round_bursts_every_1_2_s() -> void:
 	var w: SimWorld = CombatTestKit.world()
 	CombatTestKit.power(w, 1, 1)
 	var gun: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0))
+	var _root: int = CombatTestKit.feed(w, 1, 1, _at(0.0))
 	FireTestKit.hook(w).hold(gun, FIRE1)
 	var t0: int = w.tick()
 	var shots: PackedInt32Array = FireTestKit.shot_ticks(w, gun, 108)          # 3.6 s
@@ -178,8 +179,8 @@ func test_unsupplied_tower_fires_at_half_rate() -> void:
 	var w: SimWorld = CombatTestKit.world()
 	CombatTestKit.power(w, 1, 1)
 	var fed: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0))
-	var cut: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0, 0.0, 300.0))
-	FireTestKit.combat(w).fire.unsupplied[EntityId.slot(cut)] = 1
+	var cut: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0, 0.0, 900.0))   # outside the Outpost's 400 m
+	var _root: int = CombatTestKit.feed(w, 1, 1, _at(0.0))                                      # GD-18: the supply root
 	var h: FireTestKit.TriggerHook = FireTestKit.hook(w)
 	h.hold(fed, FIRE1)
 	h.hold(cut, FIRE1)
@@ -205,6 +206,7 @@ func test_flak_battery_fires_a_two_shell_salvo_per_reload() -> void:
 	var w: SimWorld = CombatTestKit.world()
 	CombatTestKit.power(w, 1, 1)
 	var flak: int = CombatTestKit.spawn(w, &"flak_battery", 1, 1, _at(0.0))
+	var _root: int = CombatTestKit.feed(w, 1, 1, _at(0.0))
 	FireTestKit.hook(w).hold(flak, FIRE1)
 	var shots: PackedInt32Array = FireTestKit.shot_ticks(w, flak, 61)
 	assert_int(shots.size()).is_equal(4)

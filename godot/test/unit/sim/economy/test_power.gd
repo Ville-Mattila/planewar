@@ -125,18 +125,19 @@ func test_low_power_rates_for_towers_and_shields() -> void:
 ## C-12 (tower half): a team at ratio ~0.45 fires nothing; at ~0.74 it fires, slower than at full power.
 func test_c12_towers_fire_zero_at_ratio_045_and_scale_above_half() -> void:
 	var shots: PackedInt32Array = PackedInt32Array()
-	for yards: int in [0, 5, 8]:
+	for yards: int in [0, 5, 9]:
 		var w: SimWorld = CombatTestKit.world()
-		CombatTestKit.power(w, 1, 1)                                  # Reactor +40
+		CombatTestKit.power(w, 1, 1)                                  # Reactor +40, the Outpost root +5
 		var gun: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, CombatTestKit.R * Vector3.RIGHT + Vector3(0.0, 0.0, 0.0))
+		var _root: int = CombatTestKit.feed(w, 1, 1, CombatTestKit.R * Vector3.RIGHT)   # GD-18: supplied, +5 power
 		for i: int in yards:
 			var _id: int = WorldTestKit.spawn(w, &"shipyard", 1, 1, Vector3(0.0, R, float(i) * 100.0))
-		if yards == 8:
+		if yards == 9:
 			var _rf: int = WorldTestKit.spawn(w, &"refinery", 1, 1, Vector3(0.0, -R, 0.0))
 		FireTestKit.hook(w).hold(gun, PilotInput.FIRE1)
 		var ratio: float = w.economy().economy.power_ratio(1)
-		if yards == 8:
-			assert_float(ratio).is_equal_approx(40.0 / 88.0, 0.001)       # 0.4545
+		if yards == 9:
+			assert_float(ratio).is_equal_approx(45.0 / 98.0, 0.001)       # 0.459
 		var s: PackedInt32Array = FireTestKit.shot_ticks(w, gun, 216)
 		shots.push_back(s.size())
 	assert_int(shots[0]).is_equal(30)                                 # 6 bursts of 5 at full power

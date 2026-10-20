@@ -10,6 +10,7 @@ var economy: Economy
 var construction: Construction
 var production: Production
 var repair: SelfRepair
+var supply: SupplyNet                    ## GD-18: the Pylon graph, supplied flags and tower refill (02 s5.4)
 
 var _store: EntityStore
 var _players: PlayerTable
@@ -34,6 +35,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	construction.applier = applier
 	production = Production.new(store, players, defs, rules, events, economy, applier)
 	repair = SelfRepair.new(store, defs, economy, rules.tick_hz)
+	supply = SupplyNet.new(store, defs, rules.tick_hz)
 	validator.build = build
 	validator.production = production
 
@@ -79,6 +81,8 @@ func step(t: int, dt: float) -> void:
 	economy.step()
 	construction.step(t, dt)
 	production.step(t, dt)
+	supply.step(t, economy.structure_epoch)
+	repair.unsupplied = supply.unsupplied   # the repair pass reads the flags of this tick
 	repair.step(t)
 
 

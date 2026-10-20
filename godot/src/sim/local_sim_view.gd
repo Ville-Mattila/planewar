@@ -310,24 +310,8 @@ func tech_available(_team: int, _def_id: int) -> bool:
 func team_state(_team: int) -> TeamStateView:
 	if _team < 0 or _team >= PlayerTable.TEAMS:
 		return null
-	var v: TeamStateView = _teams[_team]
-	v.team = _team
-	v.ore = _players.team_ore[_team]
-	v.ice = _players.team_ice[_team]
-	var cap: Vector2i = stockpile_cap(_team)
-	v.ore_cap = cap.x
-	v.ice_cap = cap.y
-	var pb: Vector2 = power_balance(_team)
-	v.power_supply = pb.x
-	v.power_demand = pb.y
-	v.unit_cap = _rules.caps.units
-	v.structure_cap = _rules.caps.structures
-	_players.members(_team, v.members)
-	v.eliminated = false
-	v.flags = TeamStateView.CORE_EXPOSURE if _state.exposure_tick >= 0 else 0
-	if pb.x < pb.y:
-		v.flags |= TeamStateView.LOW_POWER
-	return v
+	TeamStats.fill_team(_teams[_team], _team, _store, _defs, _players, _rules, _state)
+	return _teams[_team]
 
 
 func player_state(slot: int) -> PlayerStateView:
@@ -338,6 +322,18 @@ func player_state(slot: int) -> PlayerStateView:
 	v.unit_count = unit_count(slot)
 	v.structure_count = TeamStats.count_owned(_store, slot, _store.structures)
 	return v
+
+
+## Tower ammo pool fill 0..1 (02 s5.4 pool bars); 0 for a site, a non-tower or a dead id.
+func supply01(id: int) -> float:
+	if not _store.alive(id):
+		return 0.0
+	var s: int = EntityId.slot(id)
+	if _store.kind[s] != EntityStore.K_STRUCTURE or (_store.flags[s] & EntityStore.F_BUILDING) != 0:
+		return 0.0
+	var sd: StructureDef = _defs.resolved(_store.owner[s]).structure(_store.def_id[s])
+	var pool: float = Def.num(sd.tower.get("ammo_pool", 0.0)) if sd != null and sd.is_tower() else 0.0
+	return clampf(float(_store.ammo[s]) / pool, 0.0, 1.0) if pool > 0.0 else 0.0
 
 
 func production_queue(factory: int) -> PackedInt32Array:
