@@ -67,7 +67,9 @@ func test_weight_support_throttle_follows_the_lift_law() -> void:
 		for k: int in 901:
 			var a: float = deg_to_rad(0.1 * float(k))
 			best = maxf(best, Kinematics.k_up_effective(u * cos(a), def, rules) * u * sin(a) * cos(a))
-		assert_float(FlightController.lift_best(u, g)).override_failure_message(str(model)).is_equal_approx(best, 0.05 * best)
+		# Tolerance: linear interpolation of a convex curve over 11.9 m/s table rows plus the 2.5 degree AoA grid;
+		# measured +0.9 % (speed_scaled, 16.05 vs 15.90 m/s^2) and exact under damping_only (k_up u / 2): 2 % bound.
+		assert_float(FlightController.lift_best(u, g)).override_failure_message(str(model)).is_equal_approx(best, 0.02 * best)
 		var want: float = clampf((rules.gravity - FlightController.lift_best(u, g)) / (def.a_thrust * sin(alpha)), 0.0, 1.0)
 		var ws: float = FlightController.weight_support_throttle(Ai05Kit.basis(s), s.v, n, g)
 		assert_float(ws).override_failure_message(str(model)).is_equal_approx(want, 1e-4)
@@ -252,7 +254,9 @@ func test_pull_up_saves_a_steep_dive_that_nose_to_up_does_not() -> void:
 
 func test_pull_up_loss_bounds_the_height_lost() -> void:
 	# The budget is 0 while climbing and, from tick 0 of a pull-up, at least the height actually lost (it assumes
-	# gravity alone while the nose turns) and not wildly more (< 2.5x), for dives under both lift models.
+	# gravity alone while the nose turns), for dives under both lift models. Upper bound: that assumption ignores the
+	# lift and thrust during the turn; measured 1.4-2.1x the real loss (largest: damping_only 15 degrees, 58.9 vs
+	# 28.1 m), so < 2.5x catches a budget that has lost touch with the flight model without flaking.
 	var def: ShipDef = FlightTestKit.ship(&"dart")
 	for model: StringName in MODELS:
 		var rules: RulesDef = FlightTestKit.rules(model)
@@ -300,7 +304,17 @@ func test_perf_lift_law_calls() -> void:
 		for i: int in n_calls:
 			sink += FlightController.pull_up_loss(b, s.v, n, g)
 		us[2] = minf(us[2], float(Time.get_ticks_usec() - t0) / float(n_calls))
-	print("PERF AI-38 floor+lead_cap %.2f us, pull_up %.2f us, pull_up_loss %.2f us (%.0f)" % [us[0], us[1], us[2], sink])
+	var flight: Dictionary = Ai05Kit.block("flight")
+	var rules: RulesDef = FlightTestKit.rules()
+	var build_ms: float = INF   # load-time cost of the lead / lift tables (once per class and profile, per builder)
+	for batch: int in 3:
+		var t0: int = Time.get_ticks_usec()
+		for i: int in 4:
+			var _g: FlightGains = FlightGains.from_dict(flight, def, rules.tick_hz, rules, _common)
+		build_ms = minf(build_ms, float(Time.get_ticks_usec() - t0) / 4000.0)
+	print("PERF AI-38 floor+lead_cap %.2f us, pull_up %.2f us, pull_up_loss %.2f us, FlightGains.from_dict %.2f ms (%.0f)" % [
+		us[0], us[1], us[2], build_ms, sink])
+	assert_float(build_ms).is_less(200.0)
 	_assert_bounds(us)
 
 

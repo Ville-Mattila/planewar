@@ -43,12 +43,13 @@ family only.
 
 **Steep-dive scenario changed.** AI-06 drew the waypoint line as 5 % of the way to a random far point (63-600 m); the
 rig stops when it reaches its last waypoint (150 m radius), so about 40 of 200 dives ended at tick 0 and many more before
-the dive was decided. The line is now `DIVE_LEG_M` = 2 km (12 s of flight); start states are unchanged.
-`--dive-leg-m=0` replays the AI-06 line for comparisons. **Bound:** `SweepScenarios.dive_recoverable` flies each start
+the dive was decided. The line is now `DIVE_LEG_M` = 2 km (12 s of flight; the harness definition, R0 B.15 A-88); start
+states are unchanged. `--dive-leg-m=0` replays the AI-06 line for comparisons only. **Bound (R0 B.15 A-88):** `SweepScenarios.dive_recoverable` flies each start
 open-loop from tick 0 with a fixed nose elevation 0, 5, ..., 90 degrees (wings level, thrust above the horizon) and with
-`Assist.pull_up`; a start none of them saves is unrecoverable for any wings-level autopilot. Under `damping_only` 17 of
-the 200 starts are (a knife-edge pull on the side damping was tried as well and saves none of them); under
-`speed_scaled` none.
+`Assist.pull_up`; a start none of these saves is "unrecoverable": no constant-elevation pull-up from tick 0 and not the
+PULL_UP law avoids contact (a closed-loop law could in principle differ; a knife-edge pull on the side damping was also
+tried by hand and saved none). Under `damping_only` 17 of the 200 starts are; under `speed_scaled` none. The A-88
+acceptance counts contacts among the recoverable starts: 0 / 183 after AI-38.
 
 Recommended set (`recommended_gains.json` `damping_only`, used for both models), 200 seeds, `--given`, seed 606:
 

@@ -23,7 +23,8 @@ var dt: float; var pitch_rate: float; var yaw_rate: float; var roll_rate: float;
 var kp_path: float; var ki_path: float; var integ_max: float; var integ_band: float; var lead_max: float  # path loop (rad)
 var kp_att: float; var kp_yaw: float; var kp_roll: float; var kp_bank: float; var bank_threshold: float; var bank_max: float
 var t_trim: float; var kp_speed: float; var ki_speed: float; var kp_turn_thrust: float; var brake_overspeed: float
-var ship: ShipDef; var rules: RulesDef; var common: FlightCommonDef; var stop_angle: float; var lead_best: PackedFloat32Array; var lead_du: float; var lead_de: float; var lift_best: PackedFloat32Array   # AI-38
+var ship: ShipDef; var rules: RulesDef; var common: FlightCommonDef; var stop_angle: float; var lead_best: PackedFloat32Array; var lead_du: float; var lead_de: float; var lift_best: PackedFloat32Array   # AI-38 tables
+var lead_floor: float; var floor_u_max: float; var a_thrust: float; var gravity: float; var v_cruise: float; var eff_knee: float   # hot-path caches
 const LEAD_TABLE_SIZE: int; const LEAD_ERR_SIZE: int; const LEAD_SEARCH_STEPS: int   # lead_best [speed][path error] resolution
 static func from_dict(flight: Dictionary, def: ShipDef, tick_hz: int, rules_def: RulesDef, flight_common: FlightCommonDef) -> FlightGains   # null: key / def missing
 
@@ -70,7 +71,7 @@ class_name Assist extends RefCounted                                         # R
 static func link_bridge(b: Basis, p: Vector3, v: Vector3, terrain: Terrain, bp: BridgeParams, probe: ProbeResult, out: PilotInput) -> void
 static func auto_dock(st: LandingState, ship: ShipSnapshot, pad: PadSnapshot, prm: LandingParams, g: FlightGains, radius_m: float, latch_mult: float, inp: PilotInput) -> bool   # true = assist overwrote inp
 static func link_bridge_ground(out: PilotInput) -> void                      # ground unit: stop (thrust 0, no BRAKE: no reverse)
-static func pull_up(b: Basis, v: Vector3, up_local: Vector3, g: FlightGains, out: PilotInput) -> void   # buttons 0 + FlightController.pull_up (AI-38)
+static func pull_up(b: Basis, v: Vector3, up_local: Vector3, g: FlightGains, out: PilotInput) -> void   # buttons 0 + FlightController.pull_up (R0 B.15 A-89, A-90)
 static func hold_velocity(b: Basis, v: Vector3, lift_mps: float, up_local: Vector3, g: FlightGains, lead: float, out: PilotInput) -> void   # v_cmd = v + up * lift, pitch integrator = lead
 static func trim_lead(v: Vector3, up_local: Vector3, bp: BridgeParams) -> float   # steady nose lead: sin = g_perp / (u k_up_effective), <= integ_max
 
@@ -186,13 +187,13 @@ most `turn_cmd_max_deg` off the track (bank-to-turn, no loops).
 and the `FlightGains`; `choose_bearing` takes the `Terrain` and a per-candidate threat penalty array. The `landing` block
 keys are `LandingParams.KEYS` (anchors in the fixture `test/sim/ai/ai09_params.json`; AI-19 writes them).
 
-**AI-38 (05 s5.2 / s5.3 amended; A-68: one law, the lift model read from `Kinematics`, no def key).** `track_velocity`:
+**AI-38 (05 s5.3 as amended by R0 B.15 A-89; signatures A-90; A-68: one law from `Kinematics`, no def key).** `track_velocity`:
 throttle >= `weight_support_throttle` (the gravity the best wing lift at that speed cannot carry; faded out over
 `integ_band` below the path; the throttle integrator holds while it flies); nose lead <= `lead_cap` (`best_lead`, ~40
 degrees for a cruising Dart under speed_scaled, opening to `lead_max` with overspeed: braking needs the bigger lead).
 `pull_up` (via `Assist.pull_up`): nose to the best-climb elevation of the lift law, wings level, thrust above the horizon
-only. `pull_up_loss` is the pull-up budget callers compare with their clearance (AI-06 rig; brains AI-13). Evidence:
-`godot/test/tuning/README.md`.
+only. `pull_up_loss` is the pull-up budget callers compare with their clearance (AI-06 rig; brains AI-13). `LEAD_*` are
+numerical resolution, not tuning (A-90 appends; the table is within 2 degrees of brute force, FC5). Evidence: tuning README.
 
 ## Invariants
 
@@ -243,14 +244,14 @@ only. `pull_up_loss` is the pull-up budget callers compare with their clearance 
 - BA1: `predict_impact` uses the sim's own `Kinematics.step_projectile` and the Collision ground test (altitude < height + radius), allocates nothing (the caller passes the `ProjectileState` scratch) and takes `dt` (fine) and `dt_far` (used while clearance > `near_m`; a coarse step that would cross the ground is retried fine). Fine only (`dt_far` = `dt` = 2 sim ticks): within 2 m of the stepped sim for drops of 50-800 m (accepted 3 m), measured 88-109 us for a 300 m fall (the ~60-step cost 05 s6.3.1 assumed). Far mode (`dt_far` 0.133 s, `near_m` 150): 5.2 m worst error at 800 m / 250 m/s, 105-128 us for an 11 s fall, for run-in planning; R3 RELEASE uses fine. 05 s6.3.1's 0.1 s x 60 steps gives 3.9 m at 800 m and cannot reach an 11 s fall; a velocity offset that cancels the coarse bias for flat gravity was tried and fails once transport matters. `shift_impact` keeps the cached impact current within 5 m over a 10-tick gap; the plain closed form alone is hundreds of metres off over a long fall (6 km moon curvature). Terrain cost: one `Terrain.height_at` per step (a bomb is nearly always inside the relief band, so the sim's prefilter would not pay).
 
 ## Performance budget
-
 AI-08 (`test_overlays_perf.gd`, best of 6, owner's desktop): `Assist.link_bridge` 6.9-7.9 us/call (6 height samples +
 `track_velocity`); step 4 runs it at most once per player slot (<= 8 per tick, <= 65 us), outside the AI hook's budget row.
 
 05 s10 "act" row: one `track_velocity` or `track_thrust_vector` per AI ship per tick, no allocation (Vector3 / float locals,
 writes into the caller's `PilotInput`); budget 6 us per ship. Measured by `test_perf_cost_per_call` (best of 6 batches, owner's
-desktop, 4.7.2, shared with other jobs): track_velocity 5.7-7.8 us/call, track_thrust_vector 2.0-2.5 us/call. AI-38: floor +
-lead cap 1.2 us (track_velocity 6.9 us); `pull_up` 7.5 us, `pull_up_loss` 7.2 us (pull-ups only); lead table built once per class. At the top of
+desktop, 4.7.2, shared with other jobs): track_velocity 5.7-7.8 us/call, track_thrust_vector 2.0-2.5 us/call. AI-38 same-session
+A/B (interleaved, laptop): track_velocity 4.14-4.65 -> 4.90-4.96 us (+0.8; cap / floor skipped when inert, cached constants);
+`pull_up` / `pull_up_loss` 7.4-7.6 us (pull-ups only); `FlightGains.from_dict` 9.4 ms per class and builder (load). At the top of
 that range the act row is over budget; the 05 s10 governor's rung 2 (act at 15 Hz for far ships) halves it. A Dart think in
 `test_perf_think_and_act` (probe + test guidance) costs about 51 us against the 25 us row: the guidance, not this module.
 
@@ -264,7 +265,6 @@ never degraded by the governor, 05 s10; RETURN ships are a small share of the 40
 samples), once per approach at think. No allocation (struct fields, Vector3 / float locals).
 
 ## Test entry points
-
 `godot/test/unit/sim/steer/test_flight_controller.gd` (step response under both lift models, any-attitude recovery, hover,
 interface, purity, perf); `godot/test/sim/ai/test_auto_dock_landing.gd` (TA-30 spike landing numbers);
 `godot/test/sim/ai/test_sc_terrain_flight.gd` (SC-09, SC-10 on cradle); `godot/test/unit/sim/steer/test_aim_solver.gd`, `test_ballistics.gd`, `test_terrain_probe.gd`

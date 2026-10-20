@@ -44,6 +44,12 @@ var lead_best: PackedFloat32Array = PackedFloat32Array()   ## AoA of the largest
 var lead_du: float = 0.0               ## speed step of `lead_best` (m/s): v_dive_max / (LEAD_TABLE_SIZE - 1)
 var lead_de: float = 0.0               ## path-error step of `lead_best` (rad): PI / (LEAD_ERR_SIZE - 1)
 var lift_best: PackedFloat32Array = PackedFloat32Array()   ## best wing lift k_up_eff u sin cos per speed (m/s^2)
+var lead_floor: float = 0.0            ## min(lead_best, lead_max): below it no lead cap applies (hot-path skip)
+var floor_u_max: float = 0.0           ## speed from which lift_best >= gravity: no weight-support floor (INF: never)
+var a_thrust: float = 0.0              ## ShipDef.a_thrust (cached for the hot path)
+var gravity: float = 0.0               ## rules.gravity
+var v_cruise: float = 0.0              ## ShipDef.v_cruise
+var eff_knee: float = 0.0              ## flight_common.eff_fade_start * v_cruise (Kinematics.thrust_efficiency knee)
 
 
 ## Builds the struct from an autopilot def's `flight` dictionary, the ship class, the tick rate, the world rules
@@ -91,6 +97,19 @@ static func from_dict(flight: Dictionary, def: ShipDef, tick_hz: int, rules_def:
 		g.lift_best[i] = _max_lift(float(i) * g.lead_du, g)
 		for j: int in LEAD_ERR_SIZE:
 			g.lead_best[i * LEAD_ERR_SIZE + j] = _argmax_turn(float(i) * g.lead_du, float(j) * g.lead_de, g)
+	g.a_thrust = def.a_thrust
+	g.gravity = rules_def.gravity
+	g.v_cruise = def.v_cruise
+	g.eff_knee = flight_common.eff_fade_start * def.v_cruise
+	g.lead_floor = g.lead_max
+	for x: float in g.lead_best:
+		g.lead_floor = minf(g.lead_floor, x)
+	g.floor_u_max = INF
+	var i_top: int = LEAD_TABLE_SIZE
+	while i_top > 0 and g.lift_best[i_top - 1] >= g.gravity:
+		i_top -= 1
+	if i_top < LEAD_TABLE_SIZE:
+		g.floor_u_max = float(i_top) * g.lead_du
 	return g
 
 

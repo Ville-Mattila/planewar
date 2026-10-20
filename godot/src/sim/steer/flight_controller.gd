@@ -35,7 +35,8 @@ static func track_velocity(b: Basis, v: Vector3, v_cmd: Vector3, up_local: Vecto
 	var lead: Vector3 = vu * (g.kp_path * e_p) + hr * (g.kp_path * e_l) + vn * integ.x
 	var la: float = lead.length()
 	var ix: float = integ.x
-	var cap: float = lead_cap(u, Vector2(e_p, e_l).length(), s_cmd - u, g)
+	var err: float = Vector2(e_p, e_l).length()
+	var cap: float = g.lead_max if la < g.lead_floor else lead_cap(u, err, s_cmd - u, g)   # below every cap: skip
 	if la < cap:
 		var e_i: float = clampf(e_gamma, -g.integ_band, g.integ_band)
 		ix = clampf(ix + g.ki_path * e_i * g.dt, -g.integ_max, g.integ_max)
@@ -45,13 +46,13 @@ static func track_velocity(b: Basis, v: Vector3, v_cmd: Vector3, up_local: Vecto
 		nose = vhat * cos(la) + lead.normalized() * sin(la)
 	_point(b, nose, b.x, g, out)
 	out.roll = _bank(b, vhat, d, up_local, g)
-	var turn: float = g.kp_turn_thrust * Vector2(e_p, e_l).length()
-	var iy: float = _throttle(s_cmd - u, integ.y, maxf(fwd.dot(vhat), 0.5), turn, g, out)
-	var w: float = clampf(1.0 + e_gamma / g.integ_band, 0.0, 1.0) if g.integ_band > 0.0 else 1.0
-	var floor_t: float = weight_support_throttle(b, v, up_local, g) * w
-	if floor_t > out.thrust:   # the floor flies, not the speed loop: its integrator holds (no wind-down)
-		out.thrust = floor_t
-		iy = integ.y
+	var iy: float = _throttle(s_cmd - u, integ.y, maxf(fwd.dot(vhat), 0.5), g.kp_turn_thrust * err, g, out)
+	if u < g.floor_u_max and e_gamma > -g.integ_band:   # else the floor is 0 (the wing carries it / descent)
+		var w: float = clampf(1.0 + e_gamma / g.integ_band, 0.0, 1.0) if g.integ_band > 0.0 else 1.0
+		var floor_t: float = _support(fwd, v, u, up_local, g) * w
+		if floor_t > out.thrust:   # the floor flies, not the speed loop: its integrator holds (no wind-down)
+			out.thrust = floor_t
+			iy = integ.y
 	return Vector2(ix, iy)
 
 
@@ -76,11 +77,22 @@ static func track_thrust_vector(b: Basis, t_dir: Vector3, t_mag01: float, up_loc
 ## lift falls faster than the thrust adds), unless the speed loop wants to brake: the cap opens linearly to
 ## `lead_max` as the overspeed `-e_s` reaches `brake_overspeed`.
 static func lead_cap(u: float, err: float, e_s: float, g: FlightGains) -> float:
-	var best: float = best_lead(u, err, g)
+	var n: int = FlightGains.LEAD_ERR_SIZE   # best_lead inlined (hot path, 05 s10 act row)
+	var x: float = clampf(u / g.lead_du, 0.0, float(FlightGains.LEAD_TABLE_SIZE - 1))
+	var y: float = clampf(err / g.lead_de, 0.0, float(n - 1))
+	var i: int = mini(int(x), FlightGains.LEAD_TABLE_SIZE - 2)
+	var j: int = mini(int(y), n - 2)
+	var k: int = i * n + j
+	var t: PackedFloat32Array = g.lead_best
+	var fy: float = y - float(j)
+	var lo: float = t[k] + (t[k + 1] - t[k]) * fy
+	var hi: float = t[k + n] + (t[k + n + 1] - t[k + n]) * fy
+	var best: float = lo + (hi - lo) * (x - float(i))
 	if best >= g.lead_max:
 		return g.lead_max
-	var w: float = clampf(-e_s / g.brake_overspeed, 0.0, 1.0) if g.brake_overspeed > 0.0 else 0.0
-	return best + (g.lead_max - best) * w
+	if e_s >= 0.0 or g.brake_overspeed <= 0.0:
+		return best
+	return best + (g.lead_max - best) * minf(-e_s / g.brake_overspeed, 1.0)
 
 
 ## AoA (rad) of the largest `turn_accel` at speed `u` and path error `err`: bilinear in FlightGains' `lead_best`
@@ -119,15 +131,23 @@ static func turn_accel(u: float, alpha: float, err: float, g: FlightGains) -> fl
 ## fade is not modelled). 0 with the nose at or below the horizon; 1 when full thrust cannot. Under `damping_only`
 ## (wing lift k_up u / 2) it keeps the speed loop from cutting the thrust that is the lift while decelerating.
 static func weight_support_throttle(b: Basis, v: Vector3, up_local: Vector3, g: FlightGains) -> float:
-	var fwd: Vector3 = -b.z
+	return _support(-b.z, v, v.length(), up_local, g)
+
+
+# weight_support_throttle with the nose `fwd` and speed `u` already known (the track_velocity hot path): the
+# thrust efficiency of `Kinematics.thrust_efficiency` from FlightGains' cached knee and cruise speed.
+static func _support(fwd: Vector3, v: Vector3, u: float, up_local: Vector3, g: FlightGains) -> float:
 	var s_n: float = fwd.dot(up_local)
 	if s_n <= 0.0:
 		return 0.0
-	var deficit: float = g.rules.gravity - lift_best(v.length(), g)
+	var deficit: float = g.gravity - lift_best(u, g)
 	if deficit <= 0.0:
 		return 0.0
-	var eff: float = Kinematics.thrust_efficiency(v.dot(fwd), g.ship.v_cruise, g.common.eff_fade_start)
-	var a: float = g.ship.a_thrust * eff * s_n
+	var v_fwd: float = v.dot(fwd)
+	var eff: float = 1.0
+	if v_fwd > g.eff_knee:
+		eff = clampf((g.v_cruise - v_fwd) / (g.v_cruise - g.eff_knee), 0.0, 1.0) if g.v_cruise > g.eff_knee else 0.0
+	var a: float = g.a_thrust * eff * s_n
 	return minf(deficit / a, 1.0) if a > 0.0 else 1.0
 
 
@@ -188,8 +208,9 @@ static func pull_up_plane(b: Basis, v: Vector3, up_local: Vector3) -> Vector3:
 ## a nose below the horizon, where thrust is off, does not bend the samples); with no maximum in reach (convex
 ## samples) the end the slope points to. Re-evaluated every tick, it tracks the optimum as the nose turns.
 static func pull_up_elevation(v: Vector3, h: Vector3, up_local: Vector3, th0: float, g: FlightGains) -> float:
-	var d: float = minf(g.stop_angle, PI * 0.25)
-	var c: float = clampf(th0, d, PI * 0.5 - d)
+	var q: float = PI * 0.5   # the [0, 90] degree range; the sample spacing is at most half of it
+	var d: float = minf(g.stop_angle, q * 0.5)
+	var c: float = clampf(th0, d, q - d)
 	var f_m: float = climb_accel(v, h, up_local, c - d, g)
 	var f_0: float = climb_accel(v, h, up_local, c, g)
 	var f_p: float = climb_accel(v, h, up_local, c + d, g)
