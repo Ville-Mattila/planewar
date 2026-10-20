@@ -14,6 +14,7 @@ func _at(alt: float, east: float = 0.0, north: float = 0.0) -> Vector3:
 
 func _setup(w: SimWorld) -> FireTestKit.TriggerHook:
 	var h: FireTestKit.TriggerHook = FireTestKit.hook(w)
+	CombatTestKit.power(w, 1, 1)
 	for k: int in 3:
 		h.hold(CombatTestKit.spawn(w, &"dart", 1, 1, _at(450.0 + 20.0 * k, -300.0, 30.0 * k)), FIRE1)
 		var _t: int = CombatTestKit.spawn(w, &"lancer", 0, 0, _at(450.0 + 20.0 * k, 200.0, 30.0 * k))

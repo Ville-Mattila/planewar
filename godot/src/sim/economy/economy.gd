@@ -29,6 +29,10 @@ var _demand: PackedFloat32Array = PackedFloat32Array()
 var _n_struct: int = -1
 var _dirty: bool = true
 var _core_def: int = -1
+var sun_period_s: float = 0.0                            ## 0 = fixed sun +Z; > 0 = moving sun (MatchRules.sun_period_s, set by EconomyHub)
+var _clock: int = 0                                      ## sim tick set by `set_clock`; derived, not state
+var _plateaus: PackedVector3Array = PackedVector3Array() ## unit centres of the solar Plateau(s), set at map load (planned: no map data yet)
+var _tower_rate: PackedFloat32Array = PackedFloat32Array()
 
 
 func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, hz: int, events: SimEvents, build: Build) -> void:
@@ -43,6 +47,8 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, hz: int, e
 	e |= _supply.resize(PlayerTable.TEAMS) | _demand.resize(PlayerTable.TEAMS) | _cores.resize(PlayerTable.SLOTS) | _acc.resize(PlayerTable.SLOTS) | _low.resize(PlayerTable.TEAMS) | _full.resize(PlayerTable.TEAMS)
 	assert(e == OK)
 	_power.fill(1.0)
+	assert(_tower_rate.resize(PlayerTable.TEAMS) == OK)
+	_tower_rate.fill(1.0)
 	_cap_ore.fill(0)
 	_cap_ice.fill(0)
 	_cores.fill(0)
@@ -67,6 +73,36 @@ static func harvest_trip_time(d: float, def: GroundUnitDef) -> float:
 	if def.ground_speed <= 0.0 or def.ground_speed_loaded <= 0.0 or def.mine_rate <= 0.0:
 		return INF
 	return d / def.ground_speed + float(def.cargo_ore) / def.mine_rate + d / def.ground_speed_loaded + def.unload_time_s
+
+
+## Plateau centres (unit vectors) for the 02 s8.4 `solar_plateau_mult`; empty until the map loader feeds them.
+func set_plateaus(centres: PackedVector3Array) -> void:
+	_plateaus = centres
+	_dirty = true
+
+
+## Tick clock of the moving sun: the solar factor refreshes once a second of sim time while `sun_period_s` > 0.
+func set_clock(tick: int) -> void:
+	_clock = tick
+
+
+## 02 s8.4 production speed: `max(production_min_speed, ratio)`.
+func production_speed(team: int) -> float:
+	return maxf(_econ.production_min_speed, power_ratio(team))
+
+
+## 02 s8.4 tower rate of fire multiplier per team: the ratio, 0 (offline) below `tower_offline_ratio`. Reads the cache only
+## (no refresh), so it is safe to call from step 9.
+func tower_rates() -> PackedFloat32Array:
+	for tm: int in PlayerTable.TEAMS:
+		_tower_rate[tm] = _power[tm] if _power[tm] >= _econ.tower_offline_ratio else 0.0
+	return _tower_rate
+
+
+## 02 s8.4 Shield Projector: recharge multiplier (the ratio), 0 with the dome down (ratio below `tower_offline_ratio`).
+func shield_recharge_mult(team: int) -> float:
+	var r: float = power_ratio(team)
+	return r if r >= _econ.tower_offline_ratio else 0.0
 
 
 func power_ratio(team: int) -> float:
@@ -145,7 +181,8 @@ func mark_dirty() -> void:
 func step() -> void:
 	if _hz <= 0:
 		return
-	if _dirty or _store.structures.size() != _n_struct:
+	var moving: bool = sun_period_s > 0.0 and _clock % _hz == 0
+	if _dirty or moving or _store.structures.size() != _n_struct:
 		_refresh()
 	for p: int in PlayerTable.SLOTS:
 		if _cores[p] == 0 or _players.active[p] == 0:
@@ -191,6 +228,7 @@ func _refresh() -> void:
 	_cores.fill(0)
 	_supply.fill(0.0)
 	_demand.fill(0.0)
+	var sun: Vector3 = SunPath.dir_at(sun_period_s, float(_clock) / float(maxi(_hz, 1)))
 	for s: int in _store.structures:
 		var o: int = _store.owner[s]
 		var tm: int = _store.team[s]
@@ -203,7 +241,8 @@ func _refresh() -> void:
 		_cap_ice[tm] += sd.storage_ice
 		var pw: float = sd.power
 		if sd.solar:
-			pw *= solar_factor(_store.up[s], Vector3.BACK, false, _econ.solar_band_deg, _econ.solar_plateau_mult)
+			var plat: bool = not _plateaus.is_empty() and SunPath.on_plateau(_store.up[s], _plateaus, _econ.solar_plateau_radius_m)
+			pw *= solar_factor(_store.up[s], sun, plat, _econ.solar_band_deg, _econ.solar_plateau_mult)
 		_supply[tm] += maxf(pw, 0.0)
 		_demand[tm] += maxf(-pw, 0.0)
 		if _store.def_id[s] == _core_def and o < PlayerTable.SLOTS:

@@ -314,6 +314,7 @@ func _assist_substitution() -> void:
 # then the deferred deaths of this tick drop their fire state and are freed (03 s4.1 rule 6). Combat draws on the
 # world's `rng`, passed per step (S7).
 func _step_combat(t: int) -> void:
+	_combat.fire.tower_power = _econ.economy.tower_rates()   # 02 s8.4: from the step-10 power cache
 	_combat.step(t, rng)
 	for s: int in _applier.dying:
 		_combat.forget(s)

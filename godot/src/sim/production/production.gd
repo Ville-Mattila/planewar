@@ -170,7 +170,7 @@ func _run(s: int, t: int, dt: float) -> void:
 	if started[s] == 0 and not _start(s, player, unit, t):
 		return
 	var team: int = _store.team[s]
-	_store.timer_a[s] += dt * maxf(_cfg.production_min_speed, _econ.power_ratio(team))
+	_store.timer_a[s] += dt * _econ.production_speed(team)
 	if _store.timer_a[s] >= _build_time(player, unit):
 		_finish(s, player, unit, t)
 

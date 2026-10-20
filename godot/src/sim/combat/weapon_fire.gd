@@ -13,12 +13,12 @@ const UNSUPPLIED_RATE_MULT: float = 0.5
 ## 02 s4.2 flak fuse "predicted intercept + 0.3 s". Needs content (`projectiles.json` `fuse_delay_s`); named until then.
 const FLAK_FUSE_DELAY_S: float = 0.3
 const _BLOCKED: int = EntityStore.F_DOCKED | EntityStore.F_BUILDING
-const _PICK_BITS: PackedInt32Array = [Spatial.MASK_SHIP, Spatial.MASK_GROUND, Spatial.MASK_STRUCTURE]
 const _STATE: PackedStringArray = ["lock_target", "lock_time", "unsupplied"]
 
 var lock_target: PackedInt32Array = PackedInt32Array()   ## per main-range slot: seeker candidate EntityId, 0 = none
 var lock_time: PackedFloat32Array = PackedFloat32Array()   ## per slot: seconds the candidate has been held
 var unsupplied: PackedByteArray = PackedByteArray()        ## per slot: 1 = tower outside the supply network (GD-18 writes)
+var tower_power: PackedFloat32Array = PackedFloat32Array() ## per team tower rate multiplier, 0 = offline (GD-13; SimWorld sets it each tick, not state)
 
 var _store: EntityStore
 var _proj: ProjectileStore
@@ -155,6 +155,10 @@ func _weapon(s: int, wi: int, which: int, held: bool) -> void:
 		target = _seek(s, k, held)
 		trigger = held and target != 0
 	var slow: float = UNSUPPLIED_RATE_MULT if _tower[_did[s]] != 0 and unsupplied[s] != 0 else 1.0
+	if _tower[_did[s]] != 0 and _tm[s] < tower_power.size():
+		slow *= tower_power[_tm[s]]                       # 02 s8.4: x power ratio, offline (0) below tower_offline_ratio
+		if slow <= 0.0:
+			return
 	if _bn[k] > 0 and which == 0:
 		_burst(s, wi, k, trigger, slow)
 		return
@@ -284,51 +288,12 @@ func _lock_event(kind: SimEvent.Kind, s: int, t: int) -> void:
 	var _e: SimEvent = _events.emit(kind, _store.id_of(s), t, _pos[EntityId.slot(t)], 0.0, _tm[s])
 
 
-# The hostile entity of a kind in `mask` within `range_m` and the cone, not below the datum horizon, nearest the
-# boresight (ties: the first in ships / ground / structures list order); 0 when none. The seeker's scan: the arrays
-# are read through locals (no per-candidate property fetch); the horizon test runs only for a new best.
 func _pick(s: int, k: int, mask: int, cone: float) -> int:
-	var tm: PackedByteArray = _tm
-	var pos: PackedVector3Array = _pos
-	var p: Vector3 = pos[s]
-	var f: Vector3 = _fwd[s]
-	var mine: int = tm[s]
-	var r2: float = _r2[k]
-	var best: int = 0
-	var best_c: float = cone
-	for li: int in 3:
-		if (mask & _PICK_BITS[li]) == 0:
-			continue
-		var list: PackedInt32Array = _store.ships if li == 0 else (_store.ground if li == 1 else _store.structures)
-		for t: int in list:
-			var team: int = tm[t]
-			if team == mine or team == EntityStore.NONE_U8:
-				continue
-			var rel: Vector3 = pos[t] - p
-			var d2: float = rel.length_squared()
-			if d2 > r2 or d2 <= 0.0:
-				continue
-			var c: float = rel.dot(f) / sqrt(d2)
-			if (c > best_c or (best == 0 and c >= best_c)) and not Sphere.is_occluded_by_datum(p, pos[t]):
-				best_c = c
-				best = t
-	return _store.id_of(best) if best != 0 else 0
+	return SeekerScan.pick(_store, _pos, _tm, s, _fwd[s], mask, _r2[k], cone)
 
 
-# Boresight cosine of slot `t` seen from `s`, or -2.0 when `t` is friendly, neutral, out of range / cone or occluded.
 func _score(s: int, t: int, r2: float, cone: float) -> float:
-	var team: int = _tm[t]
-	if team == _tm[s] or team == EntityStore.NONE_U8:
-		return -2.0
-	var p: Vector3 = _pos[s]
-	var rel: Vector3 = _pos[t] - p
-	var d2: float = rel.length_squared()
-	if d2 <= 0.0 or d2 > r2:
-		return -2.0
-	var c: float = rel.dot(_fwd[s]) / sqrt(d2)
-	if c < cone or Sphere.is_occluded_by_datum(p, _pos[t]):
-		return -2.0
-	return c
+	return SeekerScan.score(_pos, _tm, s, _fwd[s], t, r2, cone)
 
 
 func _lockable(s: int, t: int, mask: int, r2: float, cone: float) -> bool:
