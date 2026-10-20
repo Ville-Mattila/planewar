@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 ## AI-11 swarm test (05 s5.4, s11): 50 seeds of a mixed friendly swarm (Darts, Lancers, a Bomber) launched within ~400 m
 ## of each other toward their own destination on shared waypoint legs (a squad MOVE: each ship's destination is the leg
-## point plus its own offset within `SPREAD_M`), flown by guidance velocity + `Separation.push` (SwarmWorld). Pass: no
+## point plus its own offset within `SPREAD_M`), flown by guidance velocity + `Separation.term` (SwarmWorld; EscortPilot's refresh / hold policy). Pass: no
 ## overlapping friendly pair (centres closer than the bounding radii) in any seed, at any tick.
 ## Start states are fair: ships point at their own first destination and no pair starts on a collision course
 ## (`MIN_START_GAP_M` now and at the closest approach within `START_HORIZON_S`). The stress variant sends every ship to
@@ -58,13 +58,15 @@ func _gap_ok(d: Vector3, vr: Vector3) -> bool:
 	return (d + vr * t).length() >= MIN_START_GAP_M
 
 
-## One seed: returns the world after TICKS (collisions counted every tick). `gain` >= 0 overrides `sep_gain`.
-func _fly(sv: int, spread: float, gain: float = -1.0) -> SwarmWorld:
+## One seed: returns the world after TICKS (collisions counted every tick). `gain` >= 0 overrides `sep_gain`;
+## `every_think` refreshes separation on every think (the baseline the PR's sweeps compare the hold policy with).
+func _fly(sv: int, spread: float, gain: float = -1.0, every_think: bool = false) -> SwarmWorld:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 5000 + sv
 	var w: SwarmWorld = SwarmWorld.new(FlightTestKit.common(), FormationKit.content().rules, FormationKit.params())
 	if gain >= 0.0:
 		w.prm.sep_gain = gain
+	w.every_think = every_think
 	var legs: PackedVector3Array = _legs(rng)
 	var offs: PackedVector3Array = PackedVector3Array()
 	for cls: StringName in CLASSES:

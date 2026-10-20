@@ -96,14 +96,20 @@ class EscortTestBrain extends AiBrain:
 	var pilot: EscortPilot
 	var inp: PilotInput = PilotInput.new()
 	var lost: int = 0
+	var thinks: int = 0       ## FORMING thinks
+	var refreshes: int = 0    ## of those, the ones that refreshed the separation term (Separation.term)
 
 	func _init(p: EscortPilot) -> void:
 		pilot = p
 
 	func think_batch(ids: PackedInt32Array, n: int, view: SimView, st: AiState, _sink: CommandSink, tick: int) -> void:
 		for i: int in n:
-			if pilot.think(ids[i], view, st, tick) == EscortPilot.Outcome.LOST:
+			var o: EscortPilot.Outcome = pilot.think(ids[i], view, st, tick)
+			if o == EscortPilot.Outcome.LOST:
 				lost += 1
+			elif o == EscortPilot.Outcome.FORMING:
+				thinks += 1
+				refreshes += st.sep_age[EntityId.slot(ids[i])] & Separation.AGE_FRESH
 
 	func act_batch(ids: PackedInt32Array, view: SimView, st: AiState, sink: CommandSink) -> void:
 		for id: int in ids:

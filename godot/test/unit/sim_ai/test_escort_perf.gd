@@ -1,44 +1,57 @@
 extends GdUnitTestSuite
 ## AI-11 perf note (05 s10 think row 25 us for 6 probes + 1 neighbour query + 1 choice point; act row 6 us per ship):
-## EscortPilot.think (order read, roster, formation velocity, Separation.push every second think = one ids_near on the
-## collision hash's ring path) and EscortPilot.act (track_velocity) on a real SimWorld with a Bomber, 4 escort Darts in
+## EscortPilot.think (order read, roster, formation velocity, Separation.term: one ids_near on the collision hash's ring path every second think in steady formation, every think
+## while a pair closes) and EscortPilot.act (track_velocity) on a real SimWorld with a Bomber, 4 escort Darts in
 ## slots, 12 more friendly Darts within ~300 m and FAR_SHIPS friendly Darts spread over the sphere (a match-sized
 ## population: a query that fell off the ring path would scan their cells). Three cases: no threat, an engage-gate case (a
 ## qualifying threat for the slot that may not break, so the gate runs every think) and act. Per-call timings, so the
 ## mean includes the refresh calls and the held calls; mean and p95 are printed for the PR. Bounds are the 05 s10 rows with
-## a CI factor of `CI_FACTOR` (shared runners are slower than the dev machine; precedent test_overlays_perf).
+## a CI factor of `CI_FACTOR` (shared runners are slower than the dev machine; 05 s11.1, R0 A-62). A fourth case times a
+## think with a closing friendly neighbour, which refreshes every think (Separation.term).
 
 const CALLS: int = 1000
 const BATCHES: int = 6
 const FAR_SHIPS: int = 240
 const THINK_ROW_US: float = 25.0
 const ACT_ROW_US: float = 6.0
-const CI_FACTOR: float = 2.0
+const CI_FACTOR: float = 2.0         ## 05 s11.1 (p95 assertions only on the pinned runner) and R0 A-62 (no row moves before it is measured)
+const CLOSING_FACTOR: float = 2.0    ## a closing pair is transient: it refreshes every think, the pre-hold cost (two thinks' worth)
 
 
 func _world() -> Array:
 	var rules: MatchRules = WorldTestKit.rules()
 	rules.caps.units = 2000   # a match-sized population for one player
 	var w: SimWorld = WorldTestKit.world(31, rules)
-	var vb: Vector3 = Vector3(0, 70, 0)
-	var bomber: int = WorldTestKit.spawn(w, &"bomber", 0, 0, WorldTestKit.at(300.0, 0.0), vb)
-	var darts: PackedInt32Array = PackedInt32Array()
-	for k: int in 16:
-		var p: Vector3 = WorldTestKit.at(300.0 + 25.0 * float(k % 3), -60.0 - 35.0 * float(k))
-		p.z += 45.0 * float((k % 5) - 2)
-		var _a: bool = darts.push_back(WorldTestKit.spawn(w, &"dart", 0, 0, p, vb))
-	var foe: int = WorldTestKit.spawn(w, &"dart", 1, 1, WorldTestKit.at(300.0, 600.0), Vector3(0, 60, 0))
 	var def_id: int = WorldTestKit.def_id(&"dart")
-	for k: int in FAR_SHIPS:   # spread over many hash cells, 1.5 km and more from the formation
+	for k: int in FAR_SHIPS:   # spread over many hash cells, 1.5 km and more from the formation; first, so the formation is fresh
 		var lat: float = deg_to_rad(-60.0 + 120.0 * float(k % 20) / 19.0)
 		var lon: float = deg_to_rad(8.0 + 340.0 * float(k) / float(FAR_SHIPS))
 		var pos: Vector3 = Sphere.from_lat_lon(lat, lon, Sphere.PLANET_RADIUS + 300.0)
 		var code: int = CommandResult.Code.REJECTED_RATE
-		while code == CommandResult.Code.REJECTED_RATE:   # the debug spawns share the player's command token bucket
-			code = w.apply_command(CommandPayload.debug_spawn(0, def_id, 0, 0, pos, Vector3.ZERO, Vector3(0, 1, 0))).code
+		while code == CommandResult.Code.REJECTED_RATE:   # player 1 issues them, so player 0's token bucket stays full for the formation; set-up only, not timed
+			code = w.apply_command(CommandPayload.debug_spawn(1, def_id, 0, 0, pos, Vector3.ZERO, Vector3(0, 1, 0))).code
 			w.step()
 		assert(code == CommandResult.Code.ACCEPTED, "spawn %d: code %d" % [k, code])
+	var _old: Array[SimEvent] = w.drain_events()
+	var vb: Vector3 = Vector3(0, 70, 0)
+	# the formation spawns in one tick (one step for all), so its ships fly parallel: a steady formation, no closing pair
+	var codes: PackedInt32Array = PackedInt32Array([WorldTestKit.queue_spawn(w, &"bomber", 0, 0, WorldTestKit.at(300.0, 0.0), vb)])
+	for k: int in 16:
+		var p: Vector3 = WorldTestKit.at(300.0 + 25.0 * float(k % 3), -60.0 - 35.0 * float(k))
+		p.z += 45.0 * float((k % 5) - 2)
+		var _a: bool = codes.push_back(WorldTestKit.queue_spawn(w, &"dart", 0, 0, p, vb))
+	var _f: bool = codes.push_back(WorldTestKit.queue_spawn(w, &"dart", 1, 1, WorldTestKit.at(300.0, 600.0), Vector3(0, 60, 0)))
+	for c: int in codes:
+		assert(c == CommandResult.Code.ACCEPTED, "formation spawn refused: %d" % c)
 	w.step()
+	var made: PackedInt32Array = PackedInt32Array()
+	for e: SimEvent in w.drain_events():
+		if e.kind == SimEvent.Kind.SPAWN:
+			var _m: bool = made.push_back(e.a)
+	assert(made.size() == 18, "formation spawns: %d" % made.size())
+	var bomber: int = made[0]
+	var darts: PackedInt32Array = made.slice(1, 17)
+	var foe: int = made[17]
 	return [w, bomber, darts, foe]
 
 
@@ -73,6 +86,8 @@ func test_perf_think_and_act() -> void:
 	var sc: Vector3 = Vector3(INF, 0.0, 0.0)
 	var sg: Vector3 = Vector3(INF, 0.0, 0.0)
 	var sa: Vector3 = Vector3(INF, 0.0, 0.0)
+	var refreshes: int = 0
+	var gate_refreshes: int = 0
 	for _b: int in BATCHES:   # best batch by mean: the desktop scheduler's noise is larger than the code
 		var calm: PackedFloat32Array = PackedFloat32Array()
 		var gate: PackedFloat32Array = PackedFloat32Array()
@@ -84,19 +99,45 @@ func test_perf_think_and_act() -> void:
 			var _a: EscortPilot.Outcome = pilot.think(id, v, st, 100 + k)
 			var t1: int = Time.get_ticks_usec()
 			calm[k] = float(t1 - t0)
+			refreshes += st.sep_age[EntityId.slot(id)] & Separation.AGE_FRESH
 			var _b2: EscortPilot.Outcome = pilot.think(darts[0], v, st, 100 + k, foe, 0.9)   # slot 0 may not break: the gate runs
 			var t2: int = Time.get_ticks_usec()
 			gate[k] = float(t2 - t1)
+			gate_refreshes += st.sep_age[EntityId.slot(darts[0])] & Separation.AGE_FRESH
 			var _c: bool = pilot.act(id, v, st, inp)
 			act[k] = float(Time.get_ticks_usec() - t2)
 		sc = _best(sc, _stats(calm))
 		sg = _best(sg, _stats(gate))
 		sa = _best(sa, _stats(act))
-	print("AI-11 perf (%d far ships, best of %d batches of %d): think mean %.1f / median %.1f / p95 %.1f us; threat-gate think mean %.1f / median %.1f / p95 %.1f us (row %.0f); act mean %.1f / p95 %.1f us (row %.0f)" % [
-		FAR_SHIPS, BATCHES, CALLS, sc.x, sc.y, sc.z, sg.x, sg.y, sg.z, THINK_ROW_US, sa.x, sa.z, ACT_ROW_US])
+	var sx: Vector3 = _closing_case(w, pilot, st, darts[2])
+	print("separation refresh share: quiet thinks %.2f, gate thinks %.2f" % [float(refreshes) / float(BATCHES * CALLS),
+		float(gate_refreshes) / float(BATCHES * CALLS)])
+	print("AI-11 perf (%d far ships, best of %d batches of %d): think mean %.1f / median %.1f / p95 %.1f us; threat-gate think mean %.1f / median %.1f / p95 %.1f us (row %.0f); act mean %.1f / p95 %.1f us (row %.0f); closing-neighbour think (refresh every think) mean %.1f / median %.1f / p95 %.1f us" % [
+		FAR_SHIPS, BATCHES, CALLS, sc.x, sc.y, sc.z, sg.x, sg.y, sg.z, THINK_ROW_US, sa.x, sa.z, ACT_ROW_US, sx.x, sx.y, sx.z])
 	assert_float(sc.x).is_less(THINK_ROW_US * CI_FACTOR)
 	assert_float(sg.x).is_less(THINK_ROW_US * CI_FACTOR)
 	assert_float(sa.x).is_less(ACT_ROW_US * CI_FACTOR)
+	assert_float(sx.x).is_less(THINK_ROW_US * CI_FACTOR * CLOSING_FACTOR)
+
+
+## A friendly Dart 150 m ahead of `escort`, head-on at 70 m/s: the escort refreshes on every think while it closes (the
+## transient cost of the conditional hold). Returns the best batch's mean / median / p95.
+func _closing_case(w: SimWorld, pilot: EscortPilot, st: AiState, escort: int) -> Vector3:
+	var v: SimView = w.view()
+	var ahead: Vector3 = v.pos(escort) + v.vel(escort).normalized() * 150.0
+	var _c: int = WorldTestKit.spawn(w, &"dart", 0, 0, ahead, -v.vel(escort))
+	v = w.view()
+	var best: Vector3 = Vector3(INF, 0.0, 0.0)
+	for _b: int in BATCHES:
+		var us: PackedFloat32Array = PackedFloat32Array()
+		var _n: int = us.resize(CALLS)
+		for k: int in CALLS:
+			var t0: int = Time.get_ticks_usec()
+			var _a: EscortPilot.Outcome = pilot.think(escort, v, st, 200 + k)
+			us[k] = float(Time.get_ticks_usec() - t0)
+		assert((st.sep_age[EntityId.slot(escort)] & Separation.AGE_CLOSING) != 0, "the closing case must refresh every think")
+		best = _best(best, _stats(us))
+	return best
 
 
 func _best(a: Vector3, b: Vector3) -> Vector3:

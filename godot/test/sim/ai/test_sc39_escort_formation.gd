@@ -58,14 +58,14 @@ func _run(seed_value: int, wing: bool) -> Dictionary:
 			min_sep = minf(min_sep, v.pos(id).distance_to(v.pos(bomber)) - v.radius(id) - v.radius(bomber))
 		min_sep = minf(min_sep, v.pos(darts[0]).distance_to(v.pos(darts[1])) - 2.0 * v.radius(darts[0]))
 	return {"frac": float(in_slot) / float(maxi(samples, 1)), "min_sep": min_sep, "deaths": deaths, "ticks": ticks,
-		"arrived": leader.arrived}
+		"arrived": leader.arrived, "refresh": float(escort.refreshes) / float(maxi(escort.thinks, 1))}
 
 
 func test_sc39_escort_formation_class_slots() -> void:
 	for sv: int in [39, 40, 41]:
 		var r: Dictionary = _run(sv, false)
-		var what: String = "SC-39 seed %d: in slot %.0f %%, min gap %.1f m, deaths %d, %d ticks, arrived %s" % [
-			sv, float(r["frac"]) * 100.0, r["min_sep"], r["deaths"], r["ticks"], r["arrived"]]
+		var what: String = "SC-39 seed %d: in slot %.0f %%, min gap %.1f m, deaths %d, %d ticks, arrived %s, separation refresh share %.2f" % [
+			sv, float(r["frac"]) * 100.0, r["min_sep"], r["deaths"], r["ticks"], r["arrived"], r["refresh"]]
 		print(what)
 		assert_bool(r["arrived"]).override_failure_message(what).is_true()
 		assert_float(r["frac"]).override_failure_message(what).is_greater_equal(FRACTION)
@@ -75,8 +75,8 @@ func test_sc39_escort_formation_class_slots() -> void:
 
 func test_sc39_escort_formation_wing_slots() -> void:
 	var r: Dictionary = _run(42, true)
-	var what: String = "SC-39 (SL-2 wing slots): in slot %.0f %%, min gap %.1f m, deaths %d" % [
-		float(r["frac"]) * 100.0, r["min_sep"], r["deaths"]]
+	var what: String = "SC-39 (SL-2 wing slots): in slot %.0f %%, min gap %.1f m, deaths %d, separation refresh share %.2f" % [
+		float(r["frac"]) * 100.0, r["min_sep"], r["deaths"], r["refresh"]]
 	print(what)
 	assert_float(r["frac"]).override_failure_message(what).is_greater_equal(FRACTION)
 	assert_int(r["deaths"]).override_failure_message(what).is_equal(0)

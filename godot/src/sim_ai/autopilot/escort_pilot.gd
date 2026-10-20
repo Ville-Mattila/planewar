@@ -106,7 +106,11 @@ func slot_error(id: int, view: SimView, st: AiState) -> float:
 func _slot_index(wslot: int, s: int, st: AiState, wing: bool) -> int:
 	var n: int = prm.slot_count(wing)
 	var idx: int = wslot if wing else st.form_slot[s]
-	return clampi(idx if idx != AiState.NO_SLOT else n - 1, 0, n - 1)
+	if idx == AiState.NO_SLOT:
+		idx = n - 1
+	elif not wing and idx >= AiState.ROSTER_WIDTH:   # an overflow escort doubles up on slot idx - ROSTER_WIDTH
+		idx -= AiState.ROSTER_WIDTH
+	return clampi(idx, 0, n - 1)
 
 
 func _guide(id: int, s: int, p: Vector3, lp: Vector3, leader: int, wslot: int, view: SimView, st: AiState) -> void:
@@ -115,31 +119,26 @@ func _guide(id: int, s: int, p: Vector3, lp: Vector3, leader: int, wslot: int, v
 	var lv: Vector3 = view.vel(leader)
 	var slot_pos: Vector3 = Formation.slot_world(lp, lv, view.basis(leader), idx, wing, prm)
 	var v: Vector3 = Formation.v_cmd(p, slot_pos, lv, def.v_cruise, prm)
-	if st.sep_age[s] == 0:   # the neighbour query runs every second think (05 s10 think row); the term is held in between
-		st.sep_push[s] = Separation.push(id, p, view.vel(id), view.team(id), view, prm)
-		st.sep_age[s] = 1
-	else:
-		st.sep_age[s] = 0
-	st.guidance_vel[s] = v + st.sep_push[s]
+	st.guidance_vel[s] = v + Separation.term(s, id, p, view.vel(id), view.team(id), view, prm, st)
 	st.guidance_point[s] = slot_pos
 
 
 # Lowest free class slot in the escortee's roster row (AiState.form_roster: no spatial query); stale entries (dead, released
-# or re-ordered escorts) are dropped on the way. With every slot taken the escort doubles up (modulo) without a roster entry.
+# or re-ordered escorts) are dropped on the way. With every slot taken the escort is an overflow escort: it doubles up on
+# slot `EntityId.slot(id) % n` (spread by id, a function of state only) encoded as that + ROSTER_WIDTH, outside the roster,
+# so the roster only ever names holders and a restored copy rebuilds the same rows.
 func _assign(id: int, leader: int, view: SimView, st: AiState) -> int:
 	var n: int = mini(prm.slot_count(false), AiState.ROSTER_WIDTH)
 	var row: int = EntityId.slot(leader) * AiState.ROSTER_WIDTH
 	var used: int = 0
-	var count: int = 0
 	for k: int in n:
 		if _holds(st.form_roster[row + k], leader, k, view, st):
 			used |= 1 << k
-			count += 1
 		else:
 			st.form_roster[row + k] = 0
 	var idx: int = Formation.free_slot(used, n)
 	if idx == AiState.NO_SLOT:
-		return count % prm.slot_count(false)
+		return EntityId.slot(id) % n + AiState.ROSTER_WIDTH
 	st.form_roster[row + idx] = id
 	return idx
 
@@ -193,8 +192,10 @@ func _may_start(id: int, mode: int, lp: Vector3, tgt: int, utility: float, view:
 		return d <= prm.focus_leash_m
 	if utility <= prm.break_utility or d > prm.engage_radius_m:
 		return false
-	var s: int = EntityId.slot(id)
-	return Formation.may_break(st.form_slot[s], _group_size(st.aux_id[s], view, st), prm)
+	var k: int = st.form_slot[EntityId.slot(id)]
+	if k >= AiState.ROSTER_WIDTH and k != AiState.NO_SLOT:   # an overflow escort stays in formation: the break share counts holders
+		return false
+	return Formation.may_break(k, _group_size(st.aux_id[EntityId.slot(id)], view, st), prm)
 
 
 func _keep_engaging(s: int, p: Vector3, lp: Vector3, mode: int, tgt: int, tick: int, view: SimView, st: AiState) -> bool:

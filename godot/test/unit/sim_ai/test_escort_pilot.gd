@@ -255,6 +255,65 @@ func test_separation_runs_every_second_think_and_is_held_in_between() -> void:
 	assert_vector(r.st.sep_push[s]).is_equal_approx(held, Vector3(0.001, 0.001, 0.001))
 
 
+func test_separation_refresh_policy_flags() -> void:
+	assert_bool(Separation.needs_refresh(0)).is_true()                                   # held last think (or never ran)
+	assert_bool(Separation.needs_refresh(Separation.AGE_FRESH)).is_false()               # refreshed, nobody closing: hold once
+	assert_bool(Separation.needs_refresh(Separation.AGE_FRESH | Separation.AGE_CLOSING)).is_true()   # closing pair: refresh again
+
+
+func test_a_closing_pair_refreshes_on_consecutive_thinks() -> void:
+	var r: Rig = Rig.new(1, 80.0)
+	# a friendly Dart 150 m behind the escort, 70 m/s faster: closing, predicted miss 0 m within the look-ahead horizon
+	var _closer: int = WorldTestKit.spawn(r.w, &"dart", 0, 0, WorldTestKit.at(ALT, -250.0), Vector3(0, 140, 0))
+	r.w.step()
+	var _e: Array[SimEvent] = r.w.drain_events()
+	r.order(r.darts[0])
+	var s: int = EntityId.slot(r.darts[0])
+	for k: int in 3:
+		r.st.sep_push[s] = Vector3(1, 2, 3)            # a marker: every think must overwrite it
+		var _o: EscortPilot.Outcome = r.think(0)
+		assert_int(r.st.sep_age[s]).override_failure_message("think %d" % k).is_equal(Separation.AGE_FRESH | Separation.AGE_CLOSING)
+		assert_bool(r.st.sep_push[s] == Vector3(1, 2, 3)).override_failure_message("think %d held the term" % k).is_false()
+
+
+func test_six_escorts_overflow_outside_the_roster_and_restore_identically_after_release() -> void:
+	var r: Rig = Rig.new(7)
+	for i: int in 6:
+		r.order(r.darts[i])
+		var _o: EscortPilot.Outcome = r.think(i)
+	for i: int in 4:
+		assert_int(r.slot_of(i)).is_equal(i)
+	var o4: int = r.slot_of(4)
+	var o5: int = r.slot_of(5)
+	assert_int(o4).is_greater_equal(AiState.ROSTER_WIDTH)   # overflow: outside the roster, not stacked on slot 0
+	assert_int(o5).is_greater_equal(AiState.ROSTER_WIDTH)
+	assert_int(o4).is_not_equal(o5)
+	assert_float(r.pilot.slot_error(r.darts[4], r.w.view(), r.st)).is_less(INF)
+	var copy: AiState = AiState.new()
+	assert_bool(copy.deserialize(r.st.serialize())).is_true()
+	assert_array(copy.form_roster).is_equal(r.st.form_roster)
+	r.pilot.release(r.darts[0], r.st)                        # the slot-0 holder stops escorting, live and restored
+	r.pilot.release(r.darts[0], copy)
+	var v: SimView = r.w.view()
+	assert_int(r.pilot._group_size(r.bomber, v, copy)).is_equal(r.pilot._group_size(r.bomber, v, r.st))
+	assert_int(r.pilot._group_size(r.bomber, v, r.st)).is_equal(3)
+	assert_array(copy.form_roster).is_equal(r.st.form_roster)
+	assert_array(copy.serialize()).is_equal(r.st.serialize())
+	# continue: a 7th escort takes the freed slot 0 in both; every escort thinks (one with a threat) the same in both
+	r.order(r.darts[6])
+	var foe: int = r.enemy(THREAT_FAR_M)
+	r.w.step()
+	v = r.w.view()
+	for i: int in range(1, 7):
+		var a: EscortPilot.Outcome = r.pilot.think(r.darts[i], v, r.st, r.w.tick(), foe, 0.9)
+		var b: EscortPilot.Outcome = r.pilot.think(r.darts[i], v, copy, r.w.tick(), foe, 0.9)
+		assert_int(b).override_failure_message("escort %d" % i).is_equal(a)
+	assert_int(r.slot_of(6)).is_equal(0)
+	assert_int(copy.form_slot[EntityId.slot(r.darts[6])]).is_equal(0)
+	assert_array(copy.form_roster).is_equal(r.st.form_roster)
+	assert_array(copy.serialize()).is_equal(r.st.serialize())
+
+
 func test_format_3_bytes_are_refused() -> void:
 	var r: Rig = Rig.new(1)
 	r.order(r.darts[0])

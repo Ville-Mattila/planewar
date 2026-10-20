@@ -10,6 +10,35 @@ class_name Separation extends RefCounted
 ##   the line of closing); the look-ahead pushes sideways, early. A pair that is exactly aligned splits by id order.
 ## Enemy ships are never avoided here (guns and the flip handle them). Structures are the terrain probe's job.
 ## Cost (05 s10 think row, "1 neighbour query"): one `ids_near` plus a few reads per neighbour in range.
+## Refresh policy (`term`, AI-11 review round 3; R0 B.14 A-84 does not narrow the acceptance): a think refreshes the term
+## unless the previous think refreshed it and found no closing pair; then it holds it once. A closing pair is a friendly
+## neighbour in the query whose distance shrinks at >= 1 m/s (the look-ahead's own entry gate, so a superset of "the
+## look-ahead term is non-zero": a pair turning onto a collision course during the hold is caught one think earlier).
+## Parallel flight holds every second think; a swarm or a closing pair refreshes every think. The flags live in
+## `AiState.sep_age` (u8, in the S4 bytes): AGE_FRESH = the last think refreshed, AGE_CLOSING = it found a closing pair.
+
+const AGE_FRESH: int = 1     ## sep_age bit: the previous think refreshed the term
+const AGE_CLOSING: int = 2   ## sep_age bit: that refresh found a closing pair (a friendly approaching at >= 1 m/s)
+
+static var _closing: bool = false   # set by every `push`: it saw a closing pair (read at once by `term`; the sim tick is single-threaded)
+
+
+## Whether a think with flags `age` refreshes: false only right after a refresh that found no closing pair.
+static func needs_refresh(age: int) -> bool:
+	return (age & AGE_FRESH) == 0 or (age & AGE_CLOSING) != 0
+
+
+## One think's separation term for the ship `id` in AiState slot `s`: refreshes `st.sep_push[s]` by `push` when
+## `needs_refresh(st.sep_age[s])`, else holds it; updates `st.sep_age[s]` and returns the term. EscortPilot and the
+## swarm rig both call this, so the policy exists once.
+static func term(s: int, id: int, p: Vector3, v: Vector3, team: int, view: SimView, prm: FormationParams, st: AiState) -> Vector3:
+	if not needs_refresh(st.sep_age[s]):
+		st.sep_age[s] = 0
+		return st.sep_push[s]
+	var out: Vector3 = push(id, p, v, team, view, prm)
+	st.sep_push[s] = out
+	st.sep_age[s] = AGE_FRESH | (AGE_CLOSING if _closing else 0)
+	return out
 
 
 ## The velocity to add to a guidance command for the ship `id` at `p` moving at `v` (team `team`); ZERO when nobody
@@ -17,6 +46,7 @@ class_name Separation extends RefCounted
 static func push(id: int, p: Vector3, v: Vector3, team: int, view: SimView, prm: FormationParams) -> Vector3:
 	var near_sum: Vector3 = Vector3.ZERO
 	var look_sum: Vector3 = Vector3.ZERO
+	var closing: bool = false
 	var r: float = prm.sep_radius_m
 	var q2: float = prm.query_radius_m * prm.query_radius_m
 	for j: int in view.ids_near(p, prm.query_radius_m, Spatial.MASK_SHIP):
@@ -29,9 +59,12 @@ static func push(id: int, p: Vector3, v: Vector3, team: int, view: SimView, prm:
 		var dist: float = sqrt(d2)
 		if dist < r:
 			near_sum += (d / dist if dist > 0.01 else _tangent(p, id < j)) * ((r - dist) / r)
-		var lk: Vector3 = _look_ahead(id, j, p, v, d, v - view.vel(j), prm)
+		var vr: Vector3 = v - view.vel(j)
+		closing = closing or (vr.length_squared() >= 1.0 and d.dot(vr) < 0.0)
+		var lk: Vector3 = _look_ahead(id, j, p, v, d, vr, prm)
 		if lk.length_squared() > look_sum.length_squared():
 			look_sum = lk
+	_closing = closing
 	return (near_sum * prm.sep_push_mps + look_sum) * prm.sep_gain
 
 
