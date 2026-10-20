@@ -1679,7 +1679,10 @@
       "07 s8.4",
       " 07 ART-22"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 65,
+    "merged": "2026-10-20",
+    "note": "Stdlib instead of numpy (07 s8.4 says numpy; docs follow-up). Cross-platform WAV hash pin deferred to ART-23."
   },
   {
     "id": "AI-01",
