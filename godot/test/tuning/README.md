@@ -9,7 +9,7 @@ report, and the best gain set per model. Test code only: it reads `test/sim/ai/a
 python tools/gain_sweep.py --out reports/gain_sweep                  # full sweep, ~15-25 min on a laptop
 python tools/gain_sweep.py --out reports/quick --stages base,confirm --seeds 20   # smoke, seconds
 python tools/gain_sweep.py --summarise godot/test/tuning/reports                  # print a stored run (or one sweep CSV)
-python tools/gain_sweep.py --given godot/test/tuning/recommended_gains.json --stages confirm --dive-leg-m 0   # A-88 replay (AI-39)
+python tools/gain_sweep.py --given godot/test/tuning/ai38_given.json --stages confirm --dive-leg-m 0   # A-88 replay (AI-39; ai38 rows, AI-41)
 "$GODOT_BIN" --headless --path godot res://test/tuning/gain_sweep.tscn -- --out=/abs/dir [options]
 ```
 
