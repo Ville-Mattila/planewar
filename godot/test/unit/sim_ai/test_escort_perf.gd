@@ -27,8 +27,10 @@ const THINK_ROW_US: float = 25.0
 const ACT_ROW_US: float = 6.0
 const CI_FACTOR: float = 2.0         ## 05 s11.1 (p95 assertions only on the pinned runner) and R0 A-62 (no row moves before it is measured)
 const CLOSING_FACTOR: float = 2.0    ## a closing pair is transient: it refreshes every think, the pre-hold cost (two thinks' worth)
-const REF_ANCHOR_US: float = 1.0     ## `_ref_step` cost on the anchor host: the GitHub runner class the AI-11 bounds passed on (AI-40)
-const MAX_HOST: float = 2.0          ## the largest host slowdown the scaling absorbs
+## `_ref_step` cost on the anchor host = the GitHub runner class the AI-11 bounds were accepted on (PR #69 run 39481307898,
+## `Overlays.run` 17.2 us). AI-40 CI samples: 0.762 us (Overlays 10.2), 1.615 us (Overlays 22.7); interpolated 1.22-1.28.
+const REF_ANCHOR_US: float = 1.25
+const MAX_HOST: float = 1.5          ## the largest host slowdown the scaling absorbs (slowest sample: 1.29x the anchor)
 
 
 func _world() -> Array:
