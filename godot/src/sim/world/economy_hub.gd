@@ -9,6 +9,7 @@ var build: Build
 var economy: Economy
 var construction: Construction
 var production: Production
+var repair: SelfRepair
 
 var _store: EntityStore
 var _players: PlayerTable
@@ -32,6 +33,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	construction = Construction.new(store, players, defs, events, economy, build)
 	construction.applier = applier
 	production = Production.new(store, players, defs, rules, events, economy, applier)
+	repair = SelfRepair.new(store, defs, economy, rules.tick_hz)
 	validator.build = build
 	validator.production = production
 
@@ -72,6 +74,7 @@ func step(t: int, dt: float) -> void:
 	economy.step()
 	construction.step(t, dt)
 	production.step(t, dt)
+	repair.step(t)
 
 
 ## Step 9, before the deferred free of slot `s`: a dying structure frees its footprint, its site and its queue.

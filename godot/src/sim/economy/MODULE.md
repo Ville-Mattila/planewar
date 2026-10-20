@@ -33,6 +33,10 @@ func tower_rates() -> PackedFloat32Array                                     # p
 func shield_recharge_mult(team: int) -> float                                # ratio, 0 = dome down below tower_offline_ratio (GD-10 reads)
 func mark_dirty() -> void;  func step() -> void                              # step 10: cache refresh, Core trickle
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # S4: caches, trickle remainder, notice flags
+class_name SelfRepair extends RefCounted                                     # GD-16, 02 s6.3; EconomyHub.repair, run in step 10 after Economy
+var unsupplied: PackedByteArray                                              # per entity slot, derived: GD-18 writes (empty = every structure supplied)
+func _init(store: EntityStore, defs: WorldDefs, economy: Economy, hz: int)
+func rate_hp_s(max_hp: float) -> float;  func step(tick: int) -> void   # whole sim seconds only
 class_name SunPath extends RefCounted                                        # GD-13; GD-33 adds phase and the terminator crossing
 static func dir_at(period_s: float, t_s: float) -> Vector3                   # +Z when period_s <= 0, else turning about X once per period from +Z
 static func on_plateau(up: Vector3, centres: PackedVector3Array, radius_m: float) -> bool   # arc distance on the datum sphere
@@ -49,6 +53,7 @@ Constants come from `economy.json` (`core_trickle_ore_per_s`, `solar_band_deg`, 
 - E4 The Core trickle is `core_trickle_ore_per_s` per finished Core to its owner, accumulated in Ore-ticks (exact for whole rates), credited through `credit` (so the cap clamps it and the ledger counts it).
 - E5 The early share lock has one definition, `Build.lock_blocks`; `try_pay` consults it, so BUILD starts, PRODUCE starts and `can_place` agree.
 - E6 `add_player` adds `start_ore` / `start_ice` per player to the team pool (C2-14).
+- E7 Self-repair (GD-16): a finished, supplied structure with `tick - last_damage_tick >= self_repair_delay_s` heals `min(missing, max(self_repair_min_hp_s, self_repair_frac_per_s * hp))` (A-80) HP on each whole sim second and pays `ceil(missing * repair_ore_per_hp) - ceil((missing - heal) * repair_ore_per_hp)` Ore through `try_spend` (a whole repair costs `ceil(total HP * repair_ore_per_hp)`, never more); an unpayable second is skipped (pause). Sites, dead and unsupplied structures never repair. No accumulator and no saved state: the result is a function of the store and the tick (S4).
 
 ## Data owned
 
@@ -66,4 +71,5 @@ Emits LOW_POWER, ALERT (LOW_POWER, STORAGE_FULL). Consumes nothing; `Constructio
 
 `godot/test/unit/sim/economy/test_economy.gd`: start kit, per-player start Ore, pay / refund / ledger, early share lock, caps clamp, power ratio, solar factor, trip time, trickle, determinism.
 `godot/test/unit/sim/economy/test_power.gd` (GD-13): solar factor at -1 / 0 / +0.25 / +1 degrees and on the Plateau, sun path, fade at night, ratio math, tower / shield rates, C-12, LOW_POWER wire, S4 + determinism with a moving sun.
+`godot/test/unit/sim/economy/test_self_repair.gd` (GD-16): rate floor, delay, Ore payment, hit restarts the delay, pause without Ore, unsupplied / site exclusions, S4 + determinism.
 `godot/test/unit/sim/economy/test_stockpiles.gd` (GD-11): caps, 60 Ore/min trickle, try_spend atomicity, STORAGE_FULL once per crossing, S4 flags, determinism, EventCodec round trip of the alert.
