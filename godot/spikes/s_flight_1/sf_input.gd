@@ -4,13 +4,13 @@ class_name SfInput extends Node
 ## event (06 s2.4). Assist tiers FULL and RAW (06 s3.6): FULL adds auto-level, aim assist, auto-dock and, on
 ## touch, auto-throttle on the sticky slider; RAW is the bare mapping (auto-dock off).
 
-enum InputClass { POINTER, GAMEPAD, TOUCH }
+enum SfInputClass { POINTER, GAMEPAD, TOUCH }
 enum Tier { FULL, RAW }
 enum MouseMode { MOUSE_AIM, DIRECT }
 enum ThrustMode { POWER, LEVER }
 const CLASS_NAMES: PackedStringArray = ["KBM", "GAMEPAD", "TOUCH"]
 
-var input_class: InputClass = InputClass.POINTER
+var input_class: SfInputClass = SfInputClass.POINTER
 var tier: PackedInt32Array = PackedInt32Array([Tier.RAW, Tier.FULL, Tier.FULL])   # per class (06 defaults)
 var mouse_mode: MouseMode = MouseMode.MOUSE_AIM
 var thrust_mode: ThrustMode = ThrustMode.POWER
@@ -38,9 +38,9 @@ func setup(d: SfDefs, touch_layer: SfTouchLayer) -> void:
 	_a = d.assist
 	touch = touch_layer
 	if OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios"):
-		_set_class(InputClass.TOUCH)
+		_set_class(SfInputClass.TOUCH)
 	else:
-		_set_class(InputClass.POINTER)
+		_set_class(SfInputClass.POINTER)
 
 
 func current_tier() -> Tier:
@@ -51,38 +51,38 @@ func toggle_tier() -> void:
 	tier[input_class] = Tier.RAW if current_tier() == Tier.FULL else Tier.FULL
 
 
-func _set_class(c: InputClass) -> void:
+func _set_class(c: SfInputClass) -> void:
 	if c != input_class:
 		class_changed = true
 	input_class = c
-	touch.visible = c == InputClass.TOUCH
+	touch.visible = c == SfInputClass.TOUCH
 
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
-		_set_class(InputClass.TOUCH)
+		_set_class(SfInputClass.TOUCH)
 	elif event is InputEventJoypadButton:
 		if (event as InputEventJoypadButton).pressed:
-			_set_class(InputClass.GAMEPAD)
+			_set_class(SfInputClass.GAMEPAD)
 	elif event is InputEventJoypadMotion:
 		if absf((event as InputEventJoypadMotion).axis_value) > SfDefs.num(_p, "axis_threshold"):
-			_set_class(InputClass.GAMEPAD)
+			_set_class(SfInputClass.GAMEPAD)
 	elif event is InputEventMouseMotion:
 		var mm: InputEventMouseMotion = event as InputEventMouseMotion
 		if mm.device != InputEvent.DEVICE_ID_EMULATION:
 			if mm.relative.length() > SfDefs.num(_p, "class_mouse_du"):
-				_set_class(InputClass.POINTER)
+				_set_class(SfInputClass.POINTER)
 			if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 				_mouse_acc += mm.relative
 	elif event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.pressed and mb.device != InputEvent.DEVICE_ID_EMULATION:
-			_set_class(InputClass.POINTER)
+			_set_class(SfInputClass.POINTER)
 			if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and touch.active_touches == 0 and capture_allowed:
 				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event is InputEventKey:
 		if (event as InputEventKey).pressed:
-			_set_class(InputClass.POINTER)
+			_set_class(SfInputClass.POINTER)
 
 
 ## One tick of input for `w`'s ship. Returns a reused PilotInput.
@@ -91,9 +91,9 @@ func sample(w: SfWorld, dt: float) -> PilotInput:
 	_track_aim(s)
 	_out.buttons = 0
 	match input_class:
-		InputClass.GAMEPAD:
+		SfInputClass.GAMEPAD:
 			_gamepad(dt)
-		InputClass.TOUCH:
+		SfInputClass.TOUCH:
 			_touch(s, w.d)
 		_:
 			_kbm(s, dt)
