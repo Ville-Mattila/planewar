@@ -3020,7 +3020,10 @@
       "06 s3",
       " 06 UX-05"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 83,
+    "merged": "2026-10-21",
+    "note": "Tuning consts client-only in FlightMath (no def; revisit with BindingStore/settings sensitivity). Nits: mouse motion accumulates while class is GAMEPAD/TOUCH (stale burst on switch), MOUSE_STICK_PER_PX 0.005 uncited, dt != 1/30 decay untested."
   },
   {
     "id": "UX-06",
