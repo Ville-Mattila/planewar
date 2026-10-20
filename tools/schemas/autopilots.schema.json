@@ -355,8 +355,54 @@
               "type": "number",
               "minimum": 0,
               "maximum": 10
+            },
+            "push_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 200
+            },
+            "lookahead_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 30
+            },
+            "lookahead_miss_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "lookahead_lag_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "lookahead_eff": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "lookahead_min_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "lookahead_max_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "lookahead_brake": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "query_radius_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
             }
-          }
+          },
+          "$comment": "05 s5.4 ring + look-ahead (R0 B.14 A-84); keys become required on every ship ap_* in AI-19 (A-86)"
         },
         "flight": {
           "type": "object",
@@ -462,8 +508,22 @@
             }
           },
           "required": [
-            "kp_path", "ki_path", "integ_max_rad", "integ_band_deg", "lead_max_deg", "kp_att", "kp_yaw", "kp_roll",
-            "kp_bank", "bank_threshold_deg", "bank_max_deg", "t_trim", "kp_speed", "ki_speed", "kp_turn_thrust", "brake_overspeed_mps"
+            "kp_path",
+            "ki_path",
+            "integ_max_rad",
+            "integ_band_deg",
+            "lead_max_deg",
+            "kp_att",
+            "kp_yaw",
+            "kp_roll",
+            "kp_bank",
+            "bank_threshold_deg",
+            "bank_max_deg",
+            "t_trim",
+            "kp_speed",
+            "ki_speed",
+            "kp_turn_thrust",
+            "brake_overspeed_mps"
           ],
           "$comment": "FlightGains.KEYS (sim/steer, AI-05): the sixteen keys are required whenever a flight object is present (R0 B.12 A-67); k_guidance is optional"
         },
@@ -574,6 +634,60 @@
           "type": "number",
           "minimum": 0,
           "maximum": 600
+        },
+        "formation": {
+          "type": "object",
+          "additionalProperties": false,
+          "$comment": "05 s5.6 escort formation (R0 B.14 A-86); required on ap_dart/ap_lancer via AI-19",
+          "properties": {
+            "class_slots_m": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "maxItems": 16
+            },
+            "k_form": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "speed_cap_mult": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 3
+            },
+            "rejoin_radius_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "break_utility": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "max_break_frac": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "slot_scan_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "min_heading_speed_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
         }
       },
       "required": [
