@@ -189,6 +189,77 @@ func test_lead_cap_opens_to_lead_max_with_overspeed() -> void:
 # endregion
 
 
+func test_hot_path_skips_are_exact() -> void:
+	# The lead-cap skip (la < lead_floor) and the floor skip (u >= floor_u_max, or a command below the band) must not
+	# change any output. Reference: the same gains with the cap skip off (lead_floor 0) and the floor off, then the
+	# floor law re-applied by the test with no skip. PilotInput and integrators must be bit-identical over speeds
+	# either side of floor_u_max, leads either side of lead_floor, commands either side of -integ_band, both lift
+	# models, integ_band_deg 6 and 0 (schema-legal; the round-1 guard dropped the floor there).
+	var def: ShipDef = FlightTestKit.ship(&"dart")
+	var checked: int = 0
+	for model: StringName in MODELS:
+		var rules: RulesDef = FlightTestKit.rules(model)
+		for band: float in [6.0, 0.0]:
+			var flight: Dictionary = Ai05Kit.block("flight").duplicate()
+			flight["integ_band_deg"] = band
+			var g: FlightGains = FlightGains.from_dict(flight, def, rules.tick_hz, rules, _common)
+			var r: FlightGains = FlightGains.from_dict(flight, def, rules.tick_hz, rules, _common)
+			r.lead_floor = 0.0          # lead cap always looked up
+			r.floor_u_max = -INF        # floor never applied: the test re-applies the unguarded floor itself
+			var speeds: Array[float] = [15.0, 45.0, 80.0, 110.0, 150.0]
+			if g.floor_u_max < INF:
+				speeds.append_array([g.floor_u_max - 1.0, g.floor_u_max + 1.0])
+			for u: float in speeds:
+				for aoa_deg: float in [-10.0, 5.0, 25.0]:
+					var s: ShipState = FlightTestKit.level(def, 500.0, u, deg_to_rad(aoa_deg))
+					checked += _compare_skips(s, g, r, "%s band %.0f u %.0f aoa %.0f" % [model, band, u, aoa_deg])
+	assert_int(checked).is_greater(1000)
+
+
+# Commands below / near / above the path at three speeds and two pitch integrators; returns the cases compared.
+func _compare_skips(s: ShipState, g: FlightGains, r: FlightGains, label: String) -> int:
+	var n: Vector3 = s.p.normalized()
+	var u: float = s.v.length()
+	var count: int = 0
+	for cmd_deg: float in [-20.0, -7.0, -3.0, 0.0, 2.0, 10.0, 45.0, 120.0]:
+		for spd: float in [0.5 * u, u, u + 30.0]:
+			var c: float = deg_to_rad(cmd_deg)
+			var v_cmd: Vector3 = (Vector3(0, cos(c), 0) + n * sin(c)) * spd
+			for ix: float in [0.0, 0.4]:
+				var a: PilotInput = PilotInput.new()
+				var b: PilotInput = PilotInput.new()
+				var ia: Vector2 = FlightController.track_velocity(Ai05Kit.basis(s), s.v, v_cmd, n, g, Vector2(ix, -0.2), a)
+				var ib: Vector2 = FlightController.track_velocity(Ai05Kit.basis(s), s.v, v_cmd, n, r, Vector2(ix, -0.2), b)
+				# the floor exactly as specified, with no skip: weight_support_throttle x w(e_gamma, integ_band)
+				var e_gamma: float = v_cmd.normalized().dot(n) - s.v.normalized().dot(n)
+				var w: float = clampf(1.0 + e_gamma / g.integ_band, 0.0, 1.0) if g.integ_band > 0.0 else 1.0
+				var floor_t: float = FlightController.weight_support_throttle(Ai05Kit.basis(s), s.v, n, g) * w
+				if floor_t > b.thrust:
+					b.thrust = floor_t
+					ib.y = -0.2
+				var what: String = "%s cmd %.0f spd %.0f ix %.1f" % [label, cmd_deg, spd, ix]
+				var got: Array = [ia, a.thrust, a.pitch, a.yaw, a.roll, a.buttons]
+				var want: Array = [ib, b.thrust, b.pitch, b.yaw, b.roll, b.buttons]
+				assert_array(got).override_failure_message(what).is_equal(want)
+				count += 1
+	return count
+
+
+func test_lead_cap_lookup_matches_best_lead() -> void:
+	# lead_cap inlines best_lead's bilinear lookup: with no overspeed it is min(best_lead, lead_max) everywhere,
+	# on and between table nodes and past both table edges.
+	var def: ShipDef = FlightTestKit.ship(&"dart")
+	for model: StringName in MODELS:
+		var g: FlightGains = Ai05Kit.gains(def, FlightTestKit.rules(model))
+		for i: int in 41:
+			var u: float = float(i) * def.v_dive_max / 36.0
+			for j: int in 21:
+				var err: float = float(j) * PI / 18.0
+				var want: float = minf(FlightController.best_lead(u, err, g), g.lead_max)
+				var got: float = FlightController.lead_cap(u, err, 1.0, g)
+				assert_float(got).override_failure_message("%s u %.1f err %.2f" % [model, u, err]).is_equal_approx(want, 1e-5)
+
+
 # region PULL_UP
 func test_pull_up_elevation_tracks_the_best_climb() -> void:
 	# The nose following the target from a 40 degree dive converges on the brute-force best-climb elevation; under

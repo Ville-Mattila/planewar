@@ -47,7 +47,7 @@ static func track_velocity(b: Basis, v: Vector3, v_cmd: Vector3, up_local: Vecto
 	_point(b, nose, b.x, g, out)
 	out.roll = _bank(b, vhat, d, up_local, g)
 	var iy: float = _throttle(s_cmd - u, integ.y, maxf(fwd.dot(vhat), 0.5), g.kp_turn_thrust * err, g, out)
-	if u < g.floor_u_max and e_gamma > -g.integ_band:   # else the floor is 0 (the wing carries it / descent)
+	if u < g.floor_u_max and (g.integ_band <= 0.0 or e_gamma > -g.integ_band):   # else the floor is 0 (wing / descent)
 		var w: float = clampf(1.0 + e_gamma / g.integ_band, 0.0, 1.0) if g.integ_band > 0.0 else 1.0
 		var floor_t: float = _support(fwd, v, u, up_local, g) * w
 		if floor_t > out.thrust:   # the floor flies, not the speed loop: its integrator holds (no wind-down)
