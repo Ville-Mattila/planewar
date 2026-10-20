@@ -233,9 +233,13 @@ u32  ids[count]      EntityIds
 u32  target          EntityId or 0
 u8   point_count     0-16
 vec3q points[point_count]   8 B each: MOVE/ATTACK point, PATROL waypoints (2-8 per 05), future routes
+--- ESCORT trailer, present iff order_kind == 3 (R0 B.14 A-85; 05 s3.1 SL-2 fields) ---
+u8   escort_mode     EscortMode (R0 B.3): 0 FORM, 1 FOCUS, 2 BREAK
+u8   escort_slot     0xFF = -1 (class default slots, 05 s5.6); else 0..order_rules.escort_slot_max (wing.json slot)
+u32  focus           EntityId or 0 (FOCUS target)
 ```
 
-Size = `8 + 4 * count + 8 * point_count` <= 256 B, so a 32-unit selection carries at most 15 points (8 + 128 + 120 = 256; V-ORD rejects larger payloads as REJECTED_MALFORMED). The layout already fits the v1.x `PATROL_ROUTE`/`ATTACK_VIA` routes of 08 SL-4 (R0 C3-12), so no protocol change is needed when they are adopted.
+Size = `8 + 4 * count + 8 * point_count + (6 if ESCORT)` <= 256 B, so a 32-unit selection carries at most 15 points (8 + 128 + 120 = 256; V-ORD rejects larger payloads as REJECTED_MALFORMED). ESCORT carries no points (05 s3.2), so its largest payload is 142 B; a trailer on any other kind, or an ESCORT without it, is REJECTED_MALFORMED. The layout already fits the v1.x `PATROL_ROUTE`/`ATTACK_VIA` routes of 08 SL-4 (R0 C3-12), so no protocol change is needed when they are adopted.
 
 ---
 
@@ -1522,3 +1526,4 @@ Applied 2026-10-10 from `docs/reviews/R0-resolution-register.md`, the owner deci
 | R0 B.10 A-36..A-40 (CONTRACT-0 amendments 03, 2026-10-13) | NET-06 contract questions: `SNAPSHOT` flags bits 6-7 = packet index, clients ack complete ticks only, so split ticks are baselines (`PROTOCOL_VERSION` stays 1, OWNER); section C discriminator (0xFF = FULL, blip `e8` <= 254); POS_SMALL numbers after A-23 (15.6 cm, +-19.8 m E/N); baseline policies (dead band, 1/1024 m/s mirror velocity, gravity VEL resend); client-independent FULL / C-BLIP byte cache and the canonical-schedule bench (NET-49), encode-per-tier rejected; new rows NET-48, NET-49; NET-07, NET-08, NET-17 dependencies. NET-03 (A-44, A-45): silent-pilot reuse clears FLIP / DOCK / RELEASE / FIRE bits and keeps BOOST / BRAKE; NQ10 closed at 10 ticks | 3.4, 3.5, 4.6, 5.1, 5.5, 17, 19 |
 | R0 B.11 A-54 (CONTRACT-0 amendments 04, 2026-10-14) | Roster capacity 1,536 (1,280 unit / structure slots + 256 wreck slots, 03 s3.1): wrecks are replicated entities (3.6) and WRECK_SPAWNED / WRECK_SALVAGED are roster-scoped, so the 1,280-entry roster of v1.0 could not name them (NET-10); mean gap ~6, bytes unchanged; `Roster.CAPACITY` follows in NET-50 | 3.1 |
 | R0 B.12 A-77 (CONTRACT-0 amendments 05, 2026-10-14) | Replay frame type 6 PROJECTILES (unfiltered PROJECTILE_BATCH per tick; NET-51; `PROTOCOL_VERSION` stays 1); NET-25's measured size on the synthetic all-movers scene (~61 MB / 30 min, gzip 1.3) recorded, the 20 MB target kept, tier-C 5 Hz as a NET-52 writer option decided by S-SIM-1's canonical run | 13.1 |
+| R0 B.14 A-85 (CONTRACT-0 amendments 07, 2026-10-20) | ORDER layout erratum under C2-06: a 6-byte ESCORT trailer (`escort_mode u8`, `escort_slot u8` with 0xFF = -1, `focus u32`) after `points[]`, present iff `order_kind` 3, so the SL-2 fields 05 s3.1 and 08 promised have a wire path; size formula `+ 6 if ESCORT` (max 142 B, A-60 untouched); trailer on another kind or missing on ESCORT = REJECTED_MALFORMED; sim side TA-60, codec NET-04 | 2.5 |
