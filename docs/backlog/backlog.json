@@ -7076,8 +7076,10 @@
       "R0 B.12 A-67, A-68",
       "godot/test/tuning/README"
     ],
-    "status": "todo",
-    "note": "Follow-up from AI-06 PR #64. acceptance re-baselined per R0 B.15 A-88 (17/200 starts unrecoverable under damping_only by the open-loop bound; 0/183 recoverable contacts after); 05 s5.3 PULL_UP amended to the best-climb law + pull_up_loss (A-89); flight_common / v signature changes ratified (A-90); gain_sweep.py --dive-leg-m -> AI-39; SAFETY / brain budget wiring -> AI-13"
+    "status": "done",
+    "note": "Follow-up from AI-06 PR #64. acceptance re-baselined per R0 B.15 A-88 (17/200 starts unrecoverable under damping_only by the open-loop bound; 0/183 recoverable contacts after); 05 s5.3 PULL_UP amended to the best-climb law + pull_up_loss (A-89); flight_common / v signature changes ratified (A-90); gain_sweep.py --dive-leg-m -> AI-39; SAFETY / brain budget wiring -> AI-13 Merged: 0/183 recoverable dive contacts, 17/200 unrecoverable reported; speed_scaled 0/200; landings 200/200; track_velocity 5.00 us/call CI (2.92 on a faster runner) vs 6 us act row; hot-path skips proven exact by test_hot_path_skips_are_exact. Follow-up nit: cache the 8.3 ms FlightGains tables per ContentSet.",
+    "pr": 75,
+    "merged": "2026-10-20"
   },
   {
     "id": "TA-60",
