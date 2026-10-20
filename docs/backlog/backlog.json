@@ -7199,7 +7199,9 @@
       "R0-amendments-08 A-88..A-90",
       "godot/test/tuning/README.md"
     ],
-    "status": "todo",
-    "note": "Found by AI-39 #79 reproduction 2026-10-20; deterministic (two identical reruns at HEAD)."
+    "status": "done",
+    "note": "No code bug: input mismatch (recommended_gains.json speed_scaled block vs the damping_only set ai38 used for both models). Added ai38_given.json, bit-exact equivalence test vs frozen ded8b4e track_velocity, re-baselined reports/ai38 (wall_s only). Nits: frozen copy still calls live helpers/FlightGains tables; boundary mutations lead_floor*1.01, floor_u_max*0.97 survive.",
+    "pr": 80,
+    "merged": "2026-10-21"
   }
 ]
