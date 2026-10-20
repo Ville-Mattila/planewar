@@ -1,6 +1,6 @@
 class_name SimSerialize
 ## The byte form of a whole `SimWorld` (S4; 01 ADR-10; R0 C2-07, C2-25): `SimWorld.serialize()` / `deserialize()` call
-## `write` / `read`. File: magic u32, format u32, raw size u32, SHA-256 of the raw body (32 B), then the raw body zstd-compressed (the packed arrays are
+## `write` / `read`. File: magic u32, format u32, raw size u32, SHA-256 of the raw body (32 B), `ContentSet.content_hash` (32 B, A-72), then the raw body zstd-compressed (the packed arrays are
 ## mostly zeros; ~600 KB raw is ~185 KB at 1,200 entities and 2,000 projectiles). Raw body, in this order (names in
 ## `SECTIONS`): header (seed, RNG, map), rules, clock,
 ## players, input slots, rate buckets, pending commands, control, entity store, projectile store, Collision's per-slot
@@ -11,9 +11,9 @@ class_name SimSerialize
 ## same build on the same machine (ADR-03/06): the bytes are a function of the state alone.
 
 const MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const FORMAT: int = 7           ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section
+const FORMAT: int = 8           ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section; 8: TA-58 content hash in the header
 const HASH_BYTES: int = 32
-const HEADER_BYTES: int = 12 + HASH_BYTES   ## magic, format, raw size (u32 each), SHA-256 of the raw body
+const HEADER_BYTES: int = 12 + 2 * HASH_BYTES   ## magic, format, raw size (u32 each), SHA-256 of the raw body, content hash
 const COMPRESSION: int = FileAccess.COMPRESSION_ZSTD
 const MAX_RAW_BYTES: int = 64 << 20   ## a header claiming more is refused before anything is allocated
 const MAX_TICK_HZ: int = 1000
@@ -26,7 +26,7 @@ const _CAPS_STATE: PackedStringArray = ["id", "units", "structures", "projectile
 const _COLLISION_STATE: PackedStringArray = ["ep_gen", "ep_last", "born_gen", "born_tick"]
 const _VISION_STATE: PackedStringArray = ["last_pass"]
 
-enum Status { OK, TOO_SHORT, BAD_MAGIC, OLD_FORMAT, NEWER_FORMAT }   # append-only
+enum Status { OK, TOO_SHORT, BAD_MAGIC, OLD_FORMAT, NEWER_FORMAT, CONTENT_MISMATCH }   # append-only; CONTENT_MISMATCH: TA-58, only `check_content` returns it
 
 
 ## OK when `bytes` start with this build's magic and `FORMAT`; otherwise the reason `read` returns null.
@@ -41,18 +41,34 @@ static func check(bytes: PackedByteArray) -> Status:
 	return Status.NEWER_FORMAT if f > FORMAT else Status.OK
 
 
+## `check`, and CONTENT_MISMATCH when the header's content hash differs from `content.content_hash`.
+static func check_content(bytes: PackedByteArray, content: ContentSet) -> Status:
+	var st: Status = check(bytes)
+	if st == Status.OK and bytes.slice(12 + HASH_BYTES, HEADER_BYTES) != _fit(content.content_hash):
+		return Status.CONTENT_MISMATCH
+	return st
+
+
+# A hash as exactly HASH_BYTES (zero-padded or cut): a ContentSet built in code may carry none.
+static func _fit(h: PackedByteArray) -> PackedByteArray:
+	var out: PackedByteArray = h.slice(0, HASH_BYTES)
+	var _e: int = out.resize(HASH_BYTES)
+	return out
+
+
 ## The compressed save bytes of `w` (what `SimWorld.serialize` returns).
 static func write(w: SimWorld) -> PackedByteArray:
-	return pack(write_raw(w))
+	return pack(write_raw(w), w._defs.content.content_hash)
 
 
-## `raw` (a body from `write_raw`) with the file header and compression.
-static func pack(raw: PackedByteArray) -> PackedByteArray:
+## `raw` (a body from `write_raw`) with the file header (carrying `content_hash`) and compression.
+static func pack(raw: PackedByteArray, content_hash: PackedByteArray = PackedByteArray()) -> PackedByteArray:
 	var head: StreamPeerBuffer = StreamPeerBuffer.new()
 	head.put_u32(MAGIC)
 	head.put_u32(FORMAT)
 	head.put_u32(raw.size())
 	var _e: int = head.put_data(_hash(raw))
+	_e = head.put_data(_fit(content_hash))
 	var out: PackedByteArray = head.data_array
 	out.append_array(raw.compress(COMPRESSION))
 	return out
@@ -67,7 +83,7 @@ static func unpack(bytes: PackedByteArray) -> PackedByteArray:
 	if n <= 0 or n > MAX_RAW_BYTES or packed <= 0 or n > packed * MAX_RATIO:
 		return PackedByteArray()
 	var raw: PackedByteArray = bytes.slice(HEADER_BYTES).decompress(n, COMPRESSION)
-	if raw.size() != n or _hash(raw) != bytes.slice(12, HEADER_BYTES):
+	if raw.size() != n or _hash(raw) != bytes.slice(12, 12 + HASH_BYTES):
 		return PackedByteArray()
 	return raw
 
@@ -135,6 +151,8 @@ static func size_report(w: SimWorld) -> PackedInt32Array:
 ## A world equal to the one `write` saw, with `hook` attached and handed its bytes; null when the bytes are refused
 ## (`check` != OK), corrupt, malformed, or the map fails to load.
 static func read(bytes: PackedByteArray, content: ContentSet, hook: SimAiHook) -> SimWorld:
+	if check_content(bytes, content) != Status.OK:
+		return null
 	var raw: PackedByteArray = unpack(bytes)
 	if raw.is_empty():
 		return null
