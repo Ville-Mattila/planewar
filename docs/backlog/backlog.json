@@ -1110,7 +1110,10 @@
       "02 s8.4",
       " 02 GD-13"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-20",
+    "pr": "public#55",
+    "note": "Plateau multiplier dormant until maps carry plateau data; TeamStats.power_balance assumes fixed sun"
   },
   {
     "id": "GD-16",
