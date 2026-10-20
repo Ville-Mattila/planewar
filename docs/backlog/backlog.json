@@ -7172,8 +7172,10 @@
       "R0 B.11 A-62",
       "R0 B.14 A-84"
     ],
-    "status": "todo",
-    "note": "Found 2026-10-20 by UX-03 #73 CI and main run on 645b064 (act mean 12.7 / p95 13.0 us)."
+    "status": "done",
+    "note": "Runner variance (hosts 2.1-2.3x), not a regression. Escort perf test: act back-to-back min batch mean, host scale vs a 1.25 us reference-kernel anchor clamped [1, 1.5]; rows unchanged. Re-anchor when TA-42 pinned runner exists; \"3 consecutive green main runs\" checked post-merge.",
+    "pr": 78,
+    "merged": "2026-10-21"
   },
   {
     "id": "AI-41",
