@@ -2982,7 +2982,10 @@
       "06 s2",
       " 06 UX-03"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 73,
+    "merged": "2026-10-21",
+    "note": "Raw input via InputRouter.sampler Callable until UX-04+ mappers; intent has no emitter until RTS mappers/GestureRecognizer; AssistProfile/Context/Stack, GestureRecognizer, BindingStore, Glyphs planned. Nits: PEEK clears buttons (beyond 06 s2.3, confirm), PEEK mutates the sampler object, debounce not reset on A->B->C, no layout_class accessor."
   },
   {
     "id": "UX-04",
