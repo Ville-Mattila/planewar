@@ -66,9 +66,10 @@ func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPee
 class_name MatchState extends RefCounted                                     # tick, exposure / end ticks, winner; shared by world, intake, view
 var tick: int; var exposure_tick: int; var ended_tick: int; var winner_team: int
 func ended() -> bool;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
-class_name SimEvents extends RefCounted                                      # the event array; emit stamps `tick` (S5)
-var list: Array[SimEvent]; var tick: int
-func emit(kind: SimEvent.Kind, a: int, b: int, at: Vector3, value: float, team: int, reason: int = -1) -> SimEvent;  func drain() -> Array[SimEvent]
+class_name SimEvents extends RefCounted                                      # the event array; emit stamps `tick` (S5); drain(keep) queues the batch for the hook (`pending`, A-71); forward(hook) delivers it once at step 3; write_pending / read_pending (saved, format 9)
+var list: Array[SimEvent]; var pending: Array[SimEvent]; var tick: int
+func emit(kind: SimEvent.Kind, a: int, b: int, at: Vector3, value: float, team: int, reason: int = -1) -> SimEvent;  func drain(keep: bool = false) -> Array[SimEvent]
+func forward(hook: SimAiHook) -> void;  func write_pending(buf: StreamPeerBuffer) -> void;  func read_pending(buf: StreamPeerBuffer) -> bool
 class_name WorldDefs extends RefCounted                                      # injected ContentSet + ResolvedDefs per player slot + flat tables
 const NEUTRAL: int;  var content: ContentSet; var rules: RulesDef; var common: FlightCommonDef; var economy: EconomyDef; var base: ResolvedDefs
 var projectile_radius: PackedFloat32Array; var pad_radius_by_def: PackedFloat32Array; var straight: PackedByteArray; var turn_rad_per_s: PackedFloat32Array
