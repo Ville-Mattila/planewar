@@ -1642,7 +1642,10 @@
       "07 s4.4",
       " 07 ART-04"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 62,
+    "merged": "2026-10-20",
+    "note": "validate_glb.py comparison is interim (GLB re-read through pw_core); ART-05 must swap in validate_glb.py. Blender tests skip in CI: Blender version for a CI job is an owner decision. mcp_bootstrap.py never run against a live Blender."
   },
   {
     "id": "ART-05",
