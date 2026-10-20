@@ -132,7 +132,7 @@ const NAMES: PackedStringArray = [
 
 # region wire enums owned by 04 (append-only)
 enum Platform { WIN, MAC, LINUX, ANDROID, IOS, WEB, SERVER_BOT }               # HELLO.platform
-enum InputClass { TOUCH, GAMEPAD, POINTER }                                    # HELLO.input_class
+enum WireInputClass { TOUCH, GAMEPAD, POINTER }                                    # HELLO.input_class
 enum Role { PLAYER, SPECTATOR, ADMIN }                                         # HELLO.role
 enum ChatScope { TEAM, ALL }                                                   # ALL reserved (custom lobbies)
 enum LeaveReason { QUIT, TO_MENU, CRASH_REPORTED }
