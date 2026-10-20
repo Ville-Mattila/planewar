@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bxc1smc0nh8y5"
+
+[deps]
+
+files=["res://test/tuning/reports/sweep.stage.translation", "res://test/tuning/reports/sweep.cand.translation", "res://test/tuning/reports/sweep.classes.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.dive.translation", "res://test/tuning/reports/sweep.score.translation", "res://test/tuning/reports/sweep.step.translation", "res://test/tuning/reports/sweep.step.translation", "res://test/tuning/reports/sweep.step.translation", "res://test/tuning/reports/sweep.dive.translation", "res://test/tuning/reports/sweep.dive.translation", "res://test/tuning/reports/sweep.dive.translation", "res://test/tuning/reports/sweep.dive.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.step.translation", "res://test/tuning/reports/sweep.wall.translation", "res://test/tuning/reports/sweep.flight.translation", "res://test/tuning/reports/sweep.landing.translation"]
+
+source_file="res://test/tuning/reports/sweep.csv"
+dest_files=["res://test/tuning/reports/sweep.stage.translation", "res://test/tuning/reports/sweep.cand.translation", "res://test/tuning/reports/sweep.classes.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.dive.translation", "res://test/tuning/reports/sweep.score.translation", "res://test/tuning/reports/sweep.step.translation", "res://test/tuning/reports/sweep.step.translation", "res://test/tuning/reports/sweep.step.translation", "res://test/tuning/reports/sweep.dive.translation", "res://test/tuning/reports/sweep.dive.translation", "res://test/tuning/reports/sweep.dive.translation", "res://test/tuning/reports/sweep.dive.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.land.translation", "res://test/tuning/reports/sweep.step.translation", "res://test/tuning/reports/sweep.wall.translation", "res://test/tuning/reports/sweep.flight.translation", "res://test/tuning/reports/sweep.landing.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

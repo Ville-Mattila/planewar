@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cpw63htyfdkw8"
+
+[deps]
+
+files=["res://test/tuning/reports/verify.stage.translation", "res://test/tuning/reports/verify.cand.translation", "res://test/tuning/reports/verify.classes.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.dive.translation", "res://test/tuning/reports/verify.score.translation", "res://test/tuning/reports/verify.step.translation", "res://test/tuning/reports/verify.step.translation", "res://test/tuning/reports/verify.step.translation", "res://test/tuning/reports/verify.dive.translation", "res://test/tuning/reports/verify.dive.translation", "res://test/tuning/reports/verify.dive.translation", "res://test/tuning/reports/verify.dive.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.step.translation", "res://test/tuning/reports/verify.wall.translation", "res://test/tuning/reports/verify.flight.translation", "res://test/tuning/reports/verify.landing.translation"]
+
+source_file="res://test/tuning/reports/verify.csv"
+dest_files=["res://test/tuning/reports/verify.stage.translation", "res://test/tuning/reports/verify.cand.translation", "res://test/tuning/reports/verify.classes.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.dive.translation", "res://test/tuning/reports/verify.score.translation", "res://test/tuning/reports/verify.step.translation", "res://test/tuning/reports/verify.step.translation", "res://test/tuning/reports/verify.step.translation", "res://test/tuning/reports/verify.dive.translation", "res://test/tuning/reports/verify.dive.translation", "res://test/tuning/reports/verify.dive.translation", "res://test/tuning/reports/verify.dive.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.land.translation", "res://test/tuning/reports/verify.step.translation", "res://test/tuning/reports/verify.wall.translation", "res://test/tuning/reports/verify.flight.translation", "res://test/tuning/reports/verify.landing.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
