@@ -82,7 +82,7 @@ class AnalyzeTests(unittest.TestCase):
         self.assertEqual(analyze.check(m, loop=True), [])
 
     def test_bad_loop_seam_flagged(self) -> None:
-        # 440 Hz: 50 cycles take 2.5 s * ... cut at a quarter cycle so the end jumps to the start
+        # 440 Hz cut a quarter cycle past a whole number of cycles, so the last sample jumps to the first
         n = int(SR * 0.5) + int(SR / 440 / 4)
         m = analyze.analyze_samples(sine(440, n), SR)
         problems = analyze.check(m, loop=True)

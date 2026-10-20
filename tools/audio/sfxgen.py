@@ -9,7 +9,7 @@ Writes <id>.wav and <id>.json (metadata: seed, sha256 of the WAV, analyzer metri
 Exit 0 ok, 1 recipe invalid.
 
 Note: math.sin/pow are libm calls; a last-ulp difference between platforms is removed by the
-PCM16 rounding in practice, and CI re-renders the fixture on Linux and compares the hash.
+PCM16 rounding in practice. A cross-platform hash pin in CI is deferred to ART-23.
 """
 
 from __future__ import annotations
