@@ -2142,7 +2142,8 @@
       " R0 C3-05",
       " 02 GD-10"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; an unsupplied Shield Projector does not recharge, read from SupplyNet.is_supplied (GD-18)"
   },
   {
     "id": "GD-12",
