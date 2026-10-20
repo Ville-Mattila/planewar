@@ -7226,7 +7226,9 @@
       "R0-amendments-09 A-91",
       "04 s2.5"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 86,
+    "merged": "2026-10-21"
   },
   {
     "id": "ART-39",
