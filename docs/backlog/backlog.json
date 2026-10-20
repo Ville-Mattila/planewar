@@ -1668,7 +1668,10 @@
       "07 s4.2-4.6",
       " 07 ART-05"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 82,
+    "merged": "2026-10-21",
+    "note": "validate_glb.py V01-V15 (pure Python, reuses pw_core), asset_budgets.json, write_import.py, post_import_asset.gd (compiles under warnings-as-errors; import test uses the real [debug] settings), art-import CI job."
   },
   {
     "id": "ART-22",
@@ -7224,5 +7227,25 @@
       "04 s2.5"
     ],
     "status": "todo"
+  },
+  {
+    "id": "ART-39",
+    "title": "docs (07): fix ART-05 findings: 07 s5.1 / s14 / ART-12 say 14 props but list 13 ids; V13 file-size limits for gnd/str/prop/proj/wreck missing (only ship 150 KB, Core 300 KB); Far node name <Name>Far (s4.2) vs _Far (s4.6); V03 counts the Far mesh",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "ART-05"
+    ],
+    "milestone": "M3",
+    "acceptance": "07 states 13 props consistently; V13 sizes for every class are stated and match tools/art/asset_budgets.json; one Far naming rule (<PascalId>Far, as validate_glb.py and post_import_asset.gd implement); V03 text says whether Far triangles count; extract_doc_examples --check and validate_content green",
+    "docs": [
+      "07 s4.2",
+      "07 s4.6",
+      "07 s4.7",
+      "07 s5.1"
+    ],
+    "status": "todo",
+    "note": "From the ART-05 #82 Opus review 2026-10-21. Values to adopt: those in asset_budgets.json unless the owner rules otherwise."
   }
 ]
