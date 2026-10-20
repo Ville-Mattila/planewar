@@ -1,0 +1,13 @@
+{
+  "_doc": "ART-22 fixture: sustained two-tone hum that loops through a cross-faded seam.",
+  "schema_version": 1,
+  "id": "test_hum_loop",
+  "seed": 7,
+  "loop": true,
+  "loop_crossfade_ms": 100,
+  "normalize_peak_db": -6,
+  "layers": [
+    {"wave": "sine", "f0": 217.3, "sustain": 2.0, "vibrato_hz": 3, "vibrato_depth": 0.02},
+    {"wave": "saw", "f0": 109.1, "sustain": 2.0, "lowpass": 900, "gain": 0.5}
+  ]
+}
