@@ -58,13 +58,38 @@ func test_sink_prepend_is_accepted_with_issuer_minus_one() -> void:
 	assert_int(w.view().order_issuer(id)).is_equal(-1)
 
 
-func test_system_order_ignores_team_and_rate() -> void:
+func test_system_order_takes_no_rate_token_from_the_owner() -> void:
 	var w: SimWorld = _world()
 	var id: int = _dart(w)
-	for _k: int in 100:
-		assert_int(_sink().submit(_prepend_return(id, 1)).code).is_equal(CommandResult.Code.ACCEPTED)
-		w.step()
+	for _k: int in 100:                                  # more than the burst of 30, same tick
+		assert_int(_sink().submit(_prepend_return(id, 0)).code).is_equal(CommandResult.Code.ACCEPTED)
 	assert_int(w.apply_command(Command.release(0)).code).is_not_equal(CommandResult.Code.REJECTED_RATE)
+
+
+func test_system_path_accepts_only_return() -> void:
+	var w: SimWorld = _world()
+	var id: int = _dart(w)
+	var far: Vector3 = Vector3(0.0, Sphere.PLANET_RADIUS + 300.0, 500.0)
+	var mv: OrderSpec = OrderSpec.make(OrderSpec.Kind.MOVE, 0, far, OrderSpec.FLAG_PREPEND)
+	assert_int(_sink().submit(Command.order(0, PackedInt32Array([id]), mv)).code).is_equal(CommandResult.Code.REJECTED_INVALID_ORDER)
+	var at: OrderSpec = OrderSpec.make(OrderSpec.Kind.ATTACK, id, Vector3.ZERO, OrderSpec.FLAG_PREPEND)
+	assert_int(_sink().submit(Command.order(0, PackedInt32Array([id]), at)).code).is_equal(CommandResult.Code.REJECTED_INVALID_ORDER)
+
+
+func test_system_return_on_enemy_unit_rejected() -> void:
+	var w: SimWorld = _world()
+	var id: int = _dart(w)                                 # team 0
+	assert_int(_sink().submit(_prepend_return(id, 1)).code).is_equal(CommandResult.Code.REJECTED_NOT_OWNER)
+	w.step()
+	assert_object(w.view().order_head(id)).is_null()
+
+
+func test_client_cannot_forge_the_system_marker() -> void:
+	var w: SimWorld = _world()
+	var id: int = _dart(w)
+	var c: Command = Command.order(0, PackedInt32Array([id]), OrderSpec.make(OrderSpec.Kind.RETURN))
+	c.target = CommandValidator.SYSTEM
+	assert_int(w.apply_command(c).code).is_not_equal(CommandResult.Code.ACCEPTED)
 
 
 func test_system_order_dead_target_rejected() -> void:

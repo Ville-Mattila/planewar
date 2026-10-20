@@ -88,7 +88,7 @@ func resolve_deaths(tick: int) -> void:
 func _apply_order(cmd: Command, tick: int) -> void:
 	if not CommandPayload.read_order(cmd, _spec, _ids):
 		return
-	_spec.issuer = cmd.player
+	_spec.issuer = -1 if cmd.target == CommandValidator.SYSTEM else cmd.player
 	_spec.issue_tick = tick
 	_control.orders.order(_spec, _ids)
 

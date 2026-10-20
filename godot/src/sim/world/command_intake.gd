@@ -28,14 +28,14 @@ func submit(cmd: Command) -> CommandResult:
 	return r
 
 
-## The system path of `SimSink.submit` (TA-59): the ORDER is queued with `player` SYSTEM (-1) so step 1 stamps issuer -1.
-## The caller's command is not changed.
+## The system path of `SimSink.submit` (TA-59): the ORDER is queued with `target` SYSTEM so step 1 stamps issuer -1;
+## `player` stays the AI's slot (team check). The caller's command is not changed.
 func submit_system(cmd: Command) -> CommandResult:
 	var c: Command = Command.new()
 	c.tick = cmd.tick
-	c.player = CommandValidator.SYSTEM
+	c.player = cmd.player
 	c.kind = cmd.kind
-	c.target = cmd.target
+	c.target = CommandValidator.SYSTEM
 	c.payload = cmd.payload
 	var r: CommandResult = _validator.validate_system(c, _state.ended(), pending.size())
 	if r.code == CommandResult.Code.ACCEPTED:

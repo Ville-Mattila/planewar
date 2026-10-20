@@ -55,7 +55,7 @@ func submit(cmd: Command) -> CommandResult
 func drive(id: int, input: PilotInput) -> bool                               # writes the input slot; false if POSSESSED or dead
 func pathing() -> Pathing                                                    # (TA-50) R0 B.11 A-55: sim_ai's only route to request / result / release (a write path, so sink not view); base: null
 func end_overlay(id: int) -> void                                            # (TA-59) clears SAFETY / RECOVER_CEILING in the replicated overlay byte (LINK_BRIDGE untouched); base: no-op
-func set_ai_tag(id: int, tag: int) -> void;  class_name SimSink extends CommandSinkBase   # (TA-18) the sim's sink: apply_command's intake; drive refuses POSSESSED / dead (S11); (TA-59) submit of an ORDER with FLAG_PREPEND is the system path: Command.player stored as -1 (CommandValidator.SYSTEM), issuer -1, no ownership check, no rate token, FLAG_PREPEND accepted; survives S4 in the pending queue
+func set_ai_tag(id: int, tag: int) -> void;  class_name SimSink extends CommandSinkBase   # (TA-18) the sim's sink: apply_command's intake; drive refuses POSSESSED / dead (S11); (TA-59) submit of an ORDER with FLAG_PREPEND is the system path: RETURN only (05 s2.4 forced RETURN; every other kind REJECTED_INVALID_ORDER), on units of the issuing slot's own team (REJECTED_NOT_OWNER), stored with Command.target = CommandValidator.SYSTEM (-1; client ORDERs must have target 0) and player = the AI's slot, issuer -1, no rate token (decision: the safety net must not starve the owner's own commands), FLAG_PREPEND accepted; survives S4 in the pending queue
 
 class_name Command extends RefCounted
 enum Kind { ORDER, BUILD, CANCEL_BUILD, PRODUCE, CANCEL_PRODUCE, SET_RALLY, POSSESS, RELEASE, REQUEST_POSSESS, HANDOVER,
