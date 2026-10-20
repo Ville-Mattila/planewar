@@ -1,0 +1,371 @@
+{
+ "_doc": "07 s5.1 (triangle budgets per asset), s1.2 (scale chart), s4.2 (parts, Far meshes), s4.5 (hardpoints), s4.7 (V03, V08, V11, V13, V15); 01 s8.2. Read by tools/art/validate_glb.py and pw.finalize(); schema tools/schemas/asset_budgets.schema.json. size_m is [X, Y, Z] in Blender axes (Z up, ships nose +Y): ships [span, length, height], ground units [span, length, height], structures [footprint x, footprint y, height above ground] - the foundation skirt below y=0 is not part of the height. Hardpoint lists are minimums: recipes may add more. Props other than spires and boulders use the 80-tri class ceiling; their sizes (2-9 m, 8-40 m, 3-12 m) are not charted.",
+ "schema_version": 1,
+ "size_tolerance_frac": 0.1,
+ "size_tolerance_min_m": 0.25,
+ "classes": {
+  "ship": {
+   "max_tris": 1200,
+   "max_file_kb": 150
+  },
+  "gnd": {
+   "max_tris": 900,
+   "max_file_kb": 150
+  },
+  "str": {
+   "max_tris": 3000,
+   "max_file_kb": 300,
+   "parts": [
+    "Foundation"
+   ]
+  },
+  "prop": {
+   "max_tris": 80,
+   "max_file_kb": 50
+  },
+  "proj": {
+   "max_tris": 80,
+   "max_file_kb": 20
+  },
+  "wreck": {
+   "max_tris": 300,
+   "max_file_kb": 50
+  }
+ },
+ "assets": {
+  "ship_dart": {
+   "max_tris": 600,
+   "size_m": [
+    9,
+    12,
+    3
+   ],
+   "far": true
+  },
+  "ship_lancer": {
+   "max_tris": 900,
+   "size_m": [
+    12,
+    16,
+    4
+   ],
+   "far": true
+  },
+  "ship_bomber": {
+   "max_tris": 1200,
+   "size_m": [
+    20,
+    24,
+    6
+   ],
+   "far": true
+  },
+  "ship_scout": {
+   "max_tris": 450,
+   "size_m": [
+    6,
+    8,
+    2.2
+   ],
+   "far": true
+  },
+  "ship_hauler": {
+   "max_tris": 900,
+   "size_m": [
+    14,
+    20,
+    7
+   ],
+   "hardpoints": [
+    "HP_Tether"
+   ],
+   "far": true
+  },
+  "gnd_harvester": {
+   "max_tris": 700,
+   "size_m": [
+    6,
+    9,
+    4
+   ],
+   "far": true
+  },
+  "gnd_siege_crawler": {
+   "max_tris": 900,
+   "size_m": [
+    8,
+    14,
+    6
+   ],
+   "parts": [
+    "Barrel"
+   ],
+   "far": true
+  },
+  "str_core": {
+   "max_tris": 3000,
+   "size_m": [
+    44,
+    44,
+    30
+   ],
+   "hardpoints": [
+    "HP_Dock"
+   ],
+   "far": true
+  },
+  "str_outpost": {
+   "max_tris": 2000,
+   "size_m": [
+    33,
+    33,
+    20
+   ],
+   "hardpoints": [
+    "HP_Dock"
+   ],
+   "far": true
+  },
+  "str_pylon": {
+   "max_tris": 300,
+   "size_m": [
+    4,
+    4,
+    30
+   ],
+   "far": true
+  },
+  "str_pad": {
+   "max_tris": 500,
+   "size_m": [
+    26,
+    26,
+    0.8
+   ],
+   "hardpoints": [
+    "HP_Dock",
+    "HP_Light_0"
+   ],
+   "far": true
+  },
+  "str_solar": {
+   "max_tris": 600,
+   "size_m": [
+    20,
+    20,
+    3
+   ],
+   "far": true
+  },
+  "str_reactor": {
+   "max_tris": 900,
+   "size_m": [
+    20,
+    20,
+    12
+   ],
+   "far": true
+  },
+  "str_extractor": {
+   "max_tris": 800,
+   "size_m": [
+    20,
+    20,
+    14
+   ],
+   "far": true
+  },
+  "str_refinery": {
+   "max_tris": 1500,
+   "size_m": [
+    33,
+    26,
+    null
+   ],
+   "far": true
+  },
+  "str_shipyard": {
+   "max_tris": 1500,
+   "size_m": [
+    39,
+    39,
+    null
+   ],
+   "hardpoints": [
+    "HP_Dock"
+   ],
+   "parts": [
+    "Arm_L",
+    "Arm_R"
+   ],
+   "far": true
+  },
+  "str_vehicle_bay": {
+   "max_tris": 1300,
+   "size_m": [
+    26,
+    26,
+    null
+   ],
+   "far": true
+  },
+  "str_hangar": {
+   "max_tris": 1100,
+   "size_m": [
+    26,
+    26,
+    9
+   ],
+   "hardpoints": [
+    "HP_Dock"
+   ],
+   "parts": [
+    "Roof"
+   ],
+   "far": true
+  },
+  "str_sensor_mast": {
+   "max_tris": 700,
+   "size_m": [
+    13,
+    13,
+    90
+   ],
+   "hardpoints": [
+    "HP_Light_0"
+   ],
+   "far": true
+  },
+  "str_autocannon": {
+   "max_tris": 600,
+   "size_m": [
+    13,
+    13,
+    12
+   ],
+   "parts": [
+    "Turret",
+    "Barrel"
+   ],
+   "far": true
+  },
+  "str_flak": {
+   "max_tris": 800,
+   "size_m": [
+    20,
+    20,
+    16
+   ],
+   "parts": [
+    "Turret",
+    "Barrel"
+   ],
+   "far": true
+  },
+  "str_missile_tower": {
+   "max_tris": 800,
+   "size_m": [
+    13,
+    13,
+    30
+   ],
+   "parts": [
+    "Turret"
+   ],
+   "far": true
+  },
+  "str_shield": {
+   "max_tris": 800,
+   "size_m": [
+    20,
+    20,
+    25
+   ],
+   "hardpoints": [
+    "HP_Dome"
+   ],
+   "far": true
+  },
+  "str_rail_lance": {
+   "max_tris": 1200,
+   "size_m": [
+    31,
+    39,
+    18
+   ],
+   "parts": [
+    "Barrel"
+   ],
+   "far": true
+  },
+  "str_relay_station": {
+   "max_tris": 1500,
+   "size_m": [
+    39,
+    39,
+    14
+   ],
+   "hardpoints": [
+    "HP_Dock"
+   ],
+   "far": true
+  },
+  "wreck_rubble_s": {
+   "max_tris": 80
+  },
+  "wreck_rubble_m": {
+   "max_tris": 150
+  },
+  "wreck_rubble_l": {
+   "max_tris": 300
+  },
+  "proj_bomb": {
+   "max_tris": 60
+  },
+  "proj_rocket": {
+   "max_tris": 80
+  },
+  "proj_rail_bolt": {
+   "max_tris": 12
+  },
+  "prop_boulder_a": {
+   "max_tris": 48
+  },
+  "prop_boulder_b": {
+   "max_tris": 48
+  },
+  "prop_boulder_c": {
+   "max_tris": 48
+  },
+  "prop_ice_spire_a": {
+   "max_tris": 60
+  },
+  "prop_ice_spire_b": {
+   "max_tris": 60
+  },
+  "prop_ore_cluster_a": {
+   "max_tris": 80
+  },
+  "prop_debris_a": {
+   "max_tris": 80
+  },
+  "prop_ore_cluster_b": {
+   "max_tris": 80
+  },
+  "prop_debris_b": {
+   "max_tris": 80
+  },
+  "prop_ore_cluster_c": {
+   "max_tris": 80
+  },
+  "prop_debris_c": {
+   "max_tris": 80
+  },
+  "prop_spire_midnight": {
+   "max_tris": 60
+  },
+  "prop_plateau_marker": {
+   "max_tris": 80
+  }
+ }
+}

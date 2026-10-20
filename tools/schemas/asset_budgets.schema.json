@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "asset_budgets.schema.json",
+  "title": "Asset budgets for the glb validator (tools/art/asset_budgets.json)",
+  "$comment": "07 s4.7 / s5.1 / s1.2 (ART-05): per-class and per-asset triangle ceilings, file-size ceilings, scale-chart sizes and required hardpoints / parts read by tools/art/validate_glb.py and by pw.finalize(). Tools data, not a content def: never enters the content hash.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["_doc", "schema_version", "classes", "assets"],
+  "properties": {
+    "_doc": {"type": "string", "minLength": 1},
+    "schema_version": {"type": "integer", "minimum": 1, "maximum": 1},
+    "size_tolerance_frac": {"type": "number", "minimum": 0, "maximum": 0.5, "$comment": "V08: each checked axis within +- this fraction of the chart size (default 0.10)"},
+    "size_tolerance_min_m": {"type": "number", "minimum": 0, "maximum": 5, "$comment": "V08: absolute slack for thin assets such as the 0.8 m Pad slab (default 0.25)"},
+    "classes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ship", "gnd", "str", "prop", "proj", "wreck"],
+      "properties": {
+        "ship": {"$ref": "#/$defs/class"},
+        "gnd": {"$ref": "#/$defs/class"},
+        "str": {"$ref": "#/$defs/class"},
+        "prop": {"$ref": "#/$defs/class"},
+        "proj": {"$ref": "#/$defs/class"},
+        "wreck": {"$ref": "#/$defs/class"}
+      }
+    },
+    "assets": {
+      "type": "object",
+      "propertyNames": {"pattern": "^(ship|gnd|str|prop|proj|wreck)_[a-z0-9_]+$"},
+      "additionalProperties": {"$ref": "#/$defs/asset"}
+    }
+  },
+  "$defs": {
+    "node_name": {"type": "string", "pattern": "^[A-Za-z0-9_]+$"},
+    "class": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_tris", "max_file_kb"],
+      "properties": {
+        "max_tris": {"type": "integer", "minimum": 1, "maximum": 10000, "$comment": "ceiling when an asset has no entry of its own"},
+        "max_file_kb": {"type": "integer", "minimum": 1, "maximum": 2048, "$comment": "V13 default (asset may override)"},
+        "parts": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/node_name"}, "$comment": "V15: node names every asset of the class must have (Foundation on structures)"}
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_tris"],
+      "properties": {
+        "max_tris": {"type": "integer", "minimum": 1, "maximum": 10000},
+        "max_file_kb": {"type": "integer", "minimum": 1, "maximum": 2048},
+        "size_m": {
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": {"type": ["number", "null"], "exclusiveMinimum": 0},
+          "$comment": "[X, Y, Z] extent in Blender axes (Z up, ships nose +Y): ships [span, length, height], structures [footprint x, footprint y, height above ground]; null = not charted (V08 skips that axis)"
+        },
+        "hardpoints": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^HP_[A-Za-z0-9_]+$"}, "$comment": "V11: required beyond the ship minimum (HP_Nose, HP_Tail, HP_Gear_0..2)"},
+        "parts": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/node_name"}, "$comment": "V15: required node names (Turret, Barrel, Roof, Arm_L/R)"},
+        "far": {"type": "boolean", "$comment": "V15: a mesh node named <PascalId>Far (e.g. ShipDartFar, the presentation far_mesh_node) is required (07 s4.2: every unit and every structure over 15 m)"}
+      }
+    }
+  }
+}
