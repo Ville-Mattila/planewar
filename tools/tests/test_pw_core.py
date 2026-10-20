@@ -155,6 +155,10 @@ class Struts(unittest.TestCase):
         self.assertLess(lay["feet"][0][0], -3.0)  # pushed outward
         self.assertEqual(lay["feet"][2][0], 0.0)
 
+    def test_foot_radius_smaller_than_splay_raises(self):
+        with self.assertRaises(ValueError):
+            core.strut_layout(2.0, 0.5, [(0, 0, 0)])
+
     def test_bad_inputs(self):
         for args in ((0, 1, [(0, 0, 0)]), (1, 0, [(0, 0, 0)]), (1, 1, [(0, 0, 0), (1, 0, 0)])):
             with self.assertRaises(ValueError):
@@ -172,6 +176,14 @@ class Struts(unittest.TestCase):
         g = hp["HP_Gear_1"]
         bad = dict(hp, HP_Gear_1=(g[0], g[1] + 0.2, g[2]))
         self.assertEqual(status(run(aid="ship_t", cls="ship", hp=bad), "V11"), "fail")
+
+
+class Determinism(unittest.TestCase):
+    def test_generators_repeat_exactly(self):
+        a = core.strut_geometries(core.strut_layout(1.1, 1.6, [(0, -6, 0)]), 1.1)
+        b = core.strut_geometries(core.strut_layout(1.1, 1.6, [(0, -6, 0)]), 1.1)
+        self.assertEqual(a, b)
+        self.assertEqual(core.prism_geometry(6, 1, 0.2, 5, "Y", (0, 1, 2)), core.prism_geometry(6, 1, 0.2, 5, "Y", (0, 1, 2)))
 
 
 class Checks(unittest.TestCase):

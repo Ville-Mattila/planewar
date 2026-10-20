@@ -158,6 +158,13 @@ class BlenderRecipes(unittest.TestCase):
         self.assertGreater(min(feet), by["HP_Tail"]["translation"][2])  # feet are behind the nozzle (glTF +Z)
         self.assertEqual(rep["tris"], 92)
 
+    def test_recipe_is_deterministic(self):
+        with tempfile.TemporaryDirectory() as other:
+            res = run_headless.run(str(SELFTEST / "ship_test_gear.py"), other)
+            self.assertEqual(res.returncode, 0)
+            self.assertEqual((Path(other) / "ship_test_gear.glb").read_bytes(),
+                             (Path(self.out) / "ship_test_gear.glb").read_bytes())
+
     def test_second_begin_replaces_only_same_collection(self):
         res = run_headless.run(str(SELFTEST / "begin_twice.py"), self.out)
         self.assertEqual(res.returncode, 0, res.stdout[-1500:] + res.stderr[-1500:])

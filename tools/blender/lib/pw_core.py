@@ -251,7 +251,9 @@ def strut_layout(length: float, foot_radius: float, around: list[Vec]) -> dict:
     drop, out = length * math.cos(sp), length * math.sin(sp)
     if len(around) == 1:
         cx, cy, cz = around[0]
-        rb = max(foot_radius - out, 0.0)
+        rb = foot_radius - out
+        if rb < 0.0:
+            raise ValueError(f"foot_radius {foot_radius} < length*sin({SPLAY_DEG:g} deg) = {out:.3f}: struts cannot splay that far")
         dirs = [(math.cos(math.radians(90 + 120 * i)), math.sin(math.radians(90 + 120 * i))) for i in range(3)]
         bases = [(cx + rb * dx, cy, cz + rb * dz) for dx, dz in dirs]
         feet_xz = [(cx + foot_radius * dx, cz + foot_radius * dz) for dx, dz in dirs]
