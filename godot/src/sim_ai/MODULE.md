@@ -11,7 +11,7 @@ writes only through `CommandSinkBase`.
 | May depend on | `core`, `content`, `sim` |
 | Must never touch | Nodes, `net`, `presentation`, `ui`; no `await`, signals, `Thread`, autoloads |
 | Autoloads used | None |
-| Status | AI-03 (2026-10-14): `CommandSink`. AI-04 (2026-10-14): `AiState`, `AiBatch`, `AiBrain`, `AiDriver` scheduling. AI-09 (2026-10-14): `LandingPilot`, AiState landing fields. AI-12 (2026-10-14): target choice points (`TargetParams`, `TargetContext`, `TowerEnvelope`, `TargetChooser`). AI-08 (2026-10-14): `Overlays` SAFETY / RECOVER_CEILING, `OverlayParams`, the driver's release-edge check. Brains follow. |
+| Status | AI-03 (2026-10-14): `CommandSink`. AI-04 (2026-10-14): `AiState`, `AiBatch`, `AiBrain`, `AiDriver` scheduling. AI-09 (2026-10-14): `LandingPilot`, AiState landing fields. AI-12 (2026-10-14): target choice points (`TargetParams`, `TargetContext`, `TowerEnvelope`, `TargetChooser`). AI-08 (2026-10-14): `Overlays` SAFETY / RECOVER_CEILING, `OverlayParams`, the driver's release-edge check. AI-11 (2026-10-20): `Separation`, `Formation`, `FormationParams`, `EscortPilot`, AiState FORMAT 4 (`form_slot`, `form_state`, `form_order`, `sep_age`, `sep_push`). Brains follow. |
 
 ## Public API
 
@@ -35,6 +35,8 @@ func serialize() -> PackedByteArray;  func deserialize(bytes: PackedByteArray) -
 # integ (Vector2), ground_h / lift (f32) per slot; pad_claim by pad slot, written after the records (non-zero, ascending)
 const LAND_BUSY: int; const LAND_THREAT: int; const LAND_FOREIGN: int       # land_flags bits, refreshed at think
 # AI-08 (FORMAT 3): overlay / ov_flags (u8) per slot after fire_mask; the overlays use `integ`
+# AI-11 (FORMAT 4): form_slot / form_state / sep_age (u8) per slot after ov_flags, form_order (i32) after last_wake, sep_push (Vector3) after land_ga_dir; NO_SLOT = 255; form_slot k + ROSTER_WIDTH = overflow escort; sep_age = Separation.AGE_* flags
+const NO_SLOT: int; const ROSTER_WIDTH: int      # form_roster (by escortee slot * ROSTER_WIDTH + class slot -> escort EntityId) is derived: rebuilt by deserialize, not in the bytes
 const OV_PULL_UP: int; const OV_RTB_SENT: int; const OV_POSSESSED: int      # ov_flags bits
 class_name AiBatch extends RefCounted              # ids of one class sorted by slot + `due` scratch
 func add(id: int) -> bool;  func remove(id: int) -> bool
@@ -66,6 +68,36 @@ func schedule_bot(slot: int, tier: int) -> void;  func unschedule_bot(slot: int)
 func on_tick(tick: int, view: SimView, sink: CommandSinkBase) -> void;  func serialize() -> PackedByteArray;  func deserialize(bytes: PackedByteArray) -> void
 func stats() -> Dictionary;  func reset_stats() -> void                     # stats: + "overlay_ticks" (AI-08)
 func set_overlay_params(cls: int, p: OverlayParams) -> void;  func set_terrain(t: Terrain) -> void   # AI-08: per-class overlays; the map's Terrain (default flat datum)
+```
+
+```gdscript
+class_name FormationParams extends RefCounted      # AI-11: separation + formation numbers (05 s5.4, s5.6) and the SL-2 wing slots, read-only
+const SEP_KEYS: PackedStringArray;  const FORM_KEYS: PackedStringArray       # required keys of the `separation` / `formation` blocks
+var sep_radius_m: float; var sep_gain: float; var sep_push_mps: float; var query_radius_m: float                 # 05 s5.4: 60, 1.0, 20; query <= Spatial.ring2_m (187.9 m)
+var look_s: float; var look_miss_m: float; var look_lag_s: float; var look_eff: float; var look_min_s: float; var look_max_mps: float; var look_brake: float   # AI-11 look-ahead
+var class_slots: PackedVector3Array; var wing_slots: PackedVector3Array      # (right, forward, up) m; class: tangent frame of the escortee, wing: leader body frame
+var k_form: float; var speed_cap_mult: float; var engage_radius_m: float; var rejoin_radius_m: float; var break_utility: float; var max_break_frac: float; var min_heading_speed: float
+var wing_tolerance_m: float; var focus_timeout_s: float; var focus_leash_m: float; var break_radius_m: float; var break_s: float; var ceiling_m: float   # wing.json + rules.ceiling_soft_m
+static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_soft_m: float, engage_m: float, ring2_m: float = INF) -> FormationParams   # null on a missing key / bad slot table (1..ROSTER_WIDTH); query_radius_m clamped to Spatial.ring2_m; wing may be null
+func slot_count(wing: bool) -> int
+class_name Separation extends RefCounted           # AI-11: 05 s5.4 friendly separation, static only
+static func push(id: int, p: Vector3, v: Vector3, team: int, view: SimView, prm: FormationParams) -> Vector3   # velocity to add to the guidance command; one ids_near
+const AGE_FRESH: int; const AGE_CLOSING: int                               # sep_age bits: the last think refreshed; that refresh found a closing pair
+static func needs_refresh(age: int) -> bool                                 # false only right after a refresh that found no closing pair
+static func term(s: int, id: int, p: Vector3, v: Vector3, team: int, view: SimView, prm: FormationParams, st: AiState) -> Vector3   # the one refresh / hold policy: push into st.sep_push[s] or hold it once
+class_name Formation extends RefCounted            # AI-11: 05 s5.6 slot geometry, static only
+static func slot_world(lp: Vector3, lv: Vector3, lb: Basis, idx: int, wing: bool, prm: FormationParams) -> Vector3   # lb = SimView.basis(leader); clamped to the soft ceiling
+static func v_cmd(p: Vector3, slot_pos: Vector3, lv: Vector3, cruise: float, prm: FormationParams) -> Vector3       # lv + k_form (slot - p), capped at cruise x speed_cap_mult
+static func max_breakers(count: int, prm: FormationParams) -> int;  static func may_break(slot: int, count: int, prm: FormationParams) -> bool
+static func free_slot(used: int, limit: int) -> int                        # lowest clear bit below limit, else AiState.NO_SLOT
+class_name EscortPilot extends RefCounted          # AI-11: ESCORT of one ship class (05 s3.1, s5.6), the Dart / Lancer brains call it for an ESCORT head
+enum Outcome { FORMING, ENGAGING, LOST }
+const FORM: int; const ENGAGE: int; const SPENT: int; const DOCKED: int      # form_state values (SPENT: a FOCUS / BREAK timed out, FORM until the order is re-issued)
+var def: ShipDef; var prm: FormationParams; var gains: FlightGains
+func _init(ship_def: ShipDef, params: FormationParams, flight_gains: FlightGains) -> void
+func think(id: int, view: SimView, st: AiState, tick: int, threat: int = 0, utility: float = 0.0) -> Outcome   # writes guidance_vel / guidance_point / target; LOST: brain fails the order to AUTO
+func act(id: int, view: SimView, st: AiState, out: PilotInput) -> bool    # track_velocity on guidance_vel; false while ENGAGE or without an escortee
+func release(id: int, st: AiState) -> void;  func slot_error(id: int, view: SimView, st: AiState) -> float
 ```
 
 ```gdscript
@@ -151,9 +183,17 @@ does not think; at the end it is woken. LINK_BRIDGE is `Assist.link_bridge` in `
 - Perf (05 s10, `test_think_and_act_cost`, dev laptop, `LandingWorld` view): think 14.6 us (25 us row), act 14.3 us per
   landing ship (6 us row; 10 us of it is `LandingController.step`, see `sim/steer/MODULE.md`).
 
+- Formation (AI-11, 05 s5.4 / s5.6; `test_formation.gd`, `test_escort_pilot.gd`, `test_sc39_escort_formation.gd`, `test_swarm_separation.gd`): F1 slot offsets are (right, forward, up) in the escortee's tangent frame (class) or body frame (SL-2 wing, `escort_slot >= 0`, `wing.json` back / right / up converted on load); `v_cmd = v_leader + k_form (slot - p)`, capped at cruise x 1.1; a slot above `rules.ceiling_soft_m` is pulled down to it. F2 a class slot is assigned once per order (lowest free index of the escortee's roster row `form_roster`, entries validated against `aux_id` / `form_slot` / liveness on use; no spatial query), kept in `form_slot`, dropped by `release`; with every class slot held, a further escort is an overflow escort: it doubles up on slot `EntityId.slot(id) % n`, stored as that + `ROSTER_WIDTH` outside the roster (the roster names holders only, so restore rebuilds the same rows), keeps it when a holder leaves and never breaks out (the break share counts holders); the brain must call `release` whenever it stops routing a ship to `EscortPilot` (an order replaced without a LOST think), else the stale holder keeps its slot while its `aux_id` is unchanged; at most `max_break_frac` of the escorts (at least one, the higher slots) leave formation, FORM breaks only for utility > `break_utility` within `engage_radius_m` of the escortee, rejoins when the threat is gone or beyond `rejoin_radius_m`; FOCUS / BREAK use the `wing.json` leash and time limits and, once timed out, stay `SPENT` until the order is re-issued (`form_order` = issue_tick). F3 `think` writes `guidance_vel` (formation + separation) and, while ENGAGING, `target`; the brain flies the attack and applies terrain shaping (05 s5.3) to `guidance_vel` before `act`. F4 `Separation`: the 05 s5.4 proximity ring plus an AI-11 look-ahead (below); friendly ships only, enemies never; SC-39 (Bomber MOVE 5 km, 2 Dart ESCORT): in slot 88-96 % of the run, no DEATH, smallest gap 8.7 m (join-up).
+- Separation look-ahead (AI-11; 05 s5.4 as amended by R0 B.14 A-84; the doc formula alone cannot meet the acceptance): the ring (60 m, 20 m/s) gives a head-on pair 0.3 s and an overtaker no sideways push; flight-model measurements (Dart / Lancer / Bomber step response to a 30 degree heading command: ~1 s lag, then 0.7-1.0 m of lateral offset per m/s of push per second) make the ring too late. For each friendly neighbour closing within `look_s` (4 s; a slow closer is judged at the horizon) whose predicted miss is under `look_miss_m` (80 m): push sideways (horizontal part of the miss vector, else `up x v_rel`, opposite for the two ships) at `deficit / (look_eff max(t - look_lag_s, look_min_s))` m/s, at most `look_max_mps`; only the most urgent neighbour counts (sums cancel in a clump); a ship catching up on a neighbour ahead also sheds `look_brake` x the closing speed x urgency.
+- Separation refresh (AI-11 round 3, `Separation.term`, the one policy EscortPilot and `SwarmWorld` call): a think holds the cached term only right after a refresh that found no closing pair (a friendly in the query approaching at >= 1 m/s); otherwise it refreshes. Flags in `sep_age` (AGE_FRESH, AGE_CLOSING), FORMAT 4 unchanged. Measured on `SwarmWorld` (12 mixed ships, fair starts, query 180 m), 300 seeds: 4 collide (every-think baseline 4; holding only when the look-ahead term is zero also 4, but on other seeds incl. seed 6 of the CI 50; the unconditional every-second-think hold was 11); stress (same destinations) 19 of 300 (every think 21; look-ahead-zero rule 14); CI: 50 seeds zero collisions, stress 30 seeds better than without separation; without separation 30 of 50 seeds collide. SC-39 refresh share 0.74-0.81 of the FORMING thinks (wing 0.64).
+- Perf (AI-11, `test_escort_perf.gd`; 05 s10 think row 25 us, act row 6 us; dev machine, 4 escorts + 12 friendly Darts within 300 m + 240 far Darts over many cells, best of 6 batches of 1000 per-call timings): query radius `query_radius_m` 180 m <= `Spatial.ring2_m` (187.9 m), the ring path; group count and slot assignment read the roster row, no spatial query. Held think ~8 us, refresh think ~38 us. The formation spawns in one tick (parallel flight). Quiet case (refresh share 0.50) mean 23.2-23.5 us, median 29, p95 39; threat-gate case (share 0.50) mean 28.2-28.3; closing-neighbour case (a friendly head-on 150 m ahead: refresh every think) mean 38-39, p95 39-41; act 7.1. A flown formation (SC-39, share ~0.78) costs about 30 us per think: the row is met by the steady case only; a brain that also probes and chooses targets budgets the refresh think against its own row. CI bound: row x `CI_FACTOR` 2 on the per-call mean (05 s10 rows are per-tick sums, so a mean is the comparison; 05 s11.1 keeps p95 assertions for the pinned runner; R0 A-62: no row moves before it is measured); the closing case x 2 more (transient).
+- Open (needs sim, R0 B.14 A-85 -> TA-60): the ORDER wire payload (`CommandPayload.read_order`, 04 s2.5) carries no `escort_slot` / `escort_mode` / `focus`, so SL-2 orders cannot reach the queue by `Command` yet; `EscortPilot` reads them from `SimView.order_head`, tests inject through `OrderQueue.push` (`FormationKit.escort_order`).
+- Open (needs content, R0 B.14 A-86 -> AI-19): `engage_radius_m` comes from `order_rules.json` `escort_engage_radius_m` (OrderRulesDef), not the `formation` block; `autopilots.json` `separation` block gains `push_mps`, `lookahead_s`, `lookahead_miss_m`, `lookahead_lag_s`, `lookahead_eff`, `lookahead_min_s`, `lookahead_max_mps`, `lookahead_brake`, `query_radius_m`, and a `formation` block with `FormationParams.FORM_KEYS` (fixture `test/sim/ai/ai11_params.json` carries the 05 values until then).
+
 ## Test entry points
 
 `godot/test/unit/sim_ai/test_command_sink.gd`, `test_ai_driver.gd`, `test_ai_driver_perf.gd` (fixtures `ai_test_kit.gd`),
 `test_landing_pilot.gd`; scenarios `godot/test/sim/ai/test_sc_landing.gd` (SC-02..SC-08; `LandingScenario`, `LandingWorld`); `test_target_chooser.gd`;
 `test_overlays.gd`, `test_overlays_perf.gd` (AI-08); `godot/test/sim/ai/test_sc_overlays.gd` (SC-11, SC-12, SC-22, SC-23,
 SC-25, determinism and S4; fixtures `overlay_kit.gd`, `ai08_autopilots.json`).
+`test_formation.gd`, `test_escort_pilot.gd`, `test_escort_perf.gd` (AI-11; fixtures `godot/test/sim/ai/formation_kit.gd`, `swarm_world.gd`, `ai11_params.json`); `godot/test/sim/ai/test_sc39_escort_formation.gd` (SC-39), `test_swarm_separation.gd` (50-seed swarm).
