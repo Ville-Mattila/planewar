@@ -891,8 +891,11 @@
       "01 s9.4 contract notes",
       " R0 C2-05"
     ],
-    "status": "todo",
-    "acceptance_append": "; read_poses equals pos/basis element-wise on both views (R0 B.11 A-56)"
+    "status": "done",
+    "acceptance_append": "; read_poses equals pos/basis element-wise on both views (R0 B.11 A-56)",
+    "pr": 66,
+    "merged": "2026-10-20",
+    "note": "Clauses for unlanded systems (GD-15 service/pad queue, economy field_remaining/supply01/auto_replenish_target, scoring, path_grid_version) pin defaults and must be tightened as each lands. Visibility asserted for team 0 only. Every new SimView method needs a clause + mutant (coverage test enforces)."
   },
   {
     "id": "TA-19",

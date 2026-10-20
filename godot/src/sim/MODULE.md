@@ -286,11 +286,12 @@ Existing (checked by check_deps D10): `godot/test/sim/` (scenario layer), `godot
 TA-12/48: `godot/test/unit/sim/test_kinematics.gd` (lift law, test_slug_hits_coaltitude_target), `godot/test/unit/sim/test_kinematics_purity.gd`
 (S8), `godot/test/unit/sim/test_kinematics_flip_fuel.gd`, `godot/test/sim/test_flight.gd`, `godot/test/perf/perf_kinematics.gd`. TA-14:
 `godot/test/unit/sim/test_spatial.gd` (S16), `godot/test/unit/sim/test_collision.gd` (S17), `godot/test/sim/test_collision_sweeps.gd`, `godot/test/perf/perf_collision.gd`.
+TEST-02: `godot/test/unit/sim/contract/test_simview_contract.gd` (shared SimView contract, factories/*.gd per view).
 TA-18: `godot/test/unit/sim/test_sim_world.gd` (S1, S3, S5, S11, hook, profile, steps 5-10), `godot/test/unit/sim/test_command_validator.gd`
 (S10, S12), `godot/test/unit/sim/test_serialize.gd` + `test_serialize_all.gd` (S4 over all subsystems, version refusal, size, determinism; TA-21), `godot/test/perf/bench_serialize.tscn`, `godot/test/unit/sim/test_enums.gd` (S14), `godot/test/unit/sim/test_local_sim_view.gd`,
 `godot/test/unit/sim/test_match_rules.gd`, `godot/test/unit/sim/test_command_payload.gd`, `godot/test/sim/test_tick_scenario.gd` (100-tick event sequence), `godot/test/perf/perf_tick_world.gd`.
 TA-50: `godot/test/sim/test_path_scenario.gd` (step 3b, `pathing()` via `godot/test/unit/sim/path_brain_stub.gd`), S4 with pending tickets in `test_serialize.gd`, `godot/test/perf/perf_path_load.gd` (row 3b). TA-37: `godot/test/unit/sim/vision/test_vision.gd`, `godot/test/unit/sim/vision/test_vision_lists.gd`, `godot/test/perf/perf_vision.gd` (sim/vision/MODULE.md V1-V9).
-GD-36: `test_projectile_store.gd` (`spawn`); weapon fire and fuse tests are listed by the combat subsystem contract. TA-19: `godot/test/unit/sim/economy/test_economy.gd`, `godot/test/unit/sim/production/test_production.gd`, `godot/test/unit/sim/build/test_construction.gd` (S4 economy, S12, S13). Planned (plain text until on disk, D10): test_landing.gd; godot/test/sim/scenarios/*.json (Outpost presence, victory, Core shield, caps); godot/test/contract/test_sim_view_contract.gd.
+GD-36: `test_projectile_store.gd` (`spawn`); weapon fire and fuse tests are listed by the combat subsystem contract. TA-19: `godot/test/unit/sim/economy/test_economy.gd`, `godot/test/unit/sim/production/test_production.gd`, `godot/test/unit/sim/build/test_construction.gd` (S4 economy, S12, S13). Planned (plain text until on disk, D10): test_landing.gd; godot/test/sim/scenarios/*.json (Outpost presence, victory, Core shield, caps).
 
 ## How to add X
 
