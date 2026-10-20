@@ -1133,7 +1133,10 @@
       " 02 AR-1",
       " 02 GD-16"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-10-20",
+    "pr": "public#59",
+    "note": "A-80 self-repair fields; with an empty ore pool a structure heals one free second before pausing (rounding side effect, tested); net/protocol.gd ResultCode line needs net-owner confirmation"
   },
   {
     "id": "GD-17",
