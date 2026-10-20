@@ -28,6 +28,8 @@
  "cancel_refund_queued": 1.0,
  "cancel_refund_assembly": 0.75,
  "self_repair_delay_s": 10,
+ "self_repair_min_hp_s": 2,
+ "self_repair_frac_per_s": 0.005,
  "early_share_lock_s": 120,
  "early_share_ore": 800,
  "unused_slot_yield": 0.5,

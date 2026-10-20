@@ -21,8 +21,9 @@ func _tick_hz(w: SimWorld) -> int:
 
 
 func test_rate_is_the_larger_of_two_and_half_a_percent() -> void:
-	assert_float(SelfRepair.rate_hp_s(100.0)).is_equal(2.0)
-	assert_float(SelfRepair.rate_hp_s(1200.0)).is_equal_approx(6.0, 0.0001)
+	var w: SimWorld = K.solo_world()
+	assert_float(w.economy().repair.rate_hp_s(100.0)).is_equal(2.0)
+	assert_float(w.economy().repair.rate_hp_s(1200.0)).is_equal_approx(6.0, 0.0001)
 
 
 func test_repairs_after_the_delay_and_pays_ore() -> void:
@@ -35,7 +36,7 @@ func test_repairs_after_the_delay_and_pays_ore() -> void:
 	assert_float(w.store().hp[s]).is_equal(100.0)                       # 9 s: still inside the delay
 	var _b: Array[SimEvent] = K.run(w, 2 * hz)
 	var top: float = _top(w, s)
-	var rate: float = SelfRepair.rate_hp_s(top)
+	var rate: float = w.economy().repair.rate_hp_s(top)
 	assert_float(w.store().hp[s]).is_greater(100.0)
 	assert_float(w.store().hp[s]).is_less_equal(100.0 + 2.0 * rate)
 	assert_int(K.ore(w)).is_less(ore0)                                  # paid

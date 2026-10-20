@@ -1,12 +1,9 @@
 class_name SelfRepair extends RefCounted
 ## Structure self-repair (02 s6.3, GD-16): a finished, supplied structure that has taken no damage for
-## `economy.self_repair_delay_s` repairs `max(2, 0.005 * hp)` HP per second and pays `repair_ore_per_hp` Ore per HP
+## `economy.self_repair_delay_s` repairs `max(self_repair_min_hp_s, self_repair_frac_per_s * hp)` HP per second and pays `repair_ore_per_hp` Ore per HP
 ## (rounded up per sim second, the ship-repair idiom of 02 s2.3); it pauses while the team cannot pay. Whole sim seconds
 ## only (tick % tick_hz == 0), so there is no accumulator and nothing to save (S4): the result is a function of the store.
 ## Runs in step 10 after `Economy.step`. Healing writes `hp` directly; damage still goes only through `DamageSink`.
-
-const MIN_RATE_HP_S: float = 2.0     ## 02 s6.3 "max(2, 0.005 * hp)": the floor, in HP per second
-const RATE_FRACTION: float = 0.005   ## the share of max HP per second
 
 ## Per entity slot, 1 = outside the Pylon supply network. Derived and rewritten by GD-18 each tick (not state); empty or
 ## 0 = supplied, so until GD-18 every finished structure counts as supplied.
@@ -18,6 +15,8 @@ var _economy: Economy
 var _hz: int
 var _delay_ticks: int = 0
 var _ore_per_hp: float = 0.0
+var _min_rate: float = 0.0
+var _frac: float = 0.0
 
 
 func _init(store: EntityStore, defs: WorldDefs, economy: Economy, hz: int) -> void:
@@ -28,11 +27,13 @@ func _init(store: EntityStore, defs: WorldDefs, economy: Economy, hz: int) -> vo
 	var ec: EconomyDef = defs.economy if defs.economy != null else EconomyDef.new()
 	_delay_ticks = ceili(ec.self_repair_delay_s * float(hz))
 	_ore_per_hp = ec.repair_ore_per_hp
+	_min_rate = ec.self_repair_min_hp_s
+	_frac = ec.self_repair_frac_per_s
 
 
 ## HP per second a structure of `max_hp` repairs.
-static func rate_hp_s(max_hp: float) -> float:
-	return maxf(MIN_RATE_HP_S, RATE_FRACTION * max_hp)
+func rate_hp_s(max_hp: float) -> float:
+	return maxf(_min_rate, _frac * max_hp)
 
 
 ## Step 10: on whole sim seconds, repair every eligible structure in slot order (deterministic).

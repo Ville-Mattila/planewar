@@ -130,6 +130,16 @@
       "minimum": 0,
       "maximum": 300
     },
+    "self_repair_min_hp_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "self_repair_frac_per_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
     "early_share_lock_s": {
       "type": "number",
       "minimum": 0,
@@ -211,6 +221,8 @@
     "repair_ore_per_hp",
     "salvage_pod_max_ore",
     "self_repair_delay_s",
+    "self_repair_frac_per_s",
+    "self_repair_min_hp_s",
     "solar_band_deg",
     "solar_plateau_mult",
     "solar_plateau_radius_m",

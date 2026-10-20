@@ -161,3 +161,7 @@ Schemas carry bounds and `$comment` citations; `godot/content/defs/*.json` and t
 ## Owner rulings (2026-10-14)
 
 Defaults applied per the owner's standing instruction to merge on recommendation: required fields approved; REJECTED_PREREQ appended; backlog patch approved and applied; ground_turn_rate_dps 40 kept as GD-34 anchor.
+
+## A-80 (orchestrator ruling, GD-16; the Architect may revisit) Self-repair numbers in `economy.json`
+
+`SelfRepair` (02 s6.3 "max(2, 0.005 * hp) HP/s") would have carried two sim-affecting literals (ADR-09, D6). Ruling: two required `economy.json` fields, `self_repair_min_hp_s` 2 and `self_repair_frac_per_s` 0.005 (next to `self_repair_delay_s`), with schema, `EconomyDef` and canonical-fixture entries. Values are 02 s6.3's; no balance change.
