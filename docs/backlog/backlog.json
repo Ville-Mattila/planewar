@@ -7095,5 +7095,21 @@
       "05 s3.1"
     ],
     "status": "todo"
+  },
+  {
+    "id": "NET-53",
+    "title": "net: rename protocol.gd inner wire enum InputClass -> WireInputClass (HELLO.input_class; ordinals unchanged) so it no longer shadows the input lane's global InputClass",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [],
+    "milestone": "M3",
+    "acceptance": "protocol.gd declares enum WireInputClass { TOUCH, GAMEPAD, POINTER } with unchanged ordinals; every reference updated; net/MODULE.md wire-enum list names WireInputClass and notes it is 04's HELLO.input_class; check_deps green with UX-03's global InputClass present (verified against branch task/UX-03-input-router); net protocol tests green",
+    "docs": [
+      "04 HELLO",
+      "06 s2.1"
+    ],
+    "status": "todo",
+    "note": "Unblocks UX-03 #73 (check_deps D1 name collision). Owner chose a net-lane rename task 2026-10-20."
   }
 ]
