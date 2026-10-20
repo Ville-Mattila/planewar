@@ -283,6 +283,8 @@ def finalize(asset_id: str, budget: int | None = None) -> dict:
             o.modifiers.remove(m)
         tri = o.modifiers.new("Triangulate", "TRIANGULATE")
         tri.min_vertices = 4
+    if budget is None:
+        budget = core.tri_budget(asset_id)  # tools/art/asset_budgets.json (ART-05)
     meshes = _mesh_objs()
     hp = {o.name: tuple(o.matrix_world.translation) for o in coll.objects if o.type == "EMPTY"}
     fmax = None

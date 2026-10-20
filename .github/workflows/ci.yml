@@ -157,6 +157,29 @@ jobs:
             godot/reports
           if-no-files-found: ignore
 
+  art-import:
+    name: art import (validate_glb, .glb.import, post-import script; ART-05)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: ./.github/actions/setup-godot
+      - name: validate_glb on every committed model (07 s4.7; V01-V15), .glb.import files current
+        run: |
+          if find godot/assets/models -name '*.glb' 2>/dev/null | grep -q .; then
+            python tools/art/validate_glb.py godot/assets/models --quiet
+            python tools/art/write_import.py godot/assets/models --check
+          else
+            echo "no committed models yet"
+          fi
+      - name: validator and import tool tests, incl. a real Godot import with post_import_asset.gd
+        run: python -m unittest tools/tests/test_validate_glb.py tools/tests/test_art_import.py -v
+
   export:
     name: export ${{ matrix.preset }}
     runs-on: ubuntu-latest

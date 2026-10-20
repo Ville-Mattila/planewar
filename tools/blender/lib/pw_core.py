@@ -16,6 +16,7 @@ import re
 from pathlib import Path
 
 PALETTE_PATH = Path(__file__).resolve().parent.parent / "palette.json"
+BUDGETS_PATH = Path(__file__).resolve().parent.parent.parent / "art" / "asset_budgets.json"
 ID_RE = re.compile(r"^(ship|gnd|str|prop|proj|wreck)_[a-z0-9_]+$")
 NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
 SPLAY_DEG = 20.0
@@ -79,6 +80,25 @@ class Palette:
         """Centre of emblem cell `cell` (32 px emblems, glTF convention)."""
         per_row = self.size // 32
         return ((cell % per_row) * 32 + 16) / self.size, self.emblem_v + 16 / self.size
+
+
+def load_budgets(path: Path | None = None) -> dict:
+    """tools/art/asset_budgets.json (ART-05); validate_glb.py schema-checks it, here it is only read."""
+    return json.loads((path or BUDGETS_PATH).read_text(encoding="utf-8"))
+
+
+def asset_entry(budgets: dict, asset_id: str) -> dict | None:
+    return budgets["assets"].get(asset_id)
+
+
+def tri_budget(asset_id: str, budgets: dict | None = None) -> int | None:
+    """V03 ceiling: the asset's own entry, else its class default, else None (unknown class prefix)."""
+    b = budgets if budgets is not None else load_budgets()
+    entry = asset_entry(b, asset_id)
+    if entry is not None:
+        return entry["max_tris"]
+    cls = b["classes"].get(asset_id.split("_", 1)[0])
+    return cls["max_tris"] if cls else None
 
 
 def blender_v(v_gltf: float) -> float:
@@ -313,7 +333,7 @@ def run_checks(asset_id: str, cls: str, mesh: dict, hardpoints: dict[str, Vec], 
     checks: list[dict] = [_chk("V01", "pass" if ID_RE.match(asset_id) else "fail", f"id '{asset_id}'")]
     n = len(tris)
     if budget is None:
-        checks.append(_chk("V03", "skip", f"{n} tris, no budget for class '{cls}' (asset_budgets.json: ART-05)"))
+        checks.append(_chk("V03", "skip", f"{n} tris, no budget for class '{cls}' (no asset_budgets.json entry)"))
     elif n > budget:
         checks.append(_chk("V03", "fail", f"{n} tris > budget {budget}"))
     elif n < budget * 0.25:
