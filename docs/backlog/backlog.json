@@ -1920,7 +1920,8 @@
       "05 s5.6",
       " 05 AI-11"
     ],
-    "status": "todo"
+    "status": "todo",
+    "note": "05 s5.4 look-ahead ratified as A-84 (lookahead_miss_m anchor 80 per the fixture; MODULE.md text aligned); formation.engage_radius_m dropped in favour of order_rules.escort_engage_radius_m (A-86); SL-2 wire path is TA-60 / NET-04 (A-85); think ~39 us vs 25 us row recorded, no row moves (A-62)"
   },
   {
     "id": "AI-12",
@@ -2508,7 +2509,7 @@
       " 05 AI-19"
     ],
     "status": "todo",
-    "acceptance_append": "; every ap_* flight block carries the 16 FlightGains keys of R0 B.12 A-67 with the AI-05 anchors and lift_max_frac / lift_min_time_s (A-67); AiDriver reads think_period_ticks from the def instead of its constructor default (A-71); adopt the single AI-06 damping_only recommended set (godot/test/tuning/recommended_gains.json) for every ap_* flight block (A-68)"
+    "acceptance_append": "; every ap_* flight block carries the 16 FlightGains keys of R0 B.12 A-67 with the AI-05 anchors and lift_max_frac / lift_min_time_s (A-67); AiDriver reads think_period_ticks from the def instead of its constructor default (A-71); adopt the single AI-06 damping_only recommended set (godot/test/tuning/recommended_gains.json) for every ap_* flight block (A-68); every ship ap_* carries the 11-key separation block and ap_dart / ap_lancer the 8-key formation block of R0 B.14 A-86 with the AI-11 anchors (godot/test/sim/ai/ai11_params.json, lookahead_miss_m 80), schema ranges and per-class required as A-86 states; engage_radius_m stays in order_rules.json only"
   },
   {
     "id": "AI-20",
@@ -2813,7 +2814,8 @@
       " 04 NET-04"
     ],
     "status": "todo",
-    "note": "depends on A-27 deps.json edit (SimEvent, CommandResult named for net; owner default approve)"
+    "note": "depends on A-27 deps.json edit (SimEvent, CommandResult named for net; owner default approve)",
+    "acceptance_append": "; the ORDER codec writes / reads the 6-byte ESCORT trailer (present iff order_kind 3): an ESCORT with slot 1, FOCUS and a focus id round-trips, a 32-id ESCORT is 142 B, a MOVE with 6 trailing bytes returns null (R0 B.14 A-85)"
   },
   {
     "id": "NET-07",
@@ -5310,7 +5312,8 @@
     "depends_on": [
       "FEAT-01",
       "AI-11",
-      "PM-02"
+      "PM-02",
+      "TA-60"
     ],
     "milestone": "M5",
     "acceptance": "2 Darts hold within 30 m for 60 s of leader manoeuvres; back in slot within 15 s after the focus kill",
@@ -5318,7 +5321,8 @@
       "08 SL-2",
       " 08 FEAT-09"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; the SC-39 wing variant issues its ESCORT (escort_slot >= 0, FOCUS / BREAK) through Command.order (TA-60), and the OrderQueue.push injection helper of AI-11 is deleted (R0 B.14 A-85)"
   },
   {
     "id": "FEAT-10",
@@ -7069,5 +7073,24 @@
     ],
     "status": "todo",
     "note": "Follow-up from AI-06 PR #64."
+  },
+  {
+    "id": "TA-60",
+    "title": "sim: ESCORT trailer on the ORDER payload (u8 escort_mode, u8 escort_slot 0xFF = -1, u32 focus; present iff kind ESCORT) in Command.order, CommandPayload.read_order, OrderSpec.wire_size / fits_wire (R0 B.14 A-85)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-01",
+      "TA-18"
+    ],
+    "milestone": "M3",
+    "acceptance": "An ESCORT Command with escort_slot 1, EscortMode.FOCUS and a focus id round-trips through SimWorld.apply_command to SimView.order_head with the three fields intact; an ESCORT payload without the 6 bytes and a MOVE payload with 6 trailing bytes are REJECTED_MALFORMED; a 32-id ESCORT is 142 B on the wire formula; every other kind's bytes unchanged (existing tests untouched); sim/orders/MODULE.md and sim/MODULE.md Command line updated",
+    "docs": [
+      "R0-amendments-07 A-85",
+      "04 s2.5",
+      "05 s3.1"
+    ],
+    "status": "todo"
   }
 ]
