@@ -35,8 +35,7 @@ Message: id u8, seq u16, tick u32, kind u8, target u32, len u16, payload (<= 256
 Payload per kind: the sim form (`sim/command.gd`, `CommandPayload`) with positions as vec3q (`Codec`, 8 B) instead of f64 x 3;
 every other byte is identical. ORDER: u8 kind (0-11), flags, haul_mode (0-2), count (1-32), u32 ids[count], u32 target,
 u8 point_count (0-16), vec3q points, and for ESCORT only the trailer u8 escort_mode (0-2), u8 escort_slot (0xFF = -1), u32 focus.
-The ORDER header is 9 bytes: a 32-id ORDER carries at most 14 points (249 B) and a 32-id ESCORT is 143 B (04's `8 +` omits
-`point_count`; the A-60 / A-85 figures 15 and 142 assume 8: contract question with the Architect). BUILD 7 B (rotation 0-3),
+The ORDER header is 9 bytes: a 32-id ORDER carries at most 14 points (249 B) and a 32-id ESCORT is 143 B (R0 B.16 A-91; `test_order_constants_match_sim_and_15_points_refused` pins `ORDER_HEADER_BYTES` to `OrderSpec.WIRE_HEADER_BYTES`). BUILD 7 B (rotation 0-3),
 PRODUCE 3, SET_RALLY 8 (vec3q), TOGGLE_AUTO_REPLENISH u8 enabled (0-1) + 0-8 x (u16 def, u8 count), SET_ADJUTANT 3
 (enabled any byte, profile 0-2), CANCEL_PRODUCE / HANDOVER 1, CANCEL_BUILD / POSSESS / RELEASE / REQUEST_POSSESS /
 SURRENDER 0, DEBUG_SPAWN 76 and DEBUG_SET 9 (sim form verbatim). PILOT_INPUT is never a COMMAND.

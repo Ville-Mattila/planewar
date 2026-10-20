@@ -78,6 +78,19 @@ func test_order_32_ids_boundary() -> void:
 	assert_bool(CommandCodec.order_fits(33, 0, false)).is_false()
 
 
+## A-91 anti-drift: the net and sim ORDER size constants cannot diverge; 15 points at 32 ids (257 B) are refused both ways.
+func test_order_constants_match_sim_and_15_points_refused() -> void:
+	assert_int(CommandCodec.ORDER_HEADER_BYTES).is_equal(OrderSpec.WIRE_HEADER_BYTES)
+	assert_int(CommandCodec.order_wire_size(32, 0, true)).is_equal(OrderSpec.wire_size(32, 0, OrderSpec.Kind.ESCORT))
+	assert_int(CommandCodec.order_wire_size(32, 15, false)).is_equal(257)
+	assert_bool(OrderSpec.fits_wire(32, 15)).is_false()
+	var big: PackedByteArray = PackedByteArray()
+	var _r: int = big.resize(257)
+	big[3] = 32
+	big[8 + 128] = 15
+	assert_object(CommandCodec.decode_payload(0, 0, big)).is_null()
+
+
 func test_order_16_points_with_few_ids_round_trips_17_refused() -> void:
 	var _b: Command = _round_trip(Command.order(1, _ids(1), _patrol(16)))
 	assert_object(CommandCodec.decode_payload(0, 0, _bytes_with_points(17))).is_null()
