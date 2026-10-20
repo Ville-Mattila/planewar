@@ -9,7 +9,7 @@ report, and the best gain set per model. Test code only: it reads `test/sim/ai/a
 python tools/gain_sweep.py --out reports/gain_sweep                  # full sweep, ~15-25 min on a laptop
 python tools/gain_sweep.py --out reports/quick --stages base,confirm --seeds 20   # smoke, seconds
 python tools/gain_sweep.py --summarise godot/test/tuning/reports                  # print a stored run (or one sweep CSV)
-python tools/gain_sweep.py --given godot/test/tuning/recommended_gains.json --stages confirm --dive-leg-m 0   # A-88 replay (AI-39)
+python tools/gain_sweep.py --given godot/test/tuning/ai38_given.json --stages confirm --dive-leg-m 0   # A-88 replay (AI-39; ai38 rows, AI-41)
 "$GODOT_BIN" --headless --path godot res://test/tuning/gain_sweep.tscn -- --out=/abs/dir [options]
 ```
 
@@ -55,7 +55,18 @@ PULL_UP law avoids contact (a closed-loop law could in principle differ; a knife
 tried by hand and saved none). Under `damping_only` 17 of the 200 starts are; under `speed_scaled` none. The A-88
 acceptance counts contacts among the recoverable starts: 0 / 183 after AI-38.
 
-Recommended set (`recommended_gains.json` `damping_only`, used for both models), 200 seeds, `--given`, seed 606:
+Recommended set (`recommended_gains.json` `damping_only`, used for both models: `ai38_given.json`), 200 seeds, seed 606:
+
+```sh
+python tools/gain_sweep.py --out reports/ai38_new --given godot/test/tuning/ai38_given.json --stages confirm --failures 200
+python tools/gain_sweep.py --out reports/ai38_legacy --given godot/test/tuning/ai38_given.json --stages confirm --dive-leg-m 0
+```
+
+**AI-41:** `--given recommended_gains.json` does not reproduce the speed_scaled rows below: it flies speed_scaled on
+that file's own `speed_scaled` set (score 2.525, longest throttle-0 run 246 ticks, median gate-to-dock 24.8 s) instead
+of the shared `damping_only` set (3.165, 179, 30.6 s). The steer code is not the cause: ded8b4e, the AI-38 rebase and
+main give identical rows for the same file, and `test_flight_controller_equivalence.gd` holds `track_velocity` bit
+for bit to the ded8b4e law.
 
 | | old scenario before | old scenario after | new scenario before | new scenario after |
 |---|---|---|---|---|
