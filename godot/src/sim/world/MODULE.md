@@ -72,7 +72,7 @@ func emit(kind: SimEvent.Kind, a: int, b: int, at: Vector3, value: float, team: 
 func forward(hook: SimAiHook) -> void;  func write_pending(buf: StreamPeerBuffer) -> void;  func read_pending(buf: StreamPeerBuffer) -> bool
 class_name WorldDefs extends RefCounted                                      # injected ContentSet + ResolvedDefs per player slot + flat tables
 const NEUTRAL: int;  var content: ContentSet; var rules: RulesDef; var common: FlightCommonDef; var economy: EconomyDef; var base: ResolvedDefs
-var projectile_radius: PackedFloat32Array; var pad_radius_by_def: PackedFloat32Array; var straight: PackedByteArray; var turn_rad_per_s: PackedFloat32Array
+var projectile_radius: PackedFloat32Array; var pad_radius_by_def: PackedFloat32Array; var bomb_mult_by_def: PackedFloat32Array; var fuse_delay_s: PackedFloat32Array; var unsupplied_rate_mult: float; var vision_hz: int; const DEFAULT_VISION_HZ: int; var straight: PackedByteArray; var turn_rad_per_s: PackedFloat32Array
 var ship_table: Array[ShipDef]; var ship_count: int
 func resolve(slot: int, doctrine: StringName) -> bool;  func resolved(owner: int) -> ResolvedDefs;  func ship(owner: int, def_id: int) -> ShipDef
 func entity_kind(def_id: int) -> int;  func hp_max(owner: int, def_id: int) -> float;  func cost(owner: int, def_id: int) -> Vector2i

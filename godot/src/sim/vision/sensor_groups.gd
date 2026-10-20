@@ -1,6 +1,6 @@
 class_name SensorGroups extends RefCounted
 ## One team's sensors for one Vision pass (TA-37), grouped per interest cell, and the candidate scan.
-## `gather`: every live non-wreck entity of team t with sensor or reveal radius > 0 (reach = the larger), grouped by
+## `gather`: every live non-wreck, non-site (F_BUILDING does not sense, A-76) entity of team t with sensor or reveal radius > 0 (reach = the larger), grouped by
 ## its interest cell; per group a centroid c, an extent and, per sensor k, the outer reach reach_k + |p_k - c|; the
 ## sensors of a group are sorted by outer reach, descending. `cover`: per interest cell h, the groups that can reach a
 ## point of h (near-cell gap <= the group's reach, then |c| sin(angle to h's cone) <= its max outer reach). `scan`:
@@ -89,6 +89,7 @@ func _gather_bucket(items: PackedInt32Array, s0: int, count: int, store: EntityS
 		reveal_r: PackedFloat32Array, m0: int) -> int:
 	var def_ids: PackedInt32Array = store.def_id
 	var kinds: PackedByteArray = store.kind
+	var flags: PackedByteArray = store.flags
 	var owners: PackedByteArray = store.owner
 	var pos: PackedVector3Array = store.pos
 	var m: int = m0
@@ -96,7 +97,7 @@ func _gather_bucket(items: PackedInt32Array, s0: int, count: int, store: EntityS
 	for q: int in count:
 		var s: int = items[s0 + q]
 		var d: int = def_ids[s]
-		if kinds[s] == EntityStore.K_WRECK or d < 0 or d >= Vision.DEF_N:
+		if kinds[s] == EntityStore.K_WRECK or (flags[s] & EntityStore.F_BUILDING) != 0 or d < 0 or d >= Vision.DEF_N:
 			continue
 		var row: int = mini(owners[s], Vision.OWNERS - 1) * Vision.DEF_N + d
 		var r: float = maxf(sensor_r[row], reveal_r[row])

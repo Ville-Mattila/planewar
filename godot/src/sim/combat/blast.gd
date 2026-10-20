@@ -4,9 +4,6 @@ class_name Blast extends RefCounted
 ## structures the distance to the footprint rectangle (`edge_distance`). Targets are visited in `Spatial.ids_near`
 ## order, a function of state alone. Friendly entities are skipped unless `friendly_fire` (rule 8). Lane-internal.
 
-## Hangar roof: a roofed pad structure takes this share of bomb damage (02 s4.3 rule 3, s5.1).
-## needs content: no structures.json field carries it yet (`structure_bomb_mult`); the value is 02's.
-const ROOF_BOMB_MULT: float = 0.25
 const _BLAST_MASK: int = Spatial.MASK_STRUCTURE | Spatial.MASK_SHIP | Spatial.MASK_GROUND
 
 var friendly_fire: bool = false
@@ -87,14 +84,15 @@ func hangar_docked(s: int) -> bool:
 	return sd != null and sd.pad_roofed
 
 
-## Bomb damage factor of structure slot `s`: roofed pads ROOF_BOMB_MULT, a Core after Exposure
+## Bomb damage factor of structure slot `s`: a structure its def's `structure_bomb_mult` (the Hangar roof, 02 s4.3 rule 3, A-66), a Core after Exposure
 ## `match_rules.core_bomb_mult_exposure`, else 1.0.
 func bomb_mult(s: int, tick: int) -> float:
 	var sd: StructureDef = _defs.base.structure(_store.def_id[s])
 	if sd == null:
 		return 1.0
-	if sd.pad_roofed:
-		return ROOF_BOMB_MULT
+	var m: float = _defs.bomb_mult_by_def[_store.def_id[s]]
+	if m != 1.0:
+		return m
 	var mr: MatchRulesDef = _defs.content.match_rules
 	if sd.id == &"core" and mr != null and _rules.phase(tick) == MatchRules.Phase.EXPOSURE:
 		return mr.core_bomb_mult_exposure

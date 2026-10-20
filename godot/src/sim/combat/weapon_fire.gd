@@ -3,15 +3,11 @@ class_name WeaponFire extends RefCounted
 ## live ship, ground unit and tower with a weapon reads its input slot: FIRE1 = primary (ship gun, tower or ground
 ## weapon), FIRE2 = ship secondary (bomb or rocket). Rules CB10-CB13 of sim/combat/MODULE.md: due within half a tick
 ## of 0, `1 / rof` or `reload_s` per shot / salvo with the remainder carried, no banked shots; `burst` windows on
-## `cd_secondary` (burst weapons are primary-only); unsupplied towers at 1 / UNSUPPLIED_RATE_MULT; ammo / bombs /
+## `cd_secondary` (burst weapons are primary-only); unsupplied towers at `economy.unsupplied_rate_mult`; ammo / bombs /
 ## rockets spent per projectile; lock held `lock_time_s` in cone and range; spread on the world Rng; flak fused for
-## the closest approach + FLAK_FUSE_DELAY_S (burst tick in `ProjectileStore.target`). Lane-internal. Tower aim,
+## the closest approach + the projectile's `fuse_delay_s` (burst tick in `ProjectileStore.target`). Lane-internal. Tower aim,
 ## envelopes, AGL floor, flip lock break, target priority: GD-09; supply graph and refill: GD-18 (writes `unsupplied`).
 
-## 02 s5.4 "unsupplied towers fire at 50 % rate". Needs content (a `rules.json` field); named until then (ADR-09).
-const UNSUPPLIED_RATE_MULT: float = 0.5
-## 02 s4.2 flak fuse "predicted intercept + 0.3 s". Needs content (`projectiles.json` `fuse_delay_s`); named until then.
-const FLAK_FUSE_DELAY_S: float = 0.3
 const _BLOCKED: int = EntityStore.F_DOCKED | EntityStore.F_BUILDING
 const _STATE: PackedStringArray = ["lock_target", "lock_time", "unsupplied"]
 
@@ -154,7 +150,7 @@ func _weapon(s: int, wi: int, which: int, held: bool) -> void:
 	if _lock[k] > 0.0:
 		target = _seek(s, k, held)
 		trigger = held and target != 0
-	var slow: float = UNSUPPLIED_RATE_MULT if _tower[_did[s]] != 0 and unsupplied[s] != 0 else 1.0
+	var slow: float = _defs.unsupplied_rate_mult if _tower[_did[s]] != 0 and unsupplied[s] != 0 else 1.0
 	if _tower[_did[s]] != 0 and _tm[s] < tower_power.size():
 		slow *= tower_power[_tm[s]]                       # 02 s8.4: x power ratio, offline (0) below tower_offline_ratio
 		if slow <= 0.0:
@@ -231,7 +227,7 @@ func _shoot(s: int, wi: int, k: int, which: int, target: int) -> bool:
 		var t: int = EntityId.slot(target) if target != 0 and _store.alive(target) else -1
 		var rp: Vector3 = _pos[t] - at if t >= 0 else Vector3.ZERO      # no target: the end of the shell's life
 		var rv: Vector3 = _vel[t] - v if t >= 0 else Vector3.ZERO
-		target = _tick + FireTables.fuse_ticks(rp, rv, _defs.content.projectiles[pi], _hz, FLAK_FUSE_DELAY_S)
+		target = _tick + FireTables.fuse_ticks(rp, rv, _defs.content.projectiles[pi], _hz, _defs.fuse_delay_s[pi])
 	var id: int = _proj.spawn(kind, _tick, at, v, _t.p_life[pi], pi, wi, _own[s], _tm[s], _store.id_of(s),
 		target, flags)
 	if id == EntityId.NULL_ID:

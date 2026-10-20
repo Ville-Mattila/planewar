@@ -54,7 +54,7 @@ static func visible(w: SimWorld, team: int, id: int) -> bool:
 	return (w.store().visible_mask[EntityId.slot(id)] & (1 << team)) != 0
 
 
-## Brute force of 03 s3.7 for `team`: per slot 1 if own team or seen by some live non-wreck sensor of `team`.
+## Brute force of 03 s3.7 for `team`: per slot 1 if own team or seen by some live non-wreck, non-site (A-76) sensor of `team`.
 static func brute(w: SimWorld, team: int) -> PackedByteArray:
 	var st: EntityStore = w.store()
 	var v: Vision = w.vision
@@ -69,7 +69,7 @@ static func brute(w: SimWorld, team: int) -> PackedByteArray:
 				continue
 			for le: PackedInt32Array in lists:
 				for e: int in le:
-					if st.team[e] != team or st.kind[e] == EntityStore.K_WRECK:
+					if st.team[e] != team or st.kind[e] == EntityStore.K_WRECK or (st.flags[e] & EntityStore.F_BUILDING) != 0:
 						continue
 					var row: int = mini(st.owner[e], Vision.OWNERS - 1) * Vision.DEF_N + st.def_id[e]
 					if Vision.sees(st.pos[e], st.pos[x], v.sensor_r[row], v.reveal_r[row]):
