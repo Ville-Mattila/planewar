@@ -2215,7 +2215,10 @@
       "02 s6.5",
       " 02 GD-18"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 85,
+    "merged": "2026-10-21",
+    "note": "Process: contract tests not in an earlier commit (10 s3.5), accepted because squash-merged. Node-change ticks ~1-1.9 ms spike at the 02 s5.4 limit (row 0.8 ms p95 holds at realistic rates; A-62); follow-up if S-SIM-1 shows it: rebuild only the changed team. Follow-up nit: drop the public SupplyNet.refill test hook (zero ammo_refill_per_s via test content in CombatTestKit.feed). GD-10 Shield Projector must read supply.is_supplied. E9: any capture/sell code must call mark_dirty."
   },
   {
     "id": "GD-19",
