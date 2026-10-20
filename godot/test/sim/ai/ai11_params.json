@@ -1,0 +1,11 @@
+{
+  "_doc": "AI-11 test parameters. 'separation' = autopilots.json separation block (05 s4.4) plus push_mps ; 'formation' = the 05 s5.6 numbers: class_slots_m (right, forward, up) slot 0-3, k_form 0.5/s, speed cap cruise + 10 %, break at utility > 0.5 within 1,000 m of the escortee, at most half the escorts, rejoin at 1,500 m. Needs content: AI-19 writes both blocks into autopilots.json.",
+  "separation": { "radius_m": 60, "gain": 1.0, "push_mps": 20,
+                  "lookahead_s": 4, "lookahead_miss_m": 80, "lookahead_lag_s": 1.0, "lookahead_eff": 0.7, "lookahead_min_s": 0.3, "lookahead_max_mps": 60, "lookahead_brake": 1.0, "query_radius_m": 200 },
+  "formation": {
+    "class_slots_m": [[-40, -30, 20], [40, -30, 20], [0, -60, 40], [-80, -60, 20]],
+    "k_form": 0.5, "speed_cap_mult": 1.1,
+    "engage_radius_m": 1000, "rejoin_radius_m": 1500, "break_utility": 0.5, "max_break_frac": 0.5,
+    "slot_scan_m": 1500, "min_heading_speed_mps": 5
+  }
+}

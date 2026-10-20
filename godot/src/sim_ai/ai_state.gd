@@ -5,12 +5,13 @@ class_name AiState extends RefCounted
 ## `integ`). `serialize` writes only registered slots (`cls != NO_CLASS`), ascending, so bytes are a function of state.
 
 const NO_CLASS: int = 255
-const FORMAT: int = 3
+const FORMAT: int = 4
 const WAKE_NEVER: int = -1000000
 const LAND_BUSY: int = 1                ## land_flags: the pad is occupied, queued or claimed by another ship
 const LAND_THREAT: int = 2              ## land_flags: an enemy projectile is inbound to the pad
 const LAND_FOREIGN: int = 4             ## land_flags: the pad is no longer this ship's team's
-const RECORD_MIN: int = 149             ## slot u32, 9 u8, 9 i32, 18 f32 (6 Vector3), 6 f32, path count i32
+const RECORD_MIN: int = 155             ## slot u32, 11 u8, 10 i32, 18 f32 (6 Vector3), 6 f32, path count i32
+const NO_SLOT: int = 255                ## form_slot: no formation slot assigned
 ## `ov_flags` bits (AI-08): PULL_UP running, system RETURN already requested, POSSESSED at the last check.
 const OV_PULL_UP: int = 1
 const OV_RTB_SENT: int = 2
@@ -43,6 +44,9 @@ var land_flags: PackedByteArray = PackedByteArray()       ## LAND_BUSY | LAND_TH
 var land_bearing: PackedVector3Array = PackedVector3Array()   ## LandingState.bearing
 var land_mark: PackedVector3Array = PackedVector3Array()      ## LandingState.mark
 var land_ga_dir: PackedVector3Array = PackedVector3Array()    ## LandingState.ga_dir
+var form_slot: PackedByteArray = PackedByteArray()        ## AI-11: escort formation slot index, NO_SLOT when unassigned
+var form_state: PackedByteArray = PackedByteArray()       ## AI-11: EscortPilot.FORM / ENGAGE
+var form_order: PackedInt32Array = PackedInt32Array()      ## AI-11: issue_tick of the ESCORT order the escort state belongs to
 var integ: PackedVector2Array = PackedVector2Array()      ## FlightController.track_velocity integrators
 var ground_h: PackedFloat32Array = PackedFloat32Array()   ## terrain height under the ship at the last think (m)
 var lift: PackedFloat32Array = PackedFloat32Array()       ## TerrainProbe lift of the last think (m/s)
@@ -64,7 +68,7 @@ func ensure_capacity(slots: int) -> void:
 		aux_id.resize(slots), guidance_vel.resize(slots), guidance_point.resize(slots), aim_lead.resize(slots),
 		tti.resize(slots), timer.resize(slots), fire_mask.resize(slots), path_ticket.resize(slots), cls.resize(slots),
 		eid.resize(slots), stagger.resize(slots), last_wake.resize(slots), wake_pending.resize(slots), overlay.resize(slots),
-		ov_flags.resize(slots),
+		ov_flags.resize(slots), form_slot.resize(slots), form_state.resize(slots), form_order.resize(slots),
 		land_phase.resize(slots), land_attempts.resize(slots), land_abort.resize(slots), land_flags.resize(slots),
 		land_bearing.resize(slots), land_mark.resize(slots), land_ga_dir.resize(slots), integ.resize(slots),
 		ground_h.resize(slots), lift.resize(slots), pad_claim.resize(slots)]
@@ -94,6 +98,9 @@ func clear_slot(s: int) -> void:
 	wake_pending[s] = 0
 	overlay[s] = 0
 	ov_flags[s] = 0
+	form_slot[s] = NO_SLOT
+	form_state[s] = 0
+	form_order[s] = 0
 	land_phase[s] = 0
 	land_attempts[s] = 0
 	land_abort[s] = 0
@@ -152,10 +159,12 @@ func _write_slot(b: StreamPeerBuffer, s: int) -> void:
 	b.put_u8(fire_mask[s])
 	b.put_u8(overlay[s])
 	b.put_u8(ov_flags[s])
+	b.put_u8(form_slot[s])
+	b.put_u8(form_state[s])
 	for v: int in [land_phase[s], land_attempts[s], land_abort[s], land_flags[s]]:
 		b.put_u8(v)
 	for v: int in [mode[s], mode_since[s], overlay_since[s], target[s], aux_id[s], path_ticket[s], eid[s], stagger[s],
-			last_wake[s]]:
+			last_wake[s], form_order[s]]:
 		b.put_32(v)
 	for p: Vector3 in [guidance_vel[s], guidance_point[s], aim_lead[s], land_bearing[s], land_mark[s], land_ga_dir[s]]:
 		b.put_float(p.x)
@@ -220,6 +229,8 @@ func _read_slot(b: StreamPeerBuffer) -> bool:
 	fire_mask[s] = b.get_u8()
 	overlay[s] = b.get_u8()
 	ov_flags[s] = b.get_u8()
+	form_slot[s] = b.get_u8()
+	form_state[s] = b.get_u8()
 	land_phase[s] = b.get_u8()
 	land_attempts[s] = b.get_u8()
 	land_abort[s] = b.get_u8()
@@ -233,6 +244,7 @@ func _read_slot(b: StreamPeerBuffer) -> bool:
 	eid[s] = b.get_32()
 	stagger[s] = b.get_32()
 	last_wake[s] = b.get_32()
+	form_order[s] = b.get_32()
 	guidance_vel[s] = _get_v3(b)
 	guidance_point[s] = _get_v3(b)
 	aim_lead[s] = _get_v3(b)
