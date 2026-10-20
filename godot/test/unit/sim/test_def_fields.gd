@@ -11,6 +11,7 @@ var _undo: Array = []     ## [Def, key, old value or null when absent]
 
 
 func after_test() -> void:
+	_undo.reverse()                      # the oldest value goes back last
 	for u: Array in _undo:
 		var d: Def = u[0]
 		if u[2] == null:
