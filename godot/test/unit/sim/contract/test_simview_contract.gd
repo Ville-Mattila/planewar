@@ -5,6 +5,11 @@ extends GdUnitTestSuite
 ## test_a_view_broken_in_only_X_fails_clause_X proves the contract can fail, once per accessor.
 
 
+func test_every_factory_file_loads_as_a_simview_factory() -> void:
+	assert_array(Array(SimViewFactories.unloadable())).override_failure_message(
+			"factory files that fail to load or do not extend SimViewFactory: %s" % ", ".join(SimViewFactories.unloadable())).is_empty()
+
+
 func test_contract_holds_for_every_registered_view() -> void:
 	var factories: Array[SimViewFactory] = SimViewFactories.all()
 	assert_int(factories.size()).is_greater(0)

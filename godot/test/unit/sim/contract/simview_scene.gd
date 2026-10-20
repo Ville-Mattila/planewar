@@ -85,7 +85,6 @@ func _script_state() -> void:
 	world.spatial.rebuild()
 
 
-
 ## A wreck written straight into the store (Combat's death path is GD-36): a spent Dart hull.
 func _make_wreck(p: Vector3) -> int:
 	var st: EntityStore = world.store()
