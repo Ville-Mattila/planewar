@@ -321,11 +321,11 @@ func test_sync_uses_bulk_poses_with_stable_scratch() -> void:
 	pool.sync(v, 0.0)
 	var id: int = v.ids[3]
 	assert_vector(pool.view_for(id).position).is_equal_approx(v.pos(id), Vector3(1.0e-3, 1.0e-3, 1.0e-3))
-	var cap: int = pool._pose_pos.size()
+	var cap: int = pool._stager.pos_lo.size()
 	v.advance()
 	pool.sync(v, 1.0 / pool.tick_hz)
-	assert_int(pool._pose_pos.size()).is_equal(cap)
-	assert_int(pool._pose_rot.size()).is_equal(cap)
+	assert_int(pool._stager.pos_lo.size()).is_equal(cap)
+	assert_int(pool._stager.rot_lo.size()).is_equal(cap)
 
 
 func _mean(a: PackedFloat64Array) -> float:
@@ -341,3 +341,123 @@ func _cv(a: PackedFloat64Array) -> float:
 	for x: float in a:
 		s += (x - m) * (x - m)
 	return sqrt(s / float(a.size())) / m
+
+
+
+const EPS: Vector3 = Vector3(1.0e-3, 1.0e-3, 1.0e-3)
+const STAGGER_N: int = 200   ## head = ids[0..99], tail = ids[100..199]
+
+
+## TA-55: moves every entity by `dy` along +Y.
+func _shift_all(v: StubSimView, dy: float) -> void:
+	for id: int in v.ids:
+		v.positions[id] = (v.positions[id] as Vector3) + Vector3(0.0, dy, 0.0)
+
+
+## A pool with `STAGGER_N` near views, settled on tick 1.
+func _staggered_pool(v: StubSimView) -> EntityViewPool:
+	var pool: EntityViewPool = _pool(_cfg(300))
+	_fill(v, STAGGER_N, NEAR_M)
+	pool.sync(v, 0.0)
+	pool.sync(v, 0.0)
+	return pool
+
+
+## Render time inside tick `tick` at fraction `alpha` (alpha = rt * hz - (tick - 1)).
+func _rt(pool: EntityViewPool, tick: int, alpha: float) -> float:
+	return (float(tick - 1) + alpha) / pool.tick_hz
+
+
+## TA-55: on the tick frame (alpha 0.3) the head half is at lerp(old, new), the tail half still at its OLD pose
+## (alpha 1.0 of the old pair); one frame later the tail is at the new interpolated pose too.
+func test_tick_frame_holds_the_tail_half_at_its_old_pose() -> void:
+	var v: StubSimView = StubSimView.new()
+	var pool: EntityViewPool = _staggered_pool(v)
+	var head: int = v.ids[10]
+	var tail: int = v.ids[STAGGER_N - 10]
+	var head0: Vector3 = v.positions[head]
+	var tail0: Vector3 = v.positions[tail]
+	v.advance()
+	_shift_all(v, 10.0)
+	var rt: float = _rt(pool, v.tick(), 0.3)
+	pool.sync(v, rt)
+	assert_bool(pool._stager.pending).is_true()
+	assert_vector(pool.view_for(head).position).is_equal_approx(head0 + Vector3(0.0, 3.0, 0.0), EPS)
+	assert_vector(pool.view_for(tail).position).is_equal_approx(tail0, EPS)
+	pool.sync(v, rt)
+	assert_bool(pool._stager.pending).is_false()
+	assert_vector(pool.view_for(tail).position).is_equal_approx(tail0 + Vector3(0.0, 3.0, 0.0), EPS)
+	assert_vector(pool.view_for(head).position).is_equal_approx(head0 + Vector3(0.0, 3.0, 0.0), EPS)
+
+
+## TA-55: a new id that lands in the pending half is adopted on the tick frame and drawn at its own pose, and stays there.
+func test_new_id_in_the_pending_half_draws_at_its_pose() -> void:
+	var v: StubSimView = StubSimView.new()
+	var pool: EntityViewPool = _staggered_pool(v)
+	v.advance()
+	var p: Vector3 = Vector3(NEAR_M, 5.0, Sphere.PLANET_RADIUS + 300.0)
+	var fresh: int = v.put(STAGGER_N + 40, p, WorldTestKit.def_id(&"dart"), 1)
+	var rt: float = _rt(pool, v.tick(), 0.4)
+	pool.sync(v, rt)
+	assert_bool(pool._stager.pending).is_true()
+	assert_object(pool.view_for(fresh)).is_not_null()
+	assert_vector(pool.view_for(fresh).position).is_equal_approx(p, EPS)
+	pool.sync(v, rt)
+	assert_vector(pool.view_for(fresh).position).is_equal_approx(p, EPS)
+
+
+## TA-55: ids reordered and one despawned between ticks: per-slot state keeps every remaining view on its interpolated pose.
+func test_reorder_and_despawn_between_ticks_settle_correctly() -> void:
+	var v: StubSimView = StubSimView.new()
+	var pool: EntityViewPool = _staggered_pool(v)
+	var before: Dictionary = {}
+	for id: int in v.ids:
+		before[id] = v.positions[id]
+	var gone: int = v.ids[STAGGER_N - 5]
+	var kept: PackedInt32Array = PackedInt32Array()
+	for i: int in range(STAGGER_N - 1, -1, -1):
+		if v.ids[i] != gone:
+			var _a: bool = kept.push_back(v.ids[i])
+	v.ids = kept
+	var _e: bool = v.positions.erase(gone)
+	v.advance()
+	_shift_all(v, 10.0)
+	var rt: float = _rt(pool, v.tick(), 0.5)
+	pool.sync(v, rt)
+	pool.sync(v, rt)
+	assert_int(pool.last_views).is_equal(STAGGER_N - 1)
+	for id: int in v.ids:
+		assert_vector(pool.view_for(id).position).is_equal_approx((before[id] as Vector3) + Vector3(0.0, 5.0, 0.0), EPS)
+
+
+## TA-55: no per-frame allocation: every scratch array keeps its size over many staggered ticks.
+func test_staggered_read_keeps_scratch_capacity_steady() -> void:
+	var v: StubSimView = StubSimView.new()
+	var pool: EntityViewPool = _staggered_pool(v)
+	var st: PoseStager = pool._stager
+	var sizes: Array[int] = [st.pos_lo.size(), st.rot_lo.size(), st.pos_hi.size(), st.rot_hi.size(), st.ids_lo.size(), st.ids_hi.size(), pool._d2.size(), pool._mode.size()]
+	for k: int in 40:
+		v.advance()
+		var rt: float = _rt(pool, v.tick(), 0.5)
+		pool.sync(v, rt)
+		pool.sync(v, rt)
+		pool.sync(v, rt)
+	assert_object(pool._stager).is_same(st)
+	assert_array([st.pos_lo.size(), st.rot_lo.size(), st.pos_hi.size(), st.rot_hi.size(), st.ids_lo.size(), st.ids_hi.size(), pool._d2.size(), pool._mode.size()]).is_equal(sizes)
+
+
+## TA-55: a tick that arrives before the tail ran (frame rate below the tick rate) reads everything at once and settles.
+func test_tick_before_tail_reads_all_at_once() -> void:
+	var v: StubSimView = StubSimView.new()
+	var pool: EntityViewPool = _staggered_pool(v)
+	v.advance()
+	_shift_all(v, 10.0)
+	pool.sync(v, _rt(pool, v.tick(), 0.0))
+	assert_bool(pool._stager.pending).is_true()
+	v.advance()
+	_shift_all(v, 10.0)
+	pool.sync(v, _rt(pool, v.tick(), 0.0))
+	assert_bool(pool._stager.pending).is_false()
+	pool.sync(v, _rt(pool, v.tick(), 1.0))
+	for id: int in v.ids:
+		assert_vector(pool.view_for(id).position).is_equal_approx(v.positions[id], EPS)
