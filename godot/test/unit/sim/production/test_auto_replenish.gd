@@ -126,7 +126,7 @@ func test_toggle_validation() -> void:
 	var yard: int = WorldTestKit.spawn(w, &"shipyard", 0, 0, WorldTestKit.at(0.0, 400.0))
 	var core: int = WorldTestKit.spawn(w, &"core", 0, 0, WorldTestKit.at(0.0, 900.0))
 	var ok: PackedInt32Array = _roster(&"dart", 2)
-	assert_int(K.code(w, Command.toggle_auto_replenish(2, yard, true, ok))).is_equal(C.REJECTED_NOT_OWNER)
+	assert_int(K.code(w, Command.toggle_auto_replenish(1, yard, true, ok))).is_equal(C.REJECTED_NOT_OWNER)   # foreign team
 	assert_int(K.code(w, Command.toggle_auto_replenish(0, core, true, ok))).is_equal(C.REJECTED_MALFORMED)
 	assert_int(K.code(w, Command.toggle_auto_replenish(0, yard, true, PackedInt32Array([WorldTestKit.def_id(&"shipyard"), 1])))).is_equal(C.REJECTED_MALFORMED)
 	var nine: PackedInt32Array = PackedInt32Array()
@@ -140,6 +140,17 @@ func test_toggle_validation() -> void:
 	flag.payload[0] = 2
 	assert_int(K.code(w, flag)).is_equal(C.REJECTED_MALFORMED)
 	assert_int(K.code(w, Command.toggle_auto_replenish(0, yard, true, ok))).is_equal(C.ACCEPTED)
+
+
+func test_a_teammate_may_toggle_and_the_roster_is_their_own() -> void:
+	var w: SimWorld = WorldTestKit.world()                                    # players 0 and 2 share team 0 (A-81: team-shared)
+	var yard: int = WorldTestKit.spawn(w, &"shipyard", 0, 0, WorldTestKit.at(0.0, 400.0))
+	var dart: int = K.def(&"dart")
+	assert_int(K.code(w, Command.toggle_auto_replenish(0, yard, true, _roster(&"dart", 1)))).is_equal(C.ACCEPTED)
+	assert_int(K.code(w, Command.toggle_auto_replenish(2, yard, true, _roster(&"dart", 4)))).is_equal(C.ACCEPTED)
+	var _e: Array[SimEvent] = K.run(w, 1)
+	assert_int(w.view().auto_replenish_target(2, dart)).is_equal(4)
+	assert_int(w.view().auto_replenish_target(0, dart)).is_equal(1)           # the teammate's roster did not touch the owner's
 
 
 func test_targets_survive_serialization() -> void:

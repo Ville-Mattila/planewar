@@ -10,7 +10,6 @@ class_name Production extends RefCounted
 
 const NO_ITEM: int = -1
 const CAP_UNITS: int = 0       ## CAP_REACHED `b` (04 s3.6 cap kind: 0 units, 1 structures, 2 projectiles)
-const PARK_CLEARANCE_M: float = 0.5   ## gap between the parked ship and the factory's bounding sphere
 const _FLAG_CAP: int = 1       ## CAP_REACHED already reported for this block
 const _FLAG_WAIT: int = 2      ## "waiting" alert already raised for this wait
 const _STATE: PackedStringArray = ["q_def", "q_player", "q_len", "started", "paid_ore", "paid_ice", "_flags", "_total"]
@@ -63,7 +62,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	paid_ice.fill(0)
 	_flags.fill(0)
 	_units.fill(0)
-	launch = LaunchBay.new(store, defs, events, applier, rules.tick_hz)
+	launch = LaunchBay.new(store, defs, events, applier)
 	replenish = AutoReplenish.new(store, players, defs, rules, self, economy)
 
 
@@ -227,17 +226,16 @@ func _finish(s: int, player: int, unit: int, t: int) -> void:
 		_block(s, player)
 		return
 	var ship: bool = _defs.entity_kind(unit) == EntityStore.K_SHIP
-	# A ship is parked on top of the Shipyard, just outside its bounding sphere (no ram on launch); a ground unit rolls out
-	# at the front.
+	# A ship spawns DOCKED on the launch pad (the Shipyard's `pos`, normal `up`); a ground unit rolls out at the front.
 	var at: Vector3 = _store.pos[s] + _store.fwd[s] * _store.radius[s]
 	if ship:
-		at = _store.pos[s] + _store.up[s] * (_store.radius[s] + _defs.radius_of(unit) + PARK_CLEARANCE_M)
+		at = _store.pos[s] + _store.up[s] * _defs.radius_of(unit)
 	var u: int = _applier.spawn(unit, player, _players.team[player], at, Vector3.ZERO, _store.fwd[s], t)
 	if u < 0:
 		_block(s, player)
 		return
 	if ship:
-		launch.dock(u, s, t)
+		launch.dock(u, s)
 	else:
 		launch.send_ground(u, s, player, t)
 	_units[player] += 1

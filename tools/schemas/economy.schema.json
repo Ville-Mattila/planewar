@@ -105,15 +105,11 @@
       "minimum": 1,
       "maximum": 20
     },
-    "launch_delay_s": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 30
-    },
     "auto_replenish_period_s": {
       "type": "number",
-      "minimum": 0.1,
-      "maximum": 60
+      "exclusiveMinimum": 0,
+      "maximum": 10,
+      "$comment": "02 s6.4 auto-replenish scan period; 1 Hz anchor (A-83), GD-34 may retune"
     },
     "construction_slots_base": {
       "type": "integer",
@@ -227,7 +223,6 @@
     "pipe_radius_m",
     "production_min_speed",
     "queue_max",
-    "launch_delay_s",
     "auto_replenish_period_s",
     "refinery_docks",
     "repair_ore_per_hp",

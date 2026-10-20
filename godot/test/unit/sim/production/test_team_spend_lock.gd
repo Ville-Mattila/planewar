@@ -49,7 +49,11 @@ func test_a_team_member_cannot_spend_past_800_ore_before_two_minutes() -> void:
 func test_a_second_teammate_has_their_own_800() -> void:
 	var w: SimWorld = _team_world()
 	var yard: int = w.store().id_of(K.find(w, &"shipyard"))
+	var hz: int = WorldTestKit.content().rules.tick_hz
 	var lancer: int = K.def(&"lancer")
+	var cost: int = WorldTestKit.content().ships[lancer - DefRanges.SHIP_BASE].cost_ore
 	assert_int(K.code(w, Command.produce(0, yard, lancer, 2))).is_equal(C.ACCEPTED)
 	assert_int(K.code(w, Command.produce(1, yard, lancer, 2))).is_equal(C.ACCEPTED)           # player 1's 800 is untouched
-	assert_int(w.economy().build.spent_ore[1]).is_equal(0)
+	var _ev: Array[SimEvent] = K.run(w, 100 * hz)                      # both players' items run one after the other
+	assert_int(w.economy().build.spent_ore[0]).is_equal(2 * cost)
+	assert_int(w.economy().build.spent_ore[1]).is_equal(2 * cost)      # 600 <= 800: player 0's spending did not touch it

@@ -1,13 +1,14 @@
 class_name AutoReplenish extends RefCounted
 ## Auto-replenish of 02 s6.4 (GD-17, `TOGGLE_AUTO_REPLENISH`): per player and per unit def a target count (default 0).
 ## Every `economy.auto_replenish_period_s` one scan appends one item of `def` to the least-loaded eligible queue of the
-## player's team whenever alive + queued < target. Nothing is appended into a full queue, at the unit cap or into the
-## early share lock (so the replenisher never parks a head that cannot start). Targets are sim state (S4). No RNG.
+## player's team whenever alive + queued < target. Nothing is appended into a full queue or at the unit cap, and the next
+## item is checked against the early share lock's paid ledger only (`Economy.spend_locked`; unpaid queued items are not
+## counted, so a head may still wait on the lock: `try_pay` at its start is what enforces it). Targets are sim state (S4).
+## Serialized sparsely (count, then index + value of each non-zero target). No RNG.
 
 const SPAN: int = DefRanges.STRUCTURE_BASE          ## ship + ground def ids: 0..511
 const PAYLOAD_PAIR: int = 3                         ## u16 def + u8 count
 const PAYLOAD_PAIRS_MAX: int = 8                    ## 04 s2.5 `target_roster` carries up to 8 pairs
-const _STATE: PackedStringArray = ["target", "_any"]
 
 var target: PackedByteArray = PackedByteArray()     ## [player * SPAN + def_id]: wanted alive + queued
 
@@ -79,11 +80,24 @@ func step(t: int) -> void:
 
 
 func write_state(buf: StreamPeerBuffer) -> void:
-	StateIO.put_props(buf, self, _STATE)
+	buf.put_32(_any)
+	for i: int in target.size():
+		if target[i] != 0:
+			buf.put_16(i)
+			buf.put_u8(target[i])
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
-	return StateIO.get_props(buf, self, _STATE) and target.size() == PlayerTable.SLOTS * SPAN and _any >= 0
+	target.fill(0)
+	_any = buf.get_32()
+	if _any < 0 or _any > target.size():
+		return false
+	for _k: int in _any:
+		var i: int = buf.get_16()
+		if i < 0 or i >= target.size():
+			return false
+		target[i] = buf.get_u8()
+	return true
 
 
 func _pairs(payload: PackedByteArray) -> int:
@@ -130,6 +144,6 @@ func _least_loaded(p: int, def_id: int) -> int:
 		if _store.team[s] != team or (_store.flags[s] & EntityStore.F_BUILDING) != 0:
 			continue
 		var n: int = _prod.length(s)
-		if n < _prod.queue_max() and _prod.can_make(_store.def_id[s], def_id) and (best < 0 or n < _prod.length(best)):
+		if n < _prod.queue_max() and _prod.can_make(_store.def_id[s], def_id) 				and (best < 0 or n < _prod.length(best) or (n == _prod.length(best) and s < best)):
 			best = s
 	return best
