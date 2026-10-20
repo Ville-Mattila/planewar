@@ -1157,7 +1157,10 @@
       "02 s6.3",
       " 02 GD-17"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 67,
+    "merged": "2026-10-20",
+    "note": "A-81..A-83, A-87 applied: team-shared rally/replenish, DOCKED spawn + normal LAUNCHED, own-team launch_pad never rammed, link service-state only, FORMAT 10, auto_replenish_period_s 1 (owner default). Forced-thrust climb measured 1.03 s (< 2-4 s band) until AI-10; PM-01 reads it. needs net: SET_RALLY (3xf64) and TOGGLE_AUTO_REPLENISH (u8 + up to 8 x (u16 def, u8 count)) payload codecs (NET-04). Nits: launch_pad read from raw def (not StructureDef), towers.json not read."
   },
   {
     "id": "NET-01",
