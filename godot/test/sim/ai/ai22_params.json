@@ -1,0 +1,21 @@
+{
+  "_doc": "AI-22 test fixture (needs content: bot_profiles.json does not exist yet; the R0 B.1 field names are used so the entries move verbatim). perception: the 05 s7.8 Information rows per tier (vision own/team, ghost_memory_s 10/30/60/90) and reaction_delay_s 6/2/0.5/0 mirroring bot_promises.json reaction_s (R0 C2-13; test_perception.gd asserts the mirror); 'team' is the AI driver's per-team intel behind the brains' sampler (05 s6: team vision, no delay, Brutal's memory). threat: the 05 s7.4 numbers (ghost half-life 60 s, cell margin 590 m = half a cell, fighters at 50 % of their DPS within 1,500 m, route sampled every 500 m), the band AGLs of 05 s6.3 R1 (Deck 60, Low 250, High 600) at which a tower envelope covers a band, the floor of the hottest-cell ratio's defence (1 DPS), and the class lists 05 s7.4 names: fighters (air channels) and ground attackers (GROUND: Lancers, Crawlers; towers by target_kinds).",
+  "perception": {
+    "team": { "vision": "team", "ghost_memory_s": 90, "reaction_delay_s": 0 },
+    "easy": { "vision": "own", "ghost_memory_s": 10, "reaction_delay_s": 6 },
+    "normal": { "vision": "team", "ghost_memory_s": 30, "reaction_delay_s": 2 },
+    "hard": { "vision": "team", "ghost_memory_s": 60, "reaction_delay_s": 0.5 },
+    "brutal": { "vision": "team", "ghost_memory_s": 90, "reaction_delay_s": 0 }
+  },
+  "threat": {
+    "ghost_half_life_s": 60,
+    "cell_margin_m": 590,
+    "fighter_share": 0.5,
+    "fighter_radius_m": 1500,
+    "route_sample_m": 500,
+    "band_agl_m": [60, 250, 600],
+    "defence_floor_dps": 1.0,
+    "fighters": ["dart", "lancer"],
+    "ground_attackers": ["lancer", "siege_crawler"]
+  }
+}

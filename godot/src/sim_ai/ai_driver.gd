@@ -12,7 +12,7 @@ class_name AiDriver extends SimAiHook
 const MAX_CLASSES: int = 16
 const WAKE_MIN_GAP: int = 5
 const BOT_STAGGER: int = 4              ## 05 s7: bot k thinks when (tick + 4k) % P == 0
-const FORMAT: int = 1
+const FORMAT: int = 2                   ## AI-22: + the TeamIntel section (FORMAT 1 bytes are refused)
 
 var state: AiState = AiState.new()
 
@@ -41,6 +41,7 @@ var _terrain: Terrain = Terrain.new()   ## the flat datum until the session pass
 var _ov_ids: PackedInt32Array = PackedInt32Array()
 var _probe: ProbeResult = ProbeResult.new()
 var _ov_in: PilotInput = PilotInput.new()
+var _intel: TeamIntel = null            ## AI-22: per-team perception + threat map (null: none, no cost)
 
 
 func _init(rng: Rng = null, think_period_ticks: int = 10, cut_period_ticks: int = 15,
@@ -94,6 +95,22 @@ func set_overlay_params(cls: int, p: OverlayParams) -> void:
 ## data, not a vision cheat). Default: the flat datum.
 func set_terrain(t: Terrain) -> void:
 	_terrain = t
+
+
+## AI-22: the per-team intel (05 s6 sampler; s7.4 map) the driver refreshes at 1 Hz per tracked team, before the
+## brains of the tick. Session configuration (tables and profile); the tracked teams and their state are S4 bytes.
+func set_intel(intel: TeamIntel) -> void:
+	_intel = intel
+
+
+## Team `team`'s threat map (null without intel or when the team is not tracked). Read only.
+func threat_map(team: int) -> ThreatMap:
+	return _intel.threat_map(team) if _intel != null else null
+
+
+## Team `team`'s perception (null without intel or when the team is not tracked). Read only.
+func perception(team: int) -> Perception:
+	return _intel.perception(team) if _intel != null else null
 
 
 ## Registers entity `id` in class batch `cls`; false if invalid or already registered (slot taken).
@@ -187,6 +204,8 @@ func on_tick(tick: int, view: SimView, sink: CommandSinkBase) -> void:
 	var t0: int = Time.get_ticks_usec()
 	_sink.bind(sink)
 	_sink.reset_counters()
+	if _intel != null:
+		_intel.step(tick, view)
 	var p: int = think_period()
 	for c: int in MAX_CLASSES:
 		var brain: AiBrain = _brains[c]
@@ -289,7 +308,8 @@ func reset_stats() -> void:
 	_stats_overlay_ticks = 0
 
 
-## S4 bytes: FORMAT, flags, reg counter, bots, rng state, then the AiState blob (length-prefixed).
+## S4 bytes: FORMAT, flags, reg counter, bots, rng state, the AiState blob, then the TeamIntel blob (both
+## length-prefixed; the intel blob is empty without intel).
 func serialize() -> PackedByteArray:
 	var b: StreamPeerBuffer = StreamPeerBuffer.new()
 	b.put_u8(FORMAT)
@@ -303,6 +323,9 @@ func serialize() -> PackedByteArray:
 	var st: PackedByteArray = state.serialize()
 	b.put_u32(st.size())
 	var _e2: Error = b.put_data(st)
+	var ib: PackedByteArray = _intel.serialize() if _intel != null else PackedByteArray()
+	b.put_u32(ib.size())
+	var _e3: Error = b.put_data(ib)
 	return b.data_array
 
 
@@ -311,6 +334,8 @@ func deserialize(bytes: PackedByteArray) -> void:
 	for b: AiBatch in _batches:
 		b.ids.clear()
 		b.due.clear()
+	if _intel != null:
+		var _none: bool = _intel.deserialize(PackedByteArray())
 	_bot_slot.clear()
 	_bot_tier.clear()
 	var _cleared: bool = state.deserialize(PackedByteArray())
@@ -340,6 +365,17 @@ func deserialize(bytes: PackedByteArray) -> void:
 	pos = b.get_position()
 	if not state.deserialize(bytes.slice(pos, pos + len_st)):
 		return
+	if _intel != null and not _intel.deserialize(_tail(bytes, pos + len_st)):
+		var _reset: bool = state.deserialize(PackedByteArray())   # a bad intel section refuses the whole blob
+		return
 	for s: int in state.capacity:
 		if state.cls[s] != AiState.NO_CLASS:
 			var _ok: bool = _batches[state.cls[s]].add(state.eid[s])
+
+
+# The length-prefixed section at `at` (empty when absent or truncated).
+static func _tail(bytes: PackedByteArray, at: int) -> PackedByteArray:
+	if at + 4 > bytes.size():
+		return PackedByteArray()
+	var n: int = bytes.decode_u32(at)
+	return bytes.slice(at + 4, at + 4 + n) if at + 4 + n <= bytes.size() else PackedByteArray()
