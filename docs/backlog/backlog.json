@@ -7453,7 +7453,9 @@
       "R0-amendments-10 A-95",
       "godot/src/sim/vision/MODULE.md V10"
     ],
-    "status": "todo",
-    "note": "Follow-up from TA-63 #96."
+    "status": "done",
+    "note": "Follow-up from TA-63 #96. Same set and order (ascending EntityId); picture build 542 -> 333 us per team-epoch, 722.7 -> 444 us per tick at 8 teams (cap 450).",
+    "pr": 101,
+    "merged": "2026-10-21"
   }
 ]
