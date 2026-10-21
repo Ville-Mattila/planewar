@@ -3611,7 +3611,7 @@
   },
   {
     "id": "ART-12",
-    "title": "Wrecks, projectile meshes, 14 props",
+    "title": "Wrecks, projectile meshes, 13 props",
     "lane": "assets",
     "tier": "Haiku",
     "size_days": 1.5,
@@ -7267,8 +7267,10 @@
       "07 s4.7",
       "07 s5.1"
     ],
-    "status": "todo",
-    "note": "From the ART-05 #82 Opus review 2026-10-21. Values to adopt: those in asset_budgets.json unless the owner rules otherwise."
+    "status": "done",
+    "note": "From the ART-05 #82 Opus review 2026-10-21. Values to adopt: those in asset_budgets.json unless the owner rules otherwise. Left: docs/09 ART-13 row, docs/03 and docs/01 still say _Far generically.",
+    "pr": 94,
+    "merged": "2026-10-21"
   },
   {
     "id": "TA-64",
