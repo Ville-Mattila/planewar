@@ -119,6 +119,6 @@ the S4 bytes through `AiDriver.serialize` (FORMAT 2). `ThreatParams` is session 
 ## Open items
 
 - `needs sim:` `SimView.visible_ids` allocates and walks every live slot (~135 us of a ~270 us refresh at S-SIM-1);
-  TA-63's `visible_enemy_ships(team, out)` covers ships only: an O(visible) all-kinds team list (or a `visible_into`)
-  would remove it. Team / owner are cached per id (they change only at spawn today); a capture needs a re-read.
+  TA-63's `visible_enemy_ships(team, out)` (merged, ascending ids) covers enemy ships only, while a refresh also needs
+  structures, ground units and the own assets: an O(visible) all-kinds team list (or a `visible_into`) would remove it. Team / owner are cached per id (they change only at spawn today); a capture needs a re-read.
 - `needs content:` `bot_profiles.json` (the `perception` entries of `ai22_params.json`) and the `threat` block.
