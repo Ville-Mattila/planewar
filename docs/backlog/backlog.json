@@ -7255,7 +7255,7 @@
     "note": "From the ART-05 #82 Opus review 2026-10-21. Values to adopt: those in asset_budgets.json unless the owner rules otherwise."
   },
   {
-    "id": "TA-63",
+    "id": "TA-64",
     "title": "ci: same-job A/B perf job hits its 15-minute timeout-minutes after all steps succeed (seen on AI-06 #64 and the AI-13 ruling #88); give it headroom and report its step durations",
     "lane": "tools",
     "tier": "Sonnet",
