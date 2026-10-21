@@ -166,7 +166,7 @@ class_name SnapshotDecoder extends RefCounted         # net/snapshot_decoder.gd:
 enum Status { OK, MALFORMED, STALE, NO_BASELINE, MISSING_ROSTER }
 const MAX_RECORDS: int;  var store: BaselineStore;  var roster: Roster;  var gravity_def: PackedByteArray;  var gravity: float;  var dt: float
 var pilot: PilotBlock;  var pilot_tick: int;  var missing: PackedInt32Array;  var malformed: int;  var records_applied: int
-func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) -> void;  func current() -> BaselineFrame;  func decode(bytes: PackedByteArray) -> int;  func forget_tick(tick: int) -> void;  func reset() -> void   # NET-25 replay chunks / seek
+func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) -> void;  func current() -> BaselineFrame;  func decode(bytes: PackedByteArray) -> int;  func forget_tick(tick: int) -> void;  func reset() -> void; func accept_keyframe(tick: int) -> BaselineFrame   # NET-25 replay chunks / seek; NET-07 keyframe reset (net/keyframe/MODULE.md)
 
 class_name BaselineStore extends RefCounted           # net/baseline_store.gd: ring of DEPTH (32) frames per client
 const DEPTH: int;  var team: int;  var acked_tick: int;  var newest_tick: int;  var complete_tick: int;  func _init(team_id: int = 0) -> void
@@ -227,7 +227,7 @@ func take(tick: int) -> PilotInput                      # stored input, else dec
 Link semantics (04 s15.1; deterministic: each pipe draws from `Rng.new(seed_value).fork("s2c:<conn>" | "c2s:<conn>")`): CH_CONTROL / CH_EVENTS (reliable ordered) are delayed, never lost, in send order, held to the end of a burst or stall window. CH_INPUT may be lost, duplicated, reordered. CH_SNAPSHOT (unreliable sequenced) additionally drops anything older than the newest delivered. A stall holds both directions and releases the backlog at its end.
 Bandwidth limit: serialisation delay, then unreliable packets queued > 250 ms are dropped. Presets (one-way): LAN 0/0/0; GOOD 40 ms +-5, 0.5 %; TARGET 100 ms +-15, 3 %, 1 % reorder; BAD 250 ms +-40, 5 %, 2 % reorder, 0.5 % dup; MOBILE_SWITCH = TARGET + loss window ticks 900-1019; TAB_STALL = GOOD + 45 s stall at tick 1,200. The 04 name `seed` is `seed_value` (`seed` is a GDScript global); presets are `FaultModel.preset()`, not `test/net/presets.gd`.
 
-COMMAND payload codecs (`CommandCodec`, NET-04): see `commands/MODULE.md`. Planned (04 s19): `KEYFRAME` + rolling refresh (NET-07), `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10, done: `net/events/MODULE.md`), `Interest` (NET-08, done: `net/interest/MODULE.md`), `ReplayWriter`/`ReplayReader` (NET-25, done: `net/replay/MODULE.md`).
+COMMAND payload codecs (`CommandCodec`, NET-04): see `commands/MODULE.md`. KEYFRAME + `KeyframePolicy` + `RollingRefresh` (NET-07): see `keyframe/MODULE.md`. Planned (04 s19): `ENetTransport` (NET-12), `WebSocketTransport` (NET-13), `ClientSession`, `NetSimView` (NET-17), `Prediction` (NET-18), `EventRouter` (NET-10, done: `net/events/MODULE.md`), `Interest` (NET-08, done: `net/interest/MODULE.md`), `ReplayWriter`/`ReplayReader` (NET-25, done: `net/replay/MODULE.md`).
 
 ## Wire layout
 
