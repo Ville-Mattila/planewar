@@ -184,3 +184,73 @@ func test_no_dictionary_in_spatial() -> void:
 	for line: String in src.split("\n"):
 		var code: String = line.split("#")[0]
 		assert_bool(code.contains("Dictionary") or code.contains("{")).override_failure_message(line).is_false()
+
+
+func _state(sp: Spatial) -> PackedByteArray:
+	var b: StreamPeerBuffer = StreamPeerBuffer.new()
+	sp.write_state(b)
+	return b.data_array
+
+
+func _read(sp: Spatial, bytes: PackedByteArray) -> bool:
+	var b: StreamPeerBuffer = StreamPeerBuffer.new()
+	b.data_array = bytes
+	return sp.read_state(b)
+
+
+## TA-65 (S4): write_state / read_state carry the index exactly as step 7 left it, including items moved, spawned
+## or freed since (a rebuild would not): a fresh Spatial answers every query like the original, and its next
+## rebuild resets the restored cells.
+func test_state_round_trip_keeps_the_last_rebuild_not_the_current_store() -> void:
+	var kit: CollisionTestKit = CollisionTestKit.new()
+	_populate(kit, Rng.new(65), 120, 300)
+	kit.spatial.rebuild()
+	var late: Vector3 = Vector3(0.3, 1, 0.2).normalized() * (R + 300.0)
+	var _p: int = kit.projectile("slug_light", late, Vector3.ZERO, 1)   # spawned after the rebuild (step 9)
+	var _f: bool = kit.proj.free_slot(kit.proj.live[0], 1)            # freed after the rebuild
+	var bytes: PackedByteArray = _state(kit.spatial)
+	var sp: Spatial = Spatial.new(kit.store, kit.proj)
+	assert_bool(_read(sp, bytes)).is_true()
+	assert_bool(_state(sp) == bytes).is_true()
+	assert_int(sp.item_count).is_equal(kit.spatial.item_count)
+	assert_float(sp.max_entity_radius).is_equal(kit.spatial.max_entity_radius)
+	assert_int(sp.ids_near(late, 50.0, Spatial.MASK_ALL).size()).is_equal(0)   # not in the saved index
+	var rng: Rng = Rng.new(66)
+	for _k: int in 40:
+		var p: Vector3 = _dir(rng, 2) * _radius(rng)
+		var r: float = rng.range_f(10.0, 900.0)
+		assert_bool(sp.ids_near(p, r, Spatial.MASK_ALL) == kit.spatial.ids_near(p, r, Spatial.MASK_ALL)).is_true()
+		var c: int = Spatial.cell_of(p)
+		assert_bool(sp.ids_in_hash_cell(c) == kit.spatial.ids_in_hash_cell(c)).is_true()
+	sp.rebuild()
+	kit.spatial.rebuild()
+	assert_bool(_state(sp) == _state(kit.spatial)).is_true()
+	assert_int(sp.ids_near(late, 50.0, Spatial.MASK_ALL).size()).is_equal(1)
+
+
+## read_state refuses wrong types, out-of-range or repeated cells, counts that do not sum to the items, and an
+## entity / projectile item in the other part of its cell; the index is untouched on refusal.
+func test_read_state_refuses_malformed_index() -> void:
+	var kit: CollisionTestKit = CollisionTestKit.new()
+	var s: int = kit.entity(EntityStore.K_SHIP, Vector3(1, 0.2, 0.1).normalized() * (R + 100.0), 6.0, 0)
+	var _i: int = kit.projectile("slug_light", Vector3(1, 0.2, 0.1).normalized() * (R + 110.0), Vector3.ZERO, 1)
+	kit.spatial.rebuild()
+	var good: PackedByteArray = _state(kit.spatial)
+	var c: int = kit.store.hash_cell[s]
+	var cases: Array = [
+		[PackedInt32Array([c]), PackedInt32Array([2]), PackedInt32Array([1]), PackedInt32Array([s]), 6.0],
+		[PackedInt32Array([-1]), PackedInt32Array([2]), PackedInt32Array([1]), PackedInt32Array([s, 4096]), 6.0],
+		[PackedInt32Array([c, c]), PackedInt32Array([1, 1]), PackedInt32Array([1, 0]), PackedInt32Array([s, 4096]), 6.0],
+		[PackedInt32Array([c]), PackedInt32Array([2]), PackedInt32Array([2]), PackedInt32Array([s, 4096]), 6.0],
+		[PackedInt32Array([c]), PackedInt32Array([2]), PackedInt32Array([1]), PackedInt32Array([4096, s]), 6.0],
+		[PackedInt32Array([c]), PackedInt32Array([2]), PackedInt32Array([1]), PackedInt32Array([s, 4096]), -1.0],
+		[PackedInt32Array([c]), PackedInt32Array([2]), PackedInt32Array([1]), PackedInt32Array([s, 4096]), 6],
+	]
+	for v: Array in cases:
+		var b: StreamPeerBuffer = StreamPeerBuffer.new()
+		for x: Variant in v:
+			b.put_var(x)
+		assert_bool(_read(kit.spatial, b.data_array)).is_false()
+		assert_bool(_state(kit.spatial) == good).is_true()
+	assert_bool(_read(kit.spatial, good.slice(0, good.size() - 4))).is_false()
+	assert_bool(_read(kit.spatial, good)).is_true()
