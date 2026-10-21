@@ -616,7 +616,7 @@
       " 03 TA-42"
     ],
     "status": "todo",
-    "acceptance_append": "; nightly perf_tick.gd --full and bench_snapshot canonical rows appended to perf/history.jsonl with the runner id (R0 B.11 A-62)"
+    "acceptance_append": "; nightly perf_tick.gd --full and bench_snapshot canonical rows appended to perf/history.jsonl with the runner id (R0 B.11 A-62); every job on the pinned runner exports PLANEWAR_PINNED_RUNNER=1 (R0 B.17 A-97) so PerfGate asserts there and nowhere else; the first pinned run records the test_escort_perf.gd / test_dart_perf.gd reference-kernel figure in perf/history.jsonl and a follow-up sim_ai task re-anchors REF_ANCHOR_US to it"
   },
   {
     "id": "TA-27",
@@ -2407,8 +2407,8 @@
       " 05 AI-13"
     ],
     "status": "todo",
-    "acceptance_append": "; the terrain lift uses the drop-free clearance (c_k + 0.5 g t_k^2) and is added to the current radial speed, while TTI / PULL_UP keep the ballistic probe; SC-09 and SC-10 asserted under speed_scaled (R0 B.12 A-69); PULL_UP at act also starts when the visible clearance (AGL or the probe's worst drop-free clearance) is below FlightController.pull_up_loss, ORed with the 1.0 s re-sample, in Overlays.run_safety and the Dart brain (R0 B.15 A-89); on cradle in SC-09, SC-10 and SC-11 the Dart never enters a state SweepScenarios.dive_recoverable classifies as unrecoverable (A-88 (3)); OverlayParams.for_ship / FlightGains.from_dict built with ContentSet's FlightCommonDef (A-90); test_dart_perf.gd asserts the 05 s10 act row as a fleet mean at the engaged mix f = 0.25 ((1 - f) x act_patrol + f x act_engage < 6 us x CI_FACTOR, host-scaled), act_engage in fire range < 18 us (3 x row, the A-96 interim ceiling), engaged think < 25 us x CI_FACTOR, and the counter pull_up_loss calls per act tick while sinking == 1 / pull_up_check_ticks; the constants cite R0 B.17 A-96 and are not raised by the author (R0 B.17 A-96); the S4 test saves before the first slug and names TA-65; PULL_UP ends only when AiState.tti >= safety_clear_tti_s, the mode has held guidance.pull_up_min_hold_s and ProbeResult.climb_need_mps <= 0, then resumes prev_mode (R0 B.17 A-92; test_dart_brain.gd asserts a think with TTI >= 4 s and climb_need > 0 stays in PULL_UP and the first think with climb_need <= 0 leaves it); Overlays.run_safety exit unchanged (05 s2.4); the longest PULL_UP hold in SC-09 / SC-10 / SC-11 is reported in the PR body; ENGAGE holds intercept.standoff_m (target speed - engage_speed_margin_mps inside it) and breaks off to EXTEND below intercept.break_ttc_s to collision (A-93; SC-28 reports the ram count beside the kill count, rams <= 1 of 10); AiTag (godot/src/sim_ai/ai_tag.gd, class_name AiTag, enum Tag with the 34 R0 B.3 ordinals) and the sim_ai/MODULE.md 'Enumerations' block exist and every set_ai_tag call passes an AiTag.Tag value (A-94; DartBrain.Mode either replaced by AiTag.Tag or asserted member-equal to it); the ProbeResult.climb_need_mps contract test and MODULE.md ST3 line precede the code commit and the PR body says 'Contract impact: append (sim/steer ProbeResult.climb_need_mps)' (A-95); rebased on main with AI-41's test_flight_controller_equivalence.gd entry kept in sim/steer/MODULE.md",
-    "note": "A-96: no code change required for the engaged act (pull_up_loss stays exact at act per A-89; the lead stays per tick in fire range); the row is priced as a fleet mean at f = 0.25 and the per-case 18 us is interim until the pinned runner (A-62). A-92 extends A-89's exit (later, never earlier); A-93 ratifies the standoff / break-off and the three fixture blocks as data for AI-19; A-94 makes DartBrain.Mode's ordinals the AiTag.Tag vocabulary (0-15 verbatim, no S4 byte changes); A-95 ratifies climb_need_mps as an Append and refuses the AI-41 test-entry-point drop in the branch's steer MODULE.md (rebase artifact). No perf guard factor is granted (A-62 / A-84); the review's levers come first, then BLOCKED with a component table if still over."
+    "acceptance_append": "; the terrain lift uses the drop-free clearance (c_k + 0.5 g t_k^2) and is added to the current radial speed, while TTI / PULL_UP keep the ballistic probe; SC-09 and SC-10 asserted under speed_scaled (R0 B.12 A-69); PULL_UP at act also starts when the visible clearance (AGL or the probe's worst drop-free clearance) is below FlightController.pull_up_loss, ORed with the 1.0 s re-sample, in Overlays.run_safety and the Dart brain (R0 B.15 A-89); on cradle in SC-09, SC-10 and SC-11 the Dart never enters a state SweepScenarios.dive_recoverable classifies as unrecoverable (A-88 (3)); OverlayParams.for_ship / FlightGains.from_dict built with ContentSet's FlightCommonDef (A-90); test_dart_perf.gd asserts the 05 s10 act row as a fleet mean at the engaged mix f = 0.25 ((1 - f) x act_patrol + f x act_engage < 6 us x CI_FACTOR, host-scaled), act_engage in fire range < 18 us (3 x row, the A-96 interim ceiling), engaged think < 25 us x CI_FACTOR, and the counter pull_up_loss calls per act tick while sinking == 1 / pull_up_check_ticks; the constants cite R0 B.17 A-96 and are not raised by the author (R0 B.17 A-96); the S4 test saves before the first slug and names TA-65; PULL_UP ends only when AiState.tti >= safety_clear_tti_s, the mode has held guidance.pull_up_min_hold_s and ProbeResult.climb_need_mps <= 0, then resumes prev_mode (R0 B.17 A-92; test_dart_brain.gd asserts a think with TTI >= 4 s and climb_need > 0 stays in PULL_UP and the first think with climb_need <= 0 leaves it); Overlays.run_safety exit unchanged (05 s2.4); the longest PULL_UP hold in SC-09 / SC-10 / SC-11 is reported in the PR body; ENGAGE holds intercept.standoff_m (target speed - engage_speed_margin_mps inside it) and breaks off to EXTEND below intercept.break_ttc_s to collision (A-93; SC-28 reports the ram count beside the kill count, rams <= 1 of 10); AiTag (godot/src/sim_ai/ai_tag.gd, class_name AiTag, enum Tag with the 34 R0 B.3 ordinals) and the sim_ai/MODULE.md 'Enumerations' block exist and every set_ai_tag call passes an AiTag.Tag value (A-94; DartBrain.Mode either replaced by AiTag.Tag or asserted member-equal to it); the ProbeResult.climb_need_mps contract test and MODULE.md ST3 line precede the code commit and the PR body says 'Contract impact: append (sim/steer ProbeResult.climb_need_mps)' (A-95); rebased on main with AI-41's test_flight_controller_equivalence.gd entry kept in sim/steer/MODULE.md; every timing bound in test_dart_perf.gd (quiet and engaged think < 25 us x CI_FACTOR, the A-96 act mix < 6 us x CI_FACTOR, act_engage < 18 us, TeamPicture < PICTURE_CAP_US) is asserted only when PLANEWAR_PINNED_RUNNER == '1' and otherwise printed as a PERF_REPORT line (R0 B.17 A-97; inline gate until TEST-03's PerfGate); the counters of A-96 (4) plus visible_to calls per act == 1 are hard on every runner; test_escort_perf.gd's four timing asserts are gated the same way and its separation refresh share is hard-asserted at 0.50 for quiet thinks (A-84); no bound constant changes; the PR perf note records the two hosted runs (39528393599 / 39529083459) as hosted figures for A-62",
+    "note": "A-96: no code change required for the engaged act (pull_up_loss stays exact at act per A-89; the lead stays per tick in fire range); the row is priced as a fleet mean at f = 0.25 and the per-case 18 us is interim until the pinned runner (A-62). A-92 extends A-89's exit (later, never earlier); A-93 ratifies the standoff / break-off and the three fixture blocks as data for AI-19; A-94 makes DartBrain.Mode's ordinals the AiTag.Tag vocabulary (0-15 verbatim, no S4 byte changes); A-95 ratifies climb_need_mps as an Append and refuses the AI-41 test-entry-point drop in the branch's steer MODULE.md (rebase artifact). No perf guard factor is granted (A-62 / A-84); the review's levers come first, then BLOCKED with a component table if still over. A-97: the round-3 red runs are hosted-runner figures, not a regression (the host scale under-corrects: workload ~2x between runners vs kernel 1.6x); the test prints and the counters assert; the A-96 constants are unchanged and become hard on the pinned runner (TA-42)."
   },
   {
     "id": "AI-14",
@@ -7196,7 +7196,7 @@
       "R0 B.14 A-84"
     ],
     "status": "done",
-    "note": "Runner variance (hosts 2.1-2.3x), not a regression. Escort perf test: act back-to-back min batch mean, host scale vs a 1.25 us reference-kernel anchor clamped [1, 1.5]; rows unchanged. Re-anchor when TA-42 pinned runner exists; \"3 consecutive green main runs\" checked post-merge.",
+    "note": "Runner variance (hosts 2.1-2.3x), not a regression. Escort perf test: act back-to-back min batch mean, host scale vs a 1.25 us reference-kernel anchor clamped [1, 1.5]; rows unchanged. Re-anchor when TA-42 pinned runner exists; \"3 consecutive green main runs\" checked post-merge. A-97 supersedes the host-scale clamp as a gate input; the kernel stays as a diagnostic print and as the pinned-runner divisor until TA-42 re-anchors it.",
     "pr": 78,
     "merged": "2026-10-21"
   },
@@ -7335,5 +7335,46 @@
       "06 s7.1"
     ],
     "status": "todo"
+  },
+  {
+    "id": "TEST-03",
+    "title": "test+tools+ci: PerfGate (godot/test/perf_gate.gd) report-only timing gate keyed on PLANEWAR_PINNED_RUNNER, tools/check_perf_gates.py lint in ci.yml, sweep of every wall-clock bound in godot/test/unit|sim|net (R0 B.17 A-97)",
+    "lane": "test+tools+ci",
+    "tier": "Sonnet",
+    "size_days": 0.75,
+    "depends_on": [
+      "TA-03"
+    ],
+    "milestone": "M3",
+    "acceptance": "godot/test/perf_gate.gd (class_name PerfGate): static pinned() -> bool reads OS.get_environment('PLANEWAR_PINNED_RUNNER') == '1'; static check(name: String, us: float, bound_us: float, cite: String, host: float = 1.0) -> bool prints exactly one line 'PERF_REPORT name=<name> us=<raw> bound_us=<bound> host=<host> pinned=<0|1> cite=<cite>' and returns true when not pinned, us < bound_us when pinned; test_perf_gate.gd covers both branches by setting the variable in-process; tools/check_perf_gates.py (< 2 s) fails on a file under godot/test/unit/**, godot/test/sim/** or godot/test/net/** that calls Time.get_ticks_usec() or get_ticks_msec() and neither references PerfGate nor carries the file-level comment '## timing: runaway guards only (R0 B.17 A-97)'; ci.yml tools job runs it; every timing bound in the files named in R0-amendments-11 A-97 (3) is classified: budget bounds (< 10x the recorded figure, or any row x factor) go through PerfGate.check with the row cited and at least one deterministic work counter hard-asserted beside each (test_ballistics.gd: integration steps per plan and per release solve, exact), runaway guards (>= 10x) keep assert_float(...).is_less(...) with a 'runaway guard, measured <figure>' comment and the file marker; no bound constant changes value; test_escort_perf.gd and test_dart_perf.gd migrated from their inline gate to PerfGate if AI-13 merged with one; the full unit suite is green with and without PLANEWAR_PINNED_RUNNER=1 on the dev box (the pinned branch may fail on a hosted runner; it is not run there); check_deps, gen_module_api --check green",
+    "docs": [
+      "R0-amendments-11 A-97",
+      "03 s4.4",
+      "05 s11.1",
+      "10 s5.6"
+    ],
+    "status": "todo",
+    "note": "Lands independently of AI-13; migrates the inline gates of test_dart_perf.gd / test_escort_perf.gd when both are on main."
+  },
+  {
+    "id": "TEST-04",
+    "title": "test+ci: perf_tick.gd --ai scenario (real AiDriver + Dart brain at A/B scale, A-96 engaged mix) and a second same-job A/B step for it in ci.yml (R0 B.17 A-98)",
+    "lane": "test+ci",
+    "tier": "Sonnet",
+    "size_days": 1.0,
+    "depends_on": [
+      "AI-13",
+      "TA-03"
+    ],
+    "milestone": "M3",
+    "acceptance": "perf_tick.gd accepts --ai: PerfTickWorld builds the A/B-scale world with two teams and 48 AI Darts driven by the real AiDriver and DartBrain (no OrbitHook on the ships), one Dart in four spawned inside gun fire_range of an enemy (A-96 mix f = 0.25) and the rest on PATROL, one Vision pass before WARMUP_TICKS; the run prints PERF_FINGERPRINT with scenario=ai and the PERF_TICK line; HARNESS_VERSION 3 -> 4; the default scenario's output is unchanged except the version; ab_perf.py --scenario ai passes the flag to both trees and prints the scenario in its summary; ci.yml ab-perf runs a second 'A/B ai (fails above +25 % p95)' step and a base-vs-base noise print for it, with --rounds and --ticks chosen so the whole job finishes inside its 25-minute timeout (per-round wall time of both scenarios recorded in the PR); a base tree without --ai skips with the existing fingerprint notice; the PR records the ai scenario's base-vs-base noise (10 repeats) and it is < 25 %; the ai_assist PERF_ROW of the ai scenario is printed and cited in the PR perf note beside the PERF_TICK p95",
+    "docs": [
+      "R0-amendments-11 A-98",
+      "03 s4.4",
+      "03 s12.1",
+      "05 s10"
+    ],
+    "status": "todo",
+    "note": "The hosted A/B is the sim_ai regression gate from its merge on; AI-30's test/perf/ai_tick stays the pinned-runner benchmark."
   }
 ]
