@@ -7253,5 +7253,21 @@
     ],
     "status": "todo",
     "note": "From the ART-05 #82 Opus review 2026-10-21. Values to adopt: those in asset_budgets.json unless the owner rules otherwise."
+  },
+  {
+    "id": "TA-63",
+    "title": "ci: same-job A/B perf job hits its 15-minute timeout-minutes after all steps succeed (seen on AI-06 #64 and the AI-13 ruling #88); give it headroom and report its step durations",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [],
+    "milestone": "M2",
+    "acceptance": "ci.yml A/B job timeout raised with a stated basis (measured step durations from the last 10 runs, p95 + margin), or the job made faster without dropping the base-vs-base noise pass; no other job or threshold changed; a CI run shows the job's total duration well below the new limit",
+    "docs": [
+      "03 s12",
+      "TA-42"
+    ],
+    "status": "todo",
+    "note": "Flake: run 39519937508 job 118961018294 failed at 15m04s with every step success."
   }
 ]
