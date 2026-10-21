@@ -2583,7 +2583,10 @@
       "05 s7.1",
       " 05 AI-22"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 99,
+    "merged": "2026-10-21",
+    "note": "Perception + ThreatMap (sim_ai/perception), AiDriver FORMAT 2, team/owner re-read each refresh (capture-safe). SC-43 via AuditDriver with a stand-in bot (AI-23 re-runs with the Commander). Stress slice ~2x the 0.7 ms Commander slice (refresh dominated by visible_ids) -> Architect question before AI-23. Nits: P3 should name I-38 Prize Tow; failed intel section leaves bot slots/RNG as restored; prof_defence dead but public; rings test should pin ranges to weapons; stress assert may flake on the pinned runner (best-of-N)."
   },
   {
     "id": "AI-23",
