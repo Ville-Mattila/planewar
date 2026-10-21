@@ -24,7 +24,7 @@ const EXTRA_STEPS: int = 3
 
 var world: SimWorld
 var a: int = 0              ## player 0, team 0 Dart: the subject of most scalar accessors; possessed by slot 0
-var b: int = 0              ## player 1, team 1 Dart, 250 m from `a`; visible to team 0; team 1 sees `a` and `core`
+var b: int = 0              ## player 1, team 1 Dart, 250 m from `a`; visible to team 0; team 1 sees `a`, `c` and `core`
 var c: int = 0              ## player 0 Dart docked on `pad`
 var pad: int = 0
 var core: int = 0
@@ -86,8 +86,7 @@ func _script_state() -> void:
 	st.boost_time[sa] = -0.1                 # neither boosting nor ready: cooling down (2)
 	st.flip_time[sa] = -FLIP_CD01 * dart.flip_cooldown_s
 	st.visible_mask[EntityId.slot(b)] = 1    # team 0 sees b
-	st.visible_mask[EntityId.slot(a)] = 2    # team 1 sees a and the core (a structure: never in visible_enemy_ships)
-	st.visible_mask[EntityId.slot(core)] = 2
+	st.visible_mask[EntityId.slot(core)] |= 2   # team 1 also sees the core (a structure: never in visible_enemy_ships)
 	var sc: int = EntityId.slot(c)
 	st.flags[sc] |= EntityStore.F_DOCKED
 	st.link[sc] = pad

@@ -12,7 +12,7 @@ to "Public API" or "Invariants" is a contract change: contract tests first, same
 | May depend on | `core`, `content`, `sim` (R0 B.4: inside the sim module; `EntityStore`, `Spatial` constants, `WorldDefs`, `PlayerTable`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads (D2, D3); no RNG |
 | Autoloads used | None |
-| Status | implemented (TA-37, 2026-10-14). Lane-internal types: other lanes reach Vision only through `SimWorld.interest_*()`, `SimView.visible_to / visible_ids` and `visible_mask` (net encoder) |
+| Status | implemented (TA-37, 2026-10-14). Lane-internal types: other lanes reach Vision only through `SimWorld.interest_*()`, `SimView.visible_to / visible_ids / visible_enemy_ships` and `visible_mask` (net encoder) |
 
 ## Public API
 
@@ -31,6 +31,7 @@ func bind(owner: int, r: ResolvedDefs) -> void                               # o
 func period(rungs: PackedInt32Array) -> int;  func runs(team: int, tick: int, rungs: PackedInt32Array) -> bool   # V3; rungs = MatchRules.sim_budget_profile
 func step(tick: int, rungs: PackedInt32Array) -> void                        # index once, then the passes of the teams scheduled on `tick`
 func pass_team(t: int, tick: int) -> void;  func refresh(tick: int) -> void  # one pass on the current index / every team now (tests, tools)
+func enemy_ships(team: int, out: PackedInt32Array) -> int                    # V10, behind SimView.visible_enemy_ships (TA-63)
 func rebuild_lists() -> void                                                 # lists from the current mask, no bit changed (V6)
 func ids_in_cell(team: int, cell: int) -> PackedInt32Array                   # allocating convenience over the flat lists
 static func sees(sensor: Vector3, target: Vector3, sensor_radius: float, reveal_radius: float) -> bool   # the pair test
@@ -90,6 +91,14 @@ After `SimWorld.deserialize` the lists are rebuilt from the mask with current ce
   buckets until `EntityStore.structures` or any `team` byte changes; a future system that moves a structure re-keys it
   (changes the list) or extends that check.
 
+- V10 (TA-63, R0 B.17 A-95): `SimView.visible_enemy_ships(team, out) -> int` fills the caller-owned `out` (resized once to
+  `list_size[team]` when smaller, never shrunk or reallocated otherwise) with the live ships of another team (neutral included)
+  in `ids[team * STRIDE, team * STRIDE + list_size[team])`, i.e. those carrying bit `team` at its last pass, in list order, and
+  returns the count (`out[n..]` untouched). O(listed), no allocation, no store walk: every id satisfies `alive`, `visible_to(team, id)`
+  and is in `ships()`; own-team entities, structures, ground units, wrecks and ships dead since the pass are skipped; a team outside
+  0..7 gives 0. Same set before and after `SimWorld.deserialize` + `rebuild_lists` (S4). `sim_ai` `TeamPicture` adopts it in a
+  follow-up inside the AI-13 lane.
+
 ## Data owned
 
 `InterestGrid` (bucket index, per-team lists, the near table and cell geometry shared per process as static caches),
@@ -114,6 +123,7 @@ team's pass p50 194 us. A loaded box reads up to ~1.5x; the pinned runner (TA-42
 
 `godot/test/unit/sim/vision/test_vision.gd` (V1, V2, V4, V8: range, horizon, the A-10 below-datum vectors, Sensor Mast
 reveal, wrecks, neutrals, bit clearing, `sees` vs Sphere, random scenes vs brute force, `bind`),
+`godot/test/unit/sim/vision/test_visible_enemy_ships.gd` (V10: brute force on 258 ships x 8 teams x 60 ticks, dead since the pass, kinds, neutral, `out` reuse, S4, per-team us beside the brute force),
 `godot/test/unit/sim/vision/test_vision_lists.gd` (V3, V5, V6: stagger at 10 / 5 Hz, latency, lists vs mask and the
 `SimWorld.interest_*` layout, two identical worlds, S4 round trip, `rebuild_lists`), `godot/test/unit/core/test_sphere.gd`
 (`test_is_occluded_by_datum_below_datum_a10`), `godot/test/unit/sim/test_serialize.gd` (S4 with Vision in the tick),

@@ -4,7 +4,7 @@ class_name LocalSimView extends SimView
 ## `pending_order` refill one reused `OrderSpec` each, `team_state` / `player_state` one reused view per slot.
 ## Accessors whose system has not landed return the `SimView` default: service / pad queue (Docking GD-15),
 ## field_remaining (Economy), scores and landing grade (sim/scoring); path_grid_version: TA-50.
-## `visible_to` / `visible_ids`: `visible_mask` bit t (Vision, sim/vision/, team t's last staggered pass) or the own team.
+## `visible_to` / `visible_ids` (walks every live slot) / `visible_enemy_ships` (Vision's list): `visible_mask` bit t (Vision, sim/vision/, team t's last staggered pass) or the own team.
 ## basis(id) = Basis(right, up, -fwd) with right = fwd x up (Godot's -Z forward).
 
 var _store: EntityStore
@@ -22,6 +22,7 @@ var _teams: Array[TeamStateView] = []
 var _player_views: Array[PlayerStateView] = []
 var _pathing: Pathing = null
 var production: Production = null   ## set by SimWorld (TA-19): queue and progress reads
+var vision: Vision = null             ## set by SimWorld (TA-63): `visible_enemy_ships` reads its per-team lists
 
 
 func _init(store: EntityStore, projectiles: ProjectileStore, spatial: Spatial, terrain: Terrain, players: PlayerTable,
@@ -142,6 +143,11 @@ func visible_ids(_team: int) -> PackedInt32Array:
 			if _store.team[s] == _team or (_team >= 0 and _team < PlayerTable.TEAMS and ((_store.visible_mask[s] >> _team) & 1) != 0):
 				var _a: bool = out.push_back(_store.id_of(s))
 	return out
+
+
+## Vision's per-team list, not the store (V10, TA-63).
+func visible_enemy_ships(_team: int, out: PackedInt32Array) -> int:
+	return 0 if vision == null else vision.enemy_ships(_team, out)
 
 
 func ships() -> PackedInt32Array:

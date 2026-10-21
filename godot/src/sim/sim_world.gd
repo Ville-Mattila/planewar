@@ -287,6 +287,7 @@ func _wire(rules: MatchRules) -> void:
 	_view.production = _econ.production
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
 	vision = Vision.new(_store, _defs, rules.tick_hz)
+	_view.vision = vision
 	_bridge = BridgeParams.table(c, _defs.rules, rules.tick_hz)
 
 

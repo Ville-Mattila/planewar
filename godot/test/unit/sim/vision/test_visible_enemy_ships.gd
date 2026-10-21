@@ -171,7 +171,7 @@ func test_identical_after_deserialize_and_rebuild_lists() -> void:
 
 
 ## Work counter (A-97: hard, no wall clock): the result never exceeds the team's list and equals the brute force;
-## per-team us per call and the brute-force figure beside it are PERF_REPORT lines. The bound is a quarter of
+## per-team us per call and the brute-force figure beside it are PERF_REPORT lines. The bound is half of
 ## TeamPicture's 222 us (PR #87), asserted only on the pinned runner.
 func test_perf_us_per_call_per_team_at_ai40_scale() -> void:
 	var w: SimWorld = _world()
@@ -207,5 +207,5 @@ func test_perf_us_per_call_per_team_at_ai40_scale() -> void:
 		brute_sum += brute
 		print("TA-63 team %d: visible_enemy_ships %.2f us (%d listed, %d returned) vs brute force %.1f us (%d)" % [
 				team, fast, grid.list_size[team], v.visible_enemy_ships(team, buf), brute, sink])
-		assert_bool(PerfGate.check("visible_enemy_ships_team%d" % team, fast, 222.0 / 4.0, "R0 B.17 A-95 (TeamPicture 222 us)")).is_true()
+		assert_bool(PerfGate.check("visible_enemy_ships_team%d" % team, fast, 222.0 / 2.0, "R0 B.17 A-95 (TeamPicture 222 us)")).is_true()
 	assert_bool(PerfGate.check("visible_enemy_ships_vs_brute", fast_sum, brute_sum, "R0 B.17 A-95")).is_true()

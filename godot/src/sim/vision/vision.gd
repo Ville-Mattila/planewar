@@ -122,6 +122,26 @@ func pass_team(t: int, tick: int) -> void:
 	last_pass[t] = tick
 
 
+## Live ships of another team (neutral included) in `team`'s list, into `out` (resized once to the list length when
+## smaller): the count `n`, ids `out[0..n)`. O(listed), no allocation (V10; `SimView.visible_enemy_ships`).
+func enemy_ships(team: int, out: PackedInt32Array) -> int:
+	if team < 0 or team >= TEAMS:
+		return 0
+	var base: int = team * InterestGrid.STRIDE
+	var listed: int = grid.list_size[team]
+	if out.size() < listed:
+		var _r: int = out.resize(listed)
+	var n: int = 0
+	for k: int in listed:
+		var id: int = grid.ids[base + k]
+		if _store.alive(id):
+			var s: int = EntityId.slot(id)
+			if _store.kind[s] == EntityStore.K_SHIP and _store.team[s] != team:
+				out[n] = id
+				n += 1
+	return n
+
+
 ## EntityIds visible to `team` in interest `cell` at its last pass (allocates; NET-08 reads the flat arrays).
 func ids_in_cell(team: int, cell: int) -> PackedInt32Array:
 	if team < 0 or team >= TEAMS or cell < 0 or cell >= InterestGrid.CELLS:
