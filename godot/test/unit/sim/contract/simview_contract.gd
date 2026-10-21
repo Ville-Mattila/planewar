@@ -99,6 +99,8 @@ func _vitals() -> void:
 	_t(&"landing_grade_last", _v.landing_grade_last(s.a) == -1)
 	_t(&"supply01", _near(_v.supply01(s.tower), SimViewScene.TOWER_SUPPLY01) and _v.supply01(s.core) == 0.0
 			and _v.supply01(s.a) == 0.0 and _v.supply01(s.dead) == 0.0)
+	_t(&"shield01", _near(_v.shield01(s.core), SimViewScene.SHIELD01) and _v.shield01(s.tower) == 0.0
+			and _v.shield01(s.a) == 0.0 and _v.shield01(s.dead) == 0.0)
 
 
 func _lists() -> void:
@@ -178,7 +180,8 @@ func _team_and_match() -> void:
 	var ts: TeamStateView = _v.team_state(0)
 	_t(&"team_state", ts != null and ts.team == 0 and ts.ore == eco.start_ore * 2 and ts.ice == eco.start_ice * 2
 			and ts.ore_cap == cap.x and ts.ice_cap == cap.y and _near(ts.power_supply, power.x) and _near(ts.power_demand, power.y)
-			and _sorted(ts.members) == [0, 2] and ts.flags == 0 and _v.team_state(9) == null)
+			and _sorted(ts.members) == [0, 2] and ts.flags == TeamStateView.CORE_SHIELD_UP and _v.team_state(1).flags == 0
+			and _v.team_state(9) == null)
 	var p0: PlayerStateView = _v.player_state(0)
 	var p1: PlayerStateView = _v.player_state(1)
 	_t(&"player_state", p0 != null and p1 != null and p0.team == 0 and p1.team == 1 and p0.unit_count == 2

@@ -9,6 +9,7 @@ const TICK_HZ: float = 30.0             ## 01 s8: 30 Hz sim tick
 const AMMO: int = 37
 const TOWER_AMMO: int = 120         ## of the autocannon turret's 300-round pool: supply01 = 0.4
 const TOWER_SUPPLY01: float = 0.4
+const SHIELD01: float = 0.375      ## the Core dome's charge as a share of its cap (it starts full)
 const BOMBS: int = 3
 const ROCKETS: int = 2
 const CONTROL: int = 5
@@ -76,6 +77,10 @@ func _script_state() -> void:
 	st.ammo[sa] = AMMO
 	st.ammo[EntityId.slot(tower)] = TOWER_AMMO
 	st.bombs[sa] = BOMBS
+	var shields: ShieldDomes = world.shields()
+	var sc0: int = EntityId.slot(core)
+	assert(shields.charge_of(sc0) > 0.0)       # the Core dome is bound and full after the first steps
+	shields._charge[sc0] = shields.charge_of(sc0) * SHIELD01
 	st.rockets[sa] = ROCKETS
 	st.control_state[sa] = CONTROL
 	st.ai_tag[sa] = AI_TAG

@@ -213,6 +213,12 @@ func supply01(_id: int) -> float:
 	return 0.0
 
 
+## Dome charge / effective cap (0..1) of a Shield Projector or a Core with its shield up; 0.0 for a collapsed or removed
+## dome or an entity without one; -1.0 when the view has no data (NetSimView until a codec carries dome charge; GD-38).
+func shield01(_id: int) -> float:
+	return -1.0
+
+
 func production_queue(_factory: int) -> PackedInt32Array:
 	return PackedInt32Array()
 
