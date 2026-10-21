@@ -345,6 +345,77 @@ def run_defs(val: Validator, rep: Report, root: Path, stems: set[str]) -> None:
                 rep.add("godot/content/biome_ramps.json:/biomes", "ids must be exactly 0-7, once each")
 
 
+AI_TAGS_JSON = "godot/content/ui/ai_tags.json"
+AI_TAG_MODULE = "godot/src/sim_ai/MODULE.md"
+
+
+def module_ai_tags(text: str) -> dict[int, str]:
+    """The AiTag bullet of the sim_ai/MODULE.md "Enumerations" block: ``- `AiTag.Tag` (...): 0 NONE, 1 LAUNCH, ...``
+    (R0 B.17 A-94, UX-43). Returns ordinal -> name; a malformed item raises ValueError."""
+    body = ""
+    in_block = False
+    for line in text.splitlines():
+        if line.startswith("## "):
+            in_block = line.startswith("## Enumerations")
+        elif in_block and line.startswith("- `AiTag.Tag`"):
+            body = line.split("): ", 1)[1].split(" (", 1)[0]
+            break
+    out: dict[int, str] = {}
+    for item in filter(None, (part.strip() for part in body.split(","))):
+        ordinal, _, name = item.partition(" ")
+        if not ordinal.isdigit() or not name.isidentifier():
+            raise ValueError(f"AiTag item '{item}' is not '<ordinal> <NAME>'")
+        if int(ordinal) in out:
+            raise ValueError(f"AiTag ordinal {ordinal} listed twice")
+        out[int(ordinal)] = name
+    return out
+
+
+def check_ai_tags(val: Validator, rep: Report, root: Path, stems: set[str]) -> None:
+    """UX-43: godot/content/ui/ai_tags.json (schema ai_tags) has exactly one entry per ordinal of the sim_ai/MODULE.md
+    AiTag bullet, with the same name, no extra ordinal and no repeated id."""
+    path = root / AI_TAGS_JSON
+    if not path.is_file():
+        return
+    data = load_json(path, rep, AI_TAGS_JSON)
+    if data is None:
+        return
+    if "ai_tags" in stems:
+        validate(val, rep, AI_TAGS_JSON, data, "ai_tags")
+    module = root / AI_TAG_MODULE
+    if not module.is_file():
+        rep.add(AI_TAGS_JSON, f"{AI_TAG_MODULE} missing: cannot check the AiTag ordinals against it")
+        return
+    try:
+        enum = module_ai_tags(module.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        rep.add(AI_TAG_MODULE, str(exc))
+        return
+    if not enum:
+        rep.add(AI_TAG_MODULE, "no AiTag.Tag bullet in the 'Enumerations' block")
+        return
+    entries = data.get("tags", []) if isinstance(data, dict) else []
+    seen: dict[Any, dict] = {}
+    ids: set[str] = set()
+    for i, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            continue
+        where = f"{AI_TAGS_JSON}:/tags/{i}"
+        ordinal = entry.get("ordinal")
+        if ordinal in seen:
+            rep.add(where, f"ordinal {ordinal} listed twice")
+        seen[ordinal] = entry
+        if ordinal not in enum:
+            rep.add(where, f"ordinal {ordinal} has no AiTag.Tag member in {AI_TAG_MODULE} (extra entry)")
+        elif entry.get("name") != enum[ordinal]:
+            rep.add(where, f"ordinal {ordinal} is named '{entry.get('name')}', the enum says '{enum[ordinal]}'")
+        if entry.get("id") in ids:
+            rep.add(f"{where}/id", f"id '{entry.get('id')}' is used twice")
+        ids.add(entry.get("id"))
+    for ordinal in sorted(set(enum) - set(seen)):
+        rep.add(AI_TAGS_JSON, f"ordinal {ordinal} ({enum[ordinal]}) of {AI_TAG_MODULE} has no entry")
+
+
 def run_examples(val: Validator, rep: Report, root: Path, stems: set[str]) -> None:
     ex_dir = root / "docs/examples"
     files = {p.relative_to(ex_dir).as_posix() for p in ex_dir.rglob("*.json")} if ex_dir.is_dir() else set()
@@ -427,6 +498,7 @@ def run(root: Path) -> Report:
     val = Validator(store)
     stems = run_schemas(store, rep, schema_dir)
     run_defs(val, rep, root, stems)
+    check_ai_tags(val, rep, root, stems)
     run_examples(val, rep, root, stems)
     run_scenarios(val, rep, root, stems)
     return rep

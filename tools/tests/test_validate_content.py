@@ -22,14 +22,14 @@ REPO = TOOLS.parent
 FIX = Path(__file__).resolve().parent / "fixtures" / "content"
 CANON = FIX / "canonical"
 # 03 CONTRACT-0 brief / R0 C1-10: the 15 schemas; GD-05 (R0 B.1 scoring.json) adds `scoring` -> 16; AI-01 (R0 B.1 order_rules.json) adds `order_rules` -> 17;
-# TA-47 (R0 B.9 A-22) adds `quality_tiers` -> 18; FEAT-01 (08 SL-2/3/5) adds wing, callsigns, barks, commander_verbs -> 22; ART-14 adds biome_ramps (content/biome_ramps.json, not a def file) -> 23; TA-33 adds sim_scenario (test/sim/scenarios/*.json, not a def file) -> 24.
+# TA-47 (R0 B.9 A-22) adds `quality_tiers` -> 18; FEAT-01 (08 SL-2/3/5) adds wing, callsigns, barks, commander_verbs -> 22; ART-14 adds biome_ramps (content/biome_ramps.json, not a def file) -> 23; TA-33 adds sim_scenario (test/sim/scenarios/*.json, not a def file) -> 24; UX-43 adds ai_tags (content/ui/ai_tags.json, not a def file) -> 25.
 CONTRACT0 = sorted("ships ground_units weapons projectiles structures towers doctrines economy match_rules modes "
                    "bot_promises bot_profiles autopilots map_recipe rules scoring order_rules quality_tiers "
-                   "wing callsigns barks commander_verbs biome_ramps sim_scenario".split())
+                   "wing callsigns barks commander_verbs biome_ramps sim_scenario ai_tags".split())
 # Tools-only schemas: validated by their own tool, not def files; ART-22 sfx_recipe (tools/audio/recipes/*.json),
 # ART-05 asset_budgets (tools/art/asset_budgets.json, loaded and schema-checked by validate_glb.py).
 TOOLS_ONLY = ["asset_budgets", "sfx_recipe"]
-SINGLETONS = {"rules", "economy", "match_rules", "map_recipe", "scoring", "order_rules", "wing", "callsigns", "biome_ramps"}
+SINGLETONS = {"rules", "economy", "match_rules", "map_recipe", "scoring", "order_rules", "wing", "callsigns", "biome_ramps", "ai_tags"}
 
 
 def run(root: Path) -> tuple[int, str]:
@@ -68,7 +68,7 @@ class SchemaSet(unittest.TestCase):
     def test_exactly_the_contract0_set(self) -> None:
         got = sorted(p.name[: -len(".schema.json")] for p in (TOOLS / "schemas").glob("*.schema.json"))
         self.assertEqual([g for g in got if g not in TOOLS_ONLY], CONTRACT0)
-        self.assertEqual(len(got) - len(TOOLS_ONLY), 24)
+        self.assertEqual(len(got) - len(TOOLS_ONLY), 25)
 
     def test_meta_clean(self) -> None:
         store = SchemaStore(TOOLS / "schemas")
@@ -243,7 +243,7 @@ class Repo(unittest.TestCase):
     def test_real_repo_passes(self) -> None:
         code, out = run(REPO)
         self.assertEqual(code, 0, out)
-        self.assertIn(f"{24 + len(TOOLS_ONLY)} schemas", out)
+        self.assertIn(f"{25 + len(TOOLS_ONLY)} schemas", out)
 
 
 class Canonical(Tree):

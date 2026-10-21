@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ai_tags.schema.json",
+  "title": "AiTagLabels (godot/content/ui/ai_tags.json)",
+  "$comment": "06 s7.1 / 05 s6.1 (UX-43, R0 B.17 A-94). One entry per AiTag.Tag ordinal 0-33 (sim_ai/ai_tag.gd; sim_ai/MODULE.md 'Enumerations'). Ordinals and names are append-only (R0 B.3); the parity with the enum is checked by tools/validate_content.py. The label is the English HUD text (<= 10 characters); the same id is the i18n key in godot/content/locale/src/ui_hud.csv.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {"type": "string", "minLength": 1},
+    "tags": {
+      "type": "array",
+      "minItems": 34,
+      "maxItems": 34,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ordinal": {"type": "integer", "minimum": 0, "maximum": 33},
+          "name": {"type": "string", "pattern": "^[A-Z][A-Z_]*$"},
+          "id": {"type": "string", "pattern": "^hud\\.ai_tag\\.[a-z][a-z_]*$"},
+          "label": {"type": "string", "minLength": 1, "maxLength": 10}
+        },
+        "required": ["ordinal", "name", "id", "label"]
+      }
+    }
+  },
+  "required": ["_doc", "tags"]
+}

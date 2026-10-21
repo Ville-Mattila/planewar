@@ -52,6 +52,108 @@ msgstr "{wing_number}, low fuel, going home."
 msgid "hud.agl"
 msgstr "AGL"
 
+msgid "hud.ai_tag.bomb"
+msgstr "BOMB"
+
+msgid "hud.ai_tag.capture"
+msgstr "CAPTURE"
+
+msgid "hud.ai_tag.docked"
+msgstr "DOCKED"
+
+msgid "hud.ai_tag.engage"
+msgstr "ENGAGE"
+
+msgid "hud.ai_tag.escort"
+msgstr "ESCORT"
+
+msgid "hud.ai_tag.evade"
+msgstr "EVADE"
+
+msgid "hud.ai_tag.extend"
+msgstr "EXTEND"
+
+msgid "hud.ai_tag.ferry_drop"
+msgstr "DROP"
+
+msgid "hud.ai_tag.ferry_pick"
+msgstr "PICKUP"
+
+msgid "hud.ai_tag.flee"
+msgstr "FLEE"
+
+msgid "hud.ai_tag.guard"
+msgstr "GUARD"
+
+msgid "hud.ai_tag.hold"
+msgstr "HOLD"
+
+msgid "hud.ai_tag.idle"
+msgstr "IDLE"
+
+msgid "hud.ai_tag.intercept"
+msgstr "INTERCEPT"
+
+msgid "hud.ai_tag.launch"
+msgstr "LAUNCH"
+
+msgid "hud.ai_tag.load"
+msgstr "LOADING"
+
+msgid "hud.ai_tag.loiter"
+msgstr "LOITER"
+
+msgid "hud.ai_tag.mine"
+msgstr "MINE"
+
+msgid "hud.ai_tag.move"
+msgstr "MOVE"
+
+msgid "hud.ai_tag.none"
+msgstr "NONE"
+
+msgid "hud.ai_tag.offline"
+msgstr "OFFLINE"
+
+msgid "hud.ai_tag.patrol"
+msgstr "PATROL"
+
+msgid "hud.ai_tag.pick_field"
+msgstr "PICK FIELD"
+
+msgid "hud.ai_tag.pull_up"
+msgstr "PULL UP"
+
+msgid "hud.ai_tag.queue"
+msgstr "QUEUE"
+
+msgid "hud.ai_tag.relocate"
+msgstr "RELOCATE"
+
+msgid "hud.ai_tag.return"
+msgstr "RTB"
+
+msgid "hud.ai_tag.search"
+msgstr "SEARCH"
+
+msgid "hud.ai_tag.siege"
+msgstr "SIEGE"
+
+msgid "hud.ai_tag.to_field"
+msgstr "TO FIELD"
+
+msgid "hud.ai_tag.to_refinery"
+msgstr "TO REFIN"
+
+msgid "hud.ai_tag.tow"
+msgstr "TOW"
+
+msgid "hud.ai_tag.track"
+msgstr "TRACK"
+
+msgid "hud.ai_tag.unload"
+msgstr "UNLOAD"
+
 msgid "hud.alt"
 msgstr "ALT"
 

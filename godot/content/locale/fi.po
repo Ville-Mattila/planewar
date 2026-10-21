@@ -52,6 +52,108 @@ msgstr "{wing_number}, polttoaine vähissä, palaa kotiin."
 msgid "hud.agl"
 msgstr ""
 
+msgid "hud.ai_tag.bomb"
+msgstr "POMMI"
+
+msgid "hud.ai_tag.capture"
+msgstr "VALTAUS"
+
+msgid "hud.ai_tag.docked"
+msgstr "TELAKKA"
+
+msgid "hud.ai_tag.engage"
+msgstr "HYÖKKÄYS"
+
+msgid "hud.ai_tag.escort"
+msgstr "SAATTO"
+
+msgid "hud.ai_tag.evade"
+msgstr "VÄISTÖ"
+
+msgid "hud.ai_tag.extend"
+msgstr "VETÄYTYY"
+
+msgid "hud.ai_tag.ferry_drop"
+msgstr "PUDOTUS"
+
+msgid "hud.ai_tag.ferry_pick"
+msgstr "NOUTO"
+
+msgid "hud.ai_tag.flee"
+msgstr "PAKO"
+
+msgid "hud.ai_tag.guard"
+msgstr "VARTIO"
+
+msgid "hud.ai_tag.hold"
+msgstr "PITO"
+
+msgid "hud.ai_tag.idle"
+msgstr "VAPAA"
+
+msgid "hud.ai_tag.intercept"
+msgstr "SIEPPAUS"
+
+msgid "hud.ai_tag.launch"
+msgstr "LÄHTÖ"
+
+msgid "hud.ai_tag.load"
+msgstr "LASTAUS"
+
+msgid "hud.ai_tag.loiter"
+msgstr "KIERTO"
+
+msgid "hud.ai_tag.mine"
+msgstr "LOUHINTA"
+
+msgid "hud.ai_tag.move"
+msgstr "SIIRTO"
+
+msgid "hud.ai_tag.none"
+msgstr "EI"
+
+msgid "hud.ai_tag.offline"
+msgstr "POIS"
+
+msgid "hud.ai_tag.patrol"
+msgstr "PARTIO"
+
+msgid "hud.ai_tag.pick_field"
+msgstr "KERUU"
+
+msgid "hud.ai_tag.pull_up"
+msgstr "NOUSU"
+
+msgid "hud.ai_tag.queue"
+msgstr "JONO"
+
+msgid "hud.ai_tag.relocate"
+msgstr "SIIRTYY"
+
+msgid "hud.ai_tag.return"
+msgstr "PALUU"
+
+msgid "hud.ai_tag.search"
+msgstr "ETSINTÄ"
+
+msgid "hud.ai_tag.siege"
+msgstr "PIIRITYS"
+
+msgid "hud.ai_tag.to_field"
+msgstr "KENTTÄÄN"
+
+msgid "hud.ai_tag.to_refinery"
+msgstr "JALOSTAMO"
+
+msgid "hud.ai_tag.tow"
+msgstr "VETO"
+
+msgid "hud.ai_tag.track"
+msgstr "SEURAA"
+
+msgid "hud.ai_tag.unload"
+msgstr "PURKU"
+
 msgid "hud.alt"
 msgstr ""
 
