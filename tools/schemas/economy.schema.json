@@ -197,6 +197,18 @@
       "maximum": 5000,
       "$comment": "02 s8.1: Refinery 500 m from the Core toward Home Field A"
     },
+    "salvage_hook_m": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 500,
+      "$comment": "02 s13 hook reach: a ship with a free tow slot hooks a free wreck whose centre is within this distance (R0 B.20 A-105: tether geometry 25 + 8 m, 05 s6.5 hovers at 30 m AGL)"
+    },
+    "salvage_deliver_m": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 500,
+      "$comment": "02 s13 delivery reach: a towed wreck is delivered when its ship is within the Refinery radius plus this distance (R0 B.20 A-105)"
+    },
     "start_adjacent_dist_m": {
       "type": "number",
       "minimum": 0,
@@ -210,6 +222,8 @@
     "outpost_spacing_friendly_m",
     "outpost_spacing_enemy_m",
     "site_hp_fraction",
+    "salvage_hook_m",
+    "salvage_deliver_m",
     "start_adjacent_dist_m",
     "start_refinery_dist_m",
     "cancel_refund_assembly",

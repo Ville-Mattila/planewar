@@ -11,6 +11,7 @@ var construction: Construction
 var production: Production
 var repair: SelfRepair
 var supply: SupplyNet                    ## GD-18: the Pylon graph, supplied flags and tower refill (02 s5.4)
+var salvage: Salvage                     ## GD-19: wrecks, pods, tows and delivery (02 s13)
 
 var _store: EntityStore
 var _players: PlayerTable
@@ -18,6 +19,7 @@ var _defs: WorldDefs
 var _events: SimEvents
 var _applier: CommandApplier
 var _validator: CommandValidator
+var _tick: int = 0
 
 
 func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: MatchRules, terrain: Terrain,
@@ -36,6 +38,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	production = Production.new(store, players, defs, rules, events, economy, applier)
 	repair = SelfRepair.new(store, defs, economy, rules.tick_hz)
 	supply = SupplyNet.new(store, defs, rules.tick_hz)
+	salvage = Salvage.new(store, defs, economy, events, terrain, rules.tick_hz, rules.caps.wrecks if rules.caps != null else 0)
 	validator.build = build
 	validator.production = production
 
@@ -72,6 +75,7 @@ func apply(cmd: Command) -> void:
 
 ## Start of every tick: the clock `Build` stamps sites with and the early share lock reads.
 func begin_tick(t: int) -> void:
+	_tick = t
 	build.set_clock(t)
 
 
@@ -81,14 +85,18 @@ func step(t: int, dt: float) -> void:
 	economy.step()
 	construction.step(t, dt)
 	production.step(t, dt)
+	salvage.step(t)
 	supply.step(t, economy.structure_epoch)
 	repair.unsupplied = supply.unsupplied   # the repair pass reads the flags of this tick
 	repair.step(t)
 
 
-## Step 9, before the deferred free of slot `s`: a dying structure frees its footprint, its site and its queue.
+## Step 9, before the deferred free of slot `s`: it leaves its wrecks (GD-19); a dying structure frees its footprint, its site and its queue.
 func on_death(s: int) -> void:
-	if (_store.flags[s] & EntityStore.F_ALIVE) == 0 or _store.kind[s] != EntityStore.K_STRUCTURE:
+	if (_store.flags[s] & EntityStore.F_ALIVE) == 0:
+		return
+	var _wrecks: int = salvage.on_death(s, _tick)   # GD-19: ships, ground units and finished structures leave wrecks
+	if _store.kind[s] != EntityStore.K_STRUCTURE:
 		return
 	var finished: bool = (_store.flags[s] & EntityStore.F_BUILDING) == 0
 	build.release_site(s)

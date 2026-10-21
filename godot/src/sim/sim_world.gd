@@ -286,6 +286,7 @@ func _wire(rules: MatchRules) -> void:
 	_econ = EconomyHub.new(_store, _players, _defs, rules, _terrain, _events, _applier, _validator)
 	_combat.shields.bind(_econ.economy, _econ.supply)
 	_intake.economy = _econ
+	_econ.salvage.orders = _orders           # GD-19: the head HAUL / TOW order of a ship hooks wrecks in step 10
 	_pathing = Pathing.from_rules(_defs.rules)
 	_pathing.set_terrain(_terrain)
 	_ground = GroundMotion.new(_store, _inputs, _defs, _terrain, _pathing)

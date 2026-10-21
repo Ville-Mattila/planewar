@@ -281,15 +281,15 @@ func test_c15_death_releases_first_and_clears_control_fields() -> void:
 	var _p: Array[SimEvent] = ControlTestKit.run(w, Command.possess(0, id))
 	var _r: Array[SimEvent] = ControlTestKit.run(w, ControlTestKit.request(ControlTestKit.MATE, id))
 	var ev: Array[SimEvent] = ControlTestKit.run(w, CommandPayload.debug_set(0, id, CommandPayload.SET_KILL, 0.0))
-	assert_array(Array(WorldTestKit.kinds(ev))).is_equal([K.RELEASED, K.DEATH])
-	assert_int(ev[0].extra[0]).is_equal(RR.DEATH)
+	assert_array(Array(WorldTestKit.kinds(ev))).is_equal([K.WRECK_SPAWNED, K.RELEASED, K.DEATH])   # GD-19: the dart's wreck first (EconomyHub.on_death), then C15 release, then DEATH
+	assert_int(ev[1].extra[0]).is_equal(RR.DEATH)
 	assert_int(w.view().player_state(0).possessed).is_equal(0)
 	var s: int = EntityId.slot(id)
 	assert_int(w.store().possessor[s]).is_equal(EntityStore.NONE_U8)
 	assert_int(w.store().control_state[s]).is_equal(S.AUTO)
 	assert_int(ControlTestKit.control(w).request_from(id)).is_equal(-1)
 	ev = ControlTestKit.run(w, CommandPayload.debug_set(0, other, CommandPayload.SET_KILL, 0.0))
-	assert_array(Array(WorldTestKit.kinds(ev))).is_equal([K.DEATH])     # not possessed: no RELEASED
+	assert_array(Array(WorldTestKit.kinds(ev))).is_equal([K.WRECK_SPAWNED, K.DEATH])     # not possessed: no RELEASED (GD-19: the wreck first)
 
 
 func test_c16_match_end_and_team_loss_release_to_auto() -> void:

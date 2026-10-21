@@ -40,5 +40,7 @@
  "outpost_spacing_enemy_m": 1500,
  "site_hp_fraction": 0.1,
  "start_refinery_dist_m": 500,
- "start_adjacent_dist_m": 100
+ "start_adjacent_dist_m": 100,
+ "salvage_hook_m": 33,
+ "salvage_deliver_m": 33
 }

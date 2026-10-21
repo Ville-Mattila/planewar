@@ -37,6 +37,7 @@ func test_scripted_100_ticks_event_sequence() -> void:
 		[31, K.ALERT, AlertKind.Kind.LINK_WEAK, 0],
 		[40, K.RELEASED, b, ControlMachine.ReleaseReason.PLAYER],
 		[45, K.POSSESSED, c, -1],
+		[50, K.WRECK_SPAWNED, EntityId.make(EntityId.WRECK_SLOT_MIN, 1), -1],   # GD-19: ship A leaves one wreck, before its DEATH
 		[50, K.DEATH, a, CommandApplier.DEATH_CAUSE_DEBUG],
 		[55, K.ALERT, AlertKind.Kind.PENDING_ORDER, 1],
 		[56, K.ALERT, AlertKind.Kind.LINK_WEAK, 1],
