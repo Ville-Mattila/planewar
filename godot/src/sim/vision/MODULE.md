@@ -93,8 +93,8 @@ After `SimWorld.deserialize` the lists are rebuilt from the mask with current ce
 
 - V10 (TA-63, R0 B.17 A-95): `SimView.visible_enemy_ships(team, out) -> int` fills the caller-owned `out` (resized once to
   `list_size[team]` when smaller, never shrunk or reallocated otherwise) with the live ships of another team (neutral included)
-  in `ids[team * STRIDE, team * STRIDE + list_size[team])`, i.e. those carrying bit `team` at its last pass, in list order, and
-  returns the count (`out[n..]` untouched). O(listed), no allocation, no store walk: every id satisfies `alive`, `visible_to(team, id)`
+  in `ids[team * STRIDE, team * STRIDE + list_size[team])`, i.e. those carrying bit `team` at its last pass, in ascending EntityId order (a function of state alone: the list's own cell order is unspecified and
+  differs after a restore), and returns the count (`out[n..]` untouched). O(listed), no allocation, no store walk: every id satisfies `alive`, `visible_to(team, id)`
   and is in `ships()`; own-team entities, structures, ground units, wrecks and ships dead since the pass are skipped; a team outside
   0..7 gives 0. Same set before and after `SimWorld.deserialize` + `rebuild_lists` (S4). `sim_ai` `TeamPicture` adopts it in a
   follow-up inside the AI-13 lane.
