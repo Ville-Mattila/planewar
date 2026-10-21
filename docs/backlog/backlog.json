@@ -7355,8 +7355,10 @@
       "05 s11.1",
       "10 s5.6"
     ],
-    "status": "todo",
-    "note": "Lands independently of AI-13; migrates the inline gates of test_dart_perf.gd / test_escort_perf.gd when both are on main."
+    "status": "done",
+    "note": "PerfGate + check_perf_gates.py in CI tools job. Known limits: a file-level marker exempts the whole file (reviewers must watch new asserts in marked files); PERF_REPORT us= is host-scaled where the test passes us/host (raw = us x host). Hosted margins < 10x converted to PerfGate with hard counters.",
+    "pr": 92,
+    "merged": "2026-10-21"
   },
   {
     "id": "TEST-04",
