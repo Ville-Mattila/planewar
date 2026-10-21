@@ -7269,5 +7269,24 @@
     ],
     "status": "todo",
     "note": "Flake: run 39519937508 job 118961018294 failed at 15m04s with every step success."
+  },
+  {
+    "id": "TA-65",
+    "title": "sim: S4 save/restore is not byte-exact during AI gun fights (projectile store diff; 7 of 12 checks in a three-Dart fight on the AI-13 branch); find and fix the non-restored projectile state",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 1,
+    "depends_on": [
+      "AI-13"
+    ],
+    "milestone": "M2",
+    "acceptance": "A three-Dart gun fight saved mid-burst (slugs in flight) restores and continues byte-identically for >= 600 ticks over 12 save points and 3 seeds; the root cause is named (which projectile field / ordering / quarantine state is missing from S4 or derived differently after restore) with a test that fails on the pre-fix code; serialize FORMAT bumped with a refusal test if bytes change; the possessed-Dart firing case also covered",
+    "docs": [
+      "03 s3 (S4)",
+      "R0 C1-19",
+      "GD-36"
+    ],
+    "status": "todo",
+    "note": "Found by AI-13 #87 round 2 (2026-10-21): diff in the projectile store; not reproduced with a possessed Dart firing. AI-13's S4 test currently saves before the first slug."
   }
 ]
