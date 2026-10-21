@@ -154,8 +154,8 @@ func position_of(slot: int) -> Vector3:
 	if f == null or slot < 0 or slot >= Roster.CAPACITY or f.present[slot] == 0:
 		return Vector3.ZERO
 	var def_id: int = roster.def_of(slot)
-	var grav: bool = (def_id >= 0 and def_id < decoder.gravity_def.size() and decoder.gravity_def[def_id] != 0) 			or (f.flags[slot] & Codec.FLAG_DYING) != 0
-	var dr: Vector3i = DeadReckon.dr_levels(f.pos[slot], f.vel[slot], f.tick - f.etick[slot], grav, decoder.gravity, decoder.dt)
+	var grav: bool = (def_id >= 0 and def_id < decoder.gravity_def.size() and decoder.gravity_def[def_id] != 0)
+	var dr: Vector3i = f.shown_levels(slot, f.tick, grav, decoder.gravity, decoder.dt)
 	if not DeadReckon.levels_ok(dr):
 		return Codec.dequantize_pos(f.pos[slot])
 	return Codec.dequantize_pos(Codec.pack_pos(Codec.pos_cell(f.pos[slot]), dr.x, dr.y, dr.z))
