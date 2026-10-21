@@ -949,7 +949,7 @@ Server reference: S-SIM-1 on the target VPS SKU (one dedicated 3 GHz-class vCPU 
 | Threat maps (per team, 1 Hz, spread) | 2 teams | 0.3 ms | - |
 | **Total AI** | | **<= 6.0 ms p95** | |
 
-The per-item figures are fleet means of the row's budget over its count assumption, not per-class ceilings: a ship in a gun fight costs more than one on patrol and the governor never degrades it, so its cost is part of the 2.4 ms load. Perf tests assert a row at a stated mix (R0 B.17 A-96: engaged share `f` = 0.25 for the act row, `(1 - f) x act_patrol + f x act_engage` against the row; the measured share comes from the s11.3 soak metrics) and may add a per-case interim ceiling, never a moved row (R0 A-62).
+The per-item figures are fleet means of the row's budget over its count assumption, not per-class ceilings: a ship in a gun fight costs more than one on patrol and the governor never degrades it, so its cost is part of the 2.4 ms load. Perf tests assert a row at a stated mix (R0 B.17 A-96: engaged share `f` = 0.25 for the act row, `(1 - f) x act_patrol + f x act_engage` against the row; the measured share comes from the s11.3 soak metrics) and may add a per-case interim ceiling, never a moved row (R0 A-62). On GitHub-hosted runners those timing assertions are report-only (`PerfGate`, `PLANEWAR_PINNED_RUNNER`; R0 B.17 A-97): the deterministic work counters (calls per think and per act, picture builds per epoch, refresh and choice shares) are the hard checks there, and the bounds assert on the pinned runner.
 
 **AI governor** (`AiDriver`): it measures each tick's AI time with `Time.get_ticks_usec()`. If AI time exceeds 6 ms for 5 consecutive ticks it degrades in this order, logging each step and restoring after 300 ticks under budget: (1) AUTO PATROL/GUARD ships far from enemies (> 3 km from any team-visible enemy) think every 20 ticks; (2) act for those ships at 15 Hz (input held for 2 ticks); (3) Commander slices spread over 6 ticks. Ships in combat, landing, or overlays are never degraded.
 
@@ -971,6 +971,8 @@ The per-item figures are fleet means of the row's budget over its count assumpti
 | Scenarios | `godot/test/sim/ai/` | scripted mini-matches on `tiny_test` (s11.2) | every PR (< 5 min total, 01 ADR-11) |
 | Soak | `godot/test/soak/` | 8 bots on `cradle` (plus `anvil`/`rimewater` weekly), 30 sim-minutes; 02 GD-24 `BalanceProbe` owns the harness and `results.jsonl`, AI-31 adds the s11.3 AI metrics to its output | nightly; 10-min version on PR |
 | Perf | `godot/test/perf/ai_*` | AI µs per tick at S-SIM-1 scale, Standard and Lite | p95 assertions only on the pinned self-hosted runner of the target SKU (nightly, regression > 20 % vs 7-day median fails); GitHub-hosted PR jobs run a same-job base-vs-head A/B with a 25 % threshold (R0 C1-11) |
+
+Timing bounds in the Unit and Scenario layers follow R0 B.17 A-97: on GitHub-hosted runners they print `PERF_REPORT` lines and assert only under `PLANEWAR_PINNED_RUNNER=1`; work counters are the hard checks; the hosted same-job A/B gains an `ai` scenario (real `AiDriver` + Dart brain at A/B scale, A-98, TEST-04) so brain regressions are gated there.
 
 `FakeSimView` implements `SimView` over hand-filled arrays so brains are testable without a `SimWorld`. A recorded situation can be captured from any running match with a debug command (`ai_capture <entity>`), which writes the JSON; this turns every observed AI bug into a regression test in minutes.
 

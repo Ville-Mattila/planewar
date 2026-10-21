@@ -220,7 +220,7 @@ The commit-message lint (REPO-06) rejects any commit whose first line does not s
 
 1. Read the task in `backlog.json` and the doc sections it names. Reviewers read contracts and acceptance, not the author's transcript (09 s4.2 token hygiene).
 2. Read the diff once end to end. Flag any file outside the lane's allowed paths (Section 4.3) before anything else; that is an automatic "request changes".
-3. Open every new or changed test; check that it would fail if the feature were removed (no tautologies, no asserting on the thing just set).
+3. Open every new or changed test; check that it would fail if the feature were removed (no tautologies, no asserting on the thing just set). A wall-clock bound in a unit, sim or net test goes through `PerfGate.check` (report-only off the pinned runner) or is a documented runaway guard at >= 10x the recorded figure; a hard `assert_float(us).is_less(row x factor)` is a "request changes" (R0 B.17 A-97).
 4. Check the `MODULE.md` diff against the code diff: every new public symbol is listed, nothing listed is missing, no enum reordered.
 5. For Opus lanes: determinism (no `Dictionary` iteration order, no `randf()` outside `Rng`, no float accumulation across ticks without a reason), allocations in per-entity loops (03 s12.2), packed-array copy-on-write trap (rule 11), `PLANET_RADIUS` discipline (D6), signals in sim (D2).
 6. For `net`: every new field is quantised per 04 s3 and round-trips in a codec test; no packet can exceed 1,200 B; a fuzzed packet never throws.
@@ -492,6 +492,7 @@ Variants worth keeping as separate saved workflows: `planewar-content-batch` (on
 - **Golden screenshots** differ per Mesa version. A golden failure after a runner image change is fixed by a Haiku task regenerating goldens (keyed by driver string), never by widening tolerance in a feature PR.
 - **Tracking.** `docs/waves/flaky.md` gets one line per rerun (date, job, PR). Three reruns of the same job in two weeks create a `SUB-TA-03-<n>` task for the ci lane at Sonnet tier.
 - **Flaky unit test** (fails/passes without change): quarantine is not allowed; the owning lane fixes it in the same PR or the PR is not merged. Determinism is a pillar of the sim (ADR-06); a flaky sim test is a sim bug.
+- **Timing failure of a unit test on a hosted runner** is a policy violation, not flakiness (R0 B.17 A-97): a unit, sim or net test asserts a wall-clock bound only under `PLANEWAR_PINNED_RUNNER=1` and prints it otherwise; the fix is the gate (`PerfGate`), never a rerun, a raised factor or a host-scale clamp.
 
 ---
 
