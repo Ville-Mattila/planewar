@@ -1,0 +1,209 @@
+{
+  "_doc": "docs/06 s7.1 HUD and docs/05 s6.1 (R0 B.17 A-94, UX-43): one short HUD label per AiTag.Tag ordinal (sim_ai/ai_tag.gd; ordinals frozen, reserved 16-33 included). id = i18n key in godot/content/locale/src/ui_hud.csv; label = English text of that row (<= 10 characters). Ids are append-only with the enum.",
+  "tags": [
+    {
+      "ordinal": 0,
+      "name": "NONE",
+      "id": "hud.ai_tag.none",
+      "label": "NONE"
+    },
+    {
+      "ordinal": 1,
+      "name": "LAUNCH",
+      "id": "hud.ai_tag.launch",
+      "label": "LAUNCH"
+    },
+    {
+      "ordinal": 2,
+      "name": "PATROL",
+      "id": "hud.ai_tag.patrol",
+      "label": "PATROL"
+    },
+    {
+      "ordinal": 3,
+      "name": "INTERCEPT",
+      "id": "hud.ai_tag.intercept",
+      "label": "INTERCEPT"
+    },
+    {
+      "ordinal": 4,
+      "name": "ENGAGE",
+      "id": "hud.ai_tag.engage",
+      "label": "ENGAGE"
+    },
+    {
+      "ordinal": 5,
+      "name": "EXTEND",
+      "id": "hud.ai_tag.extend",
+      "label": "EXTEND"
+    },
+    {
+      "ordinal": 6,
+      "name": "EVADE",
+      "id": "hud.ai_tag.evade",
+      "label": "EVADE"
+    },
+    {
+      "ordinal": 7,
+      "name": "BOMB",
+      "id": "hud.ai_tag.bomb",
+      "label": "BOMB"
+    },
+    {
+      "ordinal": 8,
+      "name": "RETURN",
+      "id": "hud.ai_tag.return",
+      "label": "RTB"
+    },
+    {
+      "ordinal": 9,
+      "name": "DOCKED",
+      "id": "hud.ai_tag.docked",
+      "label": "DOCKED"
+    },
+    {
+      "ordinal": 10,
+      "name": "PULL_UP",
+      "id": "hud.ai_tag.pull_up",
+      "label": "PULL UP"
+    },
+    {
+      "ordinal": 11,
+      "name": "MOVE",
+      "id": "hud.ai_tag.move",
+      "label": "MOVE"
+    },
+    {
+      "ordinal": 12,
+      "name": "HOLD",
+      "id": "hud.ai_tag.hold",
+      "label": "HOLD"
+    },
+    {
+      "ordinal": 13,
+      "name": "GUARD",
+      "id": "hud.ai_tag.guard",
+      "label": "GUARD"
+    },
+    {
+      "ordinal": 14,
+      "name": "ESCORT",
+      "id": "hud.ai_tag.escort",
+      "label": "ESCORT"
+    },
+    {
+      "ordinal": 15,
+      "name": "LOITER",
+      "id": "hud.ai_tag.loiter",
+      "label": "LOITER"
+    },
+    {
+      "ordinal": 16,
+      "name": "FLEE",
+      "id": "hud.ai_tag.flee",
+      "label": "FLEE"
+    },
+    {
+      "ordinal": 17,
+      "name": "SEARCH",
+      "id": "hud.ai_tag.search",
+      "label": "SEARCH"
+    },
+    {
+      "ordinal": 18,
+      "name": "FERRY_PICK",
+      "id": "hud.ai_tag.ferry_pick",
+      "label": "PICKUP"
+    },
+    {
+      "ordinal": 19,
+      "name": "LOAD",
+      "id": "hud.ai_tag.load",
+      "label": "LOADING"
+    },
+    {
+      "ordinal": 20,
+      "name": "FERRY_DROP",
+      "id": "hud.ai_tag.ferry_drop",
+      "label": "DROP"
+    },
+    {
+      "ordinal": 21,
+      "name": "TOW",
+      "id": "hud.ai_tag.tow",
+      "label": "TOW"
+    },
+    {
+      "ordinal": 22,
+      "name": "CAPTURE",
+      "id": "hud.ai_tag.capture",
+      "label": "CAPTURE"
+    },
+    {
+      "ordinal": 23,
+      "name": "PICK_FIELD",
+      "id": "hud.ai_tag.pick_field",
+      "label": "PICK FIELD"
+    },
+    {
+      "ordinal": 24,
+      "name": "TO_FIELD",
+      "id": "hud.ai_tag.to_field",
+      "label": "TO FIELD"
+    },
+    {
+      "ordinal": 25,
+      "name": "MINE",
+      "id": "hud.ai_tag.mine",
+      "label": "MINE"
+    },
+    {
+      "ordinal": 26,
+      "name": "TO_REFINERY",
+      "id": "hud.ai_tag.to_refinery",
+      "label": "TO REFIN"
+    },
+    {
+      "ordinal": 27,
+      "name": "QUEUE",
+      "id": "hud.ai_tag.queue",
+      "label": "QUEUE"
+    },
+    {
+      "ordinal": 28,
+      "name": "UNLOAD",
+      "id": "hud.ai_tag.unload",
+      "label": "UNLOAD"
+    },
+    {
+      "ordinal": 29,
+      "name": "SIEGE",
+      "id": "hud.ai_tag.siege",
+      "label": "SIEGE"
+    },
+    {
+      "ordinal": 30,
+      "name": "RELOCATE",
+      "id": "hud.ai_tag.relocate",
+      "label": "RELOCATE"
+    },
+    {
+      "ordinal": 31,
+      "name": "TRACK",
+      "id": "hud.ai_tag.track",
+      "label": "TRACK"
+    },
+    {
+      "ordinal": 32,
+      "name": "OFFLINE",
+      "id": "hud.ai_tag.offline",
+      "label": "OFFLINE"
+    },
+    {
+      "ordinal": 33,
+      "name": "IDLE",
+      "id": "hud.ai_tag.idle",
+      "label": "IDLE"
+    }
+  ]
+}
