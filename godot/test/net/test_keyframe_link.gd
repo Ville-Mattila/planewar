@@ -219,8 +219,8 @@ func _bytes_over(refresh_on: bool, ticks: int) -> Vector2i:
 
 
 ## Acceptance: refresh bytes at 700 C entities <= 1.8 KB/s (04 s4.3, R0 C1-15: 3 records of 19-20 B per tick, 1.74 KB/s).
-## The stream also pays for the escape gaps, the section-C count byte and the C-BLIP that follows a FULL (a FULL leaves
-## the entry's blip unknown, so the next scheduled C tick re-sends it): printed, and bounded by a guard.
+## The stream also pays for the escape gaps and the section-C count byte. NET-54: the C-BLIP that used to follow every
+## refresh FULL is skipped when the mirror implies the true blip, so the stream delta is itself <= 1.8 KB/s.
 func test_refresh_bytes_at_700_c_entities_within_1_8_kb_per_second() -> void:
 	var ticks: int = 330
 	var with: Vector2i = _bytes_over(true, ticks)
@@ -233,5 +233,5 @@ func test_refresh_bytes_at_700_c_entities_within_1_8_kb_per_second() -> void:
 	assert_int(without.y).is_equal(0)
 	assert_float(rec_kb_s).is_less_equal(1.8)
 	assert_float(rec_kb_s).is_greater(1.6)
-	assert_float(stream_kb_s).is_less_equal(2.1)       # guard: records + escapes + count byte + follow-on BLIPs
+	assert_float(stream_kb_s).is_less_equal(1.8)       # NET-54 acceptance: records + escapes + count byte
 	assert_float(stream_kb_s).is_greater(rec_kb_s)

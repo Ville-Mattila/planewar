@@ -159,6 +159,8 @@ func test_tier_c_blip_roundtrip() -> void:
 	var dec: SnapshotDecoder = _rig.new_decoder(0)
 	var acks: Array[Vector2i] = []
 	var blips: int = 0
+	var implied: int = 0
+	var wrong_implied: int = 0
 	var worst_plane: float = 0.0
 	var worst_alt: float = 0.0
 	for t: int in 600:
@@ -166,7 +168,12 @@ func test_tier_c_blip_roundtrip() -> void:
 		_pump(store, dec, 0, null, null, 0.0, 0, acks)
 		var cur: BaselineFrame = dec.current()
 		for i: int in _c:
-			if cur.blip[i] == DeadReckon.BLIP_UNKNOWN or Codec.pos_cell(cur.pos[i]) != Codec.pos_cell(Codec.quantize_pos(_rig.frame.pos[i])):
+			if Codec.pos_cell(cur.pos[i]) != Codec.pos_cell(Codec.quantize_pos(_rig.frame.pos[i])):
+				continue
+			if cur.blip[i] == DeadReckon.BLIP_UNKNOWN:      # NET-54: skipped only when the entry implies the true blip
+				implied += 1
+				if DeadReckon.entry_blip(cur.pos[i], cur.flags[i], cur.vel[i]) != _rig.codec.blip_of(i):
+					wrong_implied += 1
 				continue
 			blips += 1
 			var p: Vector3 = Codec.dequantize_pos(cur.pos[i])
@@ -176,6 +183,8 @@ func test_tier_c_blip_roundtrip() -> void:
 			worst_plane = maxf(worst_plane, maxf(absf(d.x), absf(d.y)))
 			worst_alt = maxf(worst_alt, absf(p.length() - truth.length()))
 	assert_int(blips).is_greater(500)
+	assert_int(implied).is_greater(100)                   # static structures after their FULL
+	assert_int(wrong_implied).is_equal(0)
 	assert_float(worst_plane).is_less_equal(5.2)          # 10 m e8/n8 buckets (+ the e8 254 clamp margin)
 	assert_float(worst_alt).is_less_equal(20.5)           # 40 m altitude bands
 	assert_int(_mismatch).is_equal(0)

@@ -188,7 +188,7 @@ static func dr_levels(pos_q: int, fine: int, dticks: int, grav: bool, g: float, 
 static func dr_fine(pos_q: int, fine: int, dticks: int, grav: bool, g: float, dt: float) -> int;  static func pack_fine(e: int, n: int, u: int) -> int
 static func fine_axis(fine: int, axis: int) -> int;  static func fine_from_bits(bits: int) -> int;  static func bits_from_fine(fine: int) -> int
 static func vel_close(a: int, b: int) -> bool;  static func levels_ok(l: Vector3i) -> bool;  static func make_blip(pos_q: int, alt_m: float, state: int) -> int
-static func blip_pos(cell: int, blip: int) -> int;  static func blip_state(blip: int) -> int
+static func blip_pos(cell: int, blip: int) -> int;  static func blip_state(blip: int) -> int;  static func entry_blip(pos_q: int, flag_b: int, fine: int) -> int   # blip an entry implies (NET-54)
 
 class_name PilotBlock extends RefCounted              # net/pilot_block.gd: 15 B, wire integers, clamped on write
 const BYTES: int
@@ -250,7 +250,7 @@ A, B, C in that order, each a u8 count (1-255) then records. A record starts wit
 previous record of the packet (the chain runs across sections and restarts per packet; 0 only for index 0 as the first
 record), or 0xFF + u16 index. Next byte 0xFF = FULL (vec3q, quat_s3, vel, hp, flags, +ai_tag own team); otherwise A/B: a
 DELTA mask (bit 7 and bit 6 clear, not both POS bits), groups in mask-bit order; C: a C-BLIP (e8 clamped to 254 so it
-never reads 0xFF, n8, alt6 | state << 6). POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x
+never reads 0xFF, n8, alt6 | state << 6). NET-54 (server-only, no wire change): a C entry whose blip is unknown (after a FULL or DELTA) gets no C-BLIP while `DeadReckon.entry_blip` of its position, flags and velocity equals the true blip (`blip_of`); UNDER_FIRE is server-only, so it always sends one. POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x
 i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 = ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends packet index 0. Decoder (A-36): HAS_PILOT off index 0, CONTINUED on index 3 or an index above the tick's LAST is MALFORMED; a repeated index is STALE; a missing one is loss.
 
 ## Invariants
@@ -287,7 +287,7 @@ per tick). A/B deltas stay per client. NET-08 (real Interest, same scene, dev bo
 ## Test entry points
 
 `test/unit/net/test_protocol.gd` (NET-01 catalogue vs 04 s2.1/s2.3, enum ordinals, PROTOCOL_VERSION); `test/unit/net/test_codec_roundtrip.gd` (NET-02 codec_roundtrip_test: 10,000 points, cell corners, A-23 envelope, A-24 flags, quaternions, velocity, hp, sizes); `test/net/test_codec_full_records.gd`; `test/perf/bench_codec.gd` (BENCH_CODEC). NET-08: `godot/test/unit/net/test_interest.gd`, `godot/test/net/test_interest_codec.gd` (list in net/interest/MODULE.md). Planned: fuzz_test.gd (NET-23).
-NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example, masks, dead reckoning, blip, pilot block, A-24), `test_snapshot_malformed.gd` (20,000 mutations; NET-48 index rules), `test/net/test_snapshot_delta.gd` (3,000 ticks, random splits), `test_snapshot_budget.gd` (splitting, lost middle packet never acked, bandwidth, determinism, NET-49 cache bytes identical, rolling refresh); `test/perf/bench_snapshot.gd` (BENCH_SNAPSHOT canonical + all_tiers, `--history`); helper `test/net/snap_rig.gd`.
+NET-06: `test/unit/net/test_snapshot_codec.gd` (04 s3.5 53 B example, masks, dead reckoning, blip, pilot block, A-24), `test_snapshot_malformed.gd` (20,000 mutations; NET-48 index rules), `test_c_blip_skip.gd` (NET-54), `test/net/test_snapshot_delta.gd` (3,000 ticks, random splits), `test_snapshot_budget.gd` (splitting, lost middle packet never acked, bandwidth, determinism, NET-49 cache bytes identical, rolling refresh); `test/perf/bench_snapshot.gd` (BENCH_SNAPSHOT canonical + all_tiers, `--history`); helper `test/net/snap_rig.gd`.
 NET-03: `test/unit/net/test_pilot_wire.gd` (all byte values round trip, reserved bytes, V-INP shape, 20,000 mutations), `test_input_buffer.gd` (window, duplicates, stale epoch, strikes, 10-tick decay then one bridge, hand-off, determinism), `test/net/test_input_link.gd` (LocalTransport: BAD preset recovers single/double loss, triple loss drops one tick, silence bridge once, slow client, determinism).; NET-04: `test/unit/net/test_command_codec.gd`, `test/perf/test_command_codec_perf.gd` (see commands/MODULE.md)
 `godot/test/unit/net/test_roster.gd` + `godot/test/net/test_roster_sync.gd` (NET-05: add/remove with every reason, meta/remove round trips and sizes, malformed rejected, held record applied after meta, timeout at exactly 30 ticks with one REQUEST_KEYFRAME, re-add in the hold window, determinism, LocalTransport pair); `godot/test/unit/net/test_roster_wrecks.gd` (NET-50, A-54: slot 1,535, wreck events to a filtered client, meta / remove / snapshot at 1,535, non-wreck bytes pinned); `godot/test/unit/net/test_transport_local.gd` (NET-11: channel ordering/reliability, determinism per seed, burst, stall, bandwidth, close, stats); `godot/test/net/test_fault_presets.gd` (NET-11: loss/latency/reorder/dup statistics per preset over 6,000 packets, MOBILE_SWITCH, TAB_STALL).
 
