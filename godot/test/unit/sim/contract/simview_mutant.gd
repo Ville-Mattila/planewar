@@ -89,6 +89,17 @@ func visible_ids(_team: int) -> PackedInt32Array:
 	return _pia(&"visible_ids", _inner.visible_ids(_team))
 
 
+func visible_enemy_ships(_team: int, out: PackedInt32Array) -> int:
+	var n: int = _inner.visible_enemy_ships(_team, out)
+	if broken == &"visible_enemy_ships" and n > 0:
+		out[0] += 1
+	if broken == &"visible_enemy_ships_order" and n > 1:    # same count, same set, other order
+		var first: int = out[0]
+		out[0] = out[1]
+		out[1] = first
+	return _i(&"visible_enemy_ships", n)
+
+
 func ships() -> PackedInt32Array:
 	return _pia(&"ships", _inner.ships())
 

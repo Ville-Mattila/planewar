@@ -81,6 +81,13 @@ func visible_ids(_team: int) -> PackedInt32Array:
 	return PackedInt32Array()
 
 
+## Live ships of another team (neutral included) that `team` saw at its last Vision pass, into the caller-owned `out`
+## (grown once, never shrunk); returns the count: the ids are `out[0..n)` in ascending EntityId order, a function of
+## state alone (TA-63, R0 B.17 A-95; sim/vision/MODULE.md V10).
+func visible_enemy_ships(_team: int, _out: PackedInt32Array) -> int:
+	return 0
+
+
 func ships() -> PackedInt32Array:
 	return PackedInt32Array()
 

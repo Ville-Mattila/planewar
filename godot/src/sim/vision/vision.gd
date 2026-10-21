@@ -29,6 +29,7 @@ var reveal_r: PackedFloat32Array = PackedFloat32Array()   ## [owner * DEF_N + de
 
 var _store: EntityStore
 var _seen: PackedInt32Array = PackedInt32Array()
+var _enemy: PackedInt32Array = PackedInt32Array()   ## enemy_ships scratch (V10)
 
 
 ## `ticks_per_s` = MatchRules.tick_hz; `rung_2_hz` = rules.cut_ladder.rung_2_vision_hz; every owner row starts
@@ -120,6 +121,40 @@ func pass_team(t: int, tick: int) -> void:
 		groups.clear_cover()
 	grid.build_list(t, _store, _seen, seen_n, true)
 	last_pass[t] = tick
+
+
+## Live ships of another team (neutral included) in `team`'s list, into `out` (resized once to the list length when
+## smaller): the count `n`, ids `out[0..n)` in ascending EntityId order (a function of state alone, not of the list's
+## cell order). O(listed + n log n), no allocation once `_enemy` has grown (V10; `SimView.visible_enemy_ships`).
+func enemy_ships(team: int, out: PackedInt32Array) -> int:
+	if team < 0 or team >= TEAMS:
+		return 0
+	var base: int = team * InterestGrid.STRIDE
+	var listed: int = grid.list_size[team]
+	if _enemy.size() < listed:
+		var _r: int = _enemy.resize(listed)
+	var n: int = 0
+	for k: int in listed:
+		var id: int = grid.ids[base + k]
+		if _store.alive(id):
+			var s: int = EntityId.slot(id)
+			if _store.kind[s] == EntityStore.K_SHIP and _store.team[s] != team:
+				_enemy[n] = id
+				n += 1
+	return _sorted_into(n, out)
+
+
+## Sorts `_enemy[0..n)` (a scratch sized to n, restored after) and copies it to `out[0..n)`.
+func _sorted_into(n: int, out: PackedInt32Array) -> int:
+	if out.size() < n:
+		var _r: int = out.resize(n)
+	var cap: int = _enemy.size()
+	var _s: int = _enemy.resize(n)
+	_enemy.sort()
+	for k: int in n:
+		out[k] = _enemy[k]
+	var _g: int = _enemy.resize(cap)
+	return n
 
 
 ## EntityIds visible to `team` in interest `cell` at its last pass (allocates; NET-08 reads the flat arrays).

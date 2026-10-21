@@ -112,9 +112,21 @@ func _lists() -> void:
 	_t(&"structures", _same(_v.structures(), [s.core, s.pad, s.yard, s.tower]))
 	_t(&"wrecks", _same(_v.wrecks(), [s.wreck]))
 	_t(&"visible_ids", _same(_v.visible_ids(0), [s.core, s.pad, s.yard, s.tower, s.a, s.b, s.c]) and _v.visible_ids(7).is_empty())
+	_t(&"visible_enemy_ships", _enemy_ships_ok())
 	_t(&"visible_to", _v.visible_to(0, s.a) and _v.visible_to(0, s.b) and not _v.visible_to(0, s.wreck)
 			and not _v.visible_to(0, s.dead) and not _v.visible_to(9, s.a))
 	_t(&"unit_count", _v.unit_count(0) == 2 and _v.unit_count(1) == 1 and _v.unit_count(2) == 0)
+
+
+## TA-63: team 0 sees only `b` (its own ships, the structures and the wreck are never listed), team 1 `a` and `c` (not the core it also sees); ids ascending (V10: a state-only order); a long pre-filled `out` is neither reallocated nor read past the count; bad teams give 0.
+func _enemy_ships_ok() -> bool:
+	var s: SimViewScene = _s
+	var out0: PackedInt32Array = PackedInt32Array()
+	var n0: int = _v.visible_enemy_ships(0, out0)
+	var out1: PackedInt32Array = PackedInt32Array([-7, -7, -7, -7, -7, -7, -7, -7, -7, -7])
+	var n1: int = _v.visible_enemy_ships(1, out1)
+	var out2: PackedInt32Array = PackedInt32Array([-7])
+	return n0 == 1 and out0.size() >= 1 and out0[0] == s.b 			and n1 == 2 and out1.size() == 10 and out1[2] == -7 and out1[0] == s.a and out1[1] == s.c 			and _v.visible_enemy_ships(7, out2) == 0 and _v.visible_enemy_ships(-1, out2) == 0 			and _v.visible_enemy_ships(8, out2) == 0 and out2[0] == -7
 
 
 func _flight() -> void:

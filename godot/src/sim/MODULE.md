@@ -122,7 +122,7 @@ func ids_in_cell(cell: int) -> PackedInt32Array;  func ids_near(p: Vector3, radi
 func stockpile(team: int) -> Vector3                                         # ore, ice, power_ratio
 func visible_to(team: int, id: int) -> bool                                  # ... to here
 func tick() -> int
-func visible_ids(team: int) -> PackedInt32Array                              # (03) live list, rebuilt per vision pass
+func visible_ids(team: int) -> PackedInt32Array;  func visible_enemy_ships(team: int, out: PackedInt32Array) -> int   # visible_ids allocates; walks every live slot. enemy ships: vision/MODULE.md V10 (TA-63)
 func ships() -> PackedInt32Array;  func structures() -> PackedInt32Array;  func wrecks() -> PackedInt32Array   # (03) live-slot lists
 func flags(id: int) -> int;  func radius(id: int) -> float;  func def_kind(id: int) -> int                       # (03)
 func cargo(id: int) -> float;  func cargo_kind(id: int) -> int;  func link(id: int) -> int                       # (03)
