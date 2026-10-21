@@ -278,7 +278,7 @@ func test_dart_brain_is_deterministic_and_restores_s4() -> void:
 	var bomber: int = a[3]
 	assert_bool(wa.serialize() == wb.serialize()).is_true()
 	assert_int(da.state.target_count[EntityId.slot(bomber)]).is_equal(3)
-	assert_int(wa.projectiles().live.size()).is_equal(0)   # TA-65: until it lands a world with live slugs may not round-trip byte-exactly
+	assert_int(wa.projectiles().live.size()).is_greater(0)   # saved mid-burst, slugs in flight (TA-65: the store round-trips at any tick)
 	var bytes: PackedByteArray = wa.serialize()
 	var cruise: DartKit.CruiseBrain = a[2]
 	var d2: AiDriver = AiDriver.new(Rng.new(99))
@@ -318,11 +318,11 @@ func _fight(seed_value: int) -> Array:
 	var hb: Vector3 = DartKit.heading(pb, DartKit.above(w, DartKit.offset(home, 500.0, 600.0), 400.0))
 	var bomber: int = DartKit.spawn(w, &"bomber", DartKit.FOE, pb, hb * 70.0, hb)
 	cruise.heading[bomber] = hb
-	for k: int in 3:   # 720 m behind it, 80 m apart, closing at 15 m/s: ENGAGE from 750 m, no slug fired before 650 m
-		var pd: Vector3 = DartKit.above(w, DartKit.offset(home, -720.0, 600.0 + 80.0 * float(k - 1)), 400.0 + 30.0 * float(k))
-		var dart: int = DartKit.spawn(w, &"dart", 0, pd, hb * 85.0, hb)
+	for k: int in 3:   # 300 m behind it, 80 m apart: all three in gun range at once
+		var pd: Vector3 = DartKit.above(w, DartKit.offset(home, -300.0, 600.0 + 80.0 * float(k - 1)), 400.0 + 30.0 * float(k))
+		var dart: int = DartKit.spawn(w, &"dart", 0, pd, hb * 90.0, hb)
 		DartKit.order(w, dart, OrderSpec.make(OrderSpec.Kind.ATTACK, bomber))
-	for _k: int in 45:   # 1.5 s: all three ENGAGEd, none firing yet (the saved world has no projectile in flight)
+	for _k: int in 45:   # 1.5 s: all three ENGAGEd and firing, the Bomber still alive
 		w.step()
 		var _e: Array[SimEvent] = w.drain_events()
 	return [w, d, cruise, bomber]
