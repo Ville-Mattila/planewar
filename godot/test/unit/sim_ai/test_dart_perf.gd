@@ -4,7 +4,8 @@ extends GdUnitTestSuite
 ## within ~300 m of the measured ones (the separation query's ring path has neighbours), and two enemy ships inside the
 ## intercept radius (the choice point scores candidates). Cases, timed per call with `think_one` / `act_batch`:
 ##   patrol    AUTO patrol thinks; the choice point runs every `choice_period_thinks` (6th) think, staggered by slot, the
-##             separation refresh every 2nd (never on a choice think), so the mean is the steady mix;
+##             separation refresh every `DartBrain.SEP_PHASES` (3rd) think (never on a choice think), so the mean is
+##             the steady mix;
 ##   intercept the same Darts on an enemy Bomber 1.75 km out (DartCombat.think + the engaged re-evaluation);
 ##   act       back-to-back act_batch over the measured Darts (track_velocity, the PULL_UP check on every 3rd tick per
 ##             ship, staggered: one height sample + the 1.0 s re-sample, pull_up_loss only while sinking); engaged:
@@ -140,13 +141,16 @@ func test_perf_think_and_act() -> void:
 		ref, REF_ANCHOR_US, host, qt.x / host, it.x / host, float(quiet["act"]) / host, float(fight["act"]) / host, pic_tick / host])
 	# deterministic counters (no timer noise)
 	assert_float(quiet["choice_share"]).is_between(0.15, 0.18)           # every 6th think
-	assert_float(quiet["refresh_share"]).is_less_equal(0.51)             # every 2nd think, none on a choice think (no closing pair)
-	assert_float(quiet["shape_loss"]).is_less_equal(1.0)                 # at most one exact loss per shaped think
+	# every SEP_PHASES-th think exactly (phase 1 mod 3 never meets a choice think, phase 0 mod 6; no closing pair here)
+	assert_float(quiet["refresh_share"]).is_equal_approx(1.0 / float(DartBrain.SEP_PHASES), 1e-6)
+	assert_float(quiet["shape_loss"]).is_equal(0.0)                      # level flight at the band: no sinking command
+	assert_float(quiet["sink_cmds"]).is_equal(1.0)                       # descent case: every shaped think commands a sink
+	assert_float(quiet["sink_loss"]).is_equal(1.0)                       # ... and its sink limit calls pull_up_loss exactly once
 	assert_float(quiet["check_share"]).is_less_equal(1.0 / 3.0 + 0.001)   # the PULL_UP check on every 3rd tick per ship
 	assert_float(quiet["check_loss"]).is_less_equal(1.0)
 	assert_float(quiet["sinking_acts"]).is_greater(0.0)   # the harness ships sink (frozen state): the budget path runs
 	assert_float(quiet["loss_per_sinking_act"]).is_equal_approx(1.0 / float(DartKit.params().check_ticks), 1e-6)   # A-96 counter
-	assert_int(fight["builds_per_epoch"]).is_equal(1)                     # one picture per team per Vision epoch
+	assert_int(fight["builds"]).is_equal(fight["epochs"])                 # one picture per team per Vision epoch, exactly
 	# timings against the 05 s10 rows x CI_FACTOR (AI-40 / AI-11 precedent; no other factor)
 	assert_bool(_gate("test_dart_perf.quiet_think", qt.x, THINK_ROW_US * CI_FACTOR, host, "05 s10 / R0 A-96")).is_true()
 	assert_bool(_gate("test_dart_perf.engaged_think", it.x, THINK_ROW_US * CI_FACTOR, host, "05 s10 / R0 A-96")).is_true()
@@ -195,6 +199,7 @@ func _case(enemies: bool) -> Dictionary:
 	out["sinking_acts"] = float(acts1[6] - acts0[6])
 	out["loss_per_sinking_act"] = float(acts1[5] - acts0[5]) / float(maxi(acts1[6] - acts0[6], 1))
 	if not enemies:
+		_descent(w, brain, st, sink, ids, out)
 		return out
 	for i: int in MEASURED:   # every measured Dart on the Bomber 1.75 km out
 		var s: int = EntityId.slot(ids[i])
@@ -222,10 +227,33 @@ func _case(enemies: bool) -> Dictionary:
 	var builds1: int = brain.modes.picture.builds
 	for k: int in 3 * out["period"]:   # every tick of three epochs asks: one build per epoch
 		var _q: PackedInt32Array = brain.modes.picture.enemies(v, 0, 950000 + k)
-	out["builds_per_epoch"] = float(brain.modes.picture.builds - builds1) / float(brain.modes.picture.epoch(0, 950000 + 3 * out["period"] - 1) - e + 1)
-	out["builds_per_epoch"] = roundi(out["builds_per_epoch"])
+	out["builds"] = brain.modes.picture.builds - builds1
+	out["epochs"] = brain.modes.picture.epoch(0, 950000 + 3 * out["period"] - 1) - e + 1
 	out["picture_us"] = pic
 	return out
+
+
+# The sink limit's counter on commands that sink: each measured Dart gets a MOVE with FLAG_LOW (the 60 m deck band) from
+# 300 m AGL; with the world frozen every think commands the same descent, so every shaped think runs sink_limited and its
+# one pull_up_loss. Fills out["sink_cmds"] (share of shaped thinks whose command sinks) and out["sink_loss"].
+func _descent(w: SimWorld, brain: DartBrain, st: AiState, sink: CommandSink, ids: PackedInt32Array, out: Dictionary) -> void:
+	for i: int in MEASURED:
+		var p: Vector3 = w.view().pos(ids[i])
+		var to: Vector3 = DartKit.above(w, DartKit.offset(p.normalized(), 0.0, 3000.0), 60.0)
+		DartKit.order(w, ids[i], OrderSpec.make(OrderSpec.Kind.MOVE, 0, to, OrderSpec.FLAG_LOW))
+	w.step()
+	var v: SimView = w.view()
+	var c0: Array = _counters(brain)
+	var sinking: int = 0
+	for k: int in 60:
+		for i: int in MEASURED:
+			var s: int = EntityId.slot(ids[i])
+			brain.think_one(ids[i], v, st, sink, 2000 + 10 * k)
+			sinking += 1 if st.guidance_vel[s].dot(v.pos(ids[i]).normalized()) < 0.0 else 0
+	var c1: Array = _counters(brain)
+	var shaped: int = maxi(c1[2] - c0[2], 1)
+	out["sink_cmds"] = float(sinking) / float(shaped)
+	out["sink_loss"] = float(c1[3] - c0[3]) / float(shaped)
 
 
 # [choices, refreshes, shaped thinks, shape exact losses, act checks, act exact losses, flight acts while sinking]
