@@ -3,16 +3,17 @@ class_name AiState extends RefCounted
 ## Beyond the 05 s4.3 fields it carries the driver's per-slot scheduling data (`cls`, `eid`, `stagger`, `last_wake`,
 ## `wake_pending`), the landing fields of AI-09, the overlay state of AI-08 (`overlay`, `ov_flags`; the overlays use
 ## `integ`), the escort fields of AI-11 and the brain fields of AI-13 (FORMAT 5: `sub`, `passes`, `prev_mode`, `wp`,
-## `bflags`, `seen_tick`, `mark_tick`, `burst_tick`, `order_tick`, `hp_mark`, `clear_m`, `home`, `goal`, `aim_err`).
+## `bflags`, `seen_tick`, `mark_tick`, `burst_tick`, `order_tick`, `hp_mark`, `clear_m`, `home`, `goal`, `aim_err`) and
+## the Lancer's rocket lock of AI-14 (FORMAT 6: `lock_tick`).
 ## `serialize` writes only registered slots (`cls != NO_CLASS`), ascending, so bytes are a function of state.
 
 const NO_CLASS: int = 255
-const FORMAT: int = 5
+const FORMAT: int = 6
 const WAKE_NEVER: int = -1000000
 const LAND_BUSY: int = 1                ## land_flags: the pad is occupied, queued or claimed by another ship
 const LAND_THREAT: int = 2              ## land_flags: an enemy projectile is inbound to the pad
 const LAND_FOREIGN: int = 4             ## land_flags: the pad is no longer this ship's team's
-const RECORD_MIN: int = 233             ## slot u32, 17 u8, 14 i32, 27 f32 (9 Vector3), 11 f32, path count i32
+const RECORD_MIN: int = 237             ## slot u32, 17 u8, 15 i32, 27 f32 (9 Vector3), 11 f32, path count i32
 const ROSTER_WIDTH: int = 8             ## form_roster entries per escortee (class slots are at most this many)
 const NO_SLOT: int = 255                ## form_slot: no formation slot assigned
 ## `ov_flags` bits (AI-08): PULL_UP running, system RETURN already requested, POSSESSED at the last check.
@@ -63,6 +64,7 @@ var seen_tick: PackedInt32Array = PackedInt32Array()      ## AI-13: last tick th
 var mark_tick: PackedInt32Array = PackedInt32Array()      ## AI-13: tick of `hp_mark`
 var burst_tick: PackedInt32Array = PackedInt32Array()     ## AI-13: start tick of the current gun burst cycle (0 = none)
 var order_tick: PackedInt32Array = PackedInt32Array()     ## AI-13: issue_tick of the head order the brain state belongs to (-1 = AUTO)
+var lock_tick: PackedInt32Array = PackedInt32Array()      ## AI-14: first tick of the current rocket lock attempt (target in cone and range), 0 = none
 var hp_mark: PackedFloat32Array = PackedFloat32Array()    ## AI-13: hp01 at `mark_tick` (EVADE trigger window)
 var clear_m: PackedFloat32Array = PackedFloat32Array()    ## AI-13: visible clearance of the last think (min AGL, worst drop-free clearance)
 var home: PackedVector3Array = PackedVector3Array()       ## AI-13: patrol centre (home pad or the first think's position)
@@ -97,7 +99,7 @@ func ensure_capacity(slots: int) -> void:
 		sub.resize(slots), passes.resize(slots), prev_mode.resize(slots), wp.resize(slots), bflags.resize(slots),
 		seen_tick.resize(slots), mark_tick.resize(slots), burst_tick.resize(slots), order_tick.resize(slots),
 		hp_mark.resize(slots), clear_m.resize(slots), home.resize(slots), goal.resize(slots), aim_err.resize(slots),
-		target_count.resize(slots), rtb_floor.resize(slots)]
+		target_count.resize(slots), rtb_floor.resize(slots), lock_tick.resize(slots)]
 	capacity = slots
 	for s: int in range(old, slots):
 		clear_slot(s)
@@ -156,6 +158,7 @@ func _clear_brain(s: int) -> void:
 	mark_tick[s] = 0
 	burst_tick[s] = 0
 	order_tick[s] = -1
+	lock_tick[s] = 0
 	hp_mark[s] = 0.0
 	clear_m[s] = 0.0
 	home[s] = Vector3.ZERO
@@ -229,7 +232,7 @@ func _write_slot(b: StreamPeerBuffer, s: int) -> void:
 	for v: int in [land_phase[s], land_attempts[s], land_abort[s], land_flags[s], sub[s], passes[s], prev_mode[s], wp[s], bflags[s]]:
 		b.put_u8(v)
 	for v: int in [mode[s], mode_since[s], overlay_since[s], target[s], aux_id[s], path_ticket[s], eid[s], stagger[s],
-			last_wake[s], form_order[s], seen_tick[s], mark_tick[s], burst_tick[s], order_tick[s]]:
+			last_wake[s], form_order[s], seen_tick[s], mark_tick[s], burst_tick[s], order_tick[s], lock_tick[s]]:
 		b.put_32(v)
 	for p: Vector3 in [guidance_vel[s], guidance_point[s], aim_lead[s], land_bearing[s], land_mark[s], land_ga_dir[s], sep_push[s],
 			home[s], goal[s]]:
@@ -348,6 +351,7 @@ func _read_slot(b: StreamPeerBuffer) -> bool:
 	mark_tick[s] = b.get_32()
 	burst_tick[s] = b.get_32()
 	order_tick[s] = b.get_32()
+	lock_tick[s] = b.get_32()
 	guidance_vel[s] = _get_v3(b)
 	guidance_point[s] = _get_v3(b)
 	aim_lead[s] = _get_v3(b)

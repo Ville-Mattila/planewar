@@ -71,7 +71,7 @@ static func choose_ship(view: SimView, team: int, cand: PackedInt32Array, n: int
 		if not view.alive(id) or view.team(id) == team or not view.visible_to(team, id):
 			continue
 		var d2: float = origin.distance_squared_to(view.pos(id))
-		var w: float = p.weight(view.def_id(id), view.cargo(id) > 0.0)
+		var w: float = p.weight(view.def_id(id), view.cargo(id) > 0.0, _building(view, id, p))
 		if d2 > r2 or w <= 0.0:
 			continue
 		k = _keep_best(out, ctx.scores, k, p.max_candidates, id, w / (1.0 + sqrt(d2) / p.falloff_m))
@@ -80,8 +80,9 @@ static func choose_ship(view: SimView, team: int, cand: PackedInt32Array, n: int
 		var pos: Vector3 = view.pos(id)
 		var def_id: int = view.def_id(id)
 		var under: bool = p.under_tower_penalty < 1.0 and ctx.under_tower(pos, def_id, view.terrain_height(pos))
-		ctx.scores[j] = score_ship(p.weight(def_id, view.cargo(id) > 0.0), origin.distance_to(pos), view.hp01(id),
-			ctx.attacked_recently(id, tick), under, _others(ctx, id, current), p)
+		var w: float = p.weight(def_id, view.cargo(id) > 0.0, _building(view, id, p))
+		ctx.scores[j] = score_ship(w, origin.distance_to(pos), view.hp01(id), ctx.attacked_recently(id, tick), under,
+			_others(ctx, id, current), p)
 	return pick(out, ctx.scores, k, current, p.switch_margin)
 
 
@@ -112,6 +113,11 @@ static func choose_tower(view: SimView, team: int, tower_pos: Vector3, aim: Vect
 		ctx.scores[j] = score_tower(env.base_weight(view.def_id(id), view.cargo(id) > 0.0), attacking, view.hp01(id),
 			_others(ctx, id, current), guarded != 0 and attacking, slew, p)
 	return pick(out, ctx.scores, k, current, p.tower_switch_margin)
+
+
+# AI-14: a structure under construction (read only when the params weigh `structure_building`).
+static func _building(view: SimView, id: int, p: TargetParams) -> bool:
+	return p.w_building > 0.0 and (view.flags(id) & EntityStore.F_BUILDING) != 0
 
 
 # Friendly units targeting `id` other than the chooser itself (which is counted when `id` is its current target).

@@ -39,12 +39,14 @@ var ceiling_m: float = 0.0             ## wingmen never follow above rules.ceili
 
 ## `engage_m`: OrderRulesDef.escort_engage_radius_m (order_rules.json; one home, 05 s3.1 / A-86).
 ## `ring2_m`: the collision hash's `Spatial.ring2_m`; `query_radius_m` is clamped to it so the neighbour query stays on the ring path.
+## AI-14: an empty `form` gives separation-only parameters (no class slots; A-86: the block is optional except on
+## ap_dart / ap_lancer), for brains that never escort (Bomber, Scout).
 static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_soft_m: float, engage_m: float, ring2_m: float = INF) -> FormationParams:
 	for k: String in SEP_KEYS:
 		if not _is_num(sep.get(k)):
 			return null
 	for k: String in FORM_KEYS:
-		if not form.has(k) or (k != "class_slots_m" and not _is_num(form[k])):
+		if not form.is_empty() and (not form.has(k) or (k != "class_slots_m" and not _is_num(form[k]))):
 			return null
 	var p: FormationParams = FormationParams.new()
 	p.sep_radius_m = _f(sep, "radius_m")
@@ -58,6 +60,10 @@ static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_
 	p.look_max_mps = _f(sep, "lookahead_max_mps")
 	p.look_brake = _f(sep, "lookahead_brake")
 	p.query_radius_m = minf(_f(sep, "query_radius_m"), ring2_m)
+	p.engage_radius_m = engage_m
+	p.ceiling_m = ceiling_soft_m
+	if form.is_empty():
+		return p
 	p.k_form = _f(form, "k_form")
 	p.speed_cap_mult = _f(form, "speed_cap_mult")
 	p.engage_radius_m = engage_m

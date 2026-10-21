@@ -81,6 +81,7 @@ func set_brain(cls: int, brain: AiBrain, bot: bool = false) -> void:
 	_brains[cls] = brain
 	if brain != null:
 		brain.bind_rng(_rng)
+		brain.bind_intel(_intel)
 	if bot:
 		_bot_brain = brain
 
@@ -101,6 +102,9 @@ func set_terrain(t: Terrain) -> void:
 ## brains of the tick. Session configuration (tables and profile); the tracked teams and their state are S4 bytes.
 func set_intel(intel: TeamIntel) -> void:
 	_intel = intel
+	for br: AiBrain in _brains:
+		if br != null:
+			br.bind_intel(intel)   # AI-14: brains read the team map / perception
 
 
 ## Team `team`'s threat map (null without intel or when the team is not tracked). Read only.

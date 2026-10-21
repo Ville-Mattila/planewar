@@ -5,6 +5,10 @@ class_name DartParams extends RefCounted
 ## 05 s4.4's; `guidance` (the AI-05 rig names, 05 s5.3 values), `intercept` and `attack_run` (05 s6.2 / s6.3 inline
 ## numbers) and `evade.heading_change_deg` are AI-13 additions. **Needs content (AI-19):** the fixture
 ## `test/sim/ai/ai13_autopilots.json` carries them until `autopilots.json` does.
+## AI-14: the same numbers drive the Lancer, Bomber and Scout brains (they extend DartBrain). Which blocks a class
+## needs follows its ship def's weapons: top-level KEYS, `guidance`, `intercept`, `landing` and order_rules always;
+## `gun`, `evade` and `rtb.ammo` with a gun primary; `bomb` with a bomb secondary; `attack_run` with a bomb or rocket
+## secondary (an absent, unneeded block leaves its fields 0).
 
 const KEYS: PackedStringArray = ["think_period_ticks", "cruise_alt_agl_m", "deck_alt_agl_m", "max_alt_m", "patrol_radius_m",
 	"intercept_radius_m", "safety_clear_tti_s", "safety_pull_up_tti_s"]
@@ -107,22 +111,32 @@ var threat_range: PackedFloat32Array = PackedFloat32Array() ## by def id: that t
 var threat_scan: float = 0.0                               ## largest tower range: the R1 scan radius around a target
 var hp_by_def: PackedFloat32Array = PackedFloat32Array()    ## by def id: hit points (the 05 s6.3 R3 stick size)
 var rtb_ammo: int = 0                                      ## rtb.ammo: the gun-empty term of the 05 s6 RTB rule
+var has_gun: bool = false                                  ## AI-14: the primary is a gun (Dart, Lancer)
+var has_bombs: bool = false                                ## AI-14: the secondary is a bomb (Dart, Bomber)
+var has_rockets: bool = false                              ## AI-14: the secondary is a rocket (Lancer)
+var secondary: WeaponDef = null                            ## AI-14: the secondary weapon def (bomb or rocket), null when none
 
 
 ## Builds the parameters of ship `def` from `ap` (its autopilot def's raw dictionary); null on a missing key or def.
 static func from_content(ap: Dictionary, def: ShipDef, c: ContentSet) -> DartParams:
 	var d: Dictionary = ap
 	var orr: Dictionary = c.order_rules.raw if c.order_rules != null else {}
-	if not (_has(d, KEYS) and _has(block(d, "gun"), GUN_KEYS) and _has(block(d, "bomb"), BOMB_KEYS)
-			and _has(block(d, "evade"), EVADE_KEYS) and _has(block(d, "guidance"), GUIDE_KEYS)
-			and _has(block(d, "intercept"), INTERCEPT_KEYS) and _has(block(d, "attack_run"), RUN_KEYS)
-			and _has(block(d, "landing"), LAUNCH_KEYS) and _has(orr, ORDER_KEYS) and _has(block(d, "rtb"), RTB_KEYS)):
-		return null
 	var gun: WeaponDef = _weapon(c, def.primary_weapon)
-	var bomb: WeaponDef = _weapon(c, def.secondary_weapon)
-	if gun == null or bomb == null or c.rules == null:
+	var sec: WeaponDef = _weapon(c, def.secondary_weapon)
+	if c.rules == null or (def.primary_weapon != &"" and gun == null) or (def.secondary_weapon != &"" and sec == null):
 		return null
 	var p: DartParams = DartParams.new()
+	p.has_gun = gun != null and gun.kind == &"gun"
+	p.has_bombs = sec != null and sec.kind == &"bomb"
+	p.has_rockets = sec != null and sec.kind == &"rocket"
+	p.secondary = sec
+	if not (_has(d, KEYS) and _has(block(d, "guidance"), GUIDE_KEYS) and _has(block(d, "intercept"), INTERCEPT_KEYS)
+			and _has(block(d, "landing"), LAUNCH_KEYS) and _has(orr, ORDER_KEYS)
+			and (not p.has_gun or (_has(block(d, "gun"), GUN_KEYS) and _has(block(d, "evade"), EVADE_KEYS)
+				and _has(block(d, "rtb"), RTB_KEYS)))
+			and (not p.has_bombs or _has(block(d, "bomb"), BOMB_KEYS))
+			and (not (p.has_bombs or p.has_rockets) or _has(block(d, "attack_run"), RUN_KEYS))):
+		return null
 	p.rules = c.rules
 	var vhz: float = TargetParams.as_num(c.rules.raw.get("vision_hz"), -1.0)
 	if vhz <= 0.0:
@@ -135,12 +149,16 @@ static func from_content(ap: Dictionary, def: ShipDef, c: ContentSet) -> DartPar
 	p._top(d)
 	p.cruise_speed = def.v_cruise
 	p.boost_speed = def.v_boost
-	p.rtb_ammo = roundi(_f(block(d, "rtb"), "ammo"))
-	p._gun(block(d, "gun"), gun, c)
-	p._bomb(block(d, "bomb"), block(d, "evade"), bomb, c)
+	if p.has_gun:
+		p.rtb_ammo = roundi(_f(block(d, "rtb"), "ammo"))
+		p._gun(block(d, "gun"), gun, c)
+		p._evade(block(d, "evade"))
+	if p.has_bombs:
+		p._bomb(block(d, "bomb"), sec, c)
 	p._guide(block(d, "guidance"), block(d, "landing"))
 	p._intercept(block(d, "intercept"))
-	p._run(block(d, "attack_run"))
+	if p.has_bombs or p.has_rockets:
+		p._run(block(d, "attack_run"))
 	p._orders(orr)
 	p._threats(c)
 	return p
@@ -174,13 +192,16 @@ func _gun(g: Dictionary, w: WeaponDef, c: ContentSet) -> void:
 	slug_speed = pd.speed_mps if pd != null else 0.0
 
 
-func _bomb(b: Dictionary, e: Dictionary, w: WeaponDef, c: ContentSet) -> void:
+func _bomb(b: Dictionary, w: WeaponDef, c: ContentSet) -> void:
 	dive_rad = deg_to_rad(_f(b, "dive_angle_deg"))
 	release_tol = _f(b, "release_tolerance_m")
 	pullout_margin_s = _f(b, "pullout_g_margin_s")
 	bomb_def = _projectile(c, w.projectile)
 	bomb_damage = float(w.damage_max) * w.structure_mult
 	bomb_interval = 1.0 / w.rof if w.rof > 0.0 else 0.0
+
+
+func _evade(e: Dictionary) -> void:
 	hp_drop = _f(e, "hp_drop_trigger")
 	evade_ticks = ticks(_f(e, "duration_s"))
 	evade_turn_rad = deg_to_rad(_f(e, "heading_change_deg"))

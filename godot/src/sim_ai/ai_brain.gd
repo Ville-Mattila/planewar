@@ -22,3 +22,9 @@ func think_bot(_slot: int, _tier: int, _tick: int, _view: SimView, _sink: Comman
 ## stream object); a brain that draws (aim error, 05 s6.2) keeps this reference and never another source.
 func bind_rng(_rng: Rng) -> void:
 	pass
+
+
+## AI-14: the driver's per-team intel (05 s6 "the team's threat map through a read-only sampler"; AI-22 TeamIntel),
+## bound on `set_brain` and `set_intel` (null: none). A brain reads `threat_map(team)` / `perception(team)` only.
+func bind_intel(_intel: TeamIntel) -> void:
+	pass

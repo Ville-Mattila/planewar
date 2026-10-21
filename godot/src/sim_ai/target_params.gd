@@ -3,10 +3,12 @@ class_name TargetParams extends RefCounted
 ## Read from an `autopilots.json` entry: `target_weights` (class name -> weight), `target_dist_falloff_m`,
 ## `target_under_tower_penalty`, `switch_margin`. The multipliers 05 writes inline (1.5, 1.3, 0.5, ...) and the tower block
 ## are optional keys with the 05 values as defaults; **needs content:** `autopilots.schema.json` should list them.
-## Class names are the weight keys: a ship's def id (`bomber`, `dart`, ...) plus the pseudo class `hauler_loaded`.
+## Class names are the weight keys: a ship's def id (`bomber`, `dart`, ...) plus the pseudo classes `hauler_loaded` and
+## (AI-14, the Lancer's 05 s6.4 "structures under construction") `structure_building`: any structure still building.
 
 const LOADED_KEY: StringName = &"hauler_loaded"
 const HAULER_KEY: StringName = &"hauler"
+const BUILDING_KEY: StringName = &"structure_building"
 const DEFAULT_RANK_WEIGHTS: Array = [100.0, 80.0, 60.0, 50.0, 40.0, 30.0, 25.0, 20.0]
 
 var falloff_m: float = 1000.0              ## target_dist_falloff_m
@@ -31,6 +33,7 @@ var weights: Dictionary = {}               ## class name (StringName) -> weight
 
 var w_by_def: PackedFloat32Array = PackedFloat32Array()       ## indexed by def id, filled by `bind`
 var w_loaded: float = 0.0                  ## hauler_loaded weight
+var w_building: float = 0.0                ## AI-14: structure_building weight (0: structures weigh by their def only)
 var hauler_def: int = -1
 
 
@@ -59,15 +62,20 @@ func bind(entity_index: Dictionary) -> void:
 		var wk: float = num(weights, str(k), 0.0)
 		if name == LOADED_KEY:
 			w_loaded = wk
+		elif name == BUILDING_KEY:
+			w_building = wk
 		elif entity_index.has(name):
 			w_by_def[entity_def(entity_index, name)] = wk
 	hauler_def = entity_def(entity_index, HAULER_KEY) if entity_index.has(HAULER_KEY) else -1
 
 
-## Class weight of a candidate: the loaded-hauler weight when it is a hauler carrying cargo.
-func weight(def_id: int, loaded: bool) -> float:
+## Class weight of a candidate: the loaded-hauler weight when it is a hauler carrying cargo; the structure_building
+## weight for a structure under construction (AI-14) when that is larger than its def's.
+func weight(def_id: int, loaded: bool, building: bool = false) -> float:
 	if loaded and def_id == hauler_def:
 		return w_loaded
+	if building and w_building > 0.0:
+		return maxf(w_building, w_by_def[def_id] if def_id >= 0 and def_id < w_by_def.size() else 0.0)
 	return w_by_def[def_id] if def_id >= 0 and def_id < w_by_def.size() else 0.0
 
 

@@ -10,11 +10,15 @@ class_name DartBrain extends AiBrain
 ## PULL_UP (`Assist.pull_up`); otherwise the mode's controller into one reused PilotInput and `sink.drive`. The mode
 ## is the HUD tag (`set_ai_tag`, 05 s6.1). Order completion (05 C4) is not wired in the sim yet: an ATTACK whose run is
 ## over stays the head and the Dart flies its AUTO patrol under it (`B_RUN_DONE`); a MOVE that arrived orbits the point.
+## AI-14: the base of the Lancer, Bomber and Scout brains (`_dispatch`, `_on_home`, `_weapons` are their hooks); an
+## entity seen POSSESSED or in an overlay at act is marked `B_RESUMED`, and its first think after that re-plans a
+## running AttackRun (05 s2.5, `AttackRun.resume`).
 
 const B_RTB_SENT: int = 1        ## bflags: the RTB rule's system RETURN was submitted for this head
 const B_RUN_DONE: int = DartModes.B_RUN_DONE   ## bflags: the head ATTACK is over (target dead, no bombs, passes flown)
 const DOCKED_STATE: int = 2      ## SimView.dock_state DOCKED
 const SEP_PHASES: int = 3        ## separation refresh every SEP_PHASES thinks (A-84 lever 2; closing pairs every think)
+const B_RESUMED: int = 128       ## AI-14 bflags: possessed or in an overlay since the last think (05 s2.5 re-plan)
 
 var prm: DartParams
 var gains: FlightGains
@@ -38,6 +42,15 @@ var _rtb_ids: PackedInt32Array = PackedInt32Array([0])
 ## the map's terrain. Null when a block is missing (ADR-09). `ring2_m` = the collision hash's ring-2 radius
 ## (`Spatial.ring2_m`; the separation query stays on the ring path). Flight gains use ContentSet's FlightCommonDef (A-90).
 static func from_content(c: ContentSet, ap: Dictionary, def: ShipDef, t: Terrain, ring2_m: float = INF) -> DartBrain:
+	var b: DartBrain = DartBrain.new()
+	return b if fill(b, c, ap, def, t, ring2_m) else null
+
+
+## AI-14: builds the shared parts into `b` (a DartBrain or a subclass); false when a required block is missing.
+## `escorts` false (Bomber, Scout): the `formation` block may be absent (separation only); `targets` false: the
+## target_* keys may be absent (an empty TargetParams: the brain never runs the choice point).
+static func fill(b: DartBrain, c: ContentSet, ap: Dictionary, def: ShipDef, t: Terrain, ring2_m: float = INF,
+		escorts: bool = true, targets: bool = true) -> bool:
 	var dp: DartParams = DartParams.from_content(ap, def, c)
 	var fg: FlightGains = FlightGains.from_dict(DartParams.block(ap, "flight"), def, c.rules.tick_hz, c.rules, c.flight_common)
 	var lp: LandingParams = LandingParams.from_dict(DartParams.block(ap, "landing"), c.rules.gravity)
@@ -49,8 +62,12 @@ static func from_content(c: ContentSet, ap: Dictionary, def: ShipDef, t: Terrain
 		fp = FormationParams.from_dict(DartParams.block(ap, "separation"), DartParams.block(ap, "formation"), c.wing,
 			c.rules.ceiling_soft_m, engage, ring2_m)
 	var tp: TargetParams = TargetParams.from_dict(ap)
+	if tp == null and not targets:
+		tp = TargetParams.new()
+	if fp != null and escorts and fp.slot_count(false) == 0:
+		fp = null
 	if dp == null or fg == null or lp == null or bp == null or fp == null or tp == null:
-		return null
+		return false
 	tp.bind(c.entity_index)
 	var pads: PackedFloat32Array = PackedFloat32Array()
 	var _r: int = pads.resize(DefRanges.END)
@@ -58,19 +75,23 @@ static func from_content(c: ContentSet, ap: Dictionary, def: ShipDef, t: Terrain
 		var d: int = c.entity_index.get(sd.id, -1)
 		if d >= 0 and d < DefRanges.END and sd.pads > 0:
 			pads[d] = sd.pad_radius_m
-	var b: DartBrain = DartBrain.new()
 	b.prm = dp
 	b.gains = fg
 	b.probe_params = bp.probe
 	b.terrain = t
 	b.modes = DartModes.new(dp, t, LandingPilot.new(def, c.flight_common, c.rules, fg, lp, bp.probe,
 		DartParams.block(ap, "rtb"), t, pads), EscortPilot.new(def, fp, fg), AttackRun.new(dp, t), DartCombat.new(dp, fg), tp)
-	return b
+	return true
 
 
 func bind_rng(rng: Rng) -> void:
 	modes.combat.rng = rng
 	modes.picture.reset()   # bound on set_brain and after deserialize: no list survives a restore
+
+
+func bind_intel(intel: TeamIntel) -> void:
+	modes.intel = intel
+	modes.run.intel = intel
 
 
 func think_batch(ids: PackedInt32Array, n: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -> void:
@@ -83,8 +104,10 @@ func act_batch(ids: PackedInt32Array, view: SimView, st: AiState, sink: CommandS
 	for id: int in ids:
 		var s: int = EntityId.slot(id)
 		var m: int = st.mode[s]
-		if m == AiTag.Tag.NONE or m == AiTag.Tag.DOCKED or st.overlay[s] != Overlays.NONE \
-				or view.control_state(id) == ControlMachine.State.POSSESSED:
+		if st.overlay[s] != Overlays.NONE or view.control_state(id) == ControlMachine.State.POSSESSED:
+			st.bflags[s] |= B_RESUMED   # 05 s2.5: the next think re-plans (B_RESUMED cleared there)
+			continue
+		if m == AiTag.Tag.NONE or m == AiTag.Tag.DOCKED:
 			continue   # a dead id is refused by sink.drive (S11); the driver drops it at its next think
 		_act(id, s, m, view, st, sink, tick)
 		var _d: bool = sink.drive(id, _inp)
@@ -111,6 +134,7 @@ func _think(id: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -
 		st.home[s] = view.pos(pad) if pad != 0 else view.pos(id)
 		st.hp_mark[s] = view.hp01(id)
 		st.mark_tick[s] = tick
+		_on_home(id, s, view, st)
 		var launching: bool = m == AiTag.Tag.DOCKED or view.vel(id).length() < prm.launch_max_speed   # off a pad, not in flight
 		m = AiTag.Tag.LAUNCH if launching and _agl(id, s, view, st) < prm.launch_climb_agl else AiTag.Tag.PATROL
 	if m == AiTag.Tag.LAUNCH and _agl(id, s, view, st) < prm.launch_climb_agl:
@@ -128,16 +152,21 @@ func _think(id: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -
 		m = st.prev_mode[s]
 	if kind != OrderSpec.Kind.RETURN and (st.bflags[s] & B_RTB_SENT) == 0 and _needs_rtb(id, s, view, st, tick):
 		_send_rtb(id, s, view, st, sink)
+	if (st.bflags[s] & B_RESUMED) != 0:
+		st.bflags[s] &= ~B_RESUMED
+		if m == AiTag.Tag.BOMB:
+			var _rs: int = modes.run.resume(id, view, st, tick)   # 05 s2.5: re-plan the run from here
 	var choices: int = modes.stats_choices
 	m = _dispatch(id, s, m, head, kind, view, st, tick)
-	if kind == OrderSpec.Kind.ATTACK and AttackRun.step_of(st, s) == AttackRun.Step.DONE and view.bombs(id) == 0 \
-			and (st.bflags[s] & B_RTB_SENT) == 0:
-		_send_rtb(id, s, view, st, sink)   # 05 s6.2 BOMB: run done -> RETURN if bombs = 0
+	if kind == OrderSpec.Kind.ATTACK and AttackRun.step_of(st, s) == AttackRun.Step.DONE \
+			and (view.bombs(id) == 0 or _return_after_attack()) and (st.bflags[s] & B_RTB_SENT) == 0:
+		_send_rtb(id, s, view, st, sink)   # 05 s6.2 BOMB: run done -> RETURN if bombs = 0 (Bomber: always, s6.4)
 	if m != AiTag.Tag.RETURN and m != AiTag.Tag.ENGAGE:
 		_shape(id, s, m, view, st, modes.stats_choices != choices, tick)
 	_mode(id, s, m, st, sink, tick)
 
 
+## Head-order dispatch (AI-14 hook: the class brains override it); returns the mode, the command in `guidance_vel`.
 func _dispatch(id: int, s: int, m: int, head: OrderSpec, kind: int, view: SimView, st: AiState, tick: int) -> int:
 	if kind == OrderSpec.Kind.RETURN:
 		return modes.think_return(id, s, m, head, view, st, tick)
@@ -256,14 +285,29 @@ func _act(id: int, s: int, m: int, view: SimView, st: AiState, sink: CommandSink
 		modes.combat.act_engage(id, view, st, _inp, p, v, b, tick)
 	elif m != AiTag.Tag.ESCORT or not modes.escort.act(id, view, st, _inp):
 		st.integ[s] = FlightController.track_velocity(b, v, st.guidance_vel[s], up, gains, st.integ[s], _inp)
-	if m == AiTag.Tag.BOMB:
-		modes.run.act(id, view, st, _inp)
+	_weapons(id, s, m, view, st, _inp, tick)
 	var f: int = st.bflags[s]
 	if (f & AttackRun.F_BOOST) != 0 and view.boost_state(id) == 0:
 		_inp.buttons |= PilotInput.BOOST
 	if (f & AttackRun.F_FLIP) != 0:
 		_inp.buttons |= PilotInput.FLIP
 		st.bflags[s] = f & ~AttackRun.F_FLIP
+
+
+## Weapons of the act after the flight controller (AI-14 hook): the Dart's bomb sight and stick in BOMB.
+func _weapons(id: int, _s: int, m: int, view: SimView, st: AiState, out: PilotInput, _tick: int) -> void:
+	if m == AiTag.Tag.BOMB:
+		modes.run.act(id, view, st, out)
+
+
+## AI-14 hook: the AUTO home was just set to the home pad (`st.home`); the Lancer moves it to its structure cluster.
+func _on_home(_id: int, _s: int, _view: SimView, _st: AiState) -> void:
+	pass
+
+
+## AI-14 hook: true when a finished ATTACK is always followed by RETURN (the Bomber, 05 s6.4); the Dart only without bombs.
+func _return_after_attack() -> bool:
+	return false
 
 
 # Guidance.pull_up_due with the counters: one pull_up_loss per check while sinking.
@@ -314,9 +358,10 @@ func _needs_rtb(id: int, s: int, view: SimView, st: AiState, tick: int) -> bool:
 	if st.rtb_floor[s] <= 0.0 or modes.choice_due(s, tick):
 		st.rtb_floor[s] = modes.landing.fuel_floor(id, view)
 	return view.fuel01(id) < st.rtb_floor[s] or view.hp01(id) < modes.landing.hp_floor() \
-		or (view.ammo(id) <= prm.rtb_ammo and view.bombs(id) == 0)
+		or (prm.has_gun and view.ammo(id) <= prm.rtb_ammo and view.bombs(id) == 0)
 
 
+## One system RETURN (FLAG_PREPEND, issuer -1) for this head; `B_RTB_SENT` keeps it to one.
 func _send_rtb(id: int, s: int, view: SimView, st: AiState, sink: CommandSink) -> void:
 	st.bflags[s] |= B_RTB_SENT
 	_rtb_ids[0] = id
