@@ -2142,9 +2142,11 @@
       " R0 C3-05",
       " 02 GD-10"
     ],
-    "status": "todo",
+    "status": "done",
     "acceptance_append": "; an unsupplied Shield Projector does not recharge, read from SupplyNet.is_supplied (GD-18); R0 B.18 A-99: integrated_shield carries required dome_radius and collapse_s (core 75 / 10, _doc cites A-99 and 02 s4.3 rule 6) in structures.json and both schemas, applied in PR #102 under the Architect's ruling; ShieldTables reads them as it reads shield.dome_radius / shield.collapse_s with no derivation, no cross-def maximum and no code default; a unit test asserts dome_radius >= footprint half-diagonal + the largest blast_radius_structure_m of a shield_absorbed projectile for every def with integrated_shield (72.07 m for the shipped Core); A-100: Exposure cover = a living Core of any team whose centre is within shield.dome_radius of the Projector (SH7 as written); the C-13 scenario's event ticks are re-recorded if the radius change moves them; sim/combat/MODULE.md SH1 / SH3 name the def keys and the needs content: Open item is closed; the SimView accessor and CORE_SHIELD_UP flag are GD-38, not this task",
-    "note": "A-99 / A-100 (R0-amendments-12): the content and schema edits are outside the sim lane and are authorised for PR #102 by the ruling; the Opus review's item 2 (test_shield_perf.gd PerfGate bound 400 us vs the measured 770-860 us) is a review finding under A-97, fixed in the same round, not a contract matter. FORMAT 12 is GD-10's (PR #102); GD-19 (PR #106) bumps nothing under R0 B.20 A-104. FORMAT numbers are taken in merge order."
+    "note": "A-99 / A-100 (R0-amendments-12): the content and schema edits are outside the sim lane and are authorised for PR #102 by the ruling; the Opus review's item 2 (test_shield_perf.gd PerfGate bound 400 us vs the measured 770-860 us) is a review finding under A-97, fixed in the same round, not a contract matter. FORMAT 12 is GD-10's (PR #102); GD-19 (PR #106) bumps nothing under R0 B.20 A-104. FORMAT numbers are taken in merge order. ShieldDomes/ShieldTables, FORMAT 12; A-99 dome_radius 75 / collapse_s 10; A-100 Exposure any Core by centre distance. Hosted-runner perf 87-88 % of the pinned bounds (60-shot 265.5/300 us, S-SIM-1 129.9/150 us). Nits: tests read b.get(\"dome_radius\", 0.0) fallback; _scan O(n^2) on set change. SimView accessor -> GD-38.",
+    "pr": 102,
+    "merged": "2026-10-21"
   },
   {
     "id": "GD-12",
