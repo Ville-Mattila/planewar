@@ -2291,7 +2291,8 @@
       " R0 C2-20",
       " 02 GD-23"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; after a Relay capture, AI-22 Perception re-derives team/owner (losing team drops its sensor cover; continuous vs restored runs byte-exact)"
   },
   {
     "id": "GD-21",
@@ -2603,7 +2604,8 @@
       " R0 C2-14",
       " 05 AI-23"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; SC-43 fog fairness re-run with the real Commander through AI-22's AuditDriver (every AI command checked against the per-tick visible_to record)"
   },
   {
     "id": "AI-24",
