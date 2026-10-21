@@ -234,6 +234,6 @@ func test_launch_bay_state_round_trips() -> void:
 
 func test_format_9_snapshots_are_refused() -> void:
 	var bytes: PackedByteArray = _world().serialize()
-	assert_int(SimSerialize.FORMAT).is_equal(10)                        # GD-17: Production state gained the launch bay and targets
+	assert_int(SimSerialize.FORMAT).is_greater_equal(10)                # GD-17 (10): Production state gained the launch bay and targets
 	bytes.encode_u32(4, 9)
 	assert_int(SimSerialize.check(bytes)).is_equal(SimSerialize.Status.OLD_FORMAT)

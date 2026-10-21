@@ -5,13 +5,13 @@ class_name SimSerialize
 ## `SECTIONS`): header (seed, RNG, map), rules, clock,
 ## players, input slots, rate buckets, pending commands, control, entity store, projectile store, Collision's per-slot
 ## state, Combat's fire state, orders, pathing, vision, economy (`EconomyHub`: Build, Economy, Construction, Production),
-## the queued hook events (A-71) and the AI hook's opaque bytes. Events are not included: the caller drains them each tick.
+## the queued hook events (A-71), the AI hook's opaque bytes and the Spatial index of the last step 7 (TA-65). Events are not included: the caller drains them each tick.
 ## Versioning: `FORMAT` counts layout changes; there is no migration, a world is only read by the format that wrote it.
 ## `check` names the reason a byte array is refused so a save slot UI can say "from an older version". Saves are for the
 ## same build on the same machine (ADR-03/06): the bytes are a function of the state alone.
 
 const MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const FORMAT: int = 10          ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section; 8: TA-58 content hash; 9: TA-57 pending hook events; 10: GD-17 launch bay + replenish targets (Production state)
+const FORMAT: int = 11          ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section; 8: TA-58 content hash; 9: TA-57 pending hook events; 10: GD-17 launch bay + replenish targets (Production state); 11: TA-65 the step-7 Spatial index (no rebuild on load)
 const HASH_BYTES: int = 32
 const HEADER_BYTES: int = 12 + 2 * HASH_BYTES   ## magic, format, raw size (u32 each), SHA-256 of the raw body, content hash
 const COMPRESSION: int = FileAccess.COMPRESSION_ZSTD
@@ -19,7 +19,7 @@ const MAX_RAW_BYTES: int = 64 << 20   ## a header claiming more is refused befor
 const MAX_TICK_HZ: int = 1000
 const MAX_RATIO: int = 256            ## ... as is one claiming more than this many times the compressed size
 const SECTIONS: PackedStringArray = ["header", "rules", "clock", "players", "inputs", "rate_buckets", "pending_commands",
-	"control", "entities", "projectiles", "collision", "combat", "orders", "pathing", "vision", "economy", "hook"]
+	"control", "entities", "projectiles", "collision", "combat", "orders", "pathing", "vision", "economy", "hook", "spatial"]
 const _RULES_STATE: PackedStringArray = ["mode", "caps_profile", "sim_budget_profile", "core_exposure_s", "hard_end_s",
 	"debug_commands", "profile_enabled", "friendly_fire", "adjutant_allowed", "sun_period_s", "ranked", "tick_hz"]
 const _CAPS_STATE: PackedStringArray = ["id", "units", "structures", "projectiles", "wrecks", "slots"]
@@ -136,6 +136,8 @@ static func write_raw(w: SimWorld, marks: PackedInt32Array = PackedInt32Array())
 	w._events.write_pending(buf)
 	buf.put_var(w._hook.serialize() if w._hook != null else PackedByteArray())
 	_mark(buf, marks, 16)
+	w.spatial.write_state(buf)
+	_mark(buf, marks, 17)
 	return buf.data_array
 
 
@@ -181,14 +183,15 @@ static func read(bytes: PackedByteArray, content: ContentSet, hook: SimAiHook) -
 	if not w._events.read_pending(buf):
 		return null
 	var hv: Variant = buf.get_var()
-	if typeof(hv) != TYPE_PACKED_BYTE_ARRAY or buf.get_available_bytes() != 0 or not _indices_ok(w):
+	if typeof(hv) != TYPE_PACKED_BYTE_ARRAY or not w.spatial.read_state(buf):   # TA-65: the step-7 index, not a rebuild
+		return null
+	if buf.get_available_bytes() != 0 or not _indices_ok(w):
 		return null
 	w.rng = Rng.from_state(rng_b)
 	w._hook = hook
 	if hook != null:
 		var hook_b: PackedByteArray = hv
 		hook.deserialize(hook_b)          # last: every check above has passed
-	w.spatial.rebuild()
 	w.vision.rebuild_lists()
 	return w
 

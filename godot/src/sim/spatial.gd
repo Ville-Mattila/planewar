@@ -103,6 +103,92 @@ func rebuild() -> void:
 		_fill[c] += 1
 
 
+## S4 (TA-65): the index as the last step 7 left it, compacted to its touched cells. Readers between ticks (the AI
+## hook at step 3: `ids_near`, `projectiles_near`) see this index, not one of the end-of-tick positions: projectiles
+## spawned or freed in step 9 and entities spawned or freed after step 7 are not (or still) in it, and `hash_cell`
+## of a step-9 projectile is still 0. So a restore takes these bytes instead of calling `rebuild`.
+func write_state(buf: StreamPeerBuffer) -> void:
+	var cells: PackedInt32Array = touched_cells.slice(0, touched_count)
+	var counts: PackedInt32Array = PackedInt32Array()
+	var ents: PackedInt32Array = PackedInt32Array()
+	var e: int = counts.resize(touched_count) | ents.resize(touched_count)
+	assert(e == OK)
+	for t: int in touched_count:
+		counts[t] = cell_count[cells[t]]
+		ents[t] = cell_entities[cells[t]]
+	buf.put_var(cells)
+	buf.put_var(counts)
+	buf.put_var(ents)
+	buf.put_var(cell_items.slice(0, item_count))
+	buf.put_var(max_entity_radius)
+
+
+## Replaces the index from `write_state` bytes; false (index untouched) on a type, range or consistency error.
+func read_state(buf: StreamPeerBuffer) -> bool:
+	var v: Array = []
+	for _k: int in 5:
+		if buf.get_available_bytes() <= 0:
+			return false
+		v.append(buf.get_var())
+	for k: int in 4:
+		if typeof(v[k]) != TYPE_PACKED_INT32_ARRAY:
+			return false
+	if typeof(v[4]) != TYPE_FLOAT:
+		return false
+	var cells: PackedInt32Array = v[0]
+	var counts: PackedInt32Array = v[1]
+	var ents: PackedInt32Array = v[2]
+	var items: PackedInt32Array = v[3]
+	var max_r: float = v[4]
+	if not _index_ok(cells, counts, ents, items) or not (max_r >= 0.0 and is_finite(max_r)):
+		return false
+	for t: int in touched_count:
+		cell_count[touched_cells[t]] = 0
+		cell_entities[touched_cells[t]] = 0
+	var run: int = 0
+	for t: int in cells.size():
+		var c: int = cells[t]
+		touched_cells[t] = c
+		cell_start[c] = run
+		cell_count[c] = counts[t]
+		cell_entities[c] = ents[t]
+		run += counts[t]
+	for k: int in items.size():
+		cell_items[k] = items[k]
+	touched_count = cells.size()
+	item_count = run
+	cell_start[CELL_COUNT] = run
+	max_entity_radius = max_r
+	return true
+
+
+# Restored index checks: distinct non-empty cells in range, counts summing to the items, each cell's first `ents`
+# items entity slots and the rest projectile slots.
+func _index_ok(cells: PackedInt32Array, counts: PackedInt32Array, ents: PackedInt32Array, items: PackedInt32Array) -> bool:
+	var n: int = cells.size()
+	if counts.size() != n or ents.size() != n or items.size() > ITEM_CAP or n > items.size():
+		return false
+	var seen: PackedByteArray = PackedByteArray()
+	var _e: int = seen.resize(CELL_COUNT)
+	seen.fill(0)
+	var run: int = 0
+	for t: int in n:
+		var c: int = cells[t]
+		if c < 0 or c >= CELL_COUNT or seen[c] != 0 or counts[t] < 1 or ents[t] < 0 or ents[t] > counts[t]:
+			return false
+		if run + counts[t] > items.size():
+			return false
+		seen[c] = 1
+		for k: int in counts[t]:
+			var it: int = items[run + k]
+			var is_ent: bool = it >= 0 and it < EntityStore.SLOT_COUNT
+			var is_proj: bool = it >= EntityId.PROJECTILE_SLOT_MIN and it < EntityId.PROJECTILE_SLOT_END
+			if (k < ents[t] and not is_ent) or (k >= ents[t] and not is_proj):
+				return false
+		run += counts[t]
+	return run == items.size()
+
+
 ## EntityIds of live items (kinds selected by MASK_* bits) whose position is within `radius` (3D) of `p`.
 ## Order: ring cells, then items in hash order; deterministic for identical state.
 func ids_near(p: Vector3, radius: float, mask: int) -> PackedInt32Array:

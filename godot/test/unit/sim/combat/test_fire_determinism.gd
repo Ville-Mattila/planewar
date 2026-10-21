@@ -68,8 +68,10 @@ func test_s4_round_trip_mid_lock_and_mid_burst_resumes_byte_identical() -> void:
 	var log_a: PackedStringArray = PackedStringArray()
 	_log(a, 20, log_a)                                           # lancer and missile tower mid-lock, turret mid-burst
 	var hook_b: FireTestKit.TriggerHook = FireTestKit.TriggerHook.new()
-	var b: SimWorld = SimWorld.deserialize(a.serialize(), WorldTestKit.content(), hook_b)
-	assert_object(b).is_not_null()                               # S4 compares after the next step (hash cells refresh)
+	var saved: PackedByteArray = a.serialize()
+	var b: SimWorld = SimWorld.deserialize(saved, WorldTestKit.content(), hook_b)
+	assert_object(b).is_not_null()
+	assert_bool(b.serialize() == saved).is_true()                # TA-65: the step-7 index and hash cells are saved too
 	for t: int in TICKS:
 		var la: PackedStringArray = PackedStringArray()
 		var lb: PackedStringArray = PackedStringArray()
