@@ -7378,7 +7378,9 @@
       "03 s12.1",
       "05 s10"
     ],
-    "status": "todo",
-    "note": "The hosted A/B is the sim_ai regression gate from its merge on; AI-30's test/perf/ai_tick stays the pinned-runner benchmark."
+    "status": "done",
+    "note": "perf_tick --ai: 48 Darts, engaged share 0.258; ab_perf --scenario ai fails if head lacks scenario=ai, skips on base lacking it or ai_v mismatch (AI_SCENARIO_VERSION in perf_tick_world.gd). Default noise pass x3; ab-perf job 8m19s.",
+    "pr": 93,
+    "merged": "2026-10-21"
   }
 ]
