@@ -665,7 +665,7 @@ sequenceDiagram
   participant P as Player client
   participant S as Server
   S->>S: Combat kills the possessed entity at tick T; wreck spawned; control state cleared
-  S-->>P: EVENTS: DEATH(entity, killer, cause) [ch3] ; RELEASED(reason=DEATH)
+  S-->>P: EVENTS [ch3]: WRECK_SPAWNED (per wreck / pod) ; RELEASED(reason=DEATH) ; DEATH(entity, killer, cause) (order per 05 C15 and R0 B.20 A-107)
   P->>P: Prediction = DEAD_HOLD; stop sending INPUT; camera holds on wreck 1.5 s
   P->>P: UI: nearest same-class unit / Core / roster (01 s3.1.7)
   P->>S: COMMAND(POSSESS, chosen)  -> normal possess flow
@@ -1531,3 +1531,4 @@ Applied 2026-10-10 from `docs/reviews/R0-resolution-register.md`, the owner deci
 | R0 B.14 A-85 (CONTRACT-0 amendments 07, 2026-10-20) | ORDER layout erratum under C2-06: a 6-byte ESCORT trailer (`escort_mode u8`, `escort_slot u8` with 0xFF = -1, `focus u32`) after `points[]`, present iff `order_kind` 3, so the SL-2 fields 05 s3.1 and 08 promised have a wire path; size formula `+ 6 if ESCORT` (max 142 B, A-60 untouched); trailer on another kind or missing on ESCORT = REJECTED_MALFORMED; sim side TA-60, codec NET-04 | 2.5 |
 | R0 B.19 A-101..A-103 (CONTRACT-0 amendments 13, 2026-10-21) | NET-07 (PR #97) review: `ENTITY_META` for every keyframe entry is sent **before** the `KEYFRAME` on channel 3 (the KEYFRAME record has no def/owner/team, so the roster is built by META; the join and reconnect diagrams and 3.1 said the reverse); the post-FULL C-BLIP measured at +0.23 KB/s at 700 C was removed by NET-54 (PR #100, stream delta 1.562 KB/s), so 4.6 cites it instead of adding a row; known-blip entries (NET-56) are presented at their bucket with no gravity, and the DELTA base follows the same rule as wire semantics `[planned: NET-57]` (`PROTOCOL_VERSION` stays 1) | 2.2, 2.3, 3.1, 3.4, 4.3, 4.6, 5.6, 5.7 |
 | R0 B.16 A-91 (CONTRACT-0 amendments 09, 2026-10-21) | ORDER size formula erratum (NET-04, PR #81): the field list sums to a 9-byte fixed part, the printed `8 +` omitted `point_count`; 32 ids carry at most 14 points (249 B), a 32-id ESCORT is 143 B; the layout and every byte are unchanged (`Command.order` already wrote 9); A-60 / A-85 superseded in their numbers; sim constant fix TA-62, NET-04 asserts the corrected figures and the net == sim constant | 2.5 |
+| R0 B.20 A-107 (CONTRACT-0 amendments 14, 2026-10-21) | GD-19 (PR #106) review: the 5.4 death diagram listed `DEATH ; RELEASED`, contradicting 05 C15; the contract order for one dying entity is `WRECK_SPAWNED` (per wreck / pod), `RELEASED(reason=DEATH)`, `DEATH`, so the client's 1.5 s hold on the wreck has the wreck id before DEAD_HOLD; no byte change, `cause u8` (3.6 row 1) now carries `SimEvent.DeathCause` (R0 B.3) | 5.4 |
