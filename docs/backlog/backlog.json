@@ -7348,7 +7348,10 @@
       "05 s6.1",
       "06 s7.1"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 98,
+    "merged": "2026-10-21",
+    "note": "String ids hud.ai_tag.<name> live in locale/src/ui_hud.csv (not ui/i18n.json, which is locale config). Finnish labels are drafts for owner review (e.g. VETÄYTYY, POIS)."
   },
   {
     "id": "TEST-03",
