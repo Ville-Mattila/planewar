@@ -8,7 +8,7 @@ class_name Combat extends RefCounted
 ## Weapons are the owner's doctrine-resolved defs, so doctrine factors are already inside `damage_min` / `damage_max`
 ## and never applied twice. Every random draw is on the `dice` passed in (= SimWorld.rng, S7; Combat owns no Rng):
 ## spread in fire order, then one damage roll per hit with a damage range in contact / fuse order. Shield domes
-## (GD-10) and terrain / landing damage are not here.
+## (`shields`, GD-10) run before `step` (SimWorld calls `shields.absorb`); terrain / landing damage is not here.
 
 var _store: EntityStore
 var _proj: ProjectileStore
@@ -20,6 +20,7 @@ var _friendly_fire: bool = false
 var _blast: Blast
 var _due: PackedInt32Array = PackedInt32Array()   ## fuse pass scratch: projectile indices bursting this tick
 var fire: WeaponFire                              ## step 9 fire; GD-18 writes `fire.unsupplied`
+var shields: ShieldDomes                          ## GD-10: rule 6 absorb (step 9, before `step`) and recharge (step 10)
 var _fuse_r: PackedFloat32Array = PackedFloat32Array()     ## by projectile local index: fuse_radius_m
 var _armed_ttl: PackedFloat64Array = PackedFloat64Array()  ## by projectile local index: ttl at or below which it is armed
 
@@ -36,6 +37,7 @@ func _init(store: EntityStore, projectiles: ProjectileStore, collision: Collisio
 	_spatial = spatial
 	_friendly_fire = rules.friendly_fire
 	fire = WeaponFire.new(store, projectiles, inputs, defs, events, rules.tick_hz)
+	shields = ShieldDomes.new(store, projectiles, defs, rules, events)
 	var np: int = defs.content.projectiles.size()
 	var e: int = _fuse_r.resize(np) | _armed_ttl.resize(np)
 	assert(e == OK)
@@ -62,13 +64,14 @@ func forget(s: int) -> void:
 	fire.forget(s)
 
 
-## Combat's S4 bytes: the fire state (locks, supply flags); cooldowns and ammo live in EntityStore.
+## Combat's S4 bytes: the fire state (locks, supply flags), then the shield domes; cooldowns and ammo live in EntityStore.
 func write_state(buf: StreamPeerBuffer) -> void:
 	fire.write_state(buf)
+	shields.write_state(buf)
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
-	return fire.read_state(buf)
+	return fire.read_state(buf) and shields.read_state(buf)
 
 
 ## 02 s4.3 rule 1: `rng.range_i(damage_min, damage_max)` (no draw when the range is a point), times

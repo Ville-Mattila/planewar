@@ -240,6 +240,11 @@ func store() -> EntityStore:
 	return _store
 
 
+## The shield domes (GD-10): charge and collapse reads for tests and the view; mutated only by `step()`.
+func shields() -> ShieldDomes:
+	return _combat.shields
+
+
 func projectiles() -> ProjectileStore:
 	return _proj
 
@@ -279,6 +284,7 @@ func _wire(rules: MatchRules) -> void:
 	_ships = ShipMotion.new(_store, _inputs, _defs, collision, _terrain)
 	_profiler.enabled = rules.profile_enabled
 	_econ = EconomyHub.new(_store, _players, _defs, rules, _terrain, _events, _applier, _validator)
+	_combat.shields.bind(_econ.economy, _econ.supply)
 	_intake.economy = _econ
 	_pathing = Pathing.from_rules(_defs.rules)
 	_pathing.set_terrain(_terrain)
@@ -318,6 +324,7 @@ func _assist_substitution() -> void:
 # world's `rng`, passed per step (S7).
 func _step_combat(t: int) -> void:
 	_combat.fire.tower_power = _econ.economy.tower_rates()   # 02 s8.4: from the step-10 power cache
+	var _absorbed: int = _combat.shields.absorb(t)           # 02 s4.3 rule 6, before the contacts (GD-10)
 	_combat.step(t, rng)
 	for s: int in _applier.dying:
 		_combat.forget(s)
@@ -332,6 +339,7 @@ func _step_match(t: int) -> void:
 		return
 	_econ.step(t, _dt)
 	_combat.fire.unsupplied = _econ.supply.unsupplied   # GD-18: step 9 of the next tick reads this tick's flags
+	_combat.shields.step(t)                             # GD-10: collapse ends, Core shield expiry, Projector recharge
 	var ph: MatchRules.Phase = _rules.phase(t)
 	var clock: float = float(t) / float(_rules.tick_hz)
 	if ph != MatchRules.Phase.PLAYING and _state.exposure_tick < 0:

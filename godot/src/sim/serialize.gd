@@ -4,14 +4,14 @@ class_name SimSerialize
 ## mostly zeros; ~600 KB raw is ~185 KB at 1,200 entities and 2,000 projectiles). Raw body, in this order (names in
 ## `SECTIONS`): header (seed, RNG, map), rules, clock,
 ## players, input slots, rate buckets, pending commands, control, entity store, projectile store, Collision's per-slot
-## state, Combat's fire state, orders, pathing, vision, economy (`EconomyHub`: Build, Economy, Construction, Production),
+## state, Combat's fire state and shield domes, orders, pathing, vision, economy (`EconomyHub`: Build, Economy, Construction, Production),
 ## the queued hook events (A-71), the AI hook's opaque bytes and the Spatial index of the last step 7 (TA-65). Events are not included: the caller drains them each tick.
 ## Versioning: `FORMAT` counts layout changes; there is no migration, a world is only read by the format that wrote it.
 ## `check` names the reason a byte array is refused so a save slot UI can say "from an older version". Saves are for the
 ## same build on the same machine (ADR-03/06): the bytes are a function of the state alone.
 
 const MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const FORMAT: int = 11          ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section; 8: TA-58 content hash; 9: TA-57 pending hook events; 10: GD-17 launch bay + replenish targets (Production state); 11: TA-65 the step-7 Spatial index (no rebuild on load)
+const FORMAT: int = 12          ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section; 8: TA-58 content hash; 9: TA-57 pending hook events; 10: GD-17 launch bay + replenish targets (Production state); 11: TA-65 the step-7 Spatial index (no rebuild on load); 12: GD-10 the shield domes (after the fire state, in the combat section)
 const HASH_BYTES: int = 32
 const HEADER_BYTES: int = 12 + 2 * HASH_BYTES   ## magic, format, raw size (u32 each), SHA-256 of the raw body, content hash
 const COMPRESSION: int = FileAccess.COMPRESSION_ZSTD
