@@ -16,6 +16,8 @@ var prm: DartParams
 var gains: FlightGains
 var rng: Rng = null
 var stats_draws: int = 0         ## aim-error draws (tests: the AI stream is used after a restore)
+var stats_engage_acts: int = 0   ## ENGAGE acts (perf counter)
+var stats_engage_visible: int = 0   ## visible_to calls in them (R0 B.17 A-97: exactly one per act)
 
 
 func _init(params: DartParams, flight_gains: FlightGains) -> void:
@@ -73,7 +75,8 @@ func act_engage(id: int, view: SimView, st: AiState, out: PilotInput, p: Vector3
 	var s: int = EntityId.slot(id)
 	var t: int = st.target[s]
 	var up: Vector3 = p.normalized()
-	var seen: bool = view.visible_to(view.team(id), t)   # false for a dead id: one visibility read per act
+	stats_engage_acts += 1
+	var seen: bool = _visible(view, view.team(id), t)   # false for a dead id: the one visibility read of the act
 	var pt: Vector3 = view.pos(t) if seen else st.goal[s]
 	var vt: Vector3 = view.vel(t) if seen else Vector3.ZERO
 	var dist: float = p.distance_to(pt)
@@ -212,3 +215,9 @@ static func _heading(v: Vector3, p: Vector3) -> Vector3:
 	var up: Vector3 = p.normalized()
 	var h: Vector3 = v - up * v.dot(up)
 	return h.normalized() if h.length_squared() > 1e-6 else Sphere.tangent_frame(up).x
+
+
+# Every visibility read of an ENGAGE act goes through here, so stats_engage_visible counts them (A-97: one per act).
+func _visible(view: SimView, team: int, t: int) -> bool:
+	stats_engage_visible += 1
+	return view.visible_to(team, t)
