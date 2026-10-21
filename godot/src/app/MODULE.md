@@ -55,9 +55,10 @@ func on_intent(kind: StringName, _payload: Dictionary) -> void
 ## Invariants
 
 - `go` only follows `ScreenId.targets` edges; going to the stack top pops instead (Pause -> Match).
-- `BOOT`, `START_GATE`, `AGE_GATE`, `LOADING` are never pushed; entering `MAIN_MENU` or `RESULTS` clears the stack.
+- `BOOT`, `START_GATE`, `AGE_GATE`, `LOADING`, `RESULTS` are never pushed; entering `MAIN_MENU`, `LOADING` or `RESULTS` clears the stack (no back from a match into Lobby/Briefing; Save/Load cycles stay bounded).
+- `back()` pops only when the reverse edge exists in `ScreenId.targets`; `go`/`back` change the stack only after the new screen showed.
 - `back()` asks `handle_back()` first, then pops; at an empty stack on `MAIN_MENU` it emits `quit_requested` (native only).
-- B (`Intents.BACK`), Esc (`ui_cancel`) and `NOTIFICATION_WM_GO_BACK_REQUEST` all call `back()`; `quit_on_go_back` is false.
+- B on gamepad arrives only as `Intents.BACK`; keyboard Esc (`ui_cancel`, key events only, joypad events ignored so one press pops once) and `NOTIFICATION_WM_GO_BACK_REQUEST` all call `back()`; `quit_on_go_back` is false.
 - Every shown screen ends with a focus owner inside it (`initial_focus()` or the first focusable descendant).
 
 ## Test entry points

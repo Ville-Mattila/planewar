@@ -95,18 +95,101 @@ func test_pause_returns_to_match_via_stack() -> void:
 	assert_str(String(_flow.current_id)).is_equal("match")
 
 
-func test_results_and_menu_clear_stack() -> void:
-	_flow.start(ScreenId.LOADING)
+func test_results_menu_and_loading_clear_stack() -> void:
+	_flow.start(ScreenId.MAIN_MENU)
+	_flow.go(ScreenId.SETUP_SKIRMISH)
+	_flow.go(ScreenId.LOBBY)
+	assert_int(_flow.stack_depth()).is_equal(2)
+	_flow.go(ScreenId.LOADING)
+	assert_int(_flow.stack_depth()).is_equal(0)
 	_flow.go(ScreenId.MATCH)
 	_flow.go(ScreenId.RESULTS)
 	assert_int(_flow.stack_depth()).is_equal(0)
 	_flow.go(ScreenId.LOBBY)
-	assert_int(_flow.stack_depth()).is_equal(1)
+	assert_int(_flow.stack_depth()).is_equal(0)  # results is transient
+
+
+func test_back_from_match_never_reaches_lobby_or_briefing() -> void:
+	_flow.start(ScreenId.MAIN_MENU)
+	_flow.go(ScreenId.CAMPAIGN)
+	_flow.go(ScreenId.BRIEFING)
 	_flow.go(ScreenId.LOADING)
 	_flow.go(ScreenId.MATCH)
-	assert_int(_flow.stack_depth()).is_equal(2)  # results, lobby; loading is transient
-	_flow.go(ScreenId.RESULTS)
+	_flow.back()
+	assert_str(String(_flow.current_id)).is_equal("match")
+	_flow.go(ScreenId.PAUSE)
+	_flow.back()
+	assert_str(String(_flow.current_id)).is_equal("match")
+
+
+func test_stack_bounded_across_save_load_cycles() -> void:
+	_flow.start(ScreenId.LOADING)
+	_flow.go(ScreenId.MATCH)
+	for i in 5:
+		_flow.go(ScreenId.PAUSE)
+		_flow.go(ScreenId.SAVE_LOAD)
+		_flow.go(ScreenId.LOADING)
+		_flow.go(ScreenId.MATCH)
+		assert_int(_flow.stack_depth()).is_equal(0)
+
+
+func test_every_pop_follows_an_allowed_reverse_edge() -> void:
+	# Walk every edge, then back(): the landing screen must be a source of an edge into where we were.
+	for from: StringName in ScreenId.all_ids():
+		for to: StringName in ScreenId.targets(from):
+			_flow.start(from)
+			if not _flow.go(to):
+				continue
+			var before: StringName = _flow.current_id
+			if _flow.stack_depth() > 0 and _flow.back():
+				assert_bool(ScreenId.targets(_flow.current_id).has(before)).is_true()
+
+
+func test_edge_table_pinned_to_06_s8() -> void:
+	var want: Dictionary = {
+		"boot": ["start_gate", "age_gate", "main_menu"],
+		"start_gate": ["age_gate", "main_menu"],
+		"age_gate": ["loading"],
+		"main_menu": ["online", "setup_skirmish", "setup_coop", "campaign", "replays", "settings", "profile"],
+		"online": ["account", "queue", "setup_custom"],
+		"account": ["online"],
+		"queue": ["lobby"], "setup_custom": ["lobby"], "setup_skirmish": ["lobby"], "setup_coop": ["lobby"],
+		"campaign": ["briefing"], "briefing": ["loading"], "replays": ["replay_viewer"],
+		"replay_viewer": [], "settings": [], "profile": [],
+		"lobby": ["loading"], "loading": ["match"],
+		"match": ["pause", "reconnecting", "results"],
+		"pause": ["match", "save_load", "settings", "main_menu"],
+		"save_load": ["pause", "loading"],
+		"reconnecting": ["match"],
+		"results": ["lobby", "main_menu"],
+	}
+	assert_int(ScreenId.all_ids().size()).is_equal(23)
+	for id: StringName in ScreenId.all_ids():
+		var got: Array = []
+		for t: StringName in ScreenId.targets(id):
+			got.append(String(t))
+		assert_array(got).contains_exactly_in_any_order(want[String(id)] as Array)
+
+
+func test_joypad_b_pops_exactly_once() -> void:
+	_flow.start(ScreenId.MAIN_MENU)
+	_flow.go(ScreenId.ONLINE)
+	_flow.go(ScreenId.ACCOUNT)
+	# One gamepad B press: Godot's ui_cancel joypad event plus the input lane's BACK intent.
+	var pad := InputEventJoypadButton.new()
+	pad.button_index = JOY_BUTTON_B
+	pad.pressed = true
+	_flow._unhandled_input(pad)
+	_flow.on_intent(Intents.BACK, {})
+	assert_str(String(_flow.current_id)).is_equal("online")
+
+
+func test_failed_show_leaves_stack_untouched() -> void:
+	_flow.start(ScreenId.MAIN_MENU)
+	_flow.register(ScreenId.ONLINE, func() -> FlowScreen: return null)
+	assert_bool(_flow.go(ScreenId.ONLINE)).is_false()
 	assert_int(_flow.stack_depth()).is_equal(0)
+	assert_str(String(_flow.current_id)).is_equal("main_menu")
 
 
 func test_back_intent_and_go_back_notification() -> void:
@@ -122,8 +205,8 @@ func test_back_intent_and_go_back_notification() -> void:
 func test_esc_ui_cancel_pops() -> void:
 	_flow.start(ScreenId.MAIN_MENU)
 	_flow.go(ScreenId.SETTINGS)
-	var ev := InputEventAction.new()
-	ev.action = &"ui_cancel"
+	var ev := InputEventKey.new()
+	ev.keycode = KEY_ESCAPE
 	ev.pressed = true
 	_flow._unhandled_input(ev)
 	assert_str(String(_flow.current_id)).is_equal("main_menu")
