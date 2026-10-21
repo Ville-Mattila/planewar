@@ -237,9 +237,7 @@ func _plan(s: int, tier: int, base: BaselineFrame, own: bool) -> bool:
 			or _force[s] == _enc_id:
 		return _plan_full(s, own)
 	if tier == Tier.C:
-		var bb: int = base.blip[s]          # NET-54: unknown (after FULL / DELTA) -> the blip the entry implies
-		bb = bb if bb != DeadReckon.BLIP_UNKNOWN else DeadReckon.entry_blip(base.pos[s], base.flags[s], base.vel[s])
-		if blip_of(s) == bb:
+		if blip_of(s) == base.shown_blip(s, _tick, c_grav[s] != 0, gravity, dt):    # NET-54: DR'd when unknown
 			return false
 		_k_kind = Kind.BLIP
 		_k_body = 3
