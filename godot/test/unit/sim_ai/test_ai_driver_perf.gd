@@ -1,6 +1,7 @@
 extends GdUnitTestSuite
 ## AI-04 perf note: scheduling overhead of AiDriver.on_tick for 400 AI units with a no-op brain (03 s4.2 "AI think + act"
 ## row, 6.0 ms p95; scheduling must stay a small fraction). Prints us/tick; the bound is a loose regression guard.
+## timing: runaway guards only (R0 B.17 A-97)
 
 const UNITS: int = 400
 const TICKS: int = 600
@@ -19,4 +20,5 @@ func test_scheduling_overhead_400_units_no_brains() -> void:
 	var us: float = d.stats()["us_per_tick"]
 	print("AI-04 perf: %d units, no-op brain: %.1f us/tick (thinks %d)" % [UNITS, us, d.stats()["thinks"]])
 	assert_int(d.stats()["thinks"]).is_equal(UNITS * TICKS / 10)
+	# runaway guard, measured 84.9 us/tick: GUARD_US is >= 10x (R0 B.17 A-97); the thinks count above is the hard counter
 	assert_float(us).is_less(GUARD_US)

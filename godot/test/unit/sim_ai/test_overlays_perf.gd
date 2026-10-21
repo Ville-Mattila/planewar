@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## is the scan); (2) one overlay tick (Overlays.run: one TerrainProbe.probe, 6 samples, + track_velocity + drive);
 ## (3) one Assist.link_bridge (step 4, at most one per player slot). Best of 6 batches (the desktop's scheduler noise
 ## is larger than the code); printed for the PR, bounds are loose regression guards.
+## timing: runaway guards only (R0 B.17 A-97)
 
 const UNITS: int = 400
 const TICKS: int = 300
@@ -34,6 +35,7 @@ func test_perf_scan_400_units() -> void:
 	var scan: float = _us_per_tick(_driver(true))
 	print("AI-08 perf: 400 units no-op brain: %.1f us/tick without overlays, %.1f with the scan (+%.1f us, %.2f us/unit)" % [
 		base, scan, scan - base, (scan - base) / float(UNITS)])
+	# runaway guard, measured 144 us/tick with the scan (+61 us): 2000 us is >= 10x (R0 B.17 A-97)
 	assert_float(scan).is_less(2000.0)
 
 
@@ -64,6 +66,7 @@ func test_perf_overlay_tick_and_link_bridge() -> void:
 		us_run = minf(us_run, float(t1 - t0) / float(n))
 		us_bridge = minf(us_bridge, float(t2 - t1) / float(n))
 	print("AI-08 perf: Overlays.run (SAFETY tick) %.1f us/call, Assist.link_bridge %.1f us/call" % [us_run, us_bridge])
+	# runaway guards, measured 10.9 us (Overlays.run) and 7.6 us (link_bridge): 200 us is >= 10x (R0 B.17 A-97)
 	assert_float(us_run).is_less(200.0)
 	assert_float(us_bridge).is_less(200.0)
 

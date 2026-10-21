@@ -10,8 +10,10 @@ const THINK_DT: float = 0.0666667
 const MAX_STEPS: int = 240
 const DT_FAR: float = 0.1333333        # coarse step above NEAR_M of clearance
 const NEAR_M: float = 150.0
-const RELEASE_BUDGET_US: float = 160.0   # 05 s6.3.1 design: ~60 steps at ~1 us, doubled for CI
-const PLAN_BUDGET_US: float = 240.0      # far-mode 800 m fall (11 s): measured ~117 us, 2x for CI
+const RELEASE_BUDGET_US: float = 160.0   # 05 s6.3.1 design: ~60 steps at ~1 us, doubled for CI (budget bound: PerfGate, A-97)
+const PLAN_BUDGET_US: float = 240.0      # far-mode 800 m fall (11 s): measured ~117 us, 2x for CI (budget bound: PerfGate, A-97)
+const RELEASE_STEPS: int = 80  # integration steps of the 300 m release solve (the work the budget bounds)
+const PLAN_STEPS: int = 94     # integration steps of the 800 m far-mode plan
 const FAR_TOL_M: float = 6.0             # measured 5.2 m at dt_far = 0.133 s
 
 var _rules: RulesDef
@@ -144,7 +146,9 @@ func test_far_mode_error_and_cost_for_an_800m_fall() -> void:
 	var pv2: Array[Vector3] = _drop(800.0, 150.0, 0.5)
 	var us: float = _time_us(pv2, DT_FAR)
 	print("predict_impact far mode, 800 m fall: %.1f us/call, worst error %.2f m" % [us, worst])
-	assert_float(us).is_less(PLAN_BUDGET_US)
+	var steps: int = _steps_to_impact(pv2, DT_FAR)
+	assert_int(steps).override_failure_message("far-mode plan integration steps").is_equal(PLAN_STEPS)   # work counter: hard everywhere
+	assert_bool(PerfGate.check("ballistics.plan_far_800m", us, PLAN_BUDGET_US, "05 s6.3.1 / R0 A-62 (2x CI)")).is_true()
 
 
 func test_release_mode_cost_from_300m() -> void:
@@ -152,7 +156,18 @@ func test_release_mode_cost_from_300m() -> void:
 	var pv: Array[Vector3] = _drop(300.0, 150.0, 0.5)
 	var us: float = _time_us(pv, THINK_DT)
 	print("predict_impact fine mode, 300 m fall: %.1f us/call" % us)
-	assert_float(us).is_less(RELEASE_BUDGET_US)
+	var steps: int = _steps_to_impact(pv, THINK_DT)
+	assert_int(steps).override_failure_message("release solve integration steps").is_equal(RELEASE_STEPS)   # work counter: hard everywhere
+	assert_bool(PerfGate.check("ballistics.release_300m", us, RELEASE_BUDGET_US, "05 s6.3.1 / R0 A-62 (2x CI)")).is_true()
+
+
+## Loop iterations predict_impact needs to reach the impact: the smallest `max_steps` that returns one (a retry after a
+## coarse overshoot costs an iteration too). Deterministic, so it is the hard counter beside the report-only timing.
+func _steps_to_impact(pv: Array[Vector3], dt_far: float) -> int:
+	for n: int in range(1, MAX_STEPS + 1):
+		if Ballistics.has_impact(_predict(pv[0], pv[1], Terrain.new(), n, dt_far)):
+			return n
+	return -1
 
 
 func _time_us(pv: Array[Vector3], dt_far: float) -> float:

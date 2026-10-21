@@ -348,17 +348,25 @@ func test_cost_of_one_choice_point_at_the_budget_row() -> void:
 	# that whole row at N = max_candidates = 8 with a 3x CI tolerance (a shared runner, GDScript debug build).
 	var ids: Array[int] = _fill(8)
 	var first: int = _choose(ids, 0)
+	# Hard counters (A-97): view reads per call stay within the design bound (cheap pass <= 6 per candidate, full pass <= 6
+	# per kept candidate, cap 8), whatever the clock says.
+	_view.reads = 0
+	var _c: int = _choose(ids, first)
+	assert_int(_view.reads).is_less_equal(6 * 8 + 6 * 8)
 	var t0: int = Time.get_ticks_usec()
 	for i: int in 200:
 		var _r: int = _choose(ids, first)
 	var us: float = float(Time.get_ticks_usec() - t0) / 200.0
 	print("choose_ship at N=8: %.1f us" % us)
-	assert_float(us).is_less(THINK_ROW_US * CI_TOLERANCE)
+	assert_bool(PerfGate.check("target_chooser.n8", us, THINK_ROW_US * CI_TOLERANCE, "05 s10 think row x 3 CI")).is_true()
 	# Bounded whatever n: 64 candidates cost less than 4x the N=8 call (cheap pass only) and never full-score more than 8.
 	var many: Array[int] = _fill(64)
+	_view.reads = 0
+	var _c2: int = _choose(many, first)
+	assert_int(_view.reads).is_less_equal(6 * 64 + 6 * 8)
 	t0 = Time.get_ticks_usec()
 	for i: int in 200:
 		var _r: int = _choose(many, first)
 	var us64: float = float(Time.get_ticks_usec() - t0) / 200.0
 	print("choose_ship at n=64 (cap 8): %.1f us" % us64)
-	assert_float(us64).is_less(THINK_ROW_US * CI_TOLERANCE * 4.0)
+	assert_bool(PerfGate.check("target_chooser.n64", us64, THINK_ROW_US * CI_TOLERANCE * 4.0, "05 s10 think row x 3 CI x 4")).is_true()

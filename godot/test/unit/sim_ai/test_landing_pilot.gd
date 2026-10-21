@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 ## enemy pads), team-local pad claims (busy for the second ship, stale claims ignored), the RTB rule's distance
 ## term, DONE on dock, divert on an invalid pad or too many attempts, and the S4 round trip. The world is the
 ## LandingWorld FakeSimView of test/sim/ai.
+## timing: runaway guards only (R0 B.17 A-97)
 
 const R: float = Sphere.PLANET_RADIUS
 
@@ -171,5 +172,6 @@ func test_think_and_act_cost() -> void:
 			var _p: int = _pilot.act(id, _world, _st, out)
 		us_a = minf(us_a, float(Time.get_ticks_usec() - t0) / float(n))
 	print("PERF LandingPilot.think %.2f us/call, act %.2f us/call (LandingWorld view)" % [us_t, us_a])
+	# runaway guards (R0 B.17 A-97): measured think 19.5 us (bound 500), act 19.9 us (bound 200, 10x)
 	assert_float(us_t).is_less(500.0)
 	assert_float(us_a).is_less(200.0)

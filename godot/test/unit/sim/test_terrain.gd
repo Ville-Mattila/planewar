@@ -144,7 +144,8 @@ func test_tiny_test_loads_in_under_50_ms() -> void:
 	var err: Error = _terrain.load_map(MAP_TINY)
 	var ms: float = float(Time.get_ticks_usec() - t0) / 1000.0
 	assert_int(err).is_equal(OK)
-	assert_float(ms).is_less(50.0)
+	assert_bool(_terrain.is_loaded()).is_true()   # hard counter: the map really loaded
+	assert_bool(PerfGate.check("terrain.load_tiny", ms * 1000.0, 50000.0, "03 s8 tiny-map load < 50 ms")).is_true()
 
 
 func test_flipped_byte_fails_the_load_and_leaves_flat_stub() -> void:
