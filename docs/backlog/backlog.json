@@ -7481,8 +7481,10 @@
     "docs": [
       "04 s5.6"
     ],
-    "status": "todo",
-    "note": "Pre-existing NET-06 issue found in the NET-54 #100 review. Optional Architect question: should a known-blip DYING entry's DELTA base also drop gravity (wire semantics)."
+    "status": "done",
+    "note": "Pre-existing NET-06 issue found in the NET-54 #100 review. Optional Architect question: should a known-blip DYING entry's DELTA base also drop gravity (wire semantics). BaselineFrame.shown_levels is the single rule; shown_blip derives from it; ReplayReader uses it; NetSimView (NET-17) must. Open Architect question: should a known-blip DYING entry DELTA base drop gravity.",
+    "pr": 104,
+    "merged": "2026-10-21"
   },
   {
     "id": "GD-38",
