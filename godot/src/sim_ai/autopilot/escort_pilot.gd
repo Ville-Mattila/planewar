@@ -44,7 +44,7 @@ func release(id: int, st: AiState) -> void:
 	st.form_order[s] = 0
 	st.aux_id[s] = 0
 	st.timer[s] = 0.0
-	st.target[s] = 0
+	st.set_target(s, 0)
 
 
 ## One think. `threat` / `utility`: the brain's best threat (0 = none) and its 05 s6.2 utility; FORM breaks out only
@@ -169,10 +169,10 @@ func _update_engage(id: int, s: int, p: Vector3, lp: Vector3, mode: int, focus: 
 		st.form_state[s] = FORM
 	if fs == ENGAGE:
 		if _keep_engaging(s, p, lp, mode, tgt, tick, view, st):
-			st.target[s] = tgt
+			st.set_target(s, tgt)
 			return true
 		st.form_state[s] = FORM if mode == OrderSpec.EscortMode.FORM else SPENT
-		st.target[s] = 0
+		st.set_target(s, 0)
 		return false
 	if fs == SPENT or tgt == 0 or not view.alive(tgt) or not view.visible_to(view.team(id), tgt):
 		return false
@@ -180,7 +180,7 @@ func _update_engage(id: int, s: int, p: Vector3, lp: Vector3, mode: int, focus: 
 		return false
 	st.form_state[s] = ENGAGE
 	st.timer[s] = float(tick)
-	st.target[s] = tgt
+	st.set_target(s, tgt)
 	return true
 
 

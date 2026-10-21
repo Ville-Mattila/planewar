@@ -11,7 +11,9 @@ class_name TerrainProbe extends RefCounted
 ## previous sample, so a dip between two samples is missed by design, 05 s5.3; if the very first sample is
 ## already <= 0 the crossing is extrapolated back through the first two samples, clamped to [0, t_0]), the worst
 ## sample (clearance, time, direction) and the lift `max(0, h_req - c_w) / max(t_w, lift_min_time_s)` capped at
-## `lift_max_frac * |v|`. The path is sampled from the start state; there is no separate t = 0 sample.
+## `lift_max_frac * |v|`. The path is sampled from the start state; there is no separate t = 0 sample. AI-13: the same
+## samples give `climb_need_mps`, the drop-free requirement of A-69 over every sample, not only the worst ballistic one
+## (a steep climb's worst ballistic sample is the nearest; the wall that binds is further on): no extra sample.
 static func probe(terrain: Terrain, p: Vector3, v: Vector3, probe_params: ProbeParams, h_req: float,
 		out: ProbeResult) -> void:
 	var n0: Vector3 = p.normalized()
@@ -23,6 +25,7 @@ static func probe(terrain: Terrain, p: Vector3, v: Vector3, probe_params: ProbeP
 	var g: float = probe_params.gravity
 	var ts: PackedFloat32Array = probe_params.probe_times_s
 	out.tti_s = INF
+	out.climb_need_mps = -INF
 	out.min_clearance_m = INF
 	out.worst_t_s = 0.0
 	out.worst_dir = n0
@@ -35,6 +38,7 @@ static func probe(terrain: Terrain, p: Vector3, v: Vector3, probe_params: ProbeP
 		var phi: float = s * t / r0
 		var dir: Vector3 = n0 * cos(phi) + tdir * sin(phi)
 		var c: float = r0 + vr * t - 0.5 * g * t * t - Sphere.PLANET_RADIUS - terrain.height_at(dir)
+		out.climb_need_mps = maxf(out.climb_need_mps, (h_req - c - 0.5 * g * t * t) / maxf(t, probe_params.lift_min_time_s))
 		if c < out.min_clearance_m:
 			out.min_clearance_m = c
 			out.worst_t_s = t
