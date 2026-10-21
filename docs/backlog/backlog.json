@@ -2833,9 +2833,11 @@
       " 05 AR-1",
       " 04 NET-04"
     ],
-    "status": "todo",
-    "note": "depends on A-27 deps.json edit (SimEvent, CommandResult named for net; owner default approve) A-60's 15 points and A-85's 142 B came from 04 s2.5's printed `8 +` formula; the field list sums to 9 and the merged sim writes 9 (R0 B.16 A-91). Merges after TA-62 so the drift assertions pass on main.",
-    "acceptance_append": "; the ORDER codec writes / reads the 6-byte ESCORT trailer (present iff order_kind 3): an ESCORT with slot 1, FOCUS and a focus id round-trips, a 32-id ESCORT is 143 B (A-91; A-85's 142 superseded), a MOVE with 6 trailing bytes returns null (R0 B.14 A-85); SET_RALLY (3 x f64 position) and TOGGLE_AUTO_REPLENISH (u8 flag + up to 8 x (u16 def, u8 count)) payloads round-trip as GD-17 applies them; ESCORT escort_mode > BREAK decodes to null (mirrors sim read_order, TA-60)"
+    "status": "done",
+    "note": "depends on A-27 deps.json edit (SimEvent, CommandResult named for net; owner default approve) A-60's 15 points and A-85's 142 B came from 04 s2.5's printed `8 +` formula; the field list sums to 9 and the merged sim writes 9 (R0 B.16 A-91). Merges after TA-62 so the drift assertions pass on main. CommandCodec shape-only, total; 14 points/249 B, ESCORT 143 B (A-91). Nits: per-kind accepted-mutation assert, stray \").;\" in net/MODULE.md, redundant test_random_bytes_never_throw, perf test not in CI. PR body was overwritten with GD-18 text at some point and restored by the orchestrator.",
+    "acceptance_append": "; the ORDER codec writes / reads the 6-byte ESCORT trailer (present iff order_kind 3): an ESCORT with slot 1, FOCUS and a focus id round-trips, a 32-id ESCORT is 143 B (A-91; A-85's 142 superseded), a MOVE with 6 trailing bytes returns null (R0 B.14 A-85); SET_RALLY (3 x f64 position) and TOGGLE_AUTO_REPLENISH (u8 flag + up to 8 x (u16 def, u8 count)) payloads round-trip as GD-17 applies them; ESCORT escort_mode > BREAK decodes to null (mirrors sim read_order, TA-60)",
+    "pr": 81,
+    "merged": "2026-10-21"
   },
   {
     "id": "NET-07",
