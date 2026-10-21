@@ -30,7 +30,7 @@ func test_a_projector_has_its_dome_radius_and_starts_empty() -> void:
 func test_a_bomb_entering_a_charged_dome_is_absorbed_and_charge_drops_by_its_damage() -> void:
 	var w: SimWorld = K.world()
 	var p: int = K.projector(w, 300.0)
-	w.shields()._charge[p] = 1200.0
+	var _filled: int = K.fill(w, p)
 	var id: int = K.shot(w, p)
 	assert_int(K.absorb(w)).is_equal(1)
 	assert_bool(w.projectiles().alive(id)).is_false()
@@ -42,7 +42,7 @@ func test_a_bomb_entering_a_charged_dome_is_absorbed_and_charge_drops_by_its_dam
 func test_c07_four_bombs_within_five_seconds_three_absorbed_fourth_passes_and_the_dome_collapses() -> void:
 	var w: SimWorld = K.world()
 	var p: int = K.projector(w, 300.0)
-	w.shields()._charge[p] = 1200.0
+	var _filled: int = K.fill(w, p)
 	var _old: Array[SimEvent] = w.drain_events()
 	var absorbed: int = 0
 	var ids: PackedInt32Array = PackedInt32Array()
@@ -64,7 +64,6 @@ func test_a_collapsed_dome_lets_everything_through_for_ten_seconds_then_returns_
 	var p: int = K.projector(w, 300.0)
 	var collapse_ticks: int = roundi(Def.num(K.sdef(&"shield_projector").shield["collapse_s"]) * float(HZ))
 	assert_int(collapse_ticks).is_equal(10 * HZ)
-	w.shields()._charge[p] = 100.0
 	var first: int = K.shot(w, p)                                                     # 100 < 400: passes, collapses
 	assert_int(K.absorb(w)).is_equal(0)
 	assert_bool(w.projectiles().alive(first)).is_true()
@@ -85,7 +84,7 @@ func test_a_collapsed_dome_lets_everything_through_for_ten_seconds_then_returns_
 func test_a_projectile_that_starts_inside_the_dome_is_never_absorbed() -> void:
 	var w: SimWorld = K.world()
 	var p: int = K.projector(w, 300.0)
-	w.shields()._charge[p] = 1200.0
+	var _filled: int = K.fill(w, p)
 	var id: int = K.shot(w, p, &"bomb", &"bomb", 1, -10.0, 20.0)                      # prev inside, now deeper inside
 	assert_int(K.absorb(w)).is_equal(0)
 	assert_bool(w.projectiles().alive(id)).is_true()
@@ -95,7 +94,7 @@ func test_a_projectile_that_starts_inside_the_dome_is_never_absorbed() -> void:
 func test_a_projectile_that_misses_the_dome_is_not_absorbed() -> void:
 	var w: SimWorld = K.world()
 	var p: int = K.projector(w, 300.0)
-	w.shields()._charge[p] = 1200.0
+	var _filled: int = K.fill(w, p)
 	var id: int = K.shot(w, p, &"bomb", &"bomb", 1, 40.0, -30.0)                      # ends 30 m outside
 	assert_int(K.absorb(w)).is_equal(0)
 	assert_bool(w.projectiles().alive(id)).is_true()
@@ -104,7 +103,7 @@ func test_a_projectile_that_misses_the_dome_is_not_absorbed() -> void:
 func test_friendly_projectiles_pass_and_only_shield_absorbed_defs_are_taken() -> void:
 	var w: SimWorld = K.world()
 	var p: int = K.projector(w, 300.0)
-	w.shields()._charge[p] = 1200.0
+	var _filled: int = K.fill(w, p)
 	var own: int = K.shot(w, p, &"bomb", &"bomb", 0)                                  # the dome's own team
 	var slug: int = K.shot(w, p, &"slug_light", &"gun_dart")
 	var flak: int = K.shot(w, p, &"flak_shell", &"flak_gun")
@@ -118,7 +117,7 @@ func test_friendly_projectiles_pass_and_only_shield_absorbed_defs_are_taken() ->
 func test_rockets_and_siege_shells_are_absorbed_for_their_own_damage() -> void:
 	var w: SimWorld = K.world()
 	var p: int = K.projector(w, 300.0)
-	w.shields()._charge[p] = 1200.0
+	var _filled: int = K.fill(w, p)
 	var rocket: int = K.shot(w, p, &"rocket", &"rocket_lancer")
 	var shell: int = K.shot(w, p, &"siege_shell", &"siege_gun")
 	assert_int(K.absorb(w)).is_equal(2)
@@ -130,7 +129,7 @@ func test_rockets_and_siege_shells_are_absorbed_for_their_own_damage() -> void:
 func test_absorbed_damage_is_the_owners_resolved_weapon_damage() -> void:
 	var w: SimWorld = K.world()
 	var p: int = K.projector(w, 300.0)
-	w.shields()._charge[p] = 1200.0
+	var _filled: int = K.fill(w, p)
 	var id: int = K.shot(w, p, &"bomb", &"bomb", 3)                                   # Foundry: bombs x0.85 = 340
 	assert_int(K.absorb(w)).is_equal(1)
 	assert_bool(w.projectiles().alive(id)).is_false()
@@ -140,7 +139,7 @@ func test_absorbed_damage_is_the_owners_resolved_weapon_damage() -> void:
 func test_a_ship_passes_through_a_dome_freely() -> void:
 	var w: SimWorld = K.world()
 	var p: int = K.projector(w, 300.0)
-	w.shields()._charge[p] = 1200.0
+	var _filled: int = K.fill(w, p)
 	var c: Vector3 = w.store().pos[p]
 	var dart: int = WorldTestKit.spawn(w, &"dart", 1, 1, c + c.normalized() * 30.0)
 	w.step()
@@ -152,8 +151,7 @@ func test_two_overlapping_domes_the_one_entered_first_takes_the_shot() -> void:
 	var w: SimWorld = K.world()
 	var a: int = K.projector(w, 300.0)
 	var b: int = K.projector(w, 360.0)
-	w.shields()._charge[a] = 1200.0
-	w.shields()._charge[b] = 1200.0
+	var _filled: int = K.fill(w, a, b)
 	var id: int = K.shot(w, a)                                                        # enters dome a on its far side first
 	var ps: ProjectileStore = w.projectiles()
 	var i: int = ps.index_of(id)
@@ -197,7 +195,7 @@ func test_the_integrated_shield_protects_only_the_core_not_a_neighbouring_struct
 func test_a_dome_dies_with_its_structure_and_a_new_one_in_the_slot_starts_fresh() -> void:
 	var w: SimWorld = K.world()
 	var p: int = K.projector(w, 300.0)
-	w.shields()._charge[p] = 1200.0
+	var _filled: int = K.fill(w, p)
 	var id: int = w.store().id_of(p)
 	assert_int(EconomyTestKit.code(w, CommandPayload.debug_set(0, id, CommandPayload.SET_KILL, 0.0))).is_equal(CommandResult.Code.ACCEPTED)
 	w.step()

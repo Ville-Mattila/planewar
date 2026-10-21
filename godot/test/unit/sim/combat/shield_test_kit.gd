@@ -55,3 +55,39 @@ static func kinds(events: Array[SimEvent], kind: SimEvent.Kind) -> int:
 
 static func sdef(id: StringName) -> StructureDef:
 	return WorldTestKit.content().structures[WorldTestKit.def_id(id) - DefRanges.STRUCTURE_BASE]
+
+
+## Steps the world until the domes at `a` (and `b`, when >= 0) are full, through the public recharge path (a Projector
+## takes 60 s at ratio 1). Returns the ticks stepped; asserts it converged.
+static func fill(w: SimWorld, a: int, b: int = -1) -> int:
+	var n: int = 0
+	while n < 8000 and not (_full(w, a) and (b < 0 or _full(w, b))):
+		w.step()
+		var _e: Array[SimEvent] = w.drain_events()
+		n += 1
+	assert(n < 8000)
+	return n
+
+
+static func _full(w: SimWorld, slot: int) -> bool:
+	var cap: float = float(sdef(&"core").integrated_shield["charge_max"]) if w.store().def_id[slot] == WorldTestKit.def_id(&"core") \
+			else float(sdef(&"shield_projector").shield["charge_max"])
+	return w.shields().charge_of(slot) >= cap
+
+
+## `n` enemy bombs enter the dome at `slot` and are absorbed (or pass); returns how many were absorbed.
+static func hit(w: SimWorld, slot: int, n: int = 1) -> int:
+	var absorbed: int = 0
+	for _k: int in n:
+		var _id: int = shot(w, slot)
+		absorbed += absorb(w)
+	return absorbed
+
+
+## Bombs at the dome until it collapses (the shot that exceeds the charge passes); asserts it did within 20.
+static func collapse(w: SimWorld, slot: int) -> void:
+	for _k: int in 20:
+		if w.shields().collapse_left(slot, w.tick()) > 0:
+			return
+		var _n: int = hit(w, slot)
+	assert(w.shields().collapse_left(slot, w.tick()) > 0)

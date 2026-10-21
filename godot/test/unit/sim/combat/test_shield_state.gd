@@ -6,27 +6,25 @@ const K: GDScript = preload("res://test/unit/sim/combat/shield_test_kit.gd")
 const HZ: int = 30
 
 
-# Two Projectors (one covering the Core) and the Core; a fixed bomb schedule: A takes hits until it collapses (tick 40+),
-# B takes one early hit and recharges. Returns the world after `ticks`.
+# Two Projectors (one covering the Core), charged through the recharge; then a fixed bomb schedule `ticks` long: A takes
+# hits until it collapses, B takes one rocket and recharges. Returns the world after the schedule.
 func _scene(ticks: int) -> SimWorld:
-	var w: SimWorld = K.world(true, WorldTestKit.rules(60.0))
+	var w: SimWorld = K.world()
 	var a: int = K.projector(w, 150.0)
 	var _o: int = K.put(w, &"outpost", WorldTestKit.at(0.0, 900.0))
 	var b: int = K.projector(w, 1000.0)
-	w.shields()._charge[a] = 1200.0
-	w.shields()._charge[b] = 1200.0
-	while w.tick() < ticks:
-		_schedule(w, a, b)
+	var _filled: int = K.fill(w, a, b)
+	var start: int = w.tick()
+	while w.tick() < start + ticks:
+		_schedule(w, a, b, w.tick() - start)
 		w.step()
 		var _e: Array[SimEvent] = w.drain_events()
 	return w
 
 
-func _schedule(w: SimWorld, a: int, b: int) -> void:
-	var t: int = w.tick()
+func _schedule(w: SimWorld, a: int, b: int, t: int) -> void:
 	if t >= 40 and t < 100 and (t - 40) % 15 == 0:
-		var _x: int = K.shot(w, a)
-		var _n: int = K.absorb(w)
+		var _n: int = K.hit(w, a)
 	if t == 50:
 		var _y: int = K.shot(w, b, &"rocket", &"rocket_lancer")
 		var _m: int = K.absorb(w)
@@ -67,7 +65,6 @@ func test_save_mid_recharge_continues_byte_exact() -> void:
 	var _e: Array[SimEvent] = EconomyTestKit.run(w, w.shields().collapse_left(a, w.tick()) + 200)
 	assert_int(w.shields().collapse_left(a, w.tick())).is_equal(0)
 	assert_float(w.shields().charge_of(a)).is_greater(0.0)                            # charging again
-	assert_float(w.shields()._credit[a]).is_greater(-1.0)
 	_same_future(w, 400)
 
 
@@ -115,14 +112,19 @@ func test_malformed_shield_bytes_are_refused() -> void:
 	for _k: int in 4:
 		short.put_var(PackedInt32Array([0]))
 	assert_bool(sd.read_state(short)).is_false()
-	var neg: ShieldDomes = w.shields()
-	neg._charge[3] = -5.0
+	var n: int = InputSlots.ENTITY_SLOTS
+	var charge: PackedFloat64Array = PackedFloat64Array()
+	var e: int = charge.resize(n)
+	assert(e == OK)
+	charge[3] = -5.0                                                                  # a negative charge
 	var bad: StreamPeerBuffer = StreamPeerBuffer.new()
-	neg.write_state(bad)
-	neg._charge[3] = 0.0
+	bad.put_var(charge)
+	bad.put_var(_zeros(n))
+	for _k: int in 3:
+		bad.put_var(_izeros(n))
 	var rd: StreamPeerBuffer = StreamPeerBuffer.new()
 	rd.data_array = bad.data_array
-	assert_bool(neg.read_state(rd)).is_false()                                        # a negative charge
+	assert_bool(sd.read_state(rd)).is_false()
 	var ok: StreamPeerBuffer = StreamPeerBuffer.new()
 	ok.data_array = good.data_array
 	assert_bool(sd.read_state(ok)).is_true()
@@ -131,9 +133,7 @@ func test_malformed_shield_bytes_are_refused() -> void:
 func test_shield_collapse_and_core_shield_down_survive_the_wire() -> void:
 	var w: SimWorld = K.world()
 	var core: int = K.core_slot(w)
-	w.shields()._charge[core] = 100.0
-	var _id: int = K.shot(w, core)
-	var _n: int = K.absorb(w)
+	K.collapse(w, core)
 	var events: Array[SimEvent] = w.drain_events()
 	var aud: EventAudience = EventAudience.new(Roster.new())
 	aud.unfiltered = true
@@ -152,3 +152,17 @@ func test_shield_collapse_and_core_shield_down_survive_the_wire() -> void:
 			alert_subject = we.v[1]
 	assert_int(collapse).is_equal(core)                                               # 04 s3.6: structure u16
 	assert_int(alert_subject).is_equal(core)                                          # subject = the Core
+
+
+func _zeros(n: int) -> PackedFloat64Array:
+	var a: PackedFloat64Array = PackedFloat64Array()
+	var e: int = a.resize(n)
+	assert(e == OK)
+	return a
+
+
+func _izeros(n: int) -> PackedInt32Array:
+	var a: PackedInt32Array = PackedInt32Array()
+	var e: int = a.resize(n)
+	assert(e == OK)
+	return a
