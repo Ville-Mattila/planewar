@@ -2940,7 +2940,10 @@
       "06 s8",
       " 06 UX-24"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 95,
+    "merged": "2026-10-21",
+    "note": "ScreenFlow + ScreenId edge table pinned to 06 s8 (extra edges cite 06:748/796); LOADING/RESULTS/MAIN_MENU clear the stack; back() only along reverse edges; gamepad B only via Intents.BACK (ui_cancel ignores joypad). Tested against stub screens; real screens pending. Possible missing edges per review: Continue -> Loading, rematch."
   },
   {
     "id": "UX-39",
