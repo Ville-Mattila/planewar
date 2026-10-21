@@ -2239,9 +2239,11 @@
       "02 s13",
       " 02 GD-19"
     ],
-    "status": "todo",
+    "status": "done",
     "acceptance_append": "; R0 B.20 A-104..A-107 applied in PR #106: link[wreck] = towing ship's EntityId while F_TETHERED (A-104; sim/MODULE.md Data owned sentence drops tether_target, sim/salvage/MODULE.md W6 / W9 and the How-to-add recipe cite A-104, no FORMAT bump); economy.json required salvage_hook_m 33 and salvage_deliver_m 33 with schema properties, _doc and the canonical fixture (A-105; Salvage.reach_m reads salvage_hook_m, delivery reads salvage_deliver_m, the tether_len_m + tether_drop_m sum is deleted); SimEvent.DeathCause {DEBUG, EXPIRED} declared in sim/sim_event.gd and listed in sim/MODULE.md Enumerations, Salvage.CAUSE_EXPIRED aliases or is replaced by it, test_enums.gd covers it (A-106); W3's order WRECK_SPAWNED, RELEASED, DEATH stays as written (A-107); the PR body's Contract impact lists W3 and DeathCause as contract additions (review nit)",
-    "note": "Escalated review (PR #106, comment 6322027065) resolved by R0-amendments-14 (A-104..A-108): link[wreck] ratified, no FORMAT bump; salvage_hook_m / salvage_deliver_m def fields; SimEvent.DeathCause opened; W3 order ratified; follow-ups GD-39 / GD-40 / GD-41 and AI-15 appends."
+    "note": "Escalated review (PR #106, comment 6322027065) resolved by R0-amendments-14 (A-104..A-108): link[wreck] ratified, no FORMAT bump; salvage_hook_m / salvage_deliver_m def fields; SimEvent.DeathCause opened; W3 order ratified; follow-ups GD-39 / GD-40 / GD-41 and AI-15 appends. Salvage under R0 B.20 A-104..A-108: link[wreck] for tows (no FORMAT bump), salvage_hook_m/salvage_deliver_m 33, SimEvent.DeathCause {DEBUG, EXPIRED}, W3 event order. Follow-ups GD-39/40/41, AI-15 ORDER_DONE for TOW.",
+    "pr": 106,
+    "merged": "2026-10-21"
   },
   {
     "id": "GD-37",
