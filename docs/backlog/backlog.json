@@ -2407,7 +2407,8 @@
       " 05 AI-13"
     ],
     "status": "todo",
-    "acceptance_append": "; the terrain lift uses the drop-free clearance (c_k + 0.5 g t_k^2) and is added to the current radial speed, while TTI / PULL_UP keep the ballistic probe; SC-09 and SC-10 asserted under speed_scaled (R0 B.12 A-69); PULL_UP at act also starts when the visible clearance (AGL or the probe's worst drop-free clearance) is below FlightController.pull_up_loss, ORed with the 1.0 s re-sample, in Overlays.run_safety and the Dart brain (R0 B.15 A-89); on cradle in SC-09, SC-10 and SC-11 the Dart never enters a state SweepScenarios.dive_recoverable classifies as unrecoverable (A-88 (3)); OverlayParams.for_ship / FlightGains.from_dict built with ContentSet's FlightCommonDef (A-90)"
+    "acceptance_append": "; the terrain lift uses the drop-free clearance (c_k + 0.5 g t_k^2) and is added to the current radial speed, while TTI / PULL_UP keep the ballistic probe; SC-09 and SC-10 asserted under speed_scaled (R0 B.12 A-69); PULL_UP at act also starts when the visible clearance (AGL or the probe's worst drop-free clearance) is below FlightController.pull_up_loss, ORed with the 1.0 s re-sample, in Overlays.run_safety and the Dart brain (R0 B.15 A-89); on cradle in SC-09, SC-10 and SC-11 the Dart never enters a state SweepScenarios.dive_recoverable classifies as unrecoverable (A-88 (3)); OverlayParams.for_ship / FlightGains.from_dict built with ContentSet's FlightCommonDef (A-90); test_dart_perf.gd asserts the 05 s10 act row as a fleet mean at the engaged mix f = 0.25 ((1 - f) x act_patrol + f x act_engage < 6 us x CI_FACTOR, host-scaled), act_engage in fire range < 18 us (3 x row, the A-96 interim ceiling), engaged think < 25 us x CI_FACTOR, and the counter pull_up_loss calls per act tick while sinking == 1 / pull_up_check_ticks; the constants cite R0 B.17 A-96 and are not raised by the author (R0 B.17 A-96); the S4 test saves before the first slug and names TA-65; PULL_UP ends only when AiState.tti >= safety_clear_tti_s, the mode has held guidance.pull_up_min_hold_s and ProbeResult.climb_need_mps <= 0, then resumes prev_mode (R0 B.17 A-92; test_dart_brain.gd asserts a think with TTI >= 4 s and climb_need > 0 stays in PULL_UP and the first think with climb_need <= 0 leaves it); Overlays.run_safety exit unchanged (05 s2.4); the longest PULL_UP hold in SC-09 / SC-10 / SC-11 is reported in the PR body; ENGAGE holds intercept.standoff_m (target speed - engage_speed_margin_mps inside it) and breaks off to EXTEND below intercept.break_ttc_s to collision (A-93; SC-28 reports the ram count beside the kill count, rams <= 1 of 10); AiTag (godot/src/sim_ai/ai_tag.gd, class_name AiTag, enum Tag with the 34 R0 B.3 ordinals) and the sim_ai/MODULE.md 'Enumerations' block exist and every set_ai_tag call passes an AiTag.Tag value (A-94; DartBrain.Mode either replaced by AiTag.Tag or asserted member-equal to it); the ProbeResult.climb_need_mps contract test and MODULE.md ST3 line precede the code commit and the PR body says 'Contract impact: append (sim/steer ProbeResult.climb_need_mps)' (A-95); rebased on main with AI-41's test_flight_controller_equivalence.gd entry kept in sim/steer/MODULE.md",
+    "note": "A-96: no code change required for the engaged act (pull_up_loss stays exact at act per A-89; the lead stays per tick in fire range); the row is priced as a fleet mean at f = 0.25 and the per-case 18 us is interim until the pinned runner (A-62). A-92 extends A-89's exit (later, never earlier); A-93 ratifies the standoff / break-off and the three fixture blocks as data for AI-19; A-94 makes DartBrain.Mode's ordinals the AiTag.Tag vocabulary (0-15 verbatim, no S4 byte changes); A-95 ratifies climb_need_mps as an Append and refuses the AI-41 test-entry-point drop in the branch's steer MODULE.md (rebase artifact). No perf guard factor is granted (A-62 / A-84); the review's levers come first, then BLOCKED with a component table if still over."
   },
   {
     "id": "AI-14",
@@ -2424,7 +2425,9 @@
       "05 s6.3-6.6",
       " 05 AI-14"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; every brain writes AiTag.Tag values only through set_ai_tag (R0 B.17 A-94: FLEE 16, SEARCH 17 for the Scout; a new word is appended at the end of the sim_ai/MODULE.md AiTag bullet in the same PR, never inserted); PULL_UP in every brain exits by the A-92 rule (TTI >= safety_clear_tti_s and pull_up_min_hold_s held and climb_need_mps <= 0); which of the guidance / intercept / attack_run blocks ap_lancer / ap_bomber / ap_scout require is stated in the PR as a content note for AI-19 (A-93)",
+    "note": "A-94 reserves 16-33 so the Lancer / Bomber / Scout brains need no new ordinals unless a word is missing; AttackRun's Deck ingress and attack_run block are AI-13's (A-93)."
   },
   {
     "id": "AI-15",
@@ -2464,7 +2467,8 @@
       " R0 C1-05",
       " 05 AI-16"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; Harvester tags are AiTag.Tag PICK_FIELD..UNLOAD (23-28) and FLEE (16) (R0 B.17 A-94)"
   },
   {
     "id": "AI-17",
@@ -2483,7 +2487,8 @@
       " R0 C2-15",
       " 05 AI-17"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; tower tags are AiTag.Tag TRACK 31, OFFLINE 32, IDLE 33 (R0 B.17 A-94)"
   },
   {
     "id": "AI-18",
@@ -2521,7 +2526,7 @@
       " 05 AI-19"
     ],
     "status": "todo",
-    "acceptance_append": "; every ap_* flight block carries the 16 FlightGains keys of R0 B.12 A-67 with the AI-05 anchors and lift_max_frac / lift_min_time_s (A-67); AiDriver reads think_period_ticks from the def instead of its constructor default (A-71); adopt the single AI-06 damping_only recommended set (godot/test/tuning/recommended_gains.json) for every ap_* flight block (A-68); every ship ap_* carries the 11-key separation block and ap_dart / ap_lancer the 8-key formation block of R0 B.14 A-86 with the AI-11 anchors (godot/test/sim/ai/ai11_params.json, lookahead_miss_m 80), schema ranges and per-class required as A-86 states; engage_radius_m stays in order_rules.json only"
+    "acceptance_append": "; every ap_* flight block carries the 16 FlightGains keys of R0 B.12 A-67 with the AI-05 anchors and lift_max_frac / lift_min_time_s (A-67); AiDriver reads think_period_ticks from the def instead of its constructor default (A-71); adopt the single AI-06 damping_only recommended set (godot/test/tuning/recommended_gains.json) for every ap_* flight block (A-68); every ship ap_* carries the 11-key separation block and ap_dart / ap_lancer the 8-key formation block of R0 B.14 A-86 with the AI-11 anchors (godot/test/sim/ai/ai11_params.json, lookahead_miss_m 80), schema ranges and per-class required as A-86 states; engage_radius_m stays in order_rules.json only; ap_dart carries the guidance (8 keys), intercept (12 keys incl. standoff_m 200, break_ttc_s 2.0) and attack_run (12 keys) blocks, gun.aoa_comp_max_deg 20 and evade.heading_change_deg 60 of R0 B.17 A-93 with the AI-13 anchors (godot/test/sim/ai/ai13_autopilots.json); schema: required on ap_dart, optional elsewhere, every key required when the block is present, ranges per A-93"
   },
   {
     "id": "AI-20",
@@ -4474,7 +4479,8 @@
       "R0 C2-05",
       " 04 NET-39"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; the replicated ai_tag u8 is an AiTag.Tag ordinal (R0 B.17 A-94); net stays opaque to it (no decode, no enum); the contract test round-trips the values 0 and 33"
   },
   {
     "id": "NET-40",
@@ -7289,6 +7295,43 @@
       "GD-36"
     ],
     "status": "todo",
-    "note": "Found by AI-13 #87 round 2 (2026-10-21): diff in the projectile store; not reproduced with a possessed Dart firing. AI-13's S4 test currently saves before the first slug."
+    "note": "Found by AI-13 #87 round 2 (2026-10-21): diff in the projectile store; not reproduced with a possessed Dart firing. AI-13's S4 test currently saves before the first slug. PR #87 round 2 repro: three AI Darts under ATTACK on a Bomber 300 m ahead, AI RNG bound, serialize -> deserialize -> serialize every 10 ticks for 150 ticks differs in the ProjectileStore section at 7 of 12 checks; not with a possessed Dart firing (R0 B.17 A-96)."
+  },
+  {
+    "id": "TA-63",
+    "title": "sim: SimView.visible_enemy_ships(team, out) -> int from the Vision team list (R0 B.17 A-95): live enemy ships seen at the team's last pass, O(visible), no allocation; visible_ids comment corrected",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-37"
+    ],
+    "milestone": "M3",
+    "acceptance": "SimView.visible_enemy_ships(team: int, out: PackedInt32Array) -> int appended to sim/MODULE.md B.5 list and LocalSimView: fills the caller-owned out (grown once, never reallocated when large enough) with the EntityIds of live ships whose team differs from team (neutral included) that carry bit team of visible_mask at the team's last vision pass, taken from InterestGrid.ids[team * STRIDE, team * STRIDE + list_size[team]) and not by walking the store; returns the count; contract test: every id returned satisfies visible_to(team, id) and view.alive(id) and is in ships(); a ship that died after the pass is not returned; own-team ships never returned; count equals the brute-force TeamPicture.enemies size on a 258-ship populated world for every team and tick in 60 ticks; identical output before and after SimWorld.deserialize + Vision.rebuild_lists (S4); perf test records us per call per team at the AI-40 host scale and the brute-force figure beside it; the visible_ids line in sim/MODULE.md reads 'allocates; walks every live slot' (no signature change); check_deps, gen_module_api --check green",
+    "docs": [
+      "R0-amendments-10 A-95",
+      "03 s3.7",
+      "05 s6"
+    ],
+    "status": "todo",
+    "note": "replaces the per-tick TeamPicture walk (222 us local / 302 us CI per team per tick, PR #87 perf note); sim_ai adopts it in a follow-up inside the AI-13 lane, AI-13 does not wait for it."
+  },
+  {
+    "id": "UX-43",
+    "title": "content/ui/ai_tags.json: every AiTag.Tag ordinal (R0 B.17 A-94) -> string id and short HUD label, schema, validate_content parity check with sim_ai/MODULE.md",
+    "lane": "ui+content",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "AI-13"
+    ],
+    "milestone": "M3",
+    "acceptance": "godot/content/ui/ai_tags.json lists ordinals 0..33 of R0 B.3 AiTag.Tag each with a string id (i18n key) and a label <= 10 characters; tools/schemas/ai_tags.schema.json; tools/validate_content.py fails when an ordinal of the sim_ai/MODULE.md 'Enumerations' AiTag bullet has no entry or an entry has no ordinal; i18n.json carries the string ids; no ui/ code names AiTag (check_deps D1 unchanged)",
+    "docs": [
+      "R0-amendments-10 A-94",
+      "05 s6.1",
+      "06 s7.1"
+    ],
+    "status": "todo"
   }
 ]
