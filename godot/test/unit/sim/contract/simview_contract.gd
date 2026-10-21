@@ -118,7 +118,7 @@ func _lists() -> void:
 	_t(&"unit_count", _v.unit_count(0) == 2 and _v.unit_count(1) == 1 and _v.unit_count(2) == 0)
 
 
-## TA-63: team 0 sees only `b` (its own ships, the structures and the wreck are never listed), team 1 `a` and `c` (not the core it also sees); a long pre-filled `out` is neither reallocated nor read past the count; bad teams give 0.
+## TA-63: team 0 sees only `b` (its own ships, the structures and the wreck are never listed), team 1 `a` and `c` (not the core it also sees); ids ascending (V10: a state-only order); a long pre-filled `out` is neither reallocated nor read past the count; bad teams give 0.
 func _enemy_ships_ok() -> bool:
 	var s: SimViewScene = _s
 	var out0: PackedInt32Array = PackedInt32Array()
@@ -126,7 +126,7 @@ func _enemy_ships_ok() -> bool:
 	var out1: PackedInt32Array = PackedInt32Array([-7, -7, -7, -7, -7, -7, -7, -7, -7, -7])
 	var n1: int = _v.visible_enemy_ships(1, out1)
 	var out2: PackedInt32Array = PackedInt32Array([-7])
-	return n0 == 1 and out0.size() >= 1 and out0[0] == s.b 			and n1 == 2 and out1.size() == 10 and out1[2] == -7 and ((out1[0] == s.a and out1[1] == s.c) or (out1[0] == s.c and out1[1] == s.a)) 			and _v.visible_enemy_ships(7, out2) == 0 and _v.visible_enemy_ships(-1, out2) == 0 			and _v.visible_enemy_ships(8, out2) == 0 and out2[0] == -7
+	return n0 == 1 and out0.size() >= 1 and out0[0] == s.b 			and n1 == 2 and out1.size() == 10 and out1[2] == -7 and out1[0] == s.a and out1[1] == s.c 			and _v.visible_enemy_ships(7, out2) == 0 and _v.visible_enemy_ships(-1, out2) == 0 			and _v.visible_enemy_ships(8, out2) == 0 and out2[0] == -7
 
 
 func _flight() -> void:

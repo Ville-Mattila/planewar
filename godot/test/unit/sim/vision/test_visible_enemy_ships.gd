@@ -39,10 +39,15 @@ func _brute(v: SimView, team: int) -> Array:
 
 
 func _got(v: SimView, team: int, buf: PackedInt32Array) -> Array:
-	var n: int = v.visible_enemy_ships(team, buf)
-	var a: Array = Array(buf.slice(0, n))
+	var a: Array = _raw(v, team, buf)
 	a.sort()
 	return a
+
+
+## The ids in the order returned: ascending EntityId (V10), compared unsorted wherever order matters.
+func _raw(v: SimView, team: int, buf: PackedInt32Array) -> Array:
+	var n: int = v.visible_enemy_ships(team, buf)
+	return Array(buf.slice(0, n))
 
 
 ## Every team, every tick of 60: the answer equals the brute-force picture, each id is alive, a ship, seen, in ships()
@@ -60,7 +65,10 @@ func test_matches_brute_force_picture_every_team_every_tick() -> void:
 		for id: int in v.ships():
 			in_ships[id] = true
 		for team: int in PlayerTable.TEAMS:
-			var got: Array = _got(v, team, buf)
+			var raw: Array = _raw(v, team, buf)
+			var got: Array = raw.duplicate()
+			got.sort()
+			assert_array(raw).override_failure_message("tick %d team %d not ascending" % [w.tick(), team]).is_equal(got)
 			assert_array(got).override_failure_message("tick %d team %d" % [w.tick(), team]).is_equal(_brute(v, team))
 			for id: int in got:
 				assert_bool(v.alive(id) and v.visible_to(team, id) and in_ships.has(id) and v.team(id) != team).is_true()
@@ -148,31 +156,41 @@ func test_identical_after_deserialize_and_rebuild_lists() -> void:
 	for _i: int in 20:
 		w1.step()
 		var _e: Array[SimEvent] = w1.drain_events()
+	# ships that change interest cell between the pass and the save (the restored lists use current cells)
+	var moved: int = 0
+	for team: int in PlayerTable.TEAMS:
+		for id: int in _raw(w1.view(), team, PackedInt32Array()):
+			if moved < 60:
+				var s: int = EntityId.slot(id)
+				w1.store().pos[s] = Sphere.from_lat_lon(0.05 + 0.0001 * float(moved), 0.9 - 0.01 * float(moved), R + 300.0)
+				moved += 1
+	w1.spatial.rebuild()
 	var w2: SimWorld = SimWorld.deserialize(w1.serialize(), WorldTestKit.content(), null)
 	assert_object(w2).is_not_null()
 	var b1: PackedInt32Array = PackedInt32Array()
 	var b2: PackedInt32Array = PackedInt32Array()
 	var total: int = 0
 	for team: int in PlayerTable.TEAMS:
-		var want: Array = _got(w1.view(), team, b1)
+		var want: Array = _raw(w1.view(), team, b1)
 		total += want.size()
-		assert_array(_got(w2.view(), team, b2)).is_equal(want)
+		assert_array(_raw(w2.view(), team, b2)).is_equal(want)    # unsorted: same order
 	assert_int(total).is_greater(0)
+	assert_int(moved).is_greater(0)
 	w2.vision.rebuild_lists()
 	for team: int in PlayerTable.TEAMS:
-		assert_array(_got(w2.view(), team, b2)).is_equal(_got(w1.view(), team, b1))
+		assert_array(_raw(w2.view(), team, b2)).is_equal(_raw(w1.view(), team, b1))
 	for _i: int in 12:
 		w1.step()
 		w2.step()
 		var _a: Array[SimEvent] = w1.drain_events()
 		var _b: Array[SimEvent] = w2.drain_events()
 		for team: int in PlayerTable.TEAMS:
-			assert_array(_got(w2.view(), team, b2)).is_equal(_got(w1.view(), team, b1))
+			assert_array(_raw(w2.view(), team, b2)).is_equal(_raw(w1.view(), team, b1))
 
 
 ## Work counter (A-97: hard, no wall clock): the result never exceeds the team's list and equals the brute force;
 ## per-team us per call and the brute-force figure beside it are PERF_REPORT lines. The bound is half of
-## TeamPicture's 222 us (PR #87), asserted only on the pinned runner.
+## TeamPicture's 222 us (PR #87 perf note; A-95 asks only that the figure be recorded beside it), asserted only on the pinned runner.
 func test_perf_us_per_call_per_team_at_ai40_scale() -> void:
 	var w: SimWorld = _world()
 	for _i: int in 12:

@@ -54,6 +54,13 @@ func test_a_view_broken_in_only_X_fails_clause_X(accessor: String, test_paramete
 	assert_bool(c.failed.has(accessor)).override_failure_message("a view broken in %s passed the contract" % accessor).is_true()
 
 
+func test_a_view_broken_only_in_the_order_of_visible_enemy_ships_fails_its_clause() -> void:
+	var scene: SimViewScene = SimViewScene.build()
+	var c: SimViewContract = SimViewContract.new()
+	c.run(SimViewMutant.new(scene.world.view(), &"visible_enemy_ships_order"), scene)
+	assert_array(Array(c.failed)).is_equal(["visible_enemy_ships"])
+
+
 func test_a_view_that_returns_every_default_fails_the_contract() -> void:
 	var scene: SimViewScene = SimViewScene.build()
 	var c: SimViewContract = SimViewContract.new()
