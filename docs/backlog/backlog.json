@@ -3033,7 +3033,10 @@
       " R0 C2-22",
       " 06 UX-04"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 105,
+    "merged": "2026-10-21",
+    "note": "Touch flight stays neutral until UX-06 registers the ux_* InputMap actions in project.godot and sets gestures.stick_zone/fire_zone. Nits: stale \"# planned\" line in input/MODULE.md, I10 before I9, no router test that POINTER/GAMEPAD skip the touch mapper."
   },
   {
     "id": "UX-05",
@@ -3075,7 +3078,8 @@
       " R0 C3-21",
       " 06 UX-06"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; registers the ux_* InputMap actions in project.godot and sets gestures.stick_zone / fire_zone so UX-04 touch flight is live (test: a synthetic touch drag moves PilotInput)"
   },
   {
     "id": "UX-07",
