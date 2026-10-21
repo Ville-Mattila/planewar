@@ -43,6 +43,10 @@ func test_sim_event_kind() -> void:
 	_check("`SimEvent.Kind` (", SimEvent.Kind)
 
 
+func test_sim_event_death_cause() -> void:
+	_check("`SimEvent.DeathCause` (", SimEvent.DeathCause)
+
+
 func test_command_kind() -> void:
 	_check("`Command.Kind` (", Command.Kind)
 

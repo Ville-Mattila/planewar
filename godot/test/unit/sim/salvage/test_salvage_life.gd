@@ -29,8 +29,9 @@ func test_pods_expire_at_ninety_seconds_exactly() -> void:
 	assert_int(deaths.size()).is_equal(2)
 	assert_int(deaths[0].a).is_equal(ids[0])
 	assert_int(deaths[1].a).is_equal(ids[1])
-	assert_int(deaths[0].extra[0]).is_equal(Salvage.CAUSE_EXPIRED)
-	assert_int(Salvage.CAUSE_EXPIRED).is_equal(1)
+	assert_int(deaths[0].extra[0]).is_equal(SimEvent.DeathCause.EXPIRED)
+	assert_int(SimEvent.DeathCause.EXPIRED).is_equal(1)
+	assert_int(SimEvent.DeathCause.DEBUG).is_equal(0)
 	assert_int(deaths[0].tick).is_equal(born + _life_ticks())
 
 

@@ -18,10 +18,29 @@ func _pair(w: SimWorld, owner: int = 0, east: float = 3000.0, alt: float = 20.0)
 	return Vector2i(h, wr)
 
 
-func test_reach_is_the_tether_length_plus_its_drop() -> void:
+func test_hook_and_delivery_reach_are_the_economy_fields() -> void:
 	var w: SimWorld = K.world()
-	var c: FlightCommonDef = WorldTestKit.content().flight_common
-	assert_float(_reach(w)).is_equal(c.tether_len_m + c.tether_drop_m)
+	var e: EconomyDef = WorldTestKit.content().economy
+	assert_float(e.salvage_hook_m).is_equal(33.0)
+	assert_float(e.salvage_deliver_m).is_equal(33.0)
+	assert_float(w.economy().salvage.reach_m()).is_equal(e.salvage_hook_m)
+	assert_float(w.economy().salvage.deliver_m()).is_equal(e.salvage_deliver_m)
+
+
+func test_the_reach_follows_the_def_not_the_tether_geometry() -> void:
+	var e: EconomyDef = WorldTestKit.content().economy
+	var old_hook: float = e.salvage_hook_m
+	var old_deliver: float = e.salvage_deliver_m
+	e.salvage_hook_m = 50.0
+	e.salvage_deliver_m = 70.0
+	var w: SimWorld = K.world()
+	e.salvage_hook_m = old_hook
+	e.salvage_deliver_m = old_deliver
+	assert_float(w.economy().salvage.reach_m()).is_equal(50.0)
+	assert_float(w.economy().salvage.deliver_m()).is_equal(70.0)
+	var h: int = K.put(w, &"hauler", 0, 0, 40.0, 3000.0)
+	var wr: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3000.0))
+	assert_int(w.economy().salvage.try_attach(h, wr)).is_equal(Salvage.Hook.OK)       # 40 m: out of 33, inside 50
 
 
 func test_a_hauler_has_one_slot_and_a_foundry_hauler_two() -> void:
@@ -260,7 +279,7 @@ func test_a_friendly_refinery_out_of_reach_takes_nothing() -> void:
 func test_a_tow_reaches_a_refinery_by_its_radius_plus_the_reach() -> void:
 	var w: SimWorld = K.world()
 	var ref: int = _refinery(w, 3000.0)
-	var d: float = w.store().radius[ref] + w.economy().salvage.reach_m()
+	var d: float = w.store().radius[ref] + w.economy().salvage.deliver_m()
 	var h: int = K.put(w, &"hauler", 0, 0, 20.0, 3000.0)
 	var wr: int = K.wreck_at(w, &"dart", 60.0, w.store().pos[h])
 	assert_int(w.economy().salvage.try_attach(h, wr)).is_equal(Salvage.Hook.OK)

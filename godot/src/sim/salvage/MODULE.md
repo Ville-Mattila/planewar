@@ -18,14 +18,13 @@ change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check
 ```gdscript
 class_name Salvage extends RefCounted
 enum Hook { OK, NOT_HAULER, NO_SLOT, BAD_WRECK, TOO_FAR }                    # try_attach outcomes
-const CAUSE_EXPIRED: int                                                     # DEATH cause of an expired wreck: 1 (0 is DEBUG)
 var orders: OrderQueue                                                       # set by SimWorld; the head standing order of a ship decides the auto-hook
 var cap: int                                                                 # live wreck cap (`caps.wrecks`; 0 = the whole wreck range)
 func _init(store: EntityStore, defs: WorldDefs, economy: Economy, events: SimEvents, terrain: Terrain, hz: int, wreck_cap: int)
 static func value_of(defs: WorldDefs, def_id: int) -> int                    # W1: Ore value of the wrecks a def leaves (0 = none)
 static func pods_of(value: int, pod_max: int) -> int                        # W2: ceil(value / pod_max), at least 1
 static func pod_value(value: int, pods: int, i: int) -> int                  # W2: share of pod i (integers, differ by <= 1, sum = value)
-func reach_m() -> float                                                      # W6: tether_len_m + tether_drop_m
+func reach_m() -> float;  func deliver_m() -> float                          # W6 / W8: economy.json salvage_hook_m, salvage_deliver_m (33 m each, R0 B.20 A-105)
 func on_death(s: int, tick: int) -> int                                      # step 9, before the deferred free of slot `s`: spawns its wrecks, returns how many
 func step(t: int) -> void                                                    # step 10: expiry, release, delivery, then the auto-hook
 func towed_count(hauler: int) -> int                                         # wrecks whose link is this ship (slot) and flagged TETHERED
@@ -35,7 +34,7 @@ func drop(hauler: int) -> int                                                # r
 ```
 
 Constants come from `economy.json` (`wreck_fraction`, `wreck_lifetime_s`, `salvage_pod_max_ore`), `match_rules.json`
-(`core_value`, `caps.wrecks`), `flight_common` (`tether_len_m`, `tether_drop_m`) and `ships.json` (`tow_slots`, resolved
+(`core_value`, `caps.wrecks`), `economy.json` `salvage_hook_m` / `salvage_deliver_m` (A-105) and `ships.json` (`tow_slots`, resolved
 per owner so the Foundry doctrine gives 2). Slots in the API are entity slots; `store.link` holds an EntityId.
 
 ## Invariants
@@ -54,12 +53,12 @@ per owner so the Foundry doctrine gives 2). Slots in the API are entity slots; `
   radius 0.5 x the source radius around it, pod 0 first. WRECK_SPAWNED(a = wreck id, b = source def, value = pod Ore) per
   wreck, in pod order, emitted in step 9 before the dying entity's own RELEASED (C15) and DEATH. The wreck's `hash_cell` is 0 until the next step 7.
 - W4 Lifetime. In step 10 of tick `spawn_tick + roundi(wreck_lifetime_s x tick_hz)` (90 s = 2,700 ticks at 30 Hz) the
-  wreck is freed with DEATH(a = wreck id, b = 0, cause `CAUSE_EXPIRED`), towed or not; a tether on it ends with it.
+  wreck is freed with DEATH(a = wreck id, b = 0, cause `SimEvent.DeathCause.EXPIRED` = 1, A-106), towed or not; a tether on it ends with it.
 - W5 Cap. At `cap` live wrecks no further wreck is created (no event); pods that do not fit are lost. A full wreck range
   (256 slots, quarantine included) behaves the same.
 - W6 Tow slots and hook. A ship tows at most its resolved `tow_slots` (Hauler 1; Foundry sets 2; other ships 0).
   `try_attach(h, w)` returns OK and links when: h is a live ship, not DOCKED, below its slots; w is a live, free wreck;
-  `|pos_h - pos_w| <= reach_m()`. It sets `link[w]` = h's EntityId, F_TETHERED on both and DIRTY_CONTROL; the failure
+  `|pos_h - pos_w| <= reach_m()` (`salvage_hook_m`). It sets `link[w]` = h's EntityId, F_TETHERED on both and DIRTY_CONTROL; the failure
   order is NOT_HAULER, NO_SLOT, BAD_WRECK, TOO_FAR and a failure changes nothing. Step 10 hooks, for each live ship whose
   head standing order is HAUL with `HaulMode.TOW` and a free slot: the order's target first (when a wreck in reach), then,
   only while the ship already tows at least one wreck, the other free wrecks in reach in ascending slot order until its
@@ -67,13 +66,13 @@ per owner so the Foundry doctrine gives 2). Slots in the API are entity slots; `
 - W7 Release. In step 10 a wreck whose hauler is dead (or no longer a ship) is released: `link` 0, F_TETHERED off, the
   wreck stays where it is. A ship carries F_TETHERED exactly while `towed_count >= 1` (refreshed in the same pass after a
   release, delivery or expiry, and by `drop`). `drop(h)` releases all of h's wrecks.
-- W8 Delivery. In step 10 a towed wreck whose hauler is within `radius(refinery) + reach_m()` (centre distance) of a
+- W8 Delivery. In step 10 a towed wreck whose hauler is within `radius(refinery) + deliver_m()` (`salvage_deliver_m`) (centre distance) of a
   finished (not a site) living structure of the hauler's team whose def has `docks > 0` (the Refinery) is delivered:
   `Economy.credit(team, round(hp), 0, owner of the hauler)` (so the cap clamps and the Ore ledger counts it),
   WRECK_SALVAGED(a = wreck id, b = hauler id, value = Ore) then SALVAGE_DELIVERED(a = hauler id, b = refinery id,
   value = Ore) with the hauler's team, and the wreck is freed without a DEATH. The Ore is the value, whatever the clamp
   kept. Wrecks are processed in ascending slot order.
-- W9 State. Salvage keeps no saved state: everything is in `EntityStore` (`link`, `flags`, `hp`, `spawn_tick`), so a
+- W9 State. Salvage keeps no saved state and no `tether_target` table (R0 B.20 A-104; `link[wreck]` = the towing ship's EntityId while F_TETHERED): everything is in `EntityStore` (`link`, `flags`, `hp`, `spawn_tick`), so a
   save / restore / continue at any tick of a wreck's life is byte-exact (S4) and expiry lands on the same tick. The
   Refinery list it caches is derived (rebuilt when `Economy.structure_epoch` or the structure count moves) and never saved.
 - W10 Cost. `step` returns at once while no wreck lives; otherwise one pass over the wreck list plus one over the ships
@@ -108,10 +107,8 @@ changed FORMAT), `test_salvage_perf.gd` (W10 counters; PerfGate).
 ## How to add X (recipes for the cheapest tier)
 
 - **A new wreck source:** nothing; any def with a base Ore cost leaves a wreck through `EconomyHub.on_death`.
-- **The tether follow (GD-37):** move the wreck in step 5; where the tow state lives (`link[wreck]` here vs the R0 C3-17 `tether_target` side table) is pending the GD-19 Architect ruling.
+- **The tether follow (GD-37):** move the wreck in step 5; the tow state is `link[wreck]` (A-104): a ship's tow list is the wrecks linked to it and a wreck's attach slot its rank in ascending wreck slot among them; do not add a table.
 
 ## Open items
 
-- Contract questions for the Architect (GD-19 PR): the attach and delivery radii are derived from `tether_len_m +
-  tether_drop_m` (no explicit field in R0 B.1); a possessed Hauler has no hook trigger (no `PilotInput` button, no order);
-  `SimView` has no accessor for a wreck's Ore value (`hp01` of a wreck is not meaningful); `DEATH` cause 1 is new.
+- Ruled by R0 B.20 (`docs/reviews/R0-amendments-14.md`): A-104 tow state, A-105 reach fields, A-106 `SimEvent.DeathCause`, A-107 the step-9 event order (W3). Follow-up tasks (A-108): path weight 255 under wrecks (GD-39), the possessed Hauler's hook on DOCK (GD-40), `SimView` wreck Ore value (GD-41), ORDER_DONE for HAUL/TOW (AI-15).
