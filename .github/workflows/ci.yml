@@ -343,8 +343,8 @@ jobs:
           godot --headless --path base/godot --import
       - name: A/B (fails above +25 % p95)
         run: python head/.github/scripts/ab_perf.py --base base/godot --head head/godot --rounds 7 --ticks 3600 --threshold 25
-      - name: A/B noise, base vs base x 10 (report only)
-        run: python head/.github/scripts/ab_perf.py --base head/godot --head head/godot --noise 10 --rounds 7 --ticks 3600 --threshold 25
+      - name: A/B noise, base vs base x 3 (report only)
+        run: python head/.github/scripts/ab_perf.py --base head/godot --head head/godot --noise 3 --rounds 7 --ticks 3600 --threshold 25
       # TEST-04 / R0 B.17 A-98: the sim_ai regression gate (real AiDriver + Dart brain, A-96 engaged mix). One run is ~2.3x the
       # default scenario's wall time, so fewer ticks and a shorter noise print keep the job inside its 25 minutes. A base tree
       # that predates --ai prints the default fingerprint and this step skips with the notice.

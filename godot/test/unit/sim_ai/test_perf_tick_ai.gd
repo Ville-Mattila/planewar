@@ -27,3 +27,17 @@ func test_ai_world_steps_and_keeps_population() -> void:
 		pw.top_up()
 	assert_int(pw.world.store().ships.size()).is_equal(PerfTickWorld.AI_DARTS)
 	assert_int(pw.driver.stats()["thinks"]).is_greater(0)
+
+
+func test_ai_mix_holds_after_respawns() -> void:
+	var pw: PerfTickWorld = PerfTickWorld.new(24, 8, 16, 4, 60, &"", true)
+	var st: EntityStore = pw.world.store()
+	var fire_range: float = DartKit.params().fire_range
+	for k: int in [0, 5, 7]:   # a team-0 pair member, a team-1 pair member, another team-1 pair member
+		assert_bool(st.free_slot(pw.ai_darts[k], pw.world.tick())).is_true()
+	pw.top_up()
+	assert_int(pw.respawns).is_equal(3)
+	for pair: int in [0, 2, 3]:
+		var a: int = pw.ai_darts[pair * 2]
+		var b: int = pw.ai_darts[pair * 2 + 1]
+		assert_float(st.pos[a].distance_to(st.pos[b])).is_less(fire_range)

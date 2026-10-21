@@ -19,6 +19,9 @@ import sys
 LINE = re.compile(r"PERF_TICK p50_us=(\d+) p95_us=(\d+) p99_us=(\d+) max_us=(\d+) mean_us=(\d+)")
 
 
+AI_LINE = re.compile(r"^PERF_AI (.*)$", re.M)
+AI_LINES: dict[str, str] = {}   # project -> last PERF_AI line (the realised mix), printed in the summary
+
 FP_LINE = re.compile(r"^PERF_FINGERPRINT (.*)$", re.M)
 
 
@@ -41,11 +44,17 @@ def run_once(project: str, ticks: int, scenario: str = "default") -> tuple[int, 
         [godot, "--headless", "--path", project, "res://test/perf/perf_tick.tscn", "--", f"--ticks={ticks}",
          *scenario_args(scenario)],
         check=True, capture_output=True, text=True, timeout=300).stdout
+    ai = AI_LINE.search(out)
+    if ai:
+        AI_LINES[project] = ai.group(1).strip()
     return parse_output(out)
 
 
-def decide(base_fp: str, head_fp: str, d95: float, threshold: float) -> tuple[int, str]:
-    """(exit code, message). Differing fingerprints: skip with a notice. Equal: gate on +threshold %."""
+def decide(base_fp: str, head_fp: str, d95: float, threshold: float, scenario: str = "default") -> tuple[int, str]:
+    """(exit code, message). Differing fingerprints: skip with a notice. Equal: gate on +threshold %.
+    --scenario ai: a head without `scenario=ai` is a broken gate and fails; only a base without it may skip."""
+    if scenario == "ai" and "scenario=ai" not in head_fp:
+        return 1, f"::error::head did not run the ai scenario (fingerprint: {head_fp}); the ai A/B gate would be vacuous"
     if base_fp != head_fp:
         return 0, (f"::notice::A/B skipped, harness scope differs (base: {base_fp}; head: {head_fp}); "
                    "the comparison would not be like for like")
@@ -103,9 +112,11 @@ def main() -> int:
     ma, mb, d95, dmean, fa, fb = compare(a.base, a.head, a.rounds, a.ticks, a.scenario)
     text = (f"A/B perf_tick [{a.scenario}]: base p95 {ma:.0f} us, head p95 {mb:.0f} us -> {d95:+.2f} % "
             f"(mean {dmean:+.2f} %), threshold +{a.threshold} %")
+    for proj, line in AI_LINES.items():
+        text += f"\n  PERF_AI {proj}: {line}"
     print(text)
     append_summary("### A/B perf\n" + text + "\n")
-    code, msg = decide(fa, fb, d95, a.threshold)
+    code, msg = decide(fa, fb, d95, a.threshold, a.scenario)
     if msg:
         print(msg)
         append_summary(msg.split("::", 2)[-1] + "\n")

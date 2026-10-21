@@ -11,6 +11,7 @@ const SEED: int = 22
 const TEAMS: int = 8
 const ORBIT_M: float = 1200.0
 ## TEST-04 / R0 B.17 A-98 (`ai` scenario): the A/B-scale world driven by the real AiDriver + DartBrain instead of OrbitHook.
+const AI_SCENARIO_VERSION: int = 1  ## bump when the ai world changes; printed in the fingerprint so a retune is a mismatch, not a gate
 const AI_DARTS: int = 48            ## two teams of 24
 const AI_ENGAGED_EVERY: int = 4     ## one Dart in four starts inside gun fire_range of an enemy (A-96 engaged mix f = 0.25)
 const AI_ARENA_M: float = 1200.0    ## half-width of the square the engaged pairs start in (the patrols stay within ~1 km of their Cores)
@@ -116,12 +117,14 @@ func _respawn_ai() -> void:
 		if (st.flags[s] & EntityStore.F_ALIVE) != 0 and st.kind[s] == EntityStore.K_SHIP:
 			continue
 		var engaged: bool = k < MathX.floori_div(AI_DARTS, AI_ENGAGED_EVERY)   # a lost pair member re-forms the pair
-		ai_darts[k] = _ai_dart(k % 2, ai_darts[k - 1] if engaged and k % 2 == 1 else -1, engaged)
+		var partner: int = ai_darts[k + 1 - 2 * (k % 2)]   # the pair's other member (k even: k + 1, odd: k - 1)
+		var live: bool = (st.flags[partner] & EntityStore.F_ALIVE) != 0 and st.kind[partner] == EntityStore.K_SHIP
+		ai_darts[k] = _ai_dart(k % 2, partner if engaged and live else -1, engaged)
 		respawns += 1
 
 
 ## One AI Dart on `team`; an engaged pair's team-0 member (`mate` -1) is placed freely, its team-1 member AI_PAIR_M east of
-## it on the same velocity (head-on pairs ram each other inside 30 ticks); a patrol Dart is placed around its Core.
+## it on the same velocity (pairs flying head-on ram each other inside 30 ticks); a patrol Dart is placed around its Core.
 func _ai_dart(team: int, mate: int, engaged: bool) -> int:
 	var st: EntityStore = world.store()
 	var s: int

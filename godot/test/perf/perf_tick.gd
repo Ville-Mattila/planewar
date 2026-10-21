@@ -54,7 +54,7 @@ func _ready() -> void:
 
 func _run_sim(ticks: int, full: bool, flat: bool, profile: int, ai_wanted: bool) -> void:
 	var script: GDScript = load(WORLD_SCRIPT)
-	var ai: bool = ai_wanted and not full and script.get_script_constant_map().has("AI_DARTS")   # absent in a base older than TEST-04
+	var ai: bool = ai_wanted and not full and script.get_script_constant_map().has("AI_SCENARIO_VERSION")   # absent in a base older than TEST-04
 	var map_id: StringName = &"" if flat or not full else &"s_world1_r6000"
 	var pw: Variant
 	if ai:
@@ -96,7 +96,7 @@ func _run_sim(ticks: int, full: bool, flat: bool, profile: int, ai_wanted: bool)
 				engaged_n += 1
 	var st: Variant = w.store()
 	print("PERF_FINGERPRINT harness=%d world=sim scale=%s map=%s rows=%d%s" % [HARNESS_VERSION,
-		"full" if full else "ab", map_id if map_id != &"" else "flat", ROW_NAMES.size(), " scenario=ai" if ai else ""])
+		"full" if full else "ab", map_id if map_id != &"" else "flat", ROW_NAMES.size(), " scenario=ai ai_v=%d" % script.get_script_constant_map()["AI_SCENARIO_VERSION"] if ai else ""])
 	if ai:
 		print("PERF_AI darts=%d engaged_share=%.3f think_period=%d respawns=%d" % [pw.ai_darts.size(),
 			float(engaged) / float(maxi(engaged_n, 1)), pw.driver.think_period(), pw.respawns])
