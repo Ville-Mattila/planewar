@@ -78,6 +78,8 @@ func ai_rng() -> Rng:
 ## Brain for class `cls` (null = none). Also receives `think_bot` for bots when set with `bot = true`.
 func set_brain(cls: int, brain: AiBrain, bot: bool = false) -> void:
 	_brains[cls] = brain
+	if brain != null:
+		brain.bind_rng(_rng)
 	if bot:
 		_bot_brain = brain
 
@@ -330,6 +332,9 @@ func deserialize(bytes: PackedByteArray) -> void:
 	if pos + Rng.STATE_BYTES + 4 > bytes.size():
 		return
 	_rng = Rng.from_state(bytes.slice(pos, pos + Rng.STATE_BYTES))
+	for br: AiBrain in _brains:
+		if br != null:
+			br.bind_rng(_rng)
 	b.seek(pos + Rng.STATE_BYTES)
 	var len_st: int = b.get_u32()
 	pos = b.get_position()

@@ -16,3 +16,9 @@ func act_batch(_ids: PackedInt32Array, _view: SimView, _st: AiState, _sink: Comm
 ## One Commander / Adjutant think for bot `slot` of difficulty `tier` (0 easy .. 3 brutal), on its staggered tick.
 func think_bot(_slot: int, _tier: int, _tick: int, _view: SimView, _sink: CommandSink) -> void:
 	pass
+
+
+## AI-13: the driver's `Rng.fork(&"ai")` stream, bound on `set_brain` and again after `deserialize` (which replaces the
+## stream object); a brain that draws (aim error, 05 s6.2) keeps this reference and never another source.
+func bind_rng(_rng: Rng) -> void:
+	pass

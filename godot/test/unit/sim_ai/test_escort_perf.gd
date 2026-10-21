@@ -16,8 +16,9 @@ extends GdUnitTestSuite
 ## belong on the pinned runner only (05 s11.1, R0 C1-11, ci.yml header; A-62: the rows stay). The test therefore times a
 ## fixed reference kernel (`_ref_step`: no project code, so no change under review can move it) in the same process,
 ## before and after the cases, and divides every figure by `host = clamp(ref / REF_ANCHOR_US, 1, MAX_HOST)`: a host at
-## least as fast as the anchor host is asserted on raw figures (bounds unchanged), a slower one on figures rescaled to
-## the anchor host, never by more than `MAX_HOST`, so a code regression still fails. Raw and scaled figures are printed.
+## least as fast as the anchor host is compared on raw figures (bounds unchanged), a slower one on figures rescaled to
+## the anchor host, never by more than `MAX_HOST`. R0 B.17 A-97: the timing bounds are asserted only on the pinned runner
+## (PLANEWAR_PINNED_RUNNER=1); on hosted runners they print PERF_REPORT lines and the refresh-share counter is the gate.
 
 const CALLS: int = 1000
 const BATCHES: int = 6
@@ -130,10 +131,11 @@ func test_perf_think_and_act() -> void:
 		FAR_SHIPS, BATCHES, CALLS, sc.x, sc.y, sc.z, sg.x, sg.y, sg.z, THINK_ROW_US, act_us, ACT_BATCHES, CALLS, ACT_ROW_US, sx.x, sx.y, sx.z])
 	print("AI-40 host: reference kernel %.3f us (anchor %.3f), scale %.2f; asserted think %.1f, gate %.1f, act %.2f, closing %.1f us" % [
 		ref, REF_ANCHOR_US, host, sc.x / host, sg.x / host, act_us / host, sx.x / host])
-	assert_float(sc.x / host).is_less(THINK_ROW_US * CI_FACTOR)
-	assert_float(sg.x / host).is_less(THINK_ROW_US * CI_FACTOR)
-	assert_float(act_us / host).is_less(ACT_ROW_US * CI_FACTOR)
-	assert_float(sx.x / host).is_less(THINK_ROW_US * CI_FACTOR * CLOSING_FACTOR)
+	assert_bool(_gate("test_escort_perf.quiet_think", sc.x, THINK_ROW_US * CI_FACTOR, host, "05 s10 / R0 A-84")).is_true()
+	assert_bool(_gate("test_escort_perf.gate_think", sg.x, THINK_ROW_US * CI_FACTOR, host, "05 s10 / R0 A-84")).is_true()
+	assert_bool(_gate("test_escort_perf.act", act_us, ACT_ROW_US * CI_FACTOR, host, "05 s10 / R0 A-84")).is_true()
+	assert_bool(_gate("test_escort_perf.closing_think", sx.x, THINK_ROW_US * CI_FACTOR * CLOSING_FACTOR, host, "05 s10 / R0 A-84")).is_true()
+	assert_float(float(refreshes) / float(BATCHES * CALLS)).is_equal_approx(0.5, 0.01)   # A-84 / A-97: quiet thinks hold every second
 
 
 ## Act per ship, as the 05 s10 act row counts it: back-to-back acts over the 4 slotted escorts (each returns true, so
@@ -206,3 +208,10 @@ func _closing_case(w: SimWorld, pilot: EscortPilot, st: AiState, escort: int) ->
 
 func _best(a: Vector3, b: Vector3) -> Vector3:
 	return b if b.x < a.x else a
+
+## R0 B.17 A-97 inline gate (until TEST-03's PerfGate): one PERF_REPORT line; the bound is asserted only on the pinned
+## runner (PLANEWAR_PINNED_RUNNER == "1"); on hosted runners timing never fails a test.
+static func _gate(name: String, us: float, bound_us: float, host: float, cite: String) -> bool:
+	var pinned: bool = OS.get_environment("PLANEWAR_PINNED_RUNNER") == "1"
+	print("PERF_REPORT name=%s us=%.2f bound_us=%.2f host=%.2f pinned=%d cite=%s" % [name, us, bound_us, host, 1 if pinned else 0, cite])
+	return not pinned or us / host < bound_us

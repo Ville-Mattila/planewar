@@ -52,7 +52,7 @@ func required_clearance(speed: float) -> float                               # m
 
 class_name ProbeResult extends RefCounted                                    # preallocated by the brain, overwritten by probe()
 var tti_s: float; var min_clearance_m: float; var worst_t_s: float           # INF when clear; worst (lowest) sample
-var worst_dir: Vector3; var lift_mps: float                                  # unit direction of the worst sample; extra climb along local up
+var worst_dir: Vector3; var lift_mps: float; var climb_need_mps: float      # worst sample's direction; extra climb; AI-13: drop-free need over all samples (ST3)
 
 class_name TerrainProbe extends RefCounted                                   # 05 s5.3, static only
 static func probe(terrain: Terrain, p: Vector3, v: Vector3, probe_params: ProbeParams, h_req: float, out: ProbeResult) -> void   # ONE pass, 6 samples
@@ -227,7 +227,7 @@ numerical resolution, not tuning (A-90 appends; the table is within 2 degrees of
   `test_sloped_terrain_matches_quadratic`, `test_ridge_tti_against_dense_reference`); measured <= 0.5 s (one probe interval) when
   grazing the rough cradle crater rims at 300 m/s, 8 m AGL (`test_cradle_tti_matches_dense_reference_and_lift_clears`). Kept linear
   (zero extra samples); the Architect may revisit. A path already under the surface at sample 0 gives a value in [0, t_0].
-- ST3: `lift_mps` is >= 0, 0 when the worst clearance is >= `h_req`, and <= `lift_max_frac * |v|`.
+- ST3: `lift_mps` is >= 0, 0 when the worst clearance is >= `h_req`, and <= `lift_max_frac * |v|`. AI-13: `climb_need_mps` = max over the samples of `(h_req - c_k') / max(t_k, lift_min_time_s)` (drop-free c'), no extra sample; >= the worst sample's A-69 lift, < 0 with spare clearance (`test_climb_need_is_the_drop_free_requirement_over_every_sample`).
 - ST4: A vertical or stationary ship stays over one point (no NaN from a zero ground speed).
 - LC1: `LandingController` is static and reads only its arguments; it writes only `st` and `out` (`test_source_has_no_state`,
   `test_pure_and_deterministic`). FC2 holds for its output (it drives the stick through `FlightController`).
@@ -283,8 +283,8 @@ through `SimWorld` step 4).
 
 - `ProbeParams.lift_max_frac` / `lift_min_time_s` are in `autopilots.schema.json` (optional); AI-19 writes them (0.6, 0.5) into every `ap_*` (R0 B.12 A-67).
 - Landing under `damping_only`: L1-L6 docks 200/200 with the AI-06 recommended set (AI-19 adopts it); at the AI-05 anchors it still crashes (lead_max 80).
-- The structure bounding-sphere probe of 05 s5.4 and the 1.0 s re-sample at act (PULL_UP) are `sim_ai` callers of `TerrainProbe`.
-- A-69 (05 s5.3 erratum): lift callers use the drop-free clearance `c_k + 0.5 g t_k^2` and add the lift to the current radial speed; TTI / PULL_UP keep the ballistic probe. `probe()` is unchanged; AI-13 owns the brain side. `LandingPilot` (AI-09) already does both.
+- The structure bounding-sphere probe of 05 s5.4 is not built (a `sim_ai` caller of `TerrainProbe`); the 1.0 s re-sample at act is `Guidance.pull_up_due` (AI-13).
+- A-69: lift callers use the drop-free clearance and add the lift to the current radial speed; TTI / PULL_UP keep the ballistic probe. AI-13's Dart takes the need over every sample (`climb_need_mps`: a steep climb's worst ballistic sample is the nearest, the binding wall further on).
 - A-70 (05 s5.5 erratum): implemented by AI-09 (`LandingController.thrust_vector`, floor = `landing.hover_agl_m`; LC2); `Assist.auto_dock()` (AI-10) inherits it.
 
 **Assist.auto_dock (AI-10).** `inp` is the possessed ship's input (human, or the net-predicted copy). The caller keeps one `LandingState`

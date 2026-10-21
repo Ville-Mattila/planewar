@@ -63,13 +63,23 @@ func _init(ship_def: ShipDef, common: FlightCommonDef, rules: RulesDef, flight_g
 ## fuel_needed01 = (great circle to the nearest friendly pad / v_cruise + fuel_reserve_s) / fuel_s, or
 ## hp01 < rtb.hp01. The ammo term needs the class's weapons and stays with the class brain. One sim pad lookup.
 func needs_rtb(id: int, view: SimView) -> bool:
+	return view.fuel01(id) < fuel_floor(id, view) or view.hp01(id) < hp_floor()
+
+
+## AI-13: the fuel term of `needs_rtb` alone, max(rtb.fuel01, fuel_needed01 * fuel_margin) (one pad lookup); a brain
+## may cache it between thinks (the floor moves with the distance to the pad, slowly).
+func fuel_floor(id: int, view: SimView) -> float:
 	var pad: int = view.nearest_friendly_pad(id)
-	var fuel01: float = view.fuel01(id)
 	var floor01: float = _rtb[7]
 	if pad != 0:
 		var d: float = view.pos(id).angle_to(view.pos(pad)) * view.pos(pad).length()
 		floor01 = maxf(floor01, (d / def.v_cruise + _rtb[0]) / def.fuel_s * _rtb[9])
-	return fuel01 < floor01 or view.hp01(id) < _rtb[8]
+	return floor01
+
+
+## AI-13: rtb.hp01, the hull term of `needs_rtb`.
+func hp_floor() -> float:
+	return _rtb[8]
 
 
 ## Starts a landing on `pad` (RETURN, or a divert): L1 TRANSIT, no bearing, no attempts.

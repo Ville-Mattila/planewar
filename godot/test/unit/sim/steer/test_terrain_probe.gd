@@ -160,6 +160,27 @@ func test_lift_on_ridge_raises_with_clearance_deficit() -> void:
 	var lift: float = _lift(t, s[0], s[1], p, p.required_clearance(160.0))
 	assert_float(lift).is_greater(10.0)
 	assert_float(lift).is_less_equal(0.6 * 160.0)
+
+
+# ST3 (AI-13): climb_need_mps = max over samples of (h_req - c'_k) / max(t_k, lift_min_time_s), c'_k the drop-free
+# clearance, against an independent recomputation through `_ref_clearance`; when the binding sample is not the worst
+# ballistic one the need exceeds the A-69 lift of the worst sample; over open ground it is negative.
+func test_climb_need_is_the_drop_free_requirement_over_every_sample() -> void:
+	var t: SynTerrain = SynTerrain.new()
+	t.slope = -0.3                                    # ground falling away as fast as the ship sinks: the ballistic
+	var p: ProbeParams = _probe()                     # worst sample is the last (gravity drop), the binding one the first
+	var s: Array[Vector3] = _ship(30.0, 100.0, -30.0)
+	var h_req: float = p.required_clearance(s[1].length())
+	TerrainProbe.probe(t, s[0], s[1], p, h_req, _out)
+	var ref: float = -INF
+	for time: float in p.probe_times_s:
+		var c_free: float = _ref_clearance(t, s[0], s[1], p.gravity, time) + 0.5 * p.gravity * time * time
+		ref = maxf(ref, (h_req - c_free) / maxf(time, p.lift_min_time_s))
+	assert_float(_out.climb_need_mps).is_equal_approx(ref, 1e-3)
+	assert_float(_out.climb_need_mps).is_greater(TerrainProbe.drop_free_lift(_out, p, h_req, s[1].length()))
+	var flat: Array[Vector3] = _ship(400.0, 110.0, 0.0)
+	TerrainProbe.probe(Terrain.new(), flat[0], flat[1], p, p.required_clearance(110.0), _out)
+	assert_float(_out.climb_need_mps).is_less(0.0)
 # endregion
 
 

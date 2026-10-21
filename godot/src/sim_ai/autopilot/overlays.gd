@@ -7,7 +7,8 @@ class_name Overlays extends RefCounted
 ##
 ## SAFETY (ships): hold the velocity at the release (no snap to a new heading) plus the TerrainProbe lift; PULL_UP
 ## (`Assist.pull_up`: best-climb attitude of the lift law, AI-38) when the time to impact drops below
-## `safety_pull_up_tti_s`, until it is >= `safety_clear_tti_s`; a system
+## `safety_pull_up_tti_s` or the visible clearance below the pull-up budget (R0 B.15 A-89, AI-13), until the TTI is
+## >= `safety_clear_tti_s`; a system
 ## RETURN (FLAG_PREPEND) once when fuel is below `safety_force_rtb_fuel01`; ends at TTI >= clear and >= min hold, or at
 ## max hold unless a PULL_UP is running. RECOVER_CEILING: keep the heading on a `recover_ceiling_gamma_deg` path at
 ## `v_cruise`, SAFETY checks still apply; ends at or below `recover_ceiling_exit_alt_m`. Ground SAFETY: stop with the
@@ -124,7 +125,7 @@ static func _checks(id: int, v: SimView, st: AiState, p: OverlayParams, terrain:
 	st.tti[s] = probe.tti_s
 	var f: int = st.ov_flags[s]
 	var pulling: bool = (f & AiState.OV_PULL_UP) != 0
-	if probe.tti_s < p.bridge.pull_up_tti_s:
+	if probe.tti_s < p.bridge.pull_up_tti_s or _budget_low(id, v, vel, terrain, p, probe):
 		pulling = true
 	elif pulling and probe.tti_s >= p.clear_tti_s:
 		pulling = false
@@ -133,6 +134,18 @@ static func _checks(id: int, v: SimView, st: AiState, p: OverlayParams, terrain:
 	st.ov_flags[s] = (f | AiState.OV_PULL_UP) if pulling else (f & ~AiState.OV_PULL_UP)
 	_force_return(id, v, st, p, sink)
 	return pulling
+
+
+# R0 B.15 A-89: the pull-up budget ORed into the TTI trigger: the visible clearance (AGL, one height sample, or the
+# probe's worst drop-free clearance) below `FlightController.pull_up_loss` (0 while climbing: never then).
+static func _budget_low(id: int, v: SimView, vel: Vector3, terrain: Terrain, p: OverlayParams, probe: ProbeResult) -> bool:
+	var pos: Vector3 = v.pos(id)
+	var up: Vector3 = pos.normalized()
+	if vel.dot(up) >= 0.0:
+		return false
+	var agl: float = pos.length() - Sphere.PLANET_RADIUS - terrain.height_at(pos)
+	var visible: float = minf(agl, Guidance.drop_free_clearance(probe, p.bridge.probe.gravity))
+	return Guidance.budget_low(visible, v.basis(id), vel, up, p.bridge.gains)
 
 
 # 05 s2.4 step 3: below the fuel threshold, one system RETURN prepended to the resumed queue (issuer -1 in 05; the
