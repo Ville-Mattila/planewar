@@ -42,4 +42,21 @@ func test_shown_blip_agrees_with_shown_levels() -> void:
 	f.set_full_cached(SLOT, 10, _q(), 0, 0, fine, 255, 0, -1)
 	var lv: Vector3i = f.shown_levels(SLOT, 50, false, G, DT)
 	var moved: int = Codec.pack_pos(Codec.pos_cell(f.pos[SLOT]), lv.x, lv.y, lv.z)
-	assert_int(f.shown_blip(SLOT, 50, false, G, DT)).is_equal(DeadReckon.entry_blip(moved, 0, 0, 0, false, G, DT))
+	assert_int(f.shown_blip(SLOT, 50, false, G, DT)).is_equal(DeadReckon.entry_blip(moved, 0, fine, 0, false, G, DT))
+
+
+func test_replay_reader_position_of_known_dying_blip_is_stable() -> void:
+	var r: ReplayReader = ReplayReader.new(G, 30)
+	var _a: bool = r.roster.add(SLOT, 1, 1, 1, 1)
+	var st: BaselineStore = r.decoder.store
+	var f: BaselineFrame = st.begin(10, 0)
+	f.set_full_cached(SLOT, 10, _q(), 0, 0, DeadReckon.pack_fine(0, 0, 0), 255, Codec.FLAG_DYING, -1)
+	f.set_blip(SLOT, 10, 0x0A1B2C)
+	st.newest_tick = 10
+	var p0: Vector3 = r.position_of(SLOT)
+	assert_that(p0).is_not_equal(Vector3.ZERO)
+	for t: int in [11, 100, 310]:
+		var g: BaselineFrame = st.begin(t, 10)
+		g.tick = t
+		st.newest_tick = t
+		assert_float(r.position_of(SLOT).distance_to(p0)).is_less(0.001)

@@ -180,6 +180,7 @@ func clear(t: int) -> void;  func copy_from(src: BaselineFrame, t: int) -> void;
 func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void;  func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int, fine_vel: int, hp_b: int, flag_b: int, ai_tag: int) -> void
 func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: int, ori_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void
 static func coarse_of_full(ori_bits: int) -> int;  func same_state(other: BaselineFrame) -> bool;  func state_hash() -> int;  func shown_blip(i: int, t: int, def_grav: bool, g: float, dt: float) -> int   # NET-54
+func shown_levels(i: int, t: int, def_grav: bool, g: float, dt: float) -> Vector3i   # NET-56
 
 class_name DeadReckon                                 # net/dead_reckon.gd: static, scalar float64 so both ends agree
 const BLIP_E8_MAX: int; const BLIP_ALT_STEP: float; const BLIP_ALT_MAX6: int; const BLIP_UNKNOWN: int; const FINE_PER_MPS: int
@@ -251,6 +252,7 @@ DELTA mask (bit 7 and bit 6 clear, not both POS bits), groups in mask-bit order;
 never reads 0xFF, n8, alt6 | state << 6).
 NET-54 (server only, no wire change): no C-BLIP for an unknown-blip C entry while `BaselineFrame.shown_blip` (blip of
 its dead-reckoned levels at the encode tick, what a client shows) equals `blip_of`; UNDER_FIRE always sends.
+NET-56 (04 s5.6, no wire change): `BaselineFrame.shown_levels` is the one presentation rule: a known blip shows its stored bucket (never dead-reckoned, DYING adds no gravity), anything else dead-reckons; ReplayReader.position_of and NetSimView use it. The DELTA base is unchanged.
 POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 = ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends packet index 0. Decoder (A-36): HAS_PILOT off index 0, CONTINUED on index 3 or an index above the tick's LAST is MALFORMED; a repeated index is STALE; a missing one is loss.
 
 ## Invariants
