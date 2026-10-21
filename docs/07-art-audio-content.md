@@ -84,7 +84,7 @@ Apparent length in pixels `px = S * 1080 / (2 d tan(fov/2))`, assuming 1080p and
 | Tactical high | 2,500 m | 4.5 px | 16 px | Mesh is a few pixels; world marker (06) takes over |
 | Commander | 14,000 m | 0.8 px | 2.9 px | Markers only; terrain and Cores are the picture |
 
-Rules: swap to the `_Far` mesh (<= 48 tris, flat team colour) when the body is under 24 px (Dart about 470 m); hide the mesh at 3 px (distance = 312 x length, Dart about 3.7 km). Team colour zones are >= 6 % and <= 35 % of a model's surface so they survive minification.
+Rules: swap to the `<PascalId>Far` mesh (<= 48 tris, flat team colour) when the body is under 24 px (Dart about 470 m); hide the mesh at 3 px (distance = 312 x length, Dart about 3.7 km). Team colour zones are >= 6 % and <= 35 % of a model's surface so they survive minification.
 
 ### 1.5 Lighting model (Compatibility)
 
@@ -241,7 +241,7 @@ An agent does **not** model by hand-driving the viewport. Each asset is a determ
 | Hardpoints | Empties named `HP_*` (e.g. `HP_Nose`, `HP_Tail`, `HP_Muzzle_L`, `HP_Exhaust_0`, `HP_Bomb_0`..`HP_Bomb_5`, `HP_Rocket_0`.., `HP_Tether`, `HP_Dock`, `HP_Light_0`, and on every ship the three tail landing struts `HP_Gear_0..2` at the foot-plate centres). Plain axes, size 0.5. `HP_Nose` and `HP_Tail` are on the thrust axis; `HP_Tail` sits at the engine nozzle, between the struts. |
 | Parts that move | Separate objects: tower `Turret` (yaw) and `Barrel` (pitch); Hangar `Roof`; Shipyard `Arm_L/R`. Rigid sub-nodes only; no skeletal animation in v1 (animated in code). |
 | Foundation | Every structure has a mesh part `Foundation`: its footprint extruded down by `max(0.27 x half_footprint, 0.6 m)` (tan 15 degrees, the maximum placement slope; 0.6 m minimum for small structures), flat swatch `hull_700`. |
-| Far mesh | Each unit and every structure over 15 m has a `<Name>Far` object (<= 48 tris, single swatch family, team zone as one swatch). |
+| Far mesh | Each unit and every structure over 15 m has a `<PascalId>Far` object (<= 48 tris, single swatch family, team zone as one swatch). |
 
 ### 4.3 Palette atlas, UV method, team mask
 
@@ -352,9 +352,9 @@ Dimensions in metres, half model (mirrored) unless noted. Tri counts are the tar
 | `animation/import` | `false` |
 | `import_script/path` | `res://assets/_pipeline/post_import_asset.gd` |
 
-`post_import_asset.gd` (an `EditorScenePostImport`): converts `HP_*` Node3Ds to `Marker3D`; assigns `visibility_range_end` per class (Section 1.4); applies `_Far` visibility ranges; turns shadows off for props and `Far` meshes; assigns the shared `unit_lit.tres`; prints the triangle count and warns above budget.
+`post_import_asset.gd` (an `EditorScenePostImport`): converts `HP_*` Node3Ds to `Marker3D`; assigns `visibility_range_end` per class (Section 1.4); applies `<PascalId>Far` visibility ranges; turns shadows off for props and `Far` meshes; assigns the shared `unit_lit.tres`; prints the triangle count and warns above budget.
 
-**LOD.** Godot generates mesh LODs at import (meshoptimizer; screen-coverage selected). The project setting `rendering/mesh_lod/lod_change/threshold_pixels` is 1.0 on PC and 3.0 on mobile/web quality tiers. Gate (ART-36): render LOD1/LOD2 at their switch distance; silhouette overlap with LOD0 must be >= 90 %, otherwise the asset gets an authored `_Far` replacement and `generate_lods` is disabled for it. The `_Far` meshes are separate from Godot's LODs because they have a different purpose: the far pool (Section 5.3).
+**LOD.** Godot generates mesh LODs at import (meshoptimizer; screen-coverage selected). The project setting `rendering/mesh_lod/lod_change/threshold_pixels` is 1.0 on PC and 3.0 on mobile/web quality tiers. Gate (ART-36): render LOD1/LOD2 at their switch distance; silhouette overlap with LOD0 must be >= 90 %, otherwise the asset gets an authored `<PascalId>Far` replacement and `generate_lods` is disabled for it. The `<PascalId>Far` meshes are separate from Godot's LODs because they have a different purpose: the far pool (Section 5.3).
 
 ### 4.7 Validation script spec
 
@@ -364,7 +364,7 @@ Authoritative gate: **`tools/art/validate_glb.py <file.glb>`** (pure Python, par
 |---|---|
 | V01 name | file = `<asset_id>.glb`, `^(ship|gnd|str|prop|proj|wreck)_[a-z0-9_]+$` |
 | V02 root | one root node named PascalCase of the id (`ShipDart`), identity transform |
-| V03 triangles | sum over meshes <= class budget; warn if < 25 % of budget |
+| V03 triangles | sum over all meshes of the asset, **including its `<PascalId>Far` mesh** (Far triangles count toward the budget), <= the asset's `max_tris` in `asset_budgets.json` (class ceiling for unlisted assets); warn if < 25 % of budget |
 | V04 material | exactly one material `PW_Atlas`; `images` empty |
 | V05 attributes | POSITION, NORMAL, TEXCOORD_0 only; no TANGENT, COLOR_0, TEXCOORD_1, skins, animations |
 | V06 swatch rule | all three UVs of each triangle within 1e-4 of one swatch centre (except emblem quads with v >= 0.875) |
@@ -374,9 +374,9 @@ Authoritative gate: **`tools/art/validate_glb.py <file.glb>`** (pure Python, par
 | V10 forward | ships: node `HP_Nose` has smaller Z than `HP_Tail` |
 | V11 hardpoints | required `HP_*` list per asset in `asset_budgets.json`; every ship requires `HP_Nose`, `HP_Tail`, `HP_Gear_0..2` (feet coplanar within 5 cm, centroid within 0.3 m of the thrust axis); every pad-bearing structure requires `HP_Dock` |
 | V12 degenerate | no zero-area triangles |
-| V13 file size | <= 150 KB ship, <= 300 KB Core |
+| V13 file size | `.glb` size <= the class `max_file_kb` in `asset_budgets.json`: ship 150 KB, gnd 150 KB, str 300 KB (structures incl. Core), prop 50 KB, proj 20 KB, wreck 50 KB |
 | V14 team area | team swatch area (alpha code 1 or 3, from `palette.json`) between 6 % and 35 % of surface |
-| V15 names | node names `[A-Za-z0-9_]` only; moving parts and `_Far` present where `asset_budgets.json` requires them |
+| V15 names | node names `[A-Za-z0-9_]` only; moving parts and `<PascalId>Far` present where `asset_budgets.json` requires them |
 
 ### 4.8 How a Haiku agent adds a variant
 
@@ -408,7 +408,7 @@ Tier = tier of the producing agent; hours = agent-hours including 0.5 h review b
 | `str_relay_station` | neutral structure | 1,500 | 3 + Far | 3.5 | Sonnet |
 | `wreck_rubble_s/m/l` | wreck | 80 / 150 / 300 | 1 | 1 each | Haiku |
 | `proj_bomb`, `proj_rocket`, `proj_rail_bolt` | projectile mesh | 60 / 80 / 12 | 1 | 1 each | Haiku |
-| `prop_boulder_a/b/c`, `prop_ice_spire_a/b`, `prop_ore_cluster_a/b/c`, `prop_debris_a/b/c`, `prop_spire_midnight`, `prop_plateau_marker` | props (14) | <= 80 | 1 | 0.75 each | Haiku |
+| `prop_boulder_a/b/c`, `prop_ice_spire_a/b`, `prop_ore_cluster_a/b/c`, `prop_debris_a/b/c`, `prop_spire_midnight`, `prop_plateau_marker` | props (13) | <= 80 | 1 | 0.75 each | Haiku |
 
 **Model subtotal: about 98 agent-hours** (Opus 13.5, Sonnet 56, Haiku 28.5). Against the stage-2 draft: `str_silo` removed (-1.5 h, owner cut O-4), tail landing struts added to the five ships (+1.25 h). 25 ship/ground/structure models remain (plus wrecks, projectiles and props); `gnd_siege_crawler` and `str_rail_lance` stay in v1.
 
@@ -441,7 +441,7 @@ Tier = tier of the producing agent; hours = agent-hours including 0.5 h review b
 | UI (batched canvas) | - | about 40 |
 | **Sum** | **about 305 k (76 %)** | **about 380-430** |
 
-The draw-call sum shows the budget is tight, which is why **ART-A1 is accepted** (R0 C1-17, 01 s8.1): on the Reduced, Lite and LOW tiers at most **200** visible entities are individual `Node3D` meshes (nearest first) and the rest draw as `_Far` instances through per-class MultiMesh far pools (about 8 draws); Standard keeps 800 nodes. 03 s10.1/s13 implements the far-pool path in `EntityViewPool` (200/400/800 nodes by tier).
+The draw-call sum shows the budget is tight, which is why **ART-A1 is accepted** (R0 C1-17, 01 s8.1): on the Reduced, Lite and LOW tiers at most **200** visible entities are individual `Node3D` meshes (nearest first) and the rest draw as `<PascalId>Far` instances through per-class MultiMesh far pools (about 8 draws); Standard keeps 800 nodes. 03 s10.1/s13 implements the far-pool path in `EntityViewPool` (200/400/800 nodes by tier).
 
 ---
 
@@ -702,7 +702,7 @@ M1-M12 are the validate rules of the baker (R0 Part B.2); ART-37 supplies one de
 | Def id (JSON) | snake_case of the s6 name, assumed from 02 | `dart`, `solar`, `sensor_mast` |
 | Asset id | `<prefix>_<def id>`; prefixes `ship`, `gnd`, `str`, `prop`, `proj`, `wreck` | `ship_dart`, `str_sensor_mast` |
 | Model file | `godot/assets/models/<ships|ground|structures|props|projectiles>/<asset_id>.glb` | |
-| glTF root / parts | PascalCase root; parts `Turret`, `Barrel`, `Roof`, `Arm_L`, `Foundation`, `<Name>Far`; hardpoints `HP_*` | `ShipDart` |
+| glTF root / parts | PascalCase root; parts `Turret`, `Barrel`, `Roof`, `Arm_L`, `Foundation`, `<PascalId>Far`; hardpoints `HP_*` | `ShipDart` |
 | Texture / shader / material | `unit_atlas.png`, `moon_terrain.gdshader`, `unit_lit.tres` | |
 | VFX / SFX / music / icons | `vfx_*`, `sfx_*` (file) with def id without prefix, `mus_*`, `stg_*`, `amb_*`, `ico_*` | `vfx_bomb_impact_l` |
 | Map | `content/maps/<map_id>/` | `cradle` |
@@ -772,8 +772,8 @@ IDs are stable. Dependencies name real task IDs of the other docs (TA = 03, UX =
 | ART-09 | Base core set: Outpost, Pad, Hangar, Shipyard, Vehicle Bay, Refinery | assets | Sonnet | ART-06 | Validator green; foundations present (depth >= 0.6 m); Pad has `HP_Dock`, the painted landing circle (radius `pad_radius_m`) and 12 `HP_Light_*` |
 | ART-10 | Simple structures: Pylon, Solar, Reactor, Extractor (Silo removed) | assets | Haiku | ART-06 | Validator green; recipe cards followed (dimension check V08) |
 | ART-11 | Towers and support: Sensor Mast, Autocannon, Flak, Missile Tower, Shield Projector, Rail Lance (31 x 39 footprint), Relay Station | assets | Sonnet | ART-06 | Validator green; `Turret`/`Barrel` parts present and pivot at their mounts |
-| ART-12 | Wrecks, projectile meshes, 14 props | assets | Haiku | ART-05 | Validator green; props <= 80 tris |
-| ART-13 | `_Far` meshes and LOD gate for all models; far-pool MultiMesh in the view layer (ART-A1 accepted) | presentation | Opus | ART-07, ART-08, ART-09, ART-11, TA-26 | Silhouette overlap >= 90 % at switch distances; 200 ships + 120 structures render under 400 draws on Android-mid |
+| ART-12 | Wrecks, projectile meshes, 13 props | assets | Haiku | ART-05 | Validator green; props <= 80 tris |
+| ART-13 | `<PascalId>Far` meshes and LOD gate for all models; far-pool MultiMesh in the view layer (ART-A1 accepted) | presentation | Opus | ART-07, ART-08, ART-09, ART-11, TA-26 | Silhouette overlap >= 90 % at switch distances; 200 ships + 120 structures render under 400 draws on Android-mid |
 | ART-14 | Biome ramps `biome_ramps.json` and `moon_ramp.png` (16 x 64) builder; terrain art tuning with 03 | tools / presentation | Sonnet | ART-01, TA-24 | Rendered biome colours match Section 2.1 within dE00 <= 6 on a flat test scene, day and night |
 | ART-15 | Sky shader (stars, sun at `sun_dir`, Earth 6 degrees at -Z above the Midnight Pole) | presentation | Sonnet | ART-01, TA-24 | Earth disc 6 degrees at -Z; no banding; < 0.3 ms on Android-mid |
 | ART-16 | VFX set A: muzzle, tracer, hit, rocket, flak, rail, bomb impact, scorch quads, debris MultiMesh | presentation | Sonnet | ART-03, TA-26 | Particle caps respected by a stress test (2,000 quads); frame time delta < 2 ms on PC-mid |
