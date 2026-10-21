@@ -30,6 +30,26 @@ class AbPerfTest(unittest.TestCase):
         self.assertEqual(ab.parse_output("PERF_FINGERPRINT " + FP + "\n" + tick), (5, 2, FP))
         self.assertEqual(ab.parse_output(tick)[2], "unknown")
 
+    def test_scenario_args(self) -> None:
+        self.assertEqual(ab.scenario_args("ai"), ["--ai"])
+        self.assertEqual(ab.scenario_args("default"), [])
+
+    def test_ai_fingerprint_differs_from_default_so_old_base_skips(self) -> None:
+        code, msg = ab.decide(FP, FP + " scenario=ai", 90.0, 25.0)
+        self.assertEqual(code, 0)
+        self.assertIn("::notice::", msg)
+        self.assertEqual(ab.decide(FP + " scenario=ai", FP + " scenario=ai", 30.0, 25.0, "ai")[0], 1)
+
+    def test_ai_scenario_head_without_ai_fails_and_old_base_skips(self) -> None:
+        code, msg = ab.decide(FP, FP, 0.0, 25.0, "ai")        # head ran the default scenario: vacuous gate
+        self.assertEqual(code, 1)
+        self.assertIn("::error::", msg)
+        ai = FP + " scenario=ai ai_v=1"
+        self.assertEqual(ab.decide(FP, ai, 90.0, 25.0, "ai")[0], 0)   # base predates --ai: skip
+        self.assertIn("::notice::", ab.decide(FP, ai, 90.0, 25.0, "ai")[1])
+        self.assertEqual(ab.decide(ai, ai + "x", 0.0, 25.0, "ai")[0], 0)   # retuned ai world: mismatch skips
+        self.assertEqual(ab.decide(ai, ai, 10.0, 25.0, "ai"), (0, ""))
+
 
 if __name__ == "__main__":
     unittest.main()

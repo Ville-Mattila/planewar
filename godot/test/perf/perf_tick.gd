@@ -1,19 +1,23 @@
 class_name PerfTick
 extends Node
 ## SimWorld.step() benchmark with the 03 s4.4 per-row split (TA-18). Scenario: perf_tick_world.gd.
-## godot --headless --path godot res://test/perf/perf_tick.tscn -- [--ticks=3600] [--full] [--flat] [--profile=N]
+## godot --headless --path godot res://test/perf/perf_tick.tscn -- [--ticks=3600] [--full] [--flat] [--ai] [--profile=N]
 ##   default : A/B scale (flat datum, 24 ships, 8 ground, 16 structures, 4 wrecks, 60 projectiles) so the
 ##             same-job A/B of ab_perf.py (7 rounds x 2 sides, 10 noise repeats) stays inside its job timeout;
 ##   --full  : S-SIM-1 scale on s_world1 (400 ships, 200 ground, 480 structures, 120 wrecks = 1,200 entities,
 ##             2,000 projectiles), the scale every perf note cites (03 s4.2 rows); --flat drops the map;
 ##   --profile=N: SimWorld.set_budget_profile(N) (cut rungs 1..N; 1 = vision at 10 Hz, the rate of the 03 s4.2 vision
 ##             row); default: rules.json sim_budget_profile [1, 2] (vision 5 Hz).
+##   --ai    : TEST-04 / R0 B.17 A-98: the A/B scale with 48 Darts (two teams) driven by the real AiDriver + DartBrain instead of
+##             OrbitHook, one Dart in four starting inside gun fire_range of an enemy (A-96 f = 0.25), the rest on PATROL;
+##             fingerprint gains scenario=ai. A tree whose perf_tick_world.gd predates --ai runs the default scenario and
+##             prints the default fingerprint, so ab_perf.py skips with its notice.
 ## Prints PERF_ROW lines (p50/p95/p99/max/mean ms per 03 s4.4 row, rows 1-13) and one PERF_TICK line (whole step,
 ## microseconds; the line ab_perf.py parses). A tree without perf_tick_world.gd (an A/B base older than TA-18)
 ## falls back to the S-CI-1 SoakWorldStub so the harness still prints PERF_TICK.
 
 ## Bump when the measured scope changes; ab_perf.py skips (does not fail) an A/B whose fingerprints differ.
-const HARNESS_VERSION: int = 3   ## 2: TA-50 row-3b path load; 3: GD-36 weapon fire
+const HARNESS_VERSION: int = 4   ## 2: TA-50 row-3b path load; 3: GD-36 weapon fire; 4: TEST-04 --ai scenario
 const WARMUP_TICKS: int = 300
 const STEP_DT: float = 1.0 / 30.0
 const WORLD_SCRIPT: String = "res://test/perf/perf_tick_world.gd"
@@ -26,6 +30,7 @@ func _ready() -> void:
 	var full: bool = false
 	var flat: bool = false
 	var stub: bool = false
+	var ai: bool = false
 	var profile: int = -1
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--ticks="):
@@ -34,22 +39,27 @@ func _ready() -> void:
 			full = true
 		elif arg == "--flat":
 			flat = true
+		elif arg == "--ai":
+			ai = true
 		elif arg == "--stub":
 			stub = true
 		elif arg.begins_with("--profile="):
 			profile = int(arg.substr(10))
 	if ResourceLoader.exists(WORLD_SCRIPT) and not stub:
-		_run_sim(ticks, full, flat, profile)
+		_run_sim(ticks, full, flat, profile, ai)
 	else:
 		_run_stub(ticks)
 	get_tree().quit(0)
 
 
-func _run_sim(ticks: int, full: bool, flat: bool, profile: int) -> void:
+func _run_sim(ticks: int, full: bool, flat: bool, profile: int, ai_wanted: bool) -> void:
 	var script: GDScript = load(WORLD_SCRIPT)
+	var ai: bool = ai_wanted and not full and script.get_script_constant_map().has("AI_SCENARIO_VERSION")   # absent in a base older than TEST-04
 	var map_id: StringName = &"" if flat or not full else &"s_world1_r6000"
 	var pw: Variant
-	if full:
+	if ai:
+		pw = script.new(24, 8, 16, 4, 60, map_id, true)
+	elif full:
 		pw = script.new(400, 200, 480, 120, 2000, map_id)
 	else:
 		pw = script.new(24, 8, 16, 4, 60, map_id)
@@ -66,6 +76,8 @@ func _run_sim(ticks: int, full: bool, flat: bool, profile: int) -> void:
 	samples.resize(ticks)
 	var total: int = 0
 	var live_p: int = 0
+	var engaged: int = 0       # --ai: Darts in ENGAGE, sampled every 30th tick (untimed): the realised A-96 mix
+	var engaged_n: int = 0
 	for i: int in ticks:
 		var t0: int = Time.get_ticks_usec()
 		w.step()
@@ -78,9 +90,16 @@ func _run_sim(ticks: int, full: bool, flat: bool, profile: int) -> void:
 		live_p += w.projectiles().live_count()
 		w.drain_events()
 		pw.top_up()
+		if ai and i % 30 == 0:
+			for s: int in pw.ai_darts:
+				engaged += 1 if pw.driver.state.mode[s] == AiTag.Tag.ENGAGE else 0
+				engaged_n += 1
 	var st: Variant = w.store()
-	print("PERF_FINGERPRINT harness=%d world=sim scale=%s map=%s rows=%d" % [HARNESS_VERSION,
-		"full" if full else "ab", map_id if map_id != &"" else "flat", ROW_NAMES.size()])
+	print("PERF_FINGERPRINT harness=%d world=sim scale=%s map=%s rows=%d%s" % [HARNESS_VERSION,
+		"full" if full else "ab", map_id if map_id != &"" else "flat", ROW_NAMES.size(), " scenario=ai ai_v=%d" % script.get_script_constant_map()["AI_SCENARIO_VERSION"] if ai else ""])
+	if ai:
+		print("PERF_AI darts=%d engaged_share=%.3f think_period=%d respawns=%d" % [pw.ai_darts.size(),
+			float(engaged) / float(maxi(engaged_n, 1)), pw.driver.think_period(), pw.respawns])
 	print("PERF_SCENE scale=%s map=%s ticks=%d entities=%d ships=%d projectiles_mean=%d profile=%s" % ["full" if full else "ab",
 		map_id if map_id != &"" else "flat", ticks, st.live_count(), st.ships.size(), live_p / ticks,
 		str(profile) if profile >= 0 else "default"])
