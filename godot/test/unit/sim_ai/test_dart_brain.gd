@@ -278,7 +278,7 @@ func test_dart_brain_is_deterministic_and_restores_s4() -> void:
 	var bomber: int = a[3]
 	assert_bool(wa.serialize() == wb.serialize()).is_true()
 	assert_int(da.state.target_count[EntityId.slot(bomber)]).is_equal(3)
-	assert_int(wa.projectiles().live.size()).is_equal(0)   # needs sim: a world with live slugs does not round-trip byte-exactly
+	assert_int(wa.projectiles().live.size()).is_equal(0)   # TA-65: until it lands a world with live slugs may not round-trip byte-exactly
 	var bytes: PackedByteArray = wa.serialize()
 	var cruise: DartKit.CruiseBrain = a[2]
 	var d2: AiDriver = AiDriver.new(Rng.new(99))

@@ -27,6 +27,12 @@ const MAX_HOST: float = 1.5
 ## TeamPicture: one ships() pass per team per Vision epoch; its per-tick share at PlayerTable.TEAMS teams is asserted
 ## against a stated part of the 05 s10 think slice (1.8 ms): a quarter.
 const PICTURE_CAP_US: float = 450.0
+## R0 B.17 A-96 (the author never raises these): the 05 s10 act row is a fleet mean, priced at the engaged mix
+## ENGAGED_MIX (one AI ship in four in a gun fight inside fire range on the same tick; OWNER default) as
+## (1 - f) act_patrol + f act_engage < ACT_ROW_US x CI_FACTOR; act_engage alone has the interim ceiling
+## ACT_ENGAGE_CEILING_US = 3 x the row until the pinned runner measures (A-62).
+const ENGAGED_MIX: float = 0.25
+const ACT_ENGAGE_CEILING_US: float = 3.0 * ACT_ROW_US
 
 
 func _world(enemies: bool = true) -> Array:
@@ -137,12 +143,18 @@ func test_perf_think_and_act() -> void:
 	assert_float(quiet["shape_loss"]).is_less_equal(1.0)                 # at most one exact loss per shaped think
 	assert_float(quiet["check_share"]).is_less_equal(1.0 / 3.0 + 0.001)   # the PULL_UP check on every 3rd tick per ship
 	assert_float(quiet["check_loss"]).is_less_equal(1.0)
+	assert_float(quiet["sinking_acts"]).is_greater(0.0)   # the harness ships sink (frozen state): the budget path runs
+	assert_float(quiet["loss_per_sinking_act"]).is_equal_approx(1.0 / float(DartKit.params().check_ticks), 1e-6)   # A-96 counter
 	assert_int(fight["builds_per_epoch"]).is_equal(1)                     # one picture per team per Vision epoch
 	# timings against the 05 s10 rows x CI_FACTOR (AI-40 / AI-11 precedent; no other factor)
 	assert_float(qt.x / host).is_less(THINK_ROW_US * CI_FACTOR)
 	assert_float(it.x / host).is_less(THINK_ROW_US * CI_FACTOR)
+	var mix: float = (1.0 - ENGAGED_MIX) * float(quiet["act"]) + ENGAGED_MIX * float(fight["act"])
+	print("AI-13 act fleet mix (A-96, f %.2f): %.2f us (asserted %.2f < %.1f); act engage %.2f < %.1f" % [ENGAGED_MIX, mix,
+		mix / host, ACT_ROW_US * CI_FACTOR, float(fight["act"]) / host, ACT_ENGAGE_CEILING_US])
 	assert_float(float(quiet["act"]) / host).is_less(ACT_ROW_US * CI_FACTOR)
-	assert_float(float(fight["act"]) / host).is_less(ACT_ROW_US * CI_FACTOR)
+	assert_float(mix / host).is_less(ACT_ROW_US * CI_FACTOR)
+	assert_float(float(fight["act"]) / host).is_less(ACT_ENGAGE_CEILING_US)
 	assert_float(pic_tick / host).is_less(PICTURE_CAP_US)
 
 
@@ -178,6 +190,8 @@ func _case(enemies: bool) -> Dictionary:
 	var acts1: Array = _counters(brain)
 	out["check_share"] = float(acts1[4] - acts0[4]) / float((ACT_LOOPS + 1) * MathX.floori_div(CALLS, MEASURED) * MEASURED)
 	out["check_loss"] = float(acts1[5] - acts0[5]) / float(maxi(acts1[4] - acts0[4], 1))
+	out["sinking_acts"] = float(acts1[6] - acts0[6])
+	out["loss_per_sinking_act"] = float(acts1[5] - acts0[5]) / float(maxi(acts1[6] - acts0[6], 1))
 	if not enemies:
 		return out
 	for i: int in MEASURED:   # every measured Dart on the Bomber 1.75 km out
@@ -209,9 +223,10 @@ func _case(enemies: bool) -> Dictionary:
 	return out
 
 
-# [choices, refreshes, shaped thinks, shape exact losses, act checks, act exact losses]
+# [choices, refreshes, shaped thinks, shape exact losses, act checks, act exact losses, flight acts while sinking]
 func _counters(b: DartBrain) -> Array:
-	return [b.modes.stats_choices, b.stats_refreshes, b.stats_thinks, b.stats_shape_loss, b.stats_checks, b.stats_check_loss]
+	return [b.modes.stats_choices, b.stats_refreshes, b.stats_thinks, b.stats_shape_loss, b.stats_checks, b.stats_check_loss,
+		b.stats_sinking_acts]
 
 
 ## AI-40's host-speed reference: one untimed warm-up loop, then the minimum mean over ACT_LOOPS loops of 1000 steps.
