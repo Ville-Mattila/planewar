@@ -250,9 +250,7 @@ previous record of the packet (the chain runs across sections and restarts per p
 record), or 0xFF + u16 index. Next byte 0xFF = FULL (vec3q, quat_s3, vel, hp, flags, +ai_tag own team); otherwise A/B: a
 DELTA mask (bit 7 and bit 6 clear, not both POS bits), groups in mask-bit order; C: a C-BLIP (e8 clamped to 254 so it
 never reads 0xFF, n8, alt6 | state << 6).
-NET-54 (server only, no wire change): no C-BLIP for an unknown-blip C entry while `BaselineFrame.shown_blip` (blip of
-its dead-reckoned levels at the encode tick, what a client shows) equals `blip_of`; UNDER_FIRE always sends.
-NET-56 (04 s5.6, no wire change): `BaselineFrame.shown_levels` is the one presentation rule: a known blip shows its stored bucket (never dead-reckoned, DYING adds no gravity), anything else dead-reckons; ReplayReader.position_of and NetSimView use it. The DELTA base is unchanged.
+NET-54/56 (no wire change): no C-BLIP for an unknown-blip C entry while `BaselineFrame.shown_blip` equals `blip_of`; UNDER_FIRE always sends. `shown_levels` is the one presentation rule: a known blip shows its stored bucket (no gravity even if DYING), anything else dead-reckons; ReplayReader.position_of uses it, NetSimView (NET-17) must.
 POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 = ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends packet index 0. Decoder (A-36): HAS_PILOT off index 0, CONTINUED on index 3 or an index above the tick's LAST is MALFORMED; a repeated index is STALE; a missing one is loss.
 
 ## Invariants

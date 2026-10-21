@@ -149,7 +149,7 @@ func set_blip_at(i: int, t: int, blip_bits: int, pos_q: int) -> void:
 ## The (e, n, u) levels entry `i` shows at tick `t` in its stored cell (NET-56, 04 s5.6): a known blip is presented at
 ## its stored bucket (pos is the bucket centre, velocity zero; never dead-reckoned, so a DYING flag brings no gravity);
 ## every other entry dead-reckons from `etick` (gravity term for `def_grav` or DYING, as the DELTA rule). Server mirror,
-## ReplayReader and NetSimView use this one rule; the DELTA base (DeadReckon.dr_levels on pos/vel) is unchanged.
+## ReplayReader and NetSimView (NET-17, must) use this one rule; the DELTA base (DeadReckon.dr_levels on pos/vel) is unchanged.
 func shown_levels(i: int, t: int, def_grav: bool, g: float, dt: float) -> Vector3i:
 	if blip[i] != DeadReckon.BLIP_UNKNOWN:
 		return Vector3i(Codec.pos_e(pos[i]), Codec.pos_n(pos[i]), Codec.pos_u(pos[i]))
@@ -157,12 +157,13 @@ func shown_levels(i: int, t: int, def_grav: bool, g: float, dt: float) -> Vector
 	return DeadReckon.dr_levels(pos[i], vel[i], t - etick[i], grav, g, dt)
 
 
-## The blip entry `i` shows at tick `t` (NET-54): the stored blip when known, else DeadReckon blip of shown_levels.
+## The blip entry `i` shows at tick `t` (NET-54): the stored blip when known, else the blip of the bucket levels
+## shown_levels returns (one formula; BLIP_UNKNOWN when the levels leave the cell).
 func shown_blip(i: int, t: int, def_grav: bool, g: float, dt: float) -> int:
 	if blip[i] != DeadReckon.BLIP_UNKNOWN:
 		return blip[i]
-	var grav: bool = def_grav or (flags[i] & Codec.FLAG_DYING) != 0
-	return DeadReckon.entry_blip(pos[i], flags[i], vel[i], t - etick[i], grav, g, dt)
+	var lv: Vector3i = shown_levels(i, t, def_grav, g, dt)
+	return DeadReckon.entry_blip(Codec.pack_pos(Codec.pos_cell(pos[i]), lv.x, lv.y, lv.z), flags[i], vel[i], 0, false, g, dt)
 
 
 static func coarse_of_full(ori_bits: int) -> int:
