@@ -64,22 +64,21 @@ Reading order for the AI-13 author and the AI-14 / AI-19 / NET-39 engineers: the
 3. **(c) the per-case guard is a named interim ceiling, not a moved row:** `act_engage` (in fire range, host-scaled) **< 3 x row = 18 us** as a runaway guard beside the mix assertion, replaced by the pinned-runner figure when TA-42 / TA-22 measure it (A-62's tree). Both guards are constants named in `test_dart_perf.gd` with this row cited; neither may be raised by the author (the round-1 rule), and the mix share f is a `const` the test reads from one place. The engaged think keeps `row x CI_FACTOR` (it passes); if a later class pushes it over, the same mix pricing applies with the think-slice count assumption of 05 s10.
 4. **Deterministic counters stay asserted** (the review's 3 (c)): choice share, separation refresh share, <= 1 `pull_up_loss` per shaped think and per act check, 1 picture build per team per epoch; plus one new counter, `pull_up_loss` calls per act tick while sinking == 1 / `pull_up_check_ticks` exactly.
 5. **Recorded for A-62 / PM-01:** patrol act 7.7 us and quiet think 35.4 us at host 1.00 sit above the 6 / 25 us rows themselves (below the `CI_FACTOR` guards); engaged act 17.2 us; `TeamPicture` 209 us per tick. The 03 s4.2 "AI think + act 6.0 ms" row is unchanged until the pinned runner measures `perf_tick --full` with AI (A-62 (a)). Levers left for that day, in order: `separation.query_radius_m` below the A-84 anchor 180 (ring-1 query), governor rung 1-2 for quiet ships, TA-63 for the picture.
-6. **The round-2 `needs sim` (S4 bytes differ in the `ProjectileStore` section after serialize -> deserialize -> serialize during a three-Dart gun fight, 7 of 12 checks, not with a possessed Dart firing) is a sim bug, not an AI-13 finding to carry: TA-64** (sim, Sonnet, 0.5 d). AI-13's S4 test keeps saving before the first slug and says so.
+6. **The round-2 `needs sim` (S4 bytes differ in the `ProjectileStore` section after serialize -> deserialize -> serialize during a three-Dart gun fight, 7 of 12 checks, not with a possessed Dart firing) is a sim bug, not an AI-13 finding to carry: it is already tracked as TA-65** (sim, Opus, 1 d; the repro goes into its note). AI-13's S4 test keeps saving before the first slug and says so.
 
 ## Backlog patch addendum (A-96; same keys)
 
 ```json
 {
-  "new": [
-    {"id": "TA-64", "title": "sim: S4 byte-exact round-trip of ProjectileStore during AI gunnery (three AI Darts firing at a Bomber: serialize -> deserialize -> serialize differs in 7 of 12 checks, PR #87 round 2; R0 B.17 A-96)", "lane": "sim", "tier": "Sonnet", "size_days": 0.5, "depends_on": ["TA-18", "GD-36"], "milestone": "M3", "acceptance": "test/sim/ reproduces PR #87's scenario (three AI Darts under ATTACK on a Bomber 300 m ahead, AI RNG bound, serialize -> deserialize -> serialize every 10 ticks for 150 ticks) and the bytes are identical at every check; the root cause is named in the PR (field not serialized, order-dependent free list, or float formatting) and fixed in sim/ without a FORMAT bump unless a field was missing (then FORMAT +1, S4 refusal test updated); the existing possessed-Dart round-trip stays green", "docs": ["R0-amendments-10 A-96", "03 s15.4 S4"], "status": "todo"}
-  ],
+  "new": [],
   "acceptance_append": {
-    "AI-13": "; test_dart_perf.gd asserts the 05 s10 act row as a fleet mean at the engaged mix f = 0.25 ((1 - f) x act_patrol + f x act_engage < 6 us x CI_FACTOR, host-scaled), act_engage in fire range < 18 us (3 x row, the A-96 interim ceiling), engaged think < 25 us x CI_FACTOR, and the counter pull_up_loss calls per act tick while sinking == 1 / pull_up_check_ticks; the constants cite R0 B.17 A-96 and are not raised by the author (R0 B.17 A-96); the S4 test saves before the first slug and names TA-64"
+    "AI-13": "; test_dart_perf.gd asserts the 05 s10 act row as a fleet mean at the engaged mix f = 0.25 ((1 - f) x act_patrol + f x act_engage < 6 us x CI_FACTOR, host-scaled), act_engage in fire range < 18 us (3 x row, the A-96 interim ceiling), engaged think < 25 us x CI_FACTOR, and the counter pull_up_loss calls per act tick while sinking == 1 / pull_up_check_ticks; the constants cite R0 B.17 A-96 and are not raised by the author (R0 B.17 A-96); the S4 test saves before the first slug and names TA-65"
   },
   "acceptance_replace": {},
   "depends_on_append": {},
   "note": {
-    "AI-13": "A-96: no code change required for the engaged act (pull_up_loss stays exact at act per A-89; the lead stays per tick in fire range); the row is priced as a fleet mean at f = 0.25 and the per-case 18 us is interim until the pinned runner (A-62)."
+    "AI-13": "A-96: no code change required for the engaged act (pull_up_loss stays exact at act per A-89; the lead stays per tick in fire range); the row is priced as a fleet mean at f = 0.25 and the per-case 18 us is interim until the pinned runner (A-62).",
+    "TA-65": "PR #87 round 2 repro: three AI Darts under ATTACK on a Bomber 300 m ahead, AI RNG bound, serialize -> deserialize -> serialize every 10 ticks for 150 ticks differs in the ProjectileStore section at 7 of 12 checks; not with a possessed Dart firing (R0 B.17 A-96)."
   }
 }
 ```
