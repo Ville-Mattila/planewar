@@ -6,9 +6,9 @@ extends GdUnitTestSuite
 
 const LAST_WRECK: int = 1535
 ## SHA-256 of `_scene_bytes()` measured with Roster.CAPACITY = 1280 (origin/main before NET-50) was a9f7e6be..a58a93585.
-## Re-pinned by NET-54: the C-BLIP after a FULL is skipped when the mirror implies it, so section C bytes change (the
-## re-pin is the same run on the NET-54 encoder; NET-50's capacity independence is unaffected, no slot >= 1280 is used).
-const NON_WRECK_SHA: String = "1e6ff92822321706b714685b60ec02355a1049203dc175d637e4867b6943828c"
+## Re-pinned by NET-54: a C-BLIP is skipped while the dead-reckoned mirror entry shows the true blip, so section C
+## bytes change (same run on the NET-54 encoder; NET-50's capacity independence is unaffected, no slot >= 1280 is used).
+const NON_WRECK_SHA: String = "664956b6609c3e1dfc39bbf9468d861aeed364194903f870da5ea737de752b5c"
 
 var _a: PackedInt32Array = PackedInt32Array()
 var _b: PackedInt32Array = PackedInt32Array()
@@ -124,5 +124,4 @@ func _scene_bytes() -> String:
 
 func test_non_wreck_scene_bytes_unchanged() -> void:
 	var sha: String = _scene_bytes()
-	print("NON_WRECK_SHA %s" % sha)
 	assert_str(sha).is_equal(NON_WRECK_SHA)

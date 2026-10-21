@@ -161,6 +161,7 @@ func test_tier_c_blip_roundtrip() -> void:
 	var blips: int = 0
 	var implied: int = 0
 	var wrong_implied: int = 0
+	var implied_moving: int = 0
 	var worst_plane: float = 0.0
 	var worst_alt: float = 0.0
 	for t: int in 600:
@@ -170,9 +171,19 @@ func test_tier_c_blip_roundtrip() -> void:
 		for i: int in _c:
 			if Codec.pos_cell(cur.pos[i]) != Codec.pos_cell(Codec.quantize_pos(_rig.frame.pos[i])):
 				continue
-			if cur.blip[i] == DeadReckon.BLIP_UNKNOWN:      # NET-54: skipped only when the entry implies the true blip
+			if cur.blip[i] == DeadReckon.BLIP_UNKNOWN:      # NET-54: skipped only when the client's DR shows the true blip
 				implied += 1
-				if DeadReckon.entry_blip(cur.pos[i], cur.flags[i], cur.vel[i]) != _rig.codec.blip_of(i):
+				implied_moving += 1 if cur.vel[i] != 0 else 0
+				var grav: bool = _rig.kind[i] == SnapRig.Kind.BOMB or (cur.flags[i] & Codec.FLAG_DYING) != 0
+				var lv: Vector3i = DeadReckon.dr_levels(cur.pos[i], cur.vel[i], _rig.tick - cur.etick[i], grav, SnapRig.G,
+						1.0 / SnapRig.HZ)
+				var shown: int = Codec.pack_pos(Codec.pos_cell(cur.pos[i]), lv.x, lv.y, lv.z)
+				var st: int = DeadReckon.BlipState.STATIC if cur.vel[i] == 0 else DeadReckon.BlipState.MOVING
+				var alt: float = Codec.dequantize_pos(shown).length() - Sphere.PLANET_RADIUS
+				# e8 / n8 and state must match exactly; the f32 altitude here may sit one 40 m band off the f64 one.
+				var want: int = _rig.codec.blip_of(i)
+				var got: int = DeadReckon.make_blip(shown, alt, st)
+				if not DeadReckon.levels_ok(lv) or (got & 0xC0FFFF) != (want & 0xC0FFFF) 						or absi(((got >> 16) & 0x3F) - ((want >> 16) & 0x3F)) > 1:
 					wrong_implied += 1
 				continue
 			blips += 1
@@ -185,6 +196,8 @@ func test_tier_c_blip_roundtrip() -> void:
 	assert_int(blips).is_greater(500)
 	assert_int(implied).is_greater(100)                   # static structures after their FULL
 	assert_int(wrong_implied).is_equal(0)
+	assert_int(implied_moving).is_greater(100)            # moving entries skipped because their DR stays in the bucket
+	print("NET-54 tier C: blips %d, skipped %d (moving %d)" % [blips, implied, implied_moving])
 	assert_float(worst_plane).is_less_equal(5.2)          # 10 m e8/n8 buckets (+ the e8 254 clamp margin)
 	assert_float(worst_alt).is_less_equal(20.5)           # 40 m altitude bands
 	assert_int(_mismatch).is_equal(0)

@@ -179,16 +179,14 @@ var vel: PackedInt64Array;  var hp: PackedByteArray;  var flags: PackedByteArray
 func clear(t: int) -> void;  func copy_from(src: BaselineFrame, t: int) -> void;  func set_blip(i: int, t: int, blip_bits: int) -> void;  func set_blip_at(i: int, t: int, blip_bits: int, pos_q: int) -> void
 func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void;  func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int, fine_vel: int, hp_b: int, flag_b: int, ai_tag: int) -> void
 func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: int, ori_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void
-static func coarse_of_full(ori_bits: int) -> int;  func same_state(other: BaselineFrame) -> bool;  func state_hash() -> int
+static func coarse_of_full(ori_bits: int) -> int;  func same_state(other: BaselineFrame) -> bool;  func state_hash() -> int;  func shown_blip(i: int, t: int, def_grav: bool, g: float, dt: float) -> int   # NET-54
 
 class_name DeadReckon                                 # net/dead_reckon.gd: static, scalar float64 so both ends agree
 const BLIP_E8_MAX: int; const BLIP_ALT_STEP: float; const BLIP_ALT_MAX6: int; const BLIP_UNKNOWN: int; const FINE_PER_MPS: int
 enum BlipState { MOVING, STATIC, UNDER_FIRE, DYING }
 static func dr_levels(pos_q: int, fine: int, dticks: int, grav: bool, g: float, dt: float) -> Vector3i
-static func dr_fine(pos_q: int, fine: int, dticks: int, grav: bool, g: float, dt: float) -> int;  static func pack_fine(e: int, n: int, u: int) -> int
-static func fine_axis(fine: int, axis: int) -> int;  static func fine_from_bits(bits: int) -> int;  static func bits_from_fine(fine: int) -> int
-static func vel_close(a: int, b: int) -> bool;  static func levels_ok(l: Vector3i) -> bool;  static func make_blip(pos_q: int, alt_m: float, state: int) -> int
-static func blip_pos(cell: int, blip: int) -> int;  static func blip_state(blip: int) -> int;  static func entry_blip(pos_q: int, flag_b: int, fine: int) -> int   # blip an entry implies (NET-54)
+static func dr_fine(pos_q: int, fine: int, dticks: int, grav: bool, g: float, dt: float) -> int;  static func pack_fine(e: int, n: int, u: int) -> int;  static func fine_axis(fine: int, axis: int) -> int;  static func fine_from_bits(bits: int) -> int;  static func bits_from_fine(fine: int) -> int
+static func vel_close(a: int, b: int) -> bool;  static func levels_ok(l: Vector3i) -> bool;  static func make_blip(pos_q: int, alt_m: float, state: int) -> int;  static func blip_pos(cell: int, blip: int) -> int;  static func blip_state(blip: int) -> int;  static func entry_blip(pos_q: int, flag_b: int, fine: int, dticks: int, grav: bool, g: float, dt: float) -> int   # NET-54
 
 class_name PilotBlock extends RefCounted              # net/pilot_block.gd: 15 B, wire integers, clamped on write
 const BYTES: int
@@ -250,8 +248,10 @@ A, B, C in that order, each a u8 count (1-255) then records. A record starts wit
 previous record of the packet (the chain runs across sections and restarts per packet; 0 only for index 0 as the first
 record), or 0xFF + u16 index. Next byte 0xFF = FULL (vec3q, quat_s3, vel, hp, flags, +ai_tag own team); otherwise A/B: a
 DELTA mask (bit 7 and bit 6 clear, not both POS bits), groups in mask-bit order; C: a C-BLIP (e8 clamped to 254 so it
-never reads 0xFF, n8, alt6 | state << 6). NET-54 (server-only, no wire change): a C entry whose blip is unknown (after a FULL or DELTA) gets no C-BLIP while `DeadReckon.entry_blip` of its position, flags and velocity equals the true blip (`blip_of`); UNDER_FIRE is server-only, so it always sends one. POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x
-i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 = ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends packet index 0. Decoder (A-36): HAS_PILOT off index 0, CONTINUED on index 3 or an index above the tick's LAST is MALFORMED; a repeated index is STALE; a missing one is loss.
+never reads 0xFF, n8, alt6 | state << 6).
+NET-54 (server only, no wire change): no C-BLIP for an unknown-blip C entry while `BaselineFrame.shown_blip` (blip of
+its dead-reckoned levels at the encode tick, what a client shows) equals `blip_of`; UNDER_FIRE always sends.
+POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 = ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends packet index 0. Decoder (A-36): HAS_PILOT off index 0, CONTINUED on index 3 or an index above the tick's LAST is MALFORMED; a repeated index is STALE; a missing one is loss.
 
 ## Invariants
 
@@ -282,7 +282,7 @@ Bandwidth: 04 s4.6 (24 KB/s typical, 30 KB/s cap per client, 01 s8.3). CPU: the 
 replay" row (R0 B.7, 4.0 ms p95, 8 clients) covers `prepare_tick` and per-client encoding; `Protocol` lookups are O(1).
 NET-49 canonical bench (A-40: 940 entities, 8 clients, 04 s4.1 schedule + 3 refresh FULLs, desktop p50): prepare 2.8 ms
 + encode sum 6.8-6.9 ms = 9.6-9.8 ms, over the row; the FULL / C-BLIP cache saves 0-2 % (a FULL is mostly one client's
-per tick). A/B deltas stay per client. NET-08 (real Interest, same scene, dev box ~3.4x slower than NET-49's that day: canonical 32.5 ms p50): prepare 9.6 + interest 2.6 (p95 5.2) + meta 0.02 + encode 21.1 = 34.3 ms p50, i.e. interest ~8 % of row 12 and ~0.8 ms at NET-49 speed; A/B/C 37.8 / 179.6 / 723 per scheduled tick, 945 B per client tick, 29.9 KB/s link; events (bench_events interest, rosters 940) route 10.9 + shots 2.1 ms p50. Row 12 stays 4.0 ms (A-62 (3)); the pinned-runner gate is TA-42; over-budget branch: A-40 OWNER. NET-54 (post-FULL C-BLIP skip; bytes, same dev box): canonical 968 -> 961 B per client tick (blip 15.3 -> 12.4 records), interest 945 -> 936 B (link 29.86 -> 29.59 KB/s), NET-06 400-entity bandwidth 18,158 -> 18,078 B/s (3-tick acks) and 21,522 -> 21,442 B/s (5 ticks, 3 % loss), NET-07 refresh stream delta at 700 C 1.966 -> 1.716 KB/s; encode time unchanged within noise; replay bytes unchanged (the writer encodes tier A only).
+per tick). A/B deltas stay per client. NET-08 (real Interest, same scene, dev box ~3.4x slower than NET-49's that day: canonical 32.5 ms p50): prepare 9.6 + interest 2.6 (p95 5.2) + meta 0.02 + encode 21.1 = 34.3 ms p50, i.e. interest ~8 % of row 12 and ~0.8 ms at NET-49 speed; A/B/C 37.8 / 179.6 / 723 per scheduled tick, 945 B per client tick, 29.9 KB/s link; events (bench_events interest, rosters 940) route 10.9 + shots 2.1 ms p50. Row 12 stays 4.0 ms (A-62 (3)); the pinned-runner gate is TA-42; over-budget branch: A-40 OWNER. NET-54 (C-BLIP skipped while the dead-reckoned entry shows the true blip; bytes): canonical 968 -> 960 B per client tick (blip 15.3 -> 12.1 records), interest 945 -> 935 B (link 29.86 -> 29.56 KB/s), NET-06 400-entity bandwidth 18,158 -> 18,078 B/s (3-tick acks) and 21,522 -> 21,431 B/s (5 ticks, 3 % loss), NET-07 refresh stream delta at 700 C 1.966 -> 1.562 KB/s; encode time unchanged within noise; replay bytes unchanged (the writer encodes tier A only).
 
 ## Test entry points
 

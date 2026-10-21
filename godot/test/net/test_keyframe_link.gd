@@ -29,6 +29,11 @@ var _snapshot_ok: int = 0
 var _bytes_snapshot: int = 0
 
 
+## C-BLIPs the no-refresh run sends that the refresh run does not (seeded scene; re-measured by NET-54).
+const DISPLACED_BLIPS: int = 384
+var _win_full: int = 0
+var _win_blip: int = 0
+
 func before_test() -> void:
 	_all = PackedInt32Array()
 	_c_all = PackedInt32Array()
@@ -203,6 +208,9 @@ func _bytes_over(refresh_on: bool, ticks: int) -> Vector2i:
 			assert_int(rr.pick(c_all, rig.tick, ref)).is_equal(3)
 		else:
 			ref.clear()
+		if t == 30:
+			_win_full = -rig.codec.n_full
+			_win_blip = -rig.codec.n_blip
 		var out: Array[PackedByteArray] = []
 		var _k: int = rig.codec.encode(store, rig.tick, a, b, c, null, out, ref)
 		for p: PackedByteArray in out:
@@ -215,6 +223,8 @@ func _bytes_over(refresh_on: bool, ticks: int) -> Vector2i:
 				records += 19 + (1 if rig.roster.team_of(s) == 0 else 0)
 		store.ack(dec.store.complete_tick)
 	assert_bool(dec.current().same_state(store.frame_at(rig.tick))).is_true()
+	_win_full += rig.codec.n_full
+	_win_blip += rig.codec.n_blip
 	return Vector2i(total, records)
 
 
@@ -224,7 +234,10 @@ func _bytes_over(refresh_on: bool, ticks: int) -> Vector2i:
 func test_refresh_bytes_at_700_c_entities_within_1_8_kb_per_second() -> void:
 	var ticks: int = 330
 	var with: Vector2i = _bytes_over(true, ticks)
+	var full_with: int = _win_full
+	var blip_with: int = _win_blip
 	var without: Vector2i = _bytes_over(false, ticks)
+	var picks: int = 3 * (ticks - 30)
 	var window_s: float = float(ticks - 30) / 30.0
 	var rec_kb_s: float = float(with.y) / window_s / 1000.0
 	var stream_kb_s: float = float(with.x - without.x) / window_s / 1000.0
@@ -233,7 +246,15 @@ func test_refresh_bytes_at_700_c_entities_within_1_8_kb_per_second() -> void:
 	assert_int(without.y).is_equal(0)
 	assert_float(rec_kb_s).is_less_equal(1.8)
 	assert_float(rec_kb_s).is_greater(1.6)
-	assert_float(stream_kb_s).is_less_equal(1.8)       # NET-54 acceptance: records + escapes + count byte
-	# A refresh FULL also displaces C-BLIPs the run without refresh sends (the refreshed entry then implies its blip),
-	# so the delta can sit just under the records; a refresh that silently dropped its FULLs would fall far below.
-	assert_float(stream_kb_s).is_greater(0.9 * rec_kb_s)
+	assert_float(stream_kb_s).is_less_equal(1.8)       # NET-54 acceptance
+	# Byte accounting: a refresh FULL also displaces records the run without refresh sends (C-BLIPs of 4 B and
+	# cell-change FULLs of 19-20 B), so stream = records + escapes / count bytes - displaced. `rest` is what is left
+	# for escape gaps (<= 2 extra B per refresh FULL) and section-C count bytes (<= 1 per tick).
+	var displaced_blip: int = _win_blip - blip_with
+	var displaced_full: int = _win_full - (full_with - picks)
+	var rest: int = (with.x - without.x) - with.y + 4 * displaced_blip + 19 * displaced_full
+	print("NET-54 accounting: displaced C-BLIP %d, displaced FULL %d, escapes + count bytes %d B" % [displaced_blip,
+			displaced_full, rest])
+	assert_int(displaced_blip).is_equal(DISPLACED_BLIPS)
+	assert_int(displaced_full).is_greater_equal(0)
+	assert_int(rest).is_between(0, 2 * picks + (ticks - 30) + displaced_full)
