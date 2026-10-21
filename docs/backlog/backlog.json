@@ -2865,7 +2865,7 @@
     "status": "done",
     "pr": 97,
     "merged": "2026-10-21",
-    "note": "Refresh FULL records 1.740 KB/s at 700 C (04:494/523 meaning); stream delta 1.966 KB/s due to the NET-06 post-FULL C-BLIP -> NET-54. ENTITY_META sent before KEYFRAME (04 inconsistent) -> NET-55. Nits: MOBILE_SWITCH stale count not exact; record KB/s computed not counted."
+    "note": "Refresh FULL records 1.740 KB/s at 700 C (04:494/523 meaning); stream delta 1.966 KB/s due to the NET-06 post-FULL C-BLIP -> NET-54. ENTITY_META sent before KEYFRAME (04 inconsistent) -> NET-55. Nits: MOBILE_SWITCH stale count not exact; record KB/s computed not counted. Architect notes closed by R0 B.19 A-101 (META before KEYFRAME) and A-102 (C-BLIP removed by NET-54, cited in 04 s4.3 / s4.6)."
   },
   {
     "id": "NET-14",
@@ -2908,7 +2908,8 @@
       " R0 C2-04",
       " 04 NET-15"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; R0 B.19 A-101: on join and on every KeyframePolicy trigger the ServerSession sends ENTITY_META for every record's index on channel 3 before the KEYFRAME, then TEAM_DETAIL(FULL) for scope ALL only; a LocalTransport test asserts the channel-3 order META -> KEYFRAME -> TEAM_DETAIL(FULL) and that the client decodes the KEYFRAME without a MISSING_ROSTER hold"
   },
   {
     "id": "NET-17",
@@ -2933,7 +2934,7 @@
       " 04 NET-17"
     ],
     "status": "todo",
-    "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56)"
+    "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56); R0 B.19 A-103 / 04 s5.6: NetSimView presents a known-blip entry at BaselineFrame.shown_levels (stored bucket, no gravity even when DYING) and never extrapolates it; a contract test shares the fixture of test_dying_blip_rests_300_ticks_at_blip_pos"
   },
   {
     "id": "UX-24",
@@ -4199,7 +4200,8 @@
       " 01 ADR-07",
       " 04 NET-20"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; R0 B.19 A-101: the reconnect sequence sends ENTITY_META batch, then KEYFRAME(ALL), then TEAM_DETAIL(FULL), TEAM_STATE, MATCH_STATE (04 s5.7 as amended); reconnect_test asserts the order"
   },
   {
     "id": "NET-21",
@@ -7447,8 +7449,10 @@
       "04 s2",
       "04 s4.6"
     ],
-    "status": "todo",
-    "note": "From the NET-07 #97 Opus review 2026-10-21. NET-54 (#100) removed the post-FULL C-BLIP cost: cite it instead of adding a budget row."
+    "status": "done",
+    "note": "From the NET-07 #97 Opus review 2026-10-21. NET-54 (#100) removed the post-FULL C-BLIP cost: cite it instead of adding a budget row. Done as R0-amendments-13 (A-101..A-103). 04 amended: META before KEYFRAME (s2.2, s2.3, s3.1, s4.3, s5.7); s4.6 cites NET-54 (no C-BLIP row); known-blip rule in s3.4 (4) [planned: NET-57] and s5.6. NET-56's open question ruled yes -> NET-57.",
+    "pr": 107,
+    "merged": "2026-10-21"
   },
   {
     "id": "AI-42",
@@ -7486,7 +7490,7 @@
       "04 s5.6"
     ],
     "status": "done",
-    "note": "Pre-existing NET-06 issue found in the NET-54 #100 review. Optional Architect question: should a known-blip DYING entry's DELTA base also drop gravity (wire semantics). BaselineFrame.shown_levels is the single rule; shown_blip derives from it; ReplayReader uses it; NetSimView (NET-17) must. Open Architect question: should a known-blip DYING entry DELTA base drop gravity.",
+    "note": "Pre-existing NET-06 issue found in the NET-54 #100 review. Optional Architect question: should a known-blip DYING entry's DELTA base also drop gravity (wire semantics). BaselineFrame.shown_levels is the single rule; shown_blip derives from it; ReplayReader uses it; NetSimView (NET-17) must. Open Architect question: should a known-blip DYING entry DELTA base drop gravity. Open Architect question ruled yes (R0 B.19 A-103): the DELTA base of a known blip drops gravity and velocity on both ends; code is NET-57.",
     "pr": 104,
     "merged": "2026-10-21"
   },
@@ -7510,5 +7514,24 @@
     ],
     "status": "todo",
     "note": "Filed from the Opus review of PR #102 ('file the follow-up as a task'). The Core shield timer on the HUD (UX-18, 06 s7.1) needs CORE_SHIELD_UP from this task and core_shield_until_s from match_rules; it does not need shield01."
+  },
+  {
+    "id": "NET-57",
+    "title": "net: a known blip is never dead-reckoned on the wire: DELTA base = stored bucket levels, no velocity advance, no gravity even when DYING, on both ends (R0 B.19 A-103)",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "NET-56"
+    ],
+    "milestone": "M3",
+    "acceptance": "SnapshotCodec encoder and SnapshotDecoder take the DELTA base of a known-blip entry from BaselineFrame.shown_levels (or one shared helper both call), never dr_levels; the mirror's per-tick velocity advance (A-39 policy 2) skips known-blip entries; A/B and unknown-blip entries unchanged (test_c_blip_skip.gd and test_dying_blip_rests_300_ticks_at_blip_pos stay green); a DYING entity that gets a C-BLIP, rests 300 ticks and is then promoted to A encodes POS_SMALL or POS_LARGE from the bucket residual only and mirror == client (same_state) on every tick; a falling DYING entity whose bucket changes still gets a new C-BLIP; determinism (test_determinism_identical_bytes, byte cache) and the 20,000-mutation sweep green; NET-06 / NET-25 byte baselines re-recorded only if a fixture contains a known-blip DELTA, with the change explained in the PR; PROTOCOL_VERSION stays 1 (A-36 precedent); net/MODULE.md SNAPSHOT paragraph states the rule as one sentence; the 04 s3.4 policy (4) `[planned: NET-57]` marker is removed in the same PR (shared file authorised by A-103); check_deps, gen_module_api --check, check_perf_gates green; perf note: no allocation, one branch per entry",
+    "docs": [
+      "R0-amendments-13",
+      "04 s3.4",
+      "04 s5.6"
+    ],
+    "status": "todo",
+    "note": "From the NET-56 #104 open question, ruled yes in R0 B.19 A-103. OWNER default: M3; alternative: defer to the NET-17 wave."
   }
 ]
