@@ -88,7 +88,7 @@ static func tech_available(store: EntityStore, defs: WorldDefs, team: int, def_i
 static func count_owned(store: EntityStore, player: int, live: PackedInt32Array) -> int;  static func fill_player(v: PlayerStateView, pl: PlayerTable, slot: int) -> void
 static func fill_team(v: TeamStateView, team: int, store: EntityStore, defs: WorldDefs, pl: PlayerTable, rules: MatchRules, state: MatchState) -> void   # (GD-18, A-73 extract)
 class_name EconomyHub extends RefCounted                                     # (TA-19) composes Build, Economy, Construction, Production; routes their commands, deaths and step 10
-var build: Build; var economy: Economy; var construction: Construction; var production: Production; var supply: SupplyNet   # (GD-18) supply: step 10 after production
+var build: Build; var economy: Economy; var construction: Construction; var production: Production; var supply: SupplyNet   # (GD-18) supply: step 10 after production; var salvage: Salvage   # (GD-19) wrecks: spawned in `on_death`, stepped after production (sim/salvage/MODULE.md)
 static func handles(kind: Command.Kind) -> bool;  func apply(cmd: Command) -> void;  func begin_tick(t: int) -> void;  func step(t: int, dt: float) -> void;  func on_death(s: int) -> void
 func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3, tick: int) -> bool;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name StateIO                                                           # S4 bytes: named properties via put_var / get_var, type-checked
@@ -104,7 +104,7 @@ static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: 
 - W4: `ShipMotion` and `ProjectileMotion` allocate nothing per entity: one `ShipState`, one `PilotInput`, one `ProjectileState` scratch; each SoA array is copied at most once per tick (copy-on-write of the local handle).
 - W5: every class holding state has `write_state` / `read_state`; `SimWorld.serialize` writes them in a fixed order and `deserialize(serialize())` reproduces each byte for byte (S4).
 - W6: Control state, overlay and `ReleaseReason` are `ControlMachine`'s enums (AI-02, sim/control/MODULE.md CM1); nothing here redefines them.
-- W7: `EconomyHub` owns no state of its own; `on_death` runs for every dying structure before the deferred free (footprint, site, queue), so a freed slot never keeps a footprint or a queue.
+- W7: `EconomyHub` owns no state of its own; `on_death` runs for every dying entity before the deferred free (structures: footprint, site, queue; GD-19: ships, ground units and finished structures: their wrecks, `Salvage.on_death`), so a freed slot never keeps a footprint or a queue.
 
 ## Data owned
 
