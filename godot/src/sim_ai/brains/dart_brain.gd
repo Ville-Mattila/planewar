@@ -22,6 +22,7 @@ var probe_params: ProbeParams
 var terrain: Terrain
 var modes: DartModes
 var stats_pull_ups: int = 0      ## PULL_UP entries (tests)
+var stats_sinking_acts: int = 0  ## flight acts (not LAUNCH / RETURN / PULL_UP) while sinking: the A-96 counter's denominator
 var stats_longest_pull_up: int = 0   ## longest PULL_UP hold in ticks (A-92: reported, no max hold in v1)
 var stats_thinks: int = 0        ## shaped thinks (the counters' denominators, perf tests)
 var stats_refreshes: int = 0     ## Separation.term refreshes in `_shape`
@@ -241,6 +242,8 @@ func _act(id: int, s: int, m: int, view: SimView, st: AiState, sink: CommandSink
 	if m == AiTag.Tag.LAUNCH:
 		_act_launch(s, p, up, b, st)
 		return
+	if m != AiTag.Tag.PULL_UP and v.dot(up) < 0.0:
+		stats_sinking_acts += 1
 	if m != AiTag.Tag.PULL_UP and (tick + s) % prm.check_ticks == 0:
 		var agl: float = p.length() - Sphere.PLANET_RADIUS - terrain.height_at(p)
 		if _pull_up_due(b, p, v, up, minf(agl, st.clear_m[s])):
