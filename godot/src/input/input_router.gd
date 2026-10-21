@@ -2,7 +2,7 @@ class_name InputRouter extends Node
 ## Routes device events to the DeviceMonitor and emits one PilotInput per physics tick in flight modes
 ## (06 s2.1-2.3). Runs before ClientSession.tick() (priority -10). Raw PilotInput comes from `sampler` when set
 ## (tests, replays), else from the mapper of the active class: GAMEPAD -> gamepad_mapper, POINTER -> kbm_mapper,
-## TOUCH -> neutral until the touch mapper (UX-04). The assist stack (UX-07) runs after the mapper.
+## TOUCH -> touch_mapper (UX-04). The assist stack (UX-07) runs after the mapper.
 
 enum Mode { MENU, FLIGHT, TURRET, GROUND, RTS, PLACEMENT, TEXT, PEEK }
 
@@ -15,10 +15,16 @@ signal glyph_set_changed(glyphs: StringName)
 var sampler: Callable
 var gamepad_mapper: GamepadFlightMapper = GamepadFlightMapper.new()
 var kbm_mapper: KbmFlightMapper = KbmFlightMapper.new()
+var touch_mapper: TouchFlightMapper = TouchFlightMapper.new()
+## Touch gestures (UX-04). The HUD sets `gestures.stick_zone` and `gestures.fire_zone`.
+var gestures: GestureRecognizer = GestureRecognizer.new()
+## FIRE long-press opens the wing radial only while no hostile is within 800 m (06 s3.1); `app` keeps this current.
+var wing_radial_allowed: bool = false
 
 var _monitor: DeviceMonitor
 var _mode: Mode = Mode.MENU
 var _match_class: int = -1
+var _wing_open: bool = false
 
 
 func _init() -> void:
@@ -34,6 +40,8 @@ func _input(event: InputEvent) -> void:
 func route_event(event: InputEvent, now_ms: int) -> void:
 	if event is InputEventMouseMotion and is_flight_mode(_mode):
 		kbm_mapper.add_mouse_motion((event as InputEventMouseMotion).relative)
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		_handle_gestures(gestures.feed(event, now_ms))
 	var before_class: int = _monitor.active_class
 	var before_glyphs: StringName = _monitor.glyph_set
 	if not _monitor.feed(event, now_ms):
@@ -44,7 +52,39 @@ func route_event(event: InputEvent, now_ms: int) -> void:
 		glyph_set_changed.emit(_monitor.glyph_set)
 
 
+## Advances gesture timers (long press, FIRE hold). Public for tests and replays.
+func poll_gestures(now_ms: int) -> void:
+	_handle_gestures(gestures.poll(now_ms))
+
+
+## Flight modes: FLICK_UP -> FLIP, FIRE hold -> WING_RADIAL. RTS: gestures -> camera and selection intents (06 s3.3).
+func _handle_gestures(list: Array[Gesture]) -> void:
+	for g: Gesture in list:
+		if is_flight_mode(_mode):
+			_flight_gesture(g)
+		elif _mode == Mode.RTS:
+			var r: Dictionary = GestureIntents.rts_intent(g)
+			if not r.is_empty():
+				var kind: StringName = r.get(&"kind", &"")
+				var payload: Dictionary = r.get(&"payload", {})
+				intent.emit(kind, payload)
+
+
+func _flight_gesture(g: Gesture) -> void:
+	if g.kind == Gesture.Kind.FLICK_UP:
+		touch_mapper.queue_flip()
+	elif g.kind == Gesture.Kind.FIRE_HOLD:
+		if g.phase == Gesture.Phase.BEGIN and wing_radial_allowed:
+			_wing_open = true
+		elif g.phase == Gesture.Phase.END and _wing_open:
+			_wing_open = false
+		else:
+			return
+		intent.emit(Intents.WING_RADIAL, {Intents.K_OPEN: _wing_open, Intents.K_POS: g.pos})
+
+
 func _physics_process(_delta: float) -> void:
+	poll_gestures(Time.get_ticks_msec())
 	var _emitted: bool = emit_tick()
 
 
@@ -76,6 +116,8 @@ func _mapper_sample() -> PilotInput:
 			return gamepad_mapper.sample(dt)
 		InputClass.Kind.POINTER:
 			return kbm_mapper.sample(dt)
+		InputClass.Kind.TOUCH:
+			return touch_mapper.sample(dt)
 	return PilotInput.new()
 
 
