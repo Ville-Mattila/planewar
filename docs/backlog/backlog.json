@@ -2143,7 +2143,8 @@
       " 02 GD-10"
     ],
     "status": "todo",
-    "acceptance_append": "; an unsupplied Shield Projector does not recharge, read from SupplyNet.is_supplied (GD-18)"
+    "acceptance_append": "; an unsupplied Shield Projector does not recharge, read from SupplyNet.is_supplied (GD-18); R0 B.18 A-99: integrated_shield carries required dome_radius and collapse_s (core 75 / 10, _doc cites A-99 and 02 s4.3 rule 6) in structures.json and both schemas, applied in PR #102 under the Architect's ruling; ShieldTables reads them as it reads shield.dome_radius / shield.collapse_s with no derivation, no cross-def maximum and no code default; a unit test asserts dome_radius >= footprint half-diagonal + the largest blast_radius_structure_m of a shield_absorbed projectile for every def with integrated_shield (72.07 m for the shipped Core); A-100: Exposure cover = a living Core of any team whose centre is within shield.dome_radius of the Projector (SH7 as written); the C-13 scenario's event ticks are re-recorded if the radius change moves them; sim/combat/MODULE.md SH1 / SH3 name the def keys and the needs content: Open item is closed; the SimView accessor and CORE_SHIELD_UP flag are GD-38, not this task",
+    "note": "A-99 / A-100 (R0-amendments-12): the content and schema edits are outside the sim lane and are authorised for PR #102 by the ruling; the Opus review's item 2 (test_shield_perf.gd PerfGate bound 400 us vs the measured 770-860 us) is a review finding under A-97, fixed in the same round, not a contract matter."
   },
   {
     "id": "GD-12",
@@ -3272,7 +3273,8 @@
     "depends_on": [
       "UX-16",
       "TA-18",
-      "GD-15"
+      "GD-15",
+      "GD-38"
     ],
     "milestone": "M3",
     "acceptance": "Gauge colours switch at 8/15 and 15/25 m/s and 25/45 deg; grade stamp shows every LandingGrade.Grade from a LANDING event",
@@ -3282,7 +3284,8 @@
       " R0 C3-13",
       " 06 UX-18"
     ],
-    "status": "todo"
+    "status": "todo",
+    "note": "depends_on GD-38 for TeamStateView.CORE_SHIELD_UP (the Core shield timer); the rest of UX-18 is unaffected."
   },
   {
     "id": "UX-19",
@@ -7480,5 +7483,26 @@
     ],
     "status": "todo",
     "note": "Pre-existing NET-06 issue found in the NET-54 #100 review. Optional Architect question: should a known-blip DYING entry's DELTA base also drop gravity (wire semantics)."
+  },
+  {
+    "id": "GD-38",
+    "title": "sim: SimView dome charge accessor shield01(id) and TeamStateView.CORE_SHIELD_UP from ShieldDomes (GD-10 follow-up; A-73 extraction of local_sim_view.gd first)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.75,
+    "depends_on": [
+      "GD-10"
+    ],
+    "milestone": "M3",
+    "acceptance": "A-73: local_sim_view.gd (397 lines) extracts a cohesive part into a lane-internal class_name documented in its sim/<subsystem>/MODULE.md in a separate first commit, no public symbol moved; SimView gains shield01(id: EntityId) -> float (charge / effective cap for a Shield Projector or a Core with its shield up, 0.0 for a collapsed or removed dome or an entity without one; -1.0 when the view has no data, which is NetSimView's answer until a codec task carries dome charge) appended to sim/MODULE.md and to the TEST-02 SimView contract test in an earlier commit (10 s4.1 Append); LocalSimView.shield01 reads SimWorld.shields() (ShieldDomes.charge_of / is_up and the Exposure cap); TeamStateView.flags bit CORE_SHIELD_UP (4) is set while ShieldDomes.core_up(team) is true and cleared at expiry, Exposure or collapse, asserted in test_local_sim_view and flipped at tick 14,400 in a test with match_rules core_shield_until_s 480; NetSimView: the TEAM_CORE_SHIELD_UP wire flag (net/MODULE.md 0x85) feeds the same bit and shield01 returns -1.0, stated in net/MODULE.md as a needs net: Open item for a later codec task, no wire change in GD-38; gen_module_api --check, check_deps green; zero warnings",
+    "docs": [
+      "R0-amendments-12",
+      "02 s5.1",
+      "02 s5.2",
+      "06 s7.1",
+      "R0 A-73"
+    ],
+    "status": "todo",
+    "note": "Filed from the Opus review of PR #102 ('file the follow-up as a task'). The Core shield timer on the HUD (UX-18, 06 s7.1) needs CORE_SHIELD_UP from this task and core_shield_until_s from match_rules; it does not need shield01."
   }
 ]
