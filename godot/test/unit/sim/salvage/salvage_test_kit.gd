@@ -1,6 +1,6 @@
 class_name SalvageTestKit extends RefCounted
 ## Fixtures for the GD-19 tests: the EconomyTestKit world (players 0 and 2 team 0, 1 team 1, no start kit, flat datum)
-## plus a Foundry player in slot 3 (team 0), structures and ships spawned through DEBUG_SPAWN, kills through the
+## plus a Foundry player in slot 3 (team 0), structures and ships spawned through the applier, kills through the
 ## deferred death list (the same path Combat uses), and wrecks / tow orders written the way the tick reads them.
 
 const R: float = Sphere.PLANET_RADIUS
@@ -18,8 +18,16 @@ static func world(cap: int = 0) -> SimWorld:
 	return w
 
 
+## `alt` metres above the datum, `east` metres of arc along +Y from +X (WorldTestKit.at is a flat offset, not on the sphere).
+static func at(alt: float, east: float = 0.0) -> Vector3:
+	return Vector3(R, east, 0.0).normalized() * (R + alt)
+
+
+## Spawns through the applier (DEBUG_SPAWN is rate limited per player); no tick passes. The entity slot, -1 if refused.
 static func put(w: SimWorld, def: StringName, owner: int, team: int, alt: float, east: float = 0.0) -> int:
-	return EntityId.slot(WorldTestKit.spawn(w, def, owner, team, WorldTestKit.at(alt, east)))
+	var s: int = w._applier.spawn(WorldTestKit.def_id(def), owner, team, at(alt, east), Vector3.ZERO, Vector3(0, 1, 0), w.tick())
+	assert(s > 0)
+	return s
 
 
 ## Marks `s` dying and runs one tick: step 9 spawns the wrecks. Returns that tick's events.

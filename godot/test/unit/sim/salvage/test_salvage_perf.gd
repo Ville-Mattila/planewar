@@ -16,13 +16,13 @@ func _scene() -> SimWorld:
 	for k: int in 8:
 		var east: float = 300.0 * float(k)
 		var h: int = K.put(w, &"hauler", K.FOUNDRY_SLOT, 0, 20.0, east)
-		var a: int = K.wreck_at(w, &"shipyard", 80.0, WorldTestKit.at(0.0, east))
-		var b: int = K.wreck_at(w, &"shipyard", 80.0, WorldTestKit.at(0.0, east + 4.0))
+		var a: int = K.wreck_at(w, &"shipyard", 80.0, K.at(0.0, east))
+		var b: int = K.wreck_at(w, &"shipyard", 80.0, K.at(0.0, east + 4.0))
 		assert_int(w.economy().salvage.try_attach(h, a)).is_equal(Salvage.Hook.OK)
 		assert_int(w.economy().salvage.try_attach(h, b)).is_equal(Salvage.Hook.OK)
 	var fill: int = 0
 	while w.store().wrecks.size() < 200:
-		var _x: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3000.0 + 30.0 * float(fill)))
+		var _x: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3000.0 + 30.0 * float(fill)))
 		fill += 1
 	for k: int in 8:
 		var h: int = K.put(w, &"hauler", 0, 0, 20.0, 6000.0 + 300.0 * float(k))
@@ -39,6 +39,7 @@ func test_the_wreck_pass_at_the_standard_cap_is_cheap() -> void:
 	for s: int in st.wrecks:
 		tethered += 1 if K.tethered(w, s) else 0
 	assert_int(tethered).is_equal(16)
+	var _spawned: Array[SimEvent] = w.drain_events()                          # the SPAWN events of the scene setup
 	var before: PackedByteArray = WorldTestKit.store_bytes(w)
 	var t0: int = Time.get_ticks_usec()
 	for i: int in REPS:

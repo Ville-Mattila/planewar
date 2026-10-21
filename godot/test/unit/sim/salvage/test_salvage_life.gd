@@ -49,8 +49,8 @@ func test_the_lifetime_counts_from_the_death_tick_of_each_wreck() -> void:
 
 func test_an_expired_wreck_ends_its_tow_and_the_haulers_flag() -> void:
 	var w: SimWorld = K.world()
-	var wr: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3000.0))
-	var h: int = K.put(w, &"hauler", 0, 0, 40.0, 3000.0)
+	var wr: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3000.0))
+	var h: int = K.put(w, &"hauler", 0, 0, 20.0, 3000.0)
 	assert_int(w.economy().salvage.try_attach(h, wr)).is_equal(Salvage.Hook.OK)
 	assert_bool(K.tethered(w, h)).is_true()
 	w.store().spawn_tick[wr] = w.tick() + 2 - _life_ticks()          # dies in step 10 of the second tick from now

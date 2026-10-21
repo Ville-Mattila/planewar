@@ -119,7 +119,7 @@ func test_sites_and_the_relay_station_leave_nothing() -> void:
 
 func test_a_wreck_never_leaves_a_wreck() -> void:
 	var w: SimWorld = K.world()
-	var wr: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0))
+	var wr: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0))
 	assert_int(K.of_kind(K.kill(w, wr), SimEvent.Kind.WRECK_SPAWNED).size()).is_equal(0)
 
 
@@ -135,13 +135,14 @@ func test_pods_sit_on_a_ring_around_the_structure() -> void:
 	var w: SimWorld = K.world()
 	var yard: int = K.put(w, &"shipyard", 0, 0, 0.0)
 	var centre: Vector3 = w.store().pos[yard]
-	var ring: float = w.store().radius[yard] * 0.5
+	var yard_r: float = w.store().radius[yard]
+	var ring: float = yard_r * 0.5
 	var _ev: Array[SimEvent] = K.kill(w, yard)
 	var live: PackedInt32Array = K.wrecks(w)
 	assert_float(w.store().pos[live[0]].distance_to(centre)).is_equal_approx(ring, ring * 0.02)
 	assert_float(w.store().pos[live[1]].distance_to(centre)).is_equal_approx(ring, ring * 0.02)
 	assert_float(w.store().pos[live[0]].distance_to(w.store().pos[live[1]])).is_equal_approx(2.0 * ring, ring * 0.05)
-	assert_float(w.store().radius[live[0]]).is_equal_approx(w.store().radius[yard] / 2.0, 0.001)
+	assert_float(w.store().radius[live[0]]).is_equal_approx(yard_r / 2.0, 0.001)
 
 
 func test_the_wreck_pass_is_deterministic() -> void:

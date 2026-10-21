@@ -7,6 +7,7 @@ const K: GDScript = preload("res://test/unit/sim/salvage/salvage_test_kit.gd")
 
 
 func _restore(w: SimWorld) -> SimWorld:
+	var _pending: Array[SimEvent] = w.drain_events()                         # events not yet drained are not saved
 	var r: SimWorld = SimWorld.deserialize(w.serialize(), WorldTestKit.content(), null)
 	assert_object(r).is_not_null()
 	return r
@@ -67,9 +68,9 @@ func test_expiry_lands_on_the_same_tick_after_a_restore() -> void:
 
 func test_save_restore_continue_mid_tow_is_byte_exact_through_delivery() -> void:
 	var w: SimWorld = K.world()
-	var h: int = K.put(w, &"hauler", K.FOUNDRY_SLOT, 0, 20.0, 3000.0)
-	var a: int = K.wreck_at(w, &"shipyard", 80.0, WorldTestKit.at(0.0, 3000.0))
-	var b: int = K.wreck_at(w, &"shipyard", 80.0, WorldTestKit.at(0.0, 3004.0))
+	var h: int = K.put(w, &"hauler", K.FOUNDRY_SLOT, 0, 20.0, 3060.0)
+	var a: int = K.wreck_at(w, &"shipyard", 80.0, K.at(0.0, 3060.0))
+	var b: int = K.wreck_at(w, &"shipyard", 80.0, K.at(0.0, 3064.0))
 	assert_int(w.economy().salvage.try_attach(h, a)).is_equal(Salvage.Hook.OK)
 	assert_int(w.economy().salvage.try_attach(h, b)).is_equal(Salvage.Hook.OK)
 	var _s: Array[SimEvent] = K.steps(w, 3)
@@ -88,7 +89,7 @@ func test_save_restore_continue_mid_tow_is_byte_exact_through_delivery() -> void
 func test_a_restored_tow_order_hooks_like_the_original() -> void:
 	var w: SimWorld = K.world()
 	var h: int = K.put(w, &"hauler", 0, 0, 20.0, 3000.0)
-	var wr: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3000.0))
+	var wr: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3000.0))
 	K.haul(w, h, OrderSpec.HaulMode.TOW, w.store().id_of(wr))
 	var r: SimWorld = _restore(w)
 	_run_equal(w, r, 5, 1)

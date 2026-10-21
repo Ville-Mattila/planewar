@@ -4,6 +4,7 @@ extends GdUnitTestSuite
 
 const K: GDScript = preload("res://test/unit/sim/salvage/salvage_test_kit.gd")
 const FAR: float = 2000.0
+const HOVER_EAST: float = 60.0   ## clear of a Refinery's collision radius, inside radius + reach
 
 
 func _reach(w: SimWorld) -> float:
@@ -13,7 +14,7 @@ func _reach(w: SimWorld) -> float:
 # A Hauler of `owner` hovering `alt` m above the datum at `east`; a wreck on the ground below it.
 func _pair(w: SimWorld, owner: int = 0, east: float = 3000.0, alt: float = 20.0) -> Vector2i:
 	var h: int = K.put(w, &"hauler", owner, 0, alt, east)
-	var wr: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, east))
+	var wr: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, east))
 	return Vector2i(h, wr)
 
 
@@ -38,7 +39,7 @@ func test_a_hauler_has_one_slot_and_a_foundry_hauler_two() -> void:
 func test_try_attach_links_both_ends_and_refuses_a_second_wreck() -> void:
 	var w: SimWorld = K.world()
 	var p: Vector2i = _pair(w)
-	var spare: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3000.0))
+	var spare: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3000.0))
 	var sal: Salvage = w.economy().salvage
 	assert_int(sal.try_attach(p.x, p.y)).is_equal(Salvage.Hook.OK)
 	assert_int(w.store().link[p.y]).is_equal(w.store().id_of(p.x))
@@ -53,9 +54,9 @@ func test_try_attach_links_both_ends_and_refuses_a_second_wreck() -> void:
 func test_a_foundry_hauler_tows_two_and_refuses_a_third() -> void:
 	var w: SimWorld = K.world()
 	var h: int = K.put(w, &"hauler", K.FOUNDRY_SLOT, 0, 20.0, 3000.0)
-	var a: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3000.0))
-	var b: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3004.0))
-	var c: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3008.0))
+	var a: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3000.0))
+	var b: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3004.0))
+	var c: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3008.0))
 	var sal: Salvage = w.economy().salvage
 	assert_int(sal.try_attach(h, a)).is_equal(Salvage.Hook.OK)
 	assert_int(sal.try_attach(h, b)).is_equal(Salvage.Hook.OK)
@@ -67,7 +68,7 @@ func test_a_foundry_hauler_tows_two_and_refuses_a_third() -> void:
 func test_try_attach_failure_order_and_no_side_effects() -> void:
 	var w: SimWorld = K.world()
 	var p: Vector2i = _pair(w)
-	var far: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3000.0 + FAR))
+	var far: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3000.0 + FAR))
 	var dart: int = K.put(w, &"dart", 0, 0, 20.0, 5000.0)
 	var sal: Salvage = w.economy().salvage
 	assert_int(sal.try_attach(dart, p.y)).is_equal(Salvage.Hook.NOT_HAULER)
@@ -114,7 +115,7 @@ func test_nothing_hooks_without_a_tow_order_in_reach() -> void:
 	K.haul(w, p.x, OrderSpec.HaulMode.FERRY, w.store().id_of(p.y))              # wrong mode
 	var _b: Array[SimEvent] = K.steps(w, 2)
 	assert_bool(K.tethered(w, p.y)).is_false()
-	var far: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3000.0 + FAR))
+	var far: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3000.0 + FAR))
 	K.haul(w, p.x, OrderSpec.HaulMode.TOW, w.store().id_of(far))                 # target out of reach: no greedy first hook
 	var _c: Array[SimEvent] = K.steps(w, 2)
 	assert_bool(K.tethered(w, p.y) or K.tethered(w, far)).is_false()
@@ -123,14 +124,14 @@ func test_nothing_hooks_without_a_tow_order_in_reach() -> void:
 func test_the_second_slot_takes_a_neighbouring_wreck_and_the_first_does_not() -> void:
 	var w: SimWorld = K.world()
 	var base: Vector2i = _pair(w, 0, 3000.0)
-	var base_next: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3004.0))
+	var base_next: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3004.0))
 	K.haul(w, base.x, OrderSpec.HaulMode.TOW, w.store().id_of(base.y))
 	var _a: Array[SimEvent] = K.steps(w, 3)
 	assert_bool(K.tethered(w, base.y)).is_true()
 	assert_bool(K.tethered(w, base_next)).is_false()                             # one slot, full
 	var f: Vector2i = _pair(w, K.FOUNDRY_SLOT, 5000.0)
-	var f_next: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 5004.0))
-	var f_third: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 5008.0))
+	var f_next: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 5004.0))
+	var f_third: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 5008.0))
 	K.haul(w, f.x, OrderSpec.HaulMode.TOW, w.store().id_of(f.y))
 	var _b: Array[SimEvent] = K.steps(w, 3)
 	assert_bool(K.tethered(w, f.y) and K.tethered(w, f_next)).is_true()
@@ -154,8 +155,8 @@ func test_a_dead_hauler_releases_its_wreck_where_it_lies() -> void:
 func test_drop_releases_every_wreck_and_clears_the_haulers_flag() -> void:
 	var w: SimWorld = K.world()
 	var h: int = K.put(w, &"hauler", K.FOUNDRY_SLOT, 0, 20.0, 3000.0)
-	var a: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3000.0))
-	var b: int = K.wreck_at(w, &"dart", 60.0, WorldTestKit.at(0.0, 3004.0))
+	var a: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3000.0))
+	var b: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3004.0))
 	var sal: Salvage = w.economy().salvage
 	assert_int(sal.try_attach(h, a)).is_equal(Salvage.Hook.OK)
 	assert_int(sal.try_attach(h, b)).is_equal(Salvage.Hook.OK)
@@ -170,9 +171,10 @@ func _refinery(w: SimWorld, east: float, team: int = 0, owner: int = 0) -> int:
 	return K.put(w, &"refinery", owner, team, 0.0, east)
 
 
+# A Hauler hovering HOVER_EAST m beside `east` (a ship rams a structure it overlaps) towing a wreck of `wreck_ore`.
 func _tow(w: SimWorld, east: float, wreck_ore: float = 60.0, owner: int = 0) -> Vector2i:
-	var h: int = K.put(w, &"hauler", owner, 0, 20.0, east)
-	var wr: int = K.wreck_at(w, &"dart", wreck_ore, WorldTestKit.at(0.0, east))
+	var h: int = K.put(w, &"hauler", owner, 0, 20.0, east + HOVER_EAST)
+	var wr: int = K.wreck_at(w, &"dart", wreck_ore, K.at(0.0, east + HOVER_EAST))
 	assert_int(w.economy().salvage.try_attach(h, wr)).is_equal(Salvage.Hook.OK)
 	return Vector2i(h, wr)
 
@@ -207,9 +209,9 @@ func test_delivery_credits_the_ore_frees_the_wreck_and_reports() -> void:
 func test_two_wrecks_of_a_foundry_hauler_are_delivered_in_slot_order() -> void:
 	var w: SimWorld = K.world()
 	var _ref: int = _refinery(w, 3000.0)
-	var h: int = K.put(w, &"hauler", K.FOUNDRY_SLOT, 0, 20.0, 3000.0)
-	var a: int = K.wreck_at(w, &"shipyard", 80.0, WorldTestKit.at(0.0, 3000.0))
-	var b: int = K.wreck_at(w, &"shipyard", 80.0, WorldTestKit.at(0.0, 3004.0))
+	var h: int = K.put(w, &"hauler", K.FOUNDRY_SLOT, 0, 20.0, 3000.0 + HOVER_EAST)
+	var a: int = K.wreck_at(w, &"shipyard", 80.0, K.at(0.0, 3000.0 + HOVER_EAST))
+	var b: int = K.wreck_at(w, &"shipyard", 80.0, K.at(0.0, 3004.0 + HOVER_EAST))
 	assert_int(w.economy().salvage.try_attach(h, b)).is_equal(Salvage.Hook.OK)
 	assert_int(w.economy().salvage.try_attach(h, a)).is_equal(Salvage.Hook.OK)
 	w._players.team_ore[0] = 0
@@ -234,21 +236,24 @@ func test_the_credit_is_clamped_to_storage_but_the_event_reports_the_value() -> 
 
 
 func test_only_a_finished_friendly_refinery_in_reach_takes_a_wreck() -> void:
+	# [def, owner, team, is a site]: an enemy Refinery, our own site, a structure without docks
+	for c: Array in [[&"refinery", 1, 1, false], [&"refinery", 0, 0, true], [&"shipyard", 0, 0, false]]:
+		var w: SimWorld = K.world()
+		var other: int = K.put(w, c[0], c[1], c[2], 0.0, 3000.0)
+		if c[3]:
+			w.store().flags[other] |= EntityStore.F_BUILDING
+		var p: Vector2i = _tow(w, 3000.0)
+		var ev: Array[SimEvent] = K.steps(w, 3)
+		assert_int(K.of_kind(ev, SimEvent.Kind.SALVAGE_DELIVERED).size()).override_failure_message(String(c[0])).is_equal(0)
+		assert_bool(K.tethered(w, p.y)).is_true()
+
+
+func test_a_friendly_refinery_out_of_reach_takes_nothing() -> void:
 	var w: SimWorld = K.world()
-	var enemy: int = _refinery(w, 3000.0, 1, 1)                                  # team 1: not ours
-	var site: int = _refinery(w, 3040.0)
-	w.store().flags[site] |= EntityStore.F_BUILDING
-	var yard: int = K.put(w, &"shipyard", 0, 0, 0.0, 3080.0)                     # docks == 0
-	var p: Vector2i = _tow(w, 3000.0)
+	var _good: int = _refinery(w, 3000.0)
+	var far: Vector2i = _tow(w, 3000.0 + 4000.0)
 	var ev: Array[SimEvent] = K.steps(w, 3)
 	assert_int(K.of_kind(ev, SimEvent.Kind.SALVAGE_DELIVERED).size()).is_equal(0)
-	assert_bool(K.tethered(w, p.y)).is_true()
-	assert_bool(w.store().alive(w.store().id_of(enemy)) and w.store().alive(w.store().id_of(yard))).is_true()
-	var far: Vector2i = _tow(w, 3000.0 + 2.0 * FAR)                              # a friendly Refinery far away
-	var good: int = _refinery(w, 3000.0 + 2.0 * FAR + 4000.0)
-	assert_bool(w.store().alive(w.store().id_of(good))).is_true()
-	var ev2: Array[SimEvent] = K.steps(w, 2)
-	assert_int(K.of_kind(ev2, SimEvent.Kind.SALVAGE_DELIVERED).size()).is_equal(0)
 	assert_bool(K.tethered(w, far.y)).is_true()
 
 
@@ -272,7 +277,8 @@ func test_a_refinery_built_after_the_first_pass_is_found() -> void:
 	var _p: Vector2i = _tow(w, 3000.0)
 	var _a: Array[SimEvent] = K.steps(w, 2)                                      # list built with no Refinery
 	w._players.team_ore[0] = 0
-	var _ref: int = _refinery(w, 3000.0)                                          # spawns, then its step 10 delivers
+	var _ref: int = _refinery(w, 3000.0)
+	var _b: Array[SimEvent] = K.steps(w, 1)                                       # its step 10 finds the new Refinery and delivers
 	assert_int(w.store().wrecks.size()).is_equal(0)
 	assert_int(EconomyTestKit.ore(w)).is_equal(60)
 

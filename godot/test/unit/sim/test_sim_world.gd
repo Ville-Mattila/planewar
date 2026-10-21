@@ -248,8 +248,8 @@ func test_debug_kill_is_deferred_to_step9_with_release_first() -> void:
 	w.apply_command(CommandPayload.debug_set(0, id, CommandPayload.SET_KILL, 0.0))
 	w.step()
 	var ev: Array[SimEvent] = w.drain_events()
-	assert_array(Array(WorldTestKit.kinds(ev))).is_equal([SimEvent.Kind.RELEASED, SimEvent.Kind.DEATH])
-	assert_int(ev[0].extra[0]).is_equal(ControlMachine.ReleaseReason.DEATH)
+	assert_array(Array(WorldTestKit.kinds(ev))).is_equal([SimEvent.Kind.WRECK_SPAWNED, SimEvent.Kind.RELEASED, SimEvent.Kind.DEATH])   # GD-19: the wreck precedes the release
+	assert_int(ev[1].extra[0]).is_equal(ControlMachine.ReleaseReason.DEATH)
 	assert_bool(w.store().alive(id)).is_false()
 	assert_int(w.view().player_state(0).possessed).is_equal(0)
 

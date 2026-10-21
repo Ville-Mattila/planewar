@@ -52,7 +52,7 @@ per owner so the Foundry doctrine gives 2). Slots in the API are entity slots; `
   team 255 (neutral), `hp` = the pod value in Ore, `spawn_tick` = the death tick, `radius` = source radius / pods, resting
   on the terrain surface under the death point (a flying ship's wreck is on the ground); several pods sit on a ring of
   radius 0.5 x the source radius around it, pod 0 first. WRECK_SPAWNED(a = wreck id, b = source def, value = pod Ore) per
-  wreck, in pod order. The wreck's `hash_cell` is 0 until the next step 7.
+  wreck, in pod order, emitted in step 9 before the dying entity's own RELEASED (C15) and DEATH. The wreck's `hash_cell` is 0 until the next step 7.
 - W4 Lifetime. In step 10 of tick `spawn_tick + roundi(wreck_lifetime_s x tick_hz)` (90 s = 2,700 ticks at 30 Hz) the
   wreck is freed with DEATH(a = wreck id, b = 0, cause `CAUSE_EXPIRED`), towed or not; a tether on it ends with it.
 - W5 Cap. At `cap` live wrecks no further wreck is created (no event); pods that do not fit are lost. A full wreck range
@@ -90,8 +90,10 @@ Consumes nothing.
 
 ## Performance budget
 
-03 s4.2 row 10 (economy / production / build; the Economy row of `TickProfiler`): 0.1 ms p95 at 200 live wrecks and 8
-towing Haulers (see PR perf note); free while no wreck exists.
+03 s4.2 row 10 (economy / production / build; the Economy row of `TickProfiler`, budget 0.8 ms). `step` is free while no wreck
+exists (0.15 us). With 200 live wrecks (the Standard cap), 16 of them towed by 8 Foundry Haulers and 8 more Haulers holding a
+TOW order: 62 us per `step` on a dev laptop, debug build (`test_salvage_perf.gd`, bound 200 us, PerfGate). `perf_tick.gd --full`
+(120 idle wrecks): Economy row p50 0.029 -> 0.072 ms, p95 0.132 -> 0.217 ms (before / after this change).
 
 ## Test entry points
 
