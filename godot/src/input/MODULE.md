@@ -3,7 +3,7 @@
 Contract for `godot/src/input/**` (06 s2-s3; UX-03). A change to "Public API" or "Invariants" is a contract change:
 update the contract tests first, in the same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines.
 UX-03 lands the router, class detection, glyph selection and the intent catalogue; UX-05 the gamepad and KBM
-DIRECT flight mappers. Touch mapper, gesture recognizer, assist stack and remap are later tasks ("Open items").
+DIRECT flight mappers; UX-04 the gesture recognizer and touch flight mapper. Assist stack and remap are later tasks.
 
 | Field | Value |
 |---|---|
@@ -12,7 +12,7 @@ DIRECT flight mappers. Touch mapper, gesture recognizer, assist stack and remap 
 | May depend on | `core`; the sim public type `PilotInput` only (`tools/deps.json`) |
 | Must never touch | `sim` beyond `PilotInput`, `net`, `ui`, `camera`, `presentation`, `content` loaders, `app` |
 | Autoloads used | none |
-| Status | UX-03 (router, class, monitor, intents) and UX-05 (gamepad and KBM DIRECT mappers) implemented; touch mapper and assists planned |
+| Status | UX-03 (router, class, monitor, intents) and UX-05 (gamepad and KBM DIRECT mappers) and UX-04 (gestures, touch mapper) implemented; assists planned |
 
 ## Public API
 
@@ -47,7 +47,11 @@ signal input_class_changed(kind: int)
 signal glyph_set_changed(glyphs: StringName)           # &"kbm" &"xbox" &"ps" &"nintendo" &"deck" &"generic"
 var sampler: Callable                                  # Callable() -> PilotInput raw sample; overrides the mappers when valid
 var gamepad_mapper: GamepadFlightMapper                # sampled while the active class is GAMEPAD
-var kbm_mapper: KbmFlightMapper                        # sampled while POINTER; fed MouseMotion.relative in flight modes; TOUCH = neutral until UX-04
+var kbm_mapper: KbmFlightMapper                        # sampled while POINTER; fed MouseMotion.relative in flight modes
+var touch_mapper: TouchFlightMapper                    # sampled while TOUCH
+var gestures: GestureRecognizer                        # fed every ScreenTouch/ScreenDrag; HUD sets its zones
+var wing_radial_allowed: bool                          # app: true while no hostile within 800 m (06 s3.1)
+func poll_gestures(now_ms: int) -> void                # gesture timers; called every physics tick
 func route_event(event: InputEvent, now_ms: int) -> void
 func emit_tick() -> bool                               # emits pilot_input once in a flight mode; returns whether it did
 static func is_flight_mode(m: Mode) -> bool
@@ -83,6 +87,7 @@ class_name FlightMath extends RefCounted       # pure 06 s3.5 math and feel cons
 const PAD_DEAD_ZONE: float; const PAD_GAMMA: float; const TRIGGER_DEAD_ZONE: float; const BRAKE_TRIGGER: float   # 0.15, 1.8, 0.05, 0.5
 const YAW_RAMP_S: float; const POWER_KEY_RATE: float; const LEVER_STEP: float                                     # 0.15, 4.0, 0.25
 const MOUSE_STICK_TAU_S: float; const MOUSE_STICK_PER_PX: float                                                   # 0.15, 0.005
+const TOUCH_DEAD_ZONE: float; const TOUCH_GAMMA: float                                                            # 0.12, 1.6
 static func stick(v: Vector2, d0: float, gamma: float) -> Vector2              # radial dead zone then s^gamma
 static func trigger(v: float, d0: float) -> float
 static func ramp(cur: float, target: float, rate: float, dt: float) -> float
@@ -112,6 +117,36 @@ func current_thrust() -> float
 func sample(dt: float) -> PilotInput
 func map(st: KbmState, dt: float) -> PilotInput
 
+class_name Gesture extends RefCounted         # one recognised gesture (06 s2.3)
+enum Kind { TAP, DOUBLE_TAP, LONG_PRESS, DRAG, FLING, PINCH, TWIST, TWO_FINGER_DRAG, FLICK_UP, FIRE_HOLD }
+enum Phase { BEGIN, UPDATE, END }
+var kind: Kind; var phase: Phase; var pos: Vector2; var origin: Vector2; var delta: Vector2
+var value: float; var vel: Vector2; var held: bool
+static func make(k: Kind, ph: Phase, p: Vector2, o: Vector2) -> Gesture
+
+class_name GestureRecognizer extends RefCounted   # time-driven by now_ms arguments; pure
+const TAP_SLOP_DU: float; const DOUBLE_TAP_MS: int; const DOUBLE_TAP_DU: float; const LONG_PRESS_MS: int           # 10, 300, 32, 350
+const FIRE_HOLD_MS: int; const FLICK_MIN_DU: float; const FLICK_WINDOW_MS: int; const FLICK_MIN_SPEED: float       # 500, 80, 200, 600
+const FLING_MIN_SPEED: float; const FLING_WINDOW_MS: int; const MULTI_SLOP_DU: float                              # 300, 100, 12
+var stick_zone: Rect2                          # FLICK_UP arms for presses starting inside
+var fire_zone: Rect2                           # FIRE_HOLD arms for presses starting inside (no LONG_PRESS there)
+func feed(event: InputEvent, now_ms: int) -> Array[Gesture]
+func poll(now_ms: int) -> Array[Gesture]
+func active_touches() -> int
+func reset() -> void
+
+class_name GestureIntents extends RefCounted   # 06 s3.3 touch column
+static func rts_intent(g: Gesture) -> Dictionary   # {} or {&"kind": StringName, &"payload": Dictionary}
+
+class_name TouchState extends RefCounted       # InputMap `ux_*` actions snapshot (stick, throttle, boost, brake, flip, fire1, fire2, dock, release)
+static func poll() -> TouchState
+
+class_name TouchFlightMapper extends FlightMapper   # stick -> roll/pitch (0.12, 1.6), handle -> thrust, buttons; FLIP one tick
+var poller: Callable                           # test seam: Callable() -> TouchState
+func queue_flip() -> void                      # FLICK_UP: FLIP for the next sample only
+func sample(dt: float) -> PilotInput
+func map(st: TouchState, dt: float) -> PilotInput
+
 # planned: AssistProfile, AssistContext, AssistStack, GestureRecognizer, BindingStore, Glyphs
 ```
 
@@ -127,6 +162,9 @@ func map(st: KbmState, dt: float) -> PilotInput
 - I6: the layout class changes only on a press or after the new class persisted 0.5 s; glyphs switch at once.
 - I7: `ranked_tier = min(default_tier(match), default_tier(active))`; offline (-1) uses the active class.
 - I8: no KBM glyph set while the active class is GAMEPAD.
+- I10: a two-finger gesture locks to exactly one of pinch, twist or two-finger drag (largest travel past 12 du), so a
+  two-finger drag never emits PINCH; a second finger cancels every single-finger gesture; touch events with
+  `DEVICE_ID_EMULATION` are ignored by the recognizer.
 - I9: `input` never reads `SimView` and never imports `ui`; world knowledge arrives through a caller-filled context.
 
 ## Data owned
@@ -154,6 +192,10 @@ except the key-bound InputMap scan on key presses (only on press). Not on a sim 
 - `godot/test/unit/input/test_gamepad_flight_mapper.gd` (axes, yaw ramp, RT, LT brake, edge buttons)
 - `godot/test/unit/input/test_kbm_flight_mapper.gd` (power-key 4/s, lever, mouse stick, buttons)
 - `godot/test/unit/input/test_input_router_mappers.gd` (router samples the mapper of the active class)
+- `godot/test/unit/input/test_gesture_recognizer.gd` (tap, double tap, long press, drag, fling, pinch, twist, two-finger drag, flick, FIRE hold, no false pinch)
+- `godot/test/unit/input/test_gesture_intents.gd` (gesture -> intent table)
+- `godot/test/unit/input/test_touch_flight_mapper.gd` (stick, handle, buttons, queued flip)
+- `godot/test/unit/input/test_input_router_touch.gd` (TOUCH sampling, flick -> FLIP, FIRE hold -> WING_RADIAL, RTS intents)
 
 ## How to add X (recipes for the cheapest tier)
 
@@ -162,7 +204,12 @@ except the key-bound InputMap scan on key presses (only on press). Not on a sim 
 
 ## Open items
 
-- UX-04 `TouchFlightMapper` (TOUCH is neutral until then); UX-07 `AssistStack` runs between mapper and emit and adds
+- UX-07 `AssistStack` runs between mapper and emit and adds
   ARCADE and MOUSE_AIM steering; remap (`BindingStore`) replaces the fixed keys in `KbmState.poll` / `PadState.poll`.
 - Mapper feel constants are consts in `FlightMath` (06 names no input def; they are client-only and not hashed).
-- `intent` has no emitter until the RTS mappers and `GestureRecognizer` land.
+- `intent` emitters: touch gestures in RTS mode (`GestureIntents`: TAP -> SELECT, DOUBLE_TAP -> CAM_TIER_TOGGLE, long-press
+  release -> SELECT add, long-press then drag -> SELECT_BOX, drag -> CAM_PAN_GRAB, fling -> CAM_PAN_VEL, pinch -> CAM_ZOOM,
+  twist -> CAM_ROTATE, two-finger drag -> CAM_TILT) and FIRE hold -> WING_RADIAL in flight. Unit-vs-ground picking (SELECT_SAME,
+  a double tap on a unit) is the picking layer's job (UX-20). Drag, box and wing intents carry `on`/`open` for begin/end.
+- The `ui` touch controls (UX-06) must set `gestures.stick_zone` / `fire_zone` and drive the `ux_*` actions; the actions are
+  not yet in `project.godot` (needs the owner of that file, UX-06); unregistered actions read as released.
