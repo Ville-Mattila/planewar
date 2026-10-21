@@ -2144,7 +2144,7 @@
     ],
     "status": "todo",
     "acceptance_append": "; an unsupplied Shield Projector does not recharge, read from SupplyNet.is_supplied (GD-18); R0 B.18 A-99: integrated_shield carries required dome_radius and collapse_s (core 75 / 10, _doc cites A-99 and 02 s4.3 rule 6) in structures.json and both schemas, applied in PR #102 under the Architect's ruling; ShieldTables reads them as it reads shield.dome_radius / shield.collapse_s with no derivation, no cross-def maximum and no code default; a unit test asserts dome_radius >= footprint half-diagonal + the largest blast_radius_structure_m of a shield_absorbed projectile for every def with integrated_shield (72.07 m for the shipped Core); A-100: Exposure cover = a living Core of any team whose centre is within shield.dome_radius of the Projector (SH7 as written); the C-13 scenario's event ticks are re-recorded if the radius change moves them; sim/combat/MODULE.md SH1 / SH3 name the def keys and the needs content: Open item is closed; the SimView accessor and CORE_SHIELD_UP flag are GD-38, not this task",
-    "note": "A-99 / A-100 (R0-amendments-12): the content and schema edits are outside the sim lane and are authorised for PR #102 by the ruling; the Opus review's item 2 (test_shield_perf.gd PerfGate bound 400 us vs the measured 770-860 us) is a review finding under A-97, fixed in the same round, not a contract matter."
+    "note": "A-99 / A-100 (R0-amendments-12): the content and schema edits are outside the sim lane and are authorised for PR #102 by the ruling; the Opus review's item 2 (test_shield_perf.gd PerfGate bound 400 us vs the measured 770-860 us) is a review finding under A-97, fixed in the same round, not a contract matter. FORMAT 12 is GD-10's (PR #102); GD-19 (PR #106) bumps nothing under R0 B.20 A-104. FORMAT numbers are taken in merge order."
   },
   {
     "id": "GD-12",
@@ -2237,7 +2237,9 @@
       "02 s13",
       " 02 GD-19"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; R0 B.20 A-104..A-107 applied in PR #106: link[wreck] = towing ship's EntityId while F_TETHERED (A-104; sim/MODULE.md Data owned sentence drops tether_target, sim/salvage/MODULE.md W6 / W9 and the How-to-add recipe cite A-104, no FORMAT bump); economy.json required salvage_hook_m 33 and salvage_deliver_m 33 with schema properties, _doc and the canonical fixture (A-105; Salvage.reach_m reads salvage_hook_m, delivery reads salvage_deliver_m, the tether_len_m + tether_drop_m sum is deleted); SimEvent.DeathCause {DEBUG, EXPIRED} declared in sim/sim_event.gd and listed in sim/MODULE.md Enumerations, Salvage.CAUSE_EXPIRED aliases or is replaced by it, test_enums.gd covers it (A-106); W3's order WRECK_SPAWNED, RELEASED, DEATH stays as written (A-107); the PR body's Contract impact lists W3 and DeathCause as contract additions (review nit)",
+    "note": "Escalated review (PR #106, comment 6322027065) resolved by R0-amendments-14 (A-104..A-108): link[wreck] ratified, no FORMAT bump; salvage_hook_m / salvage_deliver_m def fields; SimEvent.DeathCause opened; W3 order ratified; follow-ups GD-39 / GD-40 / GD-41 and AI-15 appends."
   },
   {
     "id": "GD-37",
@@ -2254,7 +2256,9 @@
       "R0 C3-17",
       " 02 GD-37"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; R0 B.20 A-104: the tow state is link[wreck] + F_TETHERED on both ends (no tether_target table, no new field); a Hauler's second wreck takes its anchor offset from its rank in ascending wreck-slot order among the wrecks linked to it; the spring may use the wreck's vel (03 s3.1 row 9 W column becomes x; no layout or FORMAT change); a towing ship that lands (DOCKED) drops its tows (Salvage.drop) before link = pad is written, asserted by a test; SimSerialize.FORMAT is unchanged unless GD-37 adds state it cannot derive, and then it takes the next number at merge time",
+    "note": "Builds on link[wreck] (R0 B.20 A-104); the tether_target side table of 03 s3.2 / C3-17 is not built."
   },
   {
     "id": "GD-20",
@@ -2274,7 +2278,7 @@
       " 02 GD-20"
     ],
     "status": "todo",
-    "acceptance_append": "; calls ControlMachine.release_team when a team loses its last Core (C16, R0 B.11 A-61)"
+    "acceptance_append": "; calls ControlMachine.release_team when a team loses its last Core (C16, R0 B.11 A-61); R0 B.20 A-106: DEATH causes are appended to SimEvent.DeathCause from ordinal 2 (0 DEBUG and 1 EXPIRED are frozen) in sim/sim_event.gd, sim/MODULE.md Enumerations and R0 B.3 in the same PR; never inserted, renamed or reordered"
   },
   {
     "id": "GD-23",
@@ -2441,7 +2445,8 @@
     "size_days": 1.5,
     "depends_on": [
       "AI-09",
-      "GD-37"
+      "GD-37",
+      "GD-41"
     ],
     "milestone": "M3",
     "acceptance": "SC-35, SC-36, SC-37 pass",
@@ -2451,7 +2456,7 @@
       " 05 AI-15"
     ],
     "status": "todo",
-    "acceptance_append": "; brains call ControlOrders.complete_head / fail_head for C4 / C5 (R0 B.11 A-61)"
+    "acceptance_append": "; brains call ControlOrders.complete_head / fail_head for C4 / C5 (R0 B.11 A-61); R0 B.20 A-108: the Hauler brain completes a HAUL / TOW head order with ControlOrders.complete_head on SALVAGE_DELIVERED for its own id (Salvage emits no ORDER_DONE) and fails it with fail_head(INVALID_TARGET) when the target wreck dies first (DEATH with cause EXPIRED, or hooked by another ship); it reads the wreck's value through SimView.wreck_ore (GD-41) and hooks only through a HAUL / TOW standing order (sim/salvage/MODULE.md W6); hover height for the attach comes from salvage_hook_m (economy.json), not a brain constant"
   },
   {
     "id": "AI-16",
@@ -7533,5 +7538,63 @@
     ],
     "status": "todo",
     "note": "From the NET-56 #104 open question, ruled yes in R0 B.19 A-103. OWNER default: M3; alternative: defer to the NET-17 wave."
+  },
+  {
+    "id": "GD-39",
+    "title": "sim/pathing: a resting wreck makes its path cell impassable (weight 255, 03 s6.1); baked weight restored when it is hooked, delivered or expires; towed wrecks block nothing (R0 B.20 A-108)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-19",
+      "TA-50"
+    ],
+    "milestone": "M3",
+    "acceptance": "When a wreck comes to rest (WRECK_SPAWNED, or released from a tow) Pathing.set_weight(cell_of(pos, GRID_PATH), 255) is called once; when the wreck is hooked (F_TETHERED), delivered or expires the cell gets its baked weight back, re-read from the loaded map bake (no stored previous weight, SimSerialize.FORMAT unchanged, S4 byte-exact across a save with resting wrecks); a ground unit's path routes around a resting wreck and through the same cell after the wreck is towed away (test with a Harvester request before / after); two wrecks on one cell keep it blocked until the last leaves; sim/pathing/MODULE.md and sim/salvage/MODULE.md name the hook; perf note: cost per wreck event only, no per-tick scan",
+    "docs": [
+      "R0-amendments-14 A-108",
+      "03 s6.1",
+      "03 s3.6"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-40",
+    "title": "sim/salvage: a possessed ship hooks a wreck with DOCK (bit5) when a free wreck is within salvage_hook_m and it has a free tow slot; otherwise DOCK keeps its auto-dock meaning (R0 B.20 A-108)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-19",
+      "AI-10"
+    ],
+    "milestone": "M3",
+    "acceptance": "A possessed Hauler with a free tow slot that presses DOCK (edge) with a free wreck within economy.salvage_hook_m hooks the nearest one (Salvage.try_attach, WRECK_SALVAGED is not emitted until delivery) and Assist.auto_dock does not start that tick; with no wreck in reach, or no free slot, DOCK behaves exactly as before (SC-16 stays green); a Dart (tow_slots 0) never hooks; works identically in Prediction (the hook is a sim step-10 effect, not a predicted one: the client sees the TETHERED flag from the snapshot); 02 s13's [planned: GD-40] marker removed in the same PR (shared file authorised by A-108); sim/salvage/MODULE.md W6 names the trigger; a HUD prompt is a note for the UX lane (needs ui: in the PR body), not built here",
+    "docs": [
+      "R0-amendments-14 A-108",
+      "02 s13",
+      "05 s5.5"
+    ],
+    "status": "todo",
+    "note": "OWNER default: DOCK reuse; alternative: a new PilotInput bit7 HOOK (wire and 06 s4.3 button budget change, not recommended)."
+  },
+  {
+    "id": "GD-41",
+    "title": "sim: SimView.wreck_ore(id) -> float (remaining Ore of a live wreck; 0.0 otherwise; -1.0 when the view has no data) for the Hauler brain and the HUD (R0 B.20 A-108)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "GD-19",
+      "GD-38"
+    ],
+    "milestone": "M3",
+    "acceptance": "SimView gains wreck_ore(id: int) -> float appended to sim/MODULE.md and to the TEST-02 SimView contract test with one failing fixture (mutant) in an earlier commit (10 s4.1 Append); LocalSimView returns store.hp[slot] for a live K_WRECK, 0.0 for any other live entity or a dead id; NetSimView returns -1.0 until a codec task carries the value, stated in net/MODULE.md as a needs net: Open item (GD-38 pattern); local_sim_view.gd stays <= 400 lines after the GD-38 extraction; gen_module_api --check green",
+    "docs": [
+      "R0-amendments-14 A-108",
+      "01 s9.4",
+      "R0 C2-05"
+    ],
+    "status": "todo"
   }
 ]
