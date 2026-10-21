@@ -5,8 +5,10 @@ extends GdUnitTestSuite
 ## non-wreck scene are unchanged by the capacity change (pinned SHA-256 of a canonical-schedule run taken at 1,280).
 
 const LAST_WRECK: int = 1535
-## SHA-256 of `_scene_bytes()` measured with Roster.CAPACITY = 1280 (origin/main before NET-50).
-const NON_WRECK_SHA: String = "a9f7e6be7cfe36119c9e61e0bdf441e697616e46ebe488f003e77d6a58a93585"
+## SHA-256 of `_scene_bytes()` measured with Roster.CAPACITY = 1280 (origin/main before NET-50) was a9f7e6be..a58a93585.
+## Re-pinned by NET-54: a C-BLIP is skipped while the dead-reckoned mirror entry shows the true blip, so section C
+## bytes change (same run on the NET-54 encoder; NET-50's capacity independence is unaffected, no slot >= 1280 is used).
+const NON_WRECK_SHA: String = "664956b6609c3e1dfc39bbf9468d861aeed364194903f870da5ea737de752b5c"
 
 var _a: PackedInt32Array = PackedInt32Array()
 var _b: PackedInt32Array = PackedInt32Array()

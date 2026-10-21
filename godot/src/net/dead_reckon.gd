@@ -131,3 +131,24 @@ static func blip_pos(cell: int, blip: int) -> int:
 
 static func blip_state(blip: int) -> int:
 	return (blip >> 22) & 3
+
+
+## The blip an entry shows `dticks` after its tick (NET-54, server only): make_blip of its dead-reckoned levels
+## (dr_levels, the position a client displays; `grav` as in the encoder's DELTA rule) at their float64 altitude above
+## datum, state DYING (flags), STATIC (zero velocity or DOCKED) or MOVING; never UNDER_FIRE (server-only state).
+## BLIP_UNKNOWN when the levels leave the cell. The tier-C encoder skips a C-BLIP for an entry with an unknown blip
+## while this equals the true blip, so the client's dead-reckoned entry stays in the true blip's bucket.
+static func entry_blip(pos_q: int, flag_b: int, fine: int, dticks: int, grav: bool, g: float, dt: float) -> int:
+	var lv: Vector3i = dr_levels(pos_q, fine, dticks, grav, g, dt)
+	if not levels_ok(lv):
+		return BLIP_UNKNOWN
+	var st: int = BlipState.MOVING
+	if flag_b & Codec.FLAG_DYING:
+		st = BlipState.DYING
+	elif fine == 0 or (flag_b & Codec.FLAG_DOCKED) != 0:
+		st = BlipState.STATIC
+	var em: float = float(lv.x) * Codec.POS_EN_QUANTUM - Codec.POS_EN_HALF
+	var nm: float = float(lv.y) * Codec.POS_EN_QUANTUM - Codec.POS_EN_HALF
+	var rz: float = Sphere.PLANET_RADIUS + float(lv.z) * Codec.POS_U_QUANTUM + Codec.POS_U_MIN
+	var q: int = Codec.pack_pos(Codec.pos_cell(pos_q), lv.x, lv.y, lv.z)
+	return make_blip(q, sqrt(em * em + nm * nm + rz * rz) - Sphere.PLANET_RADIUS, st)

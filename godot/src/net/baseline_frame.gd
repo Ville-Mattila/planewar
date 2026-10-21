@@ -146,6 +146,15 @@ func set_blip_at(i: int, t: int, blip_bits: int, pos_q: int) -> void:
 	etick[i] = t
 
 
+## The blip entry `i` shows at tick `t` (NET-54, server-side encoder rule): the stored blip when known, otherwise
+## DeadReckon.entry_blip of its dead reckoning from `etick` (gravity term for `def_grav` or DYING, as the DELTA rule).
+func shown_blip(i: int, t: int, def_grav: bool, g: float, dt: float) -> int:
+	if blip[i] != DeadReckon.BLIP_UNKNOWN:
+		return blip[i]
+	var grav: bool = def_grav or (flags[i] & Codec.FLAG_DYING) != 0
+	return DeadReckon.entry_blip(pos[i], flags[i], vel[i], t - etick[i], grav, g, dt)
+
+
 static func coarse_of_full(ori_bits: int) -> int:
 	return Codec.quantize_quat_coarse(Codec.dequantize_quat(ori_bits), 0) & 0x1FFFF
 
