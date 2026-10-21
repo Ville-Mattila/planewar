@@ -19,7 +19,7 @@
   ],
   "event_filter": ["SHIELD_COLLAPSE", "BOMB_IMPACT"],
   "events": [
-    { "tick": 98, "kind": "SHIELD_COLLAPSE", "a": "core" },
+    { "tick": 96, "kind": "SHIELD_COLLAPSE", "a": "core" },
     { "tick": 109, "kind": "BOMB_IMPACT", "a": "d3" },
     { "tick": 109, "kind": "BOMB_IMPACT", "a": "d4" }
   ],
