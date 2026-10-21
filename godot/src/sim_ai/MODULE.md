@@ -11,7 +11,7 @@ writes only through `CommandSinkBase`.
 | May depend on | `core`, `content`, `sim` |
 | Must never touch | Nodes, `net`, `presentation`, `ui`; no `await`, signals, `Thread`, autoloads |
 | Autoloads used | None |
-| Status | AI-03 (2026-10-14): `CommandSink`. AI-04 (2026-10-14): `AiState`, `AiBatch`, `AiBrain`, `AiDriver` scheduling. AI-09 (2026-10-14): `LandingPilot`, AiState landing fields. AI-12 (2026-10-14): target choice points (`TargetParams`, `TargetContext`, `TowerEnvelope`, `TargetChooser`). AI-08 (2026-10-14): `Overlays` SAFETY / RECOVER_CEILING, `OverlayParams`, the driver's release-edge check. AI-11 (2026-10-20): `Separation`, `Formation`, `FormationParams`, `EscortPilot`, AiState FORMAT 4 (`form_slot`, `form_state`, `form_order`, `sep_age`, `sep_push`). AI-13 (2026-10-21): `DartBrain` (+ `DartModes`, `DartCombat`, `AttackRun`, `DartParams`), `Guidance`, `TeamPicture`, AiState FORMAT 5, the A-89 budget OR in `Overlays.run_safety`. AI-22 (2026-10-21): sub-module `sim_ai/perception` (`Perception`, `ThreatMap`, `TeamIntel`; own MODULE.md), `AiDriver` FORMAT 2 with the intel section. Other brains follow. |
+| Status | AI-03 (2026-10-14): `CommandSink`. AI-04 (2026-10-14): `AiState`, `AiBatch`, `AiBrain`, `AiDriver` scheduling. AI-09 (2026-10-14): `LandingPilot`, AiState landing fields. AI-12 (2026-10-14): target choice points (`TargetParams`, `TargetContext`, `TowerEnvelope`, `TargetChooser`). AI-08 (2026-10-14): `Overlays` SAFETY / RECOVER_CEILING, `OverlayParams`, the driver's release-edge check. AI-11 (2026-10-20): `Separation`, `Formation`, `FormationParams`, `EscortPilot`, AiState FORMAT 4 (`form_slot`, `form_state`, `form_order`, `sep_age`, `sep_push`). AI-13 (2026-10-21): `DartBrain` (+ `DartModes`, `DartCombat`, `AttackRun`, `DartParams`), `Guidance`, `TeamPicture`, AiState FORMAT 5, the A-89 budget OR in `Overlays.run_safety`. AI-22 (2026-10-21): sub-module `sim_ai/perception` (`Perception`, `ThreatMap`, `TeamIntel`; own MODULE.md), `AiDriver` FORMAT 2 with the intel section. AI-14: Lancer, Bomber, Scout brains; the class brains (Dart included) move to the sub-module `sim_ai/brains` (own MODULE.md); AiState FORMAT 6 (`lock_tick`), `AiBrain.bind_intel`. Other brains follow. |
 
 ## Public API
 
@@ -39,6 +39,7 @@ const LAND_BUSY: int; const LAND_THREAT: int; const LAND_FOREIGN: int       # la
 const NO_SLOT: int; const ROSTER_WIDTH: int      # form_roster (by escortee slot * ROSTER_WIDTH + class slot -> escort EntityId) is derived: rebuilt by deserialize, not in the bytes
 const OV_PULL_UP: int; const OV_RTB_SENT: int; const OV_POSSESSED: int      # ov_flags bits
 # AI-13 (FORMAT 5): sub / passes / prev_mode / wp / bflags (u8) after land_flags, seen_tick / mark_tick / burst_tick / order_tick (i32) after form_order, home / goal (Vector3) after sep_push, hp_mark / clear_m / aim_err (f32) after lift
+# AI-14 (FORMAT 6): lock_tick (i32) after order_tick: the start tick of the Lancer's current rocket lock hold (0 = none); FORMAT 5 bytes are refused
 var target_count: PackedByteArray                  # AI-13: by slot, registered slots whose target is it (derived: rebuilt by deserialize, not in the bytes)
 var rtb_floor: PackedFloat32Array                  # AI-13 (FORMAT 5, after aim_err): the cached RTB fuel floor, 0 = unset
 func set_target(s: int, t: int) -> void            # AI-13: the one writer of `target` (keeps target_count)
@@ -49,6 +50,7 @@ func think_batch(ids: PackedInt32Array, n: int, view: SimView, st: AiState, sink
 func act_batch(ids: PackedInt32Array, view: SimView, st: AiState, sink: CommandSink) -> void
 func think_bot(slot: int, tier: int, tick: int, view: SimView, sink: CommandSink) -> void
 func bind_rng(rng: Rng) -> void                    # AI-13: AiDriver binds its Rng.fork(&"ai") stream on set_brain and after deserialize
+func bind_intel(_intel: TeamIntel) -> void          # AI-14: AiDriver binds its TeamIntel on set_brain and set_intel (null: none); brains only read it
 class_name LandingPilot extends RefCounted         # AI-09: RETURN landing of one ship class over LandingController (05 s5.5)
 const RTB_KEYS: PackedStringArray;  const DOCKED: int
 var def: ShipDef; var prm: LandingParams; var gains: FlightGains; var probe_params: ProbeParams; var terrain: Terrain
@@ -75,7 +77,7 @@ func on_tick(tick: int, view: SimView, sink: CommandSinkBase) -> void;  func ser
 func stats() -> Dictionary;  func reset_stats() -> void                     # stats: + "overlay_ticks" (AI-08)
 func set_overlay_params(cls: int, p: OverlayParams) -> void;  func set_terrain(t: Terrain) -> void   # AI-08: per-class overlays; the map's Terrain (default flat datum)
 const FORMAT: int                                   # AI-22: 2 (the TeamIntel section after AiState; FORMAT 1 bytes are refused)
-func set_intel(intel: TeamIntel) -> void;  func threat_map(team: int) -> ThreatMap;  func perception(team: int) -> Perception   # AI-22: per-team intel (sim_ai/perception/MODULE.md), refreshed before the brains
+func set_intel(intel: TeamIntel) -> void;  func threat_map(team: int) -> ThreatMap;  func perception(team: int) -> Perception   # AI-22: per-team intel (sim_ai/perception/MODULE.md), refreshed before the brains; AI-14: set_intel also binds it to every brain
 ```
 
 ```gdscript
@@ -86,7 +88,7 @@ var look_s: float; var look_miss_m: float; var look_lag_s: float; var look_eff: 
 var class_slots: PackedVector3Array; var wing_slots: PackedVector3Array      # (right, forward, up) m; class: tangent frame of the escortee, wing: leader body frame
 var k_form: float; var speed_cap_mult: float; var engage_radius_m: float; var rejoin_radius_m: float; var break_utility: float; var max_break_frac: float; var min_heading_speed: float
 var wing_tolerance_m: float; var focus_timeout_s: float; var focus_leash_m: float; var break_radius_m: float; var break_s: float; var ceiling_m: float   # wing.json + rules.ceiling_soft_m
-static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_soft_m: float, engage_m: float, ring2_m: float = INF) -> FormationParams   # null on a missing key / bad slot table (1..ROSTER_WIDTH); query_radius_m clamped to Spatial.ring2_m; wing may be null
+static func from_dict(sep: Dictionary, form: Dictionary, wing: WingDef, ceiling_soft_m: float, engage_m: float, ring2_m: float = INF) -> FormationParams   # null on a missing key / bad slot table (1..ROSTER_WIDTH); query_radius_m clamped to Spatial.ring2_m; wing may be null; AI-14: an empty `form` = separation only (no class slots)
 func slot_count(wing: bool) -> int
 class_name Separation extends RefCounted           # AI-11: 05 s5.4 friendly separation, static only
 static func push(id: int, p: Vector3, v: Vector3, team: int, view: SimView, prm: FormationParams) -> Vector3   # velocity to add to the guidance command; one ids_near
@@ -110,55 +112,6 @@ func release(id: int, st: AiState) -> void;  func slot_error(id: int, view: SimV
 
 ```gdscript
 class_name AiTag                                   # AI-13 (R0 B.17 A-94): enum holder, `enum Tag` (Enumerations below)
-class_name DartBrain extends AiBrain               # AI-13: 05 s6.2 Dart; AiState.mode = its AiTag.Tag, also written as the ai_tag
-const B_RTB_SENT: int; const B_RUN_DONE: int; const DOCKED_STATE: int; const SEP_PHASES: int
-var prm: DartParams; var gains: FlightGains; var probe_params: ProbeParams; var terrain: Terrain; var modes: DartModes; var stats_pull_ups: int
-var stats_longest_pull_up: int; var stats_sinking_acts: int; var stats_thinks: int; var stats_refreshes: int; var stats_shape_loss: int; var stats_checks: int; var stats_check_loss: int   # deterministic perf counters
-static func from_content(c: ContentSet, ap: Dictionary, def: ShipDef, t: Terrain, ring2_m: float = INF) -> DartBrain   # null on a missing key; FlightCommonDef from c (A-90)
-func think_one(id: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -> void   # one think (rigs, perf)
-class_name DartModes extends RefCounted            # AI-13: the per-order thinks (RETURN, ESCORT, ATTACK, MOVE, PATROL / HOLD / GUARD / AUTO) and the choice point
-const B_RUN_DONE: int
-var prm: DartParams; var terrain: Terrain; var landing: LandingPilot; var escort: EscortPilot; var run: AttackRun; var combat: DartCombat; var targets: TargetParams; var stats_choices: int; var picture: TeamPicture
-func _init(params: DartParams, t: Terrain, lp: LandingPilot, ep: EscortPilot, ar: AttackRun, dc: DartCombat, tp: TargetParams) -> void
-static func patrol_point(home: Vector3, k: int, n: int, radius: float) -> Vector3;  static func is_combat(m: int) -> bool
-func choice_due(s: int, tick: int) -> bool         # the think phase of the choice point (every choice_period_thinks, staggered by slot)
-func think_return(id: int, s: int, m: int, head: OrderSpec, view: SimView, st: AiState, tick: int) -> int
-func think_escort(id: int, s: int, m: int, head: OrderSpec, view: SimView, st: AiState, tick: int) -> int
-func think_attack(id: int, s: int, m: int, head: OrderSpec, view: SimView, st: AiState, tick: int) -> int
-func think_move(id: int, s: int, head: OrderSpec, view: SimView, st: AiState) -> int
-func think_patrol(id: int, s: int, m: int, head: OrderSpec, kind: int, view: SimView, st: AiState, tick: int) -> int
-class_name DartCombat extends RefCounted           # AI-13: INTERCEPT / ENGAGE (straight-line gun, R0 C1-03) / EXTEND / EVADE
-const F_BOOST: int; const F_FLIP: int
-var prm: DartParams; var gains: FlightGains; var rng: Rng; var stats_draws: int; var stats_engage_acts: int; var stats_engage_visible: int
-func _init(params: DartParams, flight_gains: FlightGains) -> void
-func think(id: int, mode: int, view: SimView, st: AiState, tick: int) -> int
-func act_engage(id: int, view: SimView, st: AiState, out: PilotInput, p: Vector3, v: Vector3, b: Basis, tick: int) -> void   # the act's own reads passed in
-static func aim_offset(dir: Vector3, err: Vector2, up: Vector3) -> Vector3   # the burst's small aim error applied to `dir` (no rotation per tick)
-static func gauss2(r: Rng) -> Vector2              # two standard normals (Box-Muller), the per-burst aim error
-class_name AttackRun extends RefCounted            # AI-13: the 05 s6.3 sub-machine R1-R5 (Dart; Lancer / Bomber with AI-14)
-enum Step { NONE, ROUTE, RUN_IN, RELEASE, EGRESS, REATTACK, DONE };  enum Band { LOW, DECK, HIGH }
-const F_ABORTED: int; const F_RELEASING: int; const F_DIVING: int; const F_BOOST: int; const F_FLIP: int   # bflags bits
-var prm: DartParams; var terrain: Terrain; var dart_dive: bool
-func _init(params: DartParams, t: Terrain) -> void
-static func step_of(st: AiState, s: int) -> int;  static func band_of(st: AiState, s: int) -> int
-func begin(id: int, view: SimView, st: AiState, aim: Vector3, tick: int) -> void;  func think(id: int, target: int, view: SimView, st: AiState, tick: int) -> int
-func act(id: int, view: SimView, st: AiState, out: PilotInput) -> void   # R3 sight + stick (FIRE2), egress BOOST / FLIP
-class_name DartParams extends RefCounted           # AI-13: the brain's numbers from ap_dart + ship / rules / order_rules / weapon / tower defs
-const KEYS: PackedStringArray; const GUN_KEYS: PackedStringArray; const BOMB_KEYS: PackedStringArray; const EVADE_KEYS: PackedStringArray; const GUIDE_KEYS: PackedStringArray
-const INTERCEPT_KEYS: PackedStringArray; const RUN_KEYS: PackedStringArray; const LAUNCH_KEYS: PackedStringArray; const RTB_KEYS: PackedStringArray; const ORDER_KEYS: PackedStringArray
-const THREAT_NONE: int; const THREAT_GUN: int; const THREAT_FLAK: int; const THREAT_MISSILE: int
-var tick_hz: int; var think_ticks: int; var cruise_speed: float; var boost_speed: float; var dt: float; var gravity: float; var cruise_agl: float; var deck_agl: float; var max_alt: float
-var patrol_radius: float; var intercept_radius: float; var clear_tti: float; var pull_up_tti: float; var fire_range: float; var fire_cone_k: float; var burst_ticks: int; var cycle_ticks: int
-var aim_error_rad: float; var slug_speed: float; var aoa_comp_max: float; var dive_rad: float; var release_tol: float; var pullout_margin_s: float; var hp_drop: float; var evade_ticks: int
-var evade_turn_rad: float; var kp_alt: float; var vz_max: float; var wp_radius: float; var check_ticks: int; var sample_s: float; var pull_up_hold_ticks: int; var launch_tilt_rad: float; var deck_speed: float
-var aoa_comp_cos: float; var vision_period: int
-var boost_close: float; var lost_ticks: int; var engage_extra: float; var engage_margin: float; var overshoot: float; var extend_ticks: int; var choice_period: int; var patrol_points: int
-var patrol_switch: float; var hp_window_ticks: int; var standoff: float; var break_ttc: float; var ip_dist: float; var ip_arrive: float; var band_low: float; var band_high: float
-var continue_rad: float; var egress_turn_rad: float; var egress_ticks: int; var abort_hp01: float; var max_passes: int; var predict_dt: float; var predict_steps: int; var dive_release_frac: float
-var pitch_over_agl: float; var launch_climb_agl: float; var launch_max_speed: float; var arrival: float; var move_agl: float; var patrol_engage: float; var hold_orbit: float
-var guard_orbit: float; var guard_engage: float; var loiter_alt: float; var ghost_ticks: int; var bomb_def: ProjectileDef; var bomb_damage: float; var bomb_interval: float; var rules: RulesDef
-var threat_kind: PackedByteArray; var threat_range: PackedFloat32Array; var threat_scan: float; var hp_by_def: PackedFloat32Array; var rtb_ammo: int
-static func from_content(ap: Dictionary, def: ShipDef, c: ContentSet) -> DartParams;  func ticks(s: float) -> int;  static func block(d: Dictionary, k: String) -> Dictionary
 class_name Guidance extends RefCounted             # AI-13: shaping shared by brains and overlays (05 s5.3; A-69, A-89), static
 static func band_vz(agl: float, band_agl: float, alt: float, max_alt: float, kp: float, vz_max: float) -> float
 static func level(dir_h: Vector3, speed: float, vz: float, u: float, up: Vector3) -> Vector3
@@ -191,7 +144,8 @@ static func run_recover_ceiling(id: int, v: SimView, st: AiState, p: OverlayPara
 static func run_ground_safety(id: int, st: AiState, p: OverlayParams, sink: CommandSink, tick: int, out: PilotInput) -> bool
 class_name TargetParams extends RefCounted         # AI-12: choice-point constants from an autopilots.json entry (05 s6.2, s6.8)
 static func from_dict(d: Dictionary) -> TargetParams   # null unless target_weights, target_dist_falloff_m, target_under_tower_penalty, switch_margin
-func bind(entity_index: Dictionary) -> void;  func weight(def_id: int, loaded: bool) -> float   # class name -> def id; `hauler_loaded` pseudo class
+func bind(entity_index: Dictionary) -> void;  func weight(def_id: int, loaded: bool, building: bool = false) -> float   # class name -> def id; `hauler_loaded` pseudo class; AI-14: `structure_building` (a structure under construction)
+const BUILDING_KEY: StringName; var w_building: float   # AI-14: the structure_building weight (0: off; the chooser reads the flags only then)
 static func num(d: Dictionary, key: String, fallback: float) -> float;  static func as_num(v: Variant, fallback: float) -> float   # typed JSON readers
 static func dict_of(d: Dictionary, key: String) -> Dictionary;  static func entity_def(entity_index: Dictionary, name: StringName) -> int
 var max_candidates: int   # default 8: cost bound of a choice point
@@ -269,11 +223,7 @@ does not think; at the end it is woken. LINK_BRIDGE is `Assist.link_bridge` in `
 - Open (needs sim, R0 B.14 A-85 -> TA-60): the ORDER wire payload (`CommandPayload.read_order`, 04 s2.5) carries no `escort_slot` / `escort_mode` / `focus`, so SL-2 orders cannot reach the queue by `Command` yet; `EscortPilot` reads them from `SimView.order_head`, tests inject through `OrderQueue.push` (`FormationKit.escort_order`).
 - Open (needs content, R0 B.14 A-86 -> AI-19): `engage_radius_m` comes from `order_rules.json` `escort_engage_radius_m` (OrderRulesDef), not the `formation` block; `autopilots.json` `separation` block gains `push_mps`, `lookahead_s`, `lookahead_miss_m`, `lookahead_lag_s`, `lookahead_eff`, `lookahead_min_s`, `lookahead_max_mps`, `lookahead_brake`, `query_radius_m`, and a `formation` block with `FormationParams.FORM_KEYS` (fixture `test/sim/ai/ai11_params.json` carries the 05 values until then).
 
-- Dart (AI-13, 05 s6.2-6.3; `test_dart_brain.gd`, `test_sc_dart.gd` SC-01 / SC-28 / SC-29, `test_sc_dart_terrain.gd` SC-09 / SC-10 / SC-11 on cradle): DB1 the mode is an `AiTag.Tag` and is the `ai_tag` (set on change and the tick PULL_UP starts); per-entity state is AiState only (FORMAT 5), `TeamPicture` / `TargetContext` are scratch, `target_count` is derived; restore + continue is byte-identical with the driver configured before `deserialize`, so its rebind loop is exercised (`test_dart_brain_is_deterministic_and_restores_s4`, three Darts on one Bomber saved mid-burst, counts compared). DB2 one TerrainProbe pass per think (6 samples); TTI / PULL_UP keep the ballistic probe; the climb command is A-69 over every sample: `v_cmd.radial >= v_r + climb_need` (`Guidance.cleared`, signed), then the deck floor, the sink limit (one `pull_up_loss`; the sink scaled by room / loss) and no climb at `max_alt_m`. DB3 PULL_UP starts at act every `pull_up_check_ticks` (staggered by slot) on the 1.0 s re-sample < 0 OR the A-89 budget (one `pull_up_loss` while sinking; no conservative pre-bound exists: the loss is INF where the chosen elevation has no climb and is not monotone, a (speed, sink) grid bound was undercut by random states), and at think on TTI < `safety_pull_up_tti_s`; it ends (R0 B.17 A-92) at the first think with TTI >= `safety_clear_tti_s`, `pull_up_min_hold_s` held and `climb_need_mps` <= 0, then `prev_mode`; no max hold in v1 (`stats_longest_pull_up` reported); the SAFETY overlay keeps its 05 s2.4 exit. DB4 vision only: choice points take `TeamPicture`, rebuilt once per team per Vision epoch (team t's bits change only in its own pass, so the cache equals the live set every tick: `test_team_picture_is_built_once_per_vision_epoch_and_stays_exact`); an ATTACK on a never-seen entity flies no run; an invisible target's last seen position is `goal`, lost after `lost_s`. DB5 the choice point runs every `choice_period_thinks` (6th) think; the separation term refreshes every `SEP_PHASES` (3rd) think, never on a choice think, and every think while a pair closes (AI-11's rule); engaged, a target chased out of the radius is kept until lost. DB6 ENGAGE steers the nose onto the erroneous lead (`aoa_comp_max_deg`); outside fire range on the think's cached lead (`aim_lead`), inside it on the per-tick lead; `standoff_m` (200) and the ram break-off `break_ttc_s` (2.0) are the 05 s6.2 ENGAGE append of R0 B.17 A-93 (keys in `intercept`). DB7 Deck legs fly at `deck_speed_mps` (160, SC-09's speed). DB8 a run done with no bombs prepends a system RETURN; the RTB rule (every think; the fuel floor cached in `rtb_floor` at the choice period) prepends one per head; no pad: LOITER over home.
 - Perf (AI-22, `test_intel_perf.gd`, S-SIM-1 `PerfTickWorld`, 1,198 live; gdUnit runs on the dev laptop, best of 7, which varied ~3x with machine load): threat update, worst of the 8 teams' own vision, 85-292 us (row 300, asserted unscaled on the pinned runner); refresh + update slice 560-1,814 us (0.7 ms x CI_FACTOR 2); stress "team 0 sees all 943 enemies" update 337-625 us (x2), slice 2.6-4.3 ms (report only). Standalone (no debugger): update 38-45 us, slice ~270 us, `visible_ids` ~135 us of it. Hard counters: a warm refresh = 1 `visible_ids` + 1 read per listed entity; one spread per (side, cell, range class), ring lengths exact.
-- Measured (dev laptop): SC-01 airborne 1.27 s, AGL 150-302 m, <= 1,307 m from the pad; SC-28 10 / 10 kills, Bomber first 10 / 10; SC-29 Deck, 100 % of 18 s in Flak range below 150 m AGL; SC-09 min clearance 30 / 24 m, SC-10 trench 100 % low, rille legs no contact; SC-11 cradle pull-up +0 ticks; 0 unrecoverable states in every tick checked while sinking (265 / 502 / 61 / 139 / 141 / 41).
-- Perf (`test_dart_perf.gd`, guards row x CI_FACTOR 2 only; counters asserted: choice share 1/6, refresh share <= 0.5, <= 1 `pull_up_loss` per shaped think and per act check, 1 picture per team per epoch). Dev laptop, host scale 1.00: quiet think 41 / median 36 / p95 72 us; engaged think 56 / 41 / 83; act patrol 8.5, act engage in fire range 18.4 us; TeamPicture 221 us for 261 ships = 295 us per tick at 8 teams (cap 450). Engaged think components: hold 29, separation refresh think 68, choice think 73 (choose_engaged 33, combat.think 8.5); act engage: act_engage 8.9 (track_velocity 3.2, lead 1.6) + act_batch reads and the check 5-6. Priced by R0 B.17 A-96: the act row is a fleet mean, asserted as (1 - 0.25) act_patrol + 0.25 act_engage < 12 us, act_engage < 18 us (3 x row) until the pinned runner; engaged think < 50 us; `pull_up_loss` calls per act while sinking == 1 / `pull_up_check_ticks`. R0 B.17 A-97: the timing bounds assert only with PLANEWAR_PINNED_RUNNER=1 (PERF_REPORT lines on hosted runners); the counters (and one `visible_to` per ENGAGE act) are hard everywhere. `_send_rtb` allocates an OrderSpec and a Command per send (rare).
-- Open (needs sim): order completion (05 C4) is not wired, so a finished ATTACK stays the head (`B_RUN_DONE`: AUTO patrol under it) and a MOVE orbits its point; Docking (GD-15) is not built, so DOCKED waits; `Spatial.ids_near` beyond `ring2_m` is O(touched cells), and `TeamPicture` builds once per team per Vision epoch from `SimView.visible_enemy_ships` (AI-42, ascending EntityId as the old `ships()` walk). Open (needs content, AI-19): the AI-13 keys of `ai13_autopilots.json` (`guidance`, `intercept`, `attack_run` blocks, `gun.aoa_comp_max_deg`, `evade.heading_change_deg`, `rtb.ammo`). Open (threat map, s7.4; the map exists since AI-22, not wired: AI-13's acceptance does not ask): the IP bearing is the direct one (AI-22 enables R1: score candidate IPs by `driver.threat_map(team).route_risk(ip, target, band)` over the last 5 km), the Autocannon "stay > 450 m" rule (enabled: `threat_at(cell(target), AIR_DECK) > 0` with `AIR_HIGH == 0` marks a gun-only cell) and the `attacked` factor (HIT feed: a `Perception` contact that hit a friendly, recorded only when `visible_to`) are not applied; rail towers do not set a band.
 
 ## Test entry points
 
@@ -283,4 +233,5 @@ does not think; at the end it is woken. LINK_BRIDGE is `Assist.link_bridge` in `
 SC-25, determinism and S4; fixtures `overlay_kit.gd`, `ai08_autopilots.json`).
 `test_formation.gd`, `test_escort_pilot.gd`, `test_escort_perf.gd` (AI-11; fixtures `godot/test/sim/ai/formation_kit.gd`, `swarm_world.gd`, `ai11_params.json`); `godot/test/sim/ai/test_sc39_escort_formation.gd` (SC-39), `test_swarm_separation.gd` (50-seed swarm).
 `test_perception.gd`, `test_threat_map.gd`, `test_team_intel.gd`, `test_intel_perf.gd`, scenario `godot/test/sim/ai/test_sc43_fog_fairness.gd` (AI-22; contract in the perception sub-module MODULE.md).
+`test_ai14_contract.gd` (AI-14 contract: AiState FORMAT 6, `bind_intel`, separation-only FormationParams, the structure_building weight). The class brains' tests (also listed in the brains sub-module):
 `test_dart_brain.gd`, `test_dart_perf.gd` (AI-13; fixtures `godot/test/sim/ai/dart_kit.gd`, `ai13_autopilots.json`); scenarios `godot/test/sim/ai/test_sc_dart.gd` (SC-01, SC-28, SC-29), `test_sc_dart_terrain.gd` (SC-09, SC-10, SC-11 on cradle, the dive bound).
