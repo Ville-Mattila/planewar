@@ -173,6 +173,19 @@ func core_up(team: int) -> bool:
 	return false
 
 
+## Charge / effective cap (0..1) of the dome at `slot`: 0 for no dome, a collapsed or removed one, an unpowered Projector.
+## The cap is `charge_max`, times `exposure_charge_mult` for a Projector covering a Core during Exposure (SH7, SH11).
+func charge01(slot: int, tick: int) -> float:
+	if not _has(slot):
+		return 0.0
+	var d: int = _store.def_id[slot]
+	var up: bool = _down_until[slot] == 0 if _kind[d] == _K_CORE else is_up(slot, tick)   # a Core by `core_up`'s rule
+	if not up:
+		return 0.0
+	var cap: float = _cmax[d] * (_xc[d] if _exposed and _covers[slot] != 0 else 1.0)
+	return clampf(_charge[slot] / cap, 0.0, 1.0) if cap > 0.0 else 0.0
+
+
 func write_state(buf: StreamPeerBuffer) -> void:
 	StateIO.put_props(buf, self, _STATE)
 

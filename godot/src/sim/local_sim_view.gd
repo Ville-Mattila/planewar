@@ -22,6 +22,7 @@ var _teams: Array[TeamStateView] = []
 var _player_views: Array[PlayerStateView] = []
 var _pathing: Pathing = null
 var production: Production = null   ## set by SimWorld (TA-19): queue and progress reads
+var shields: ShieldDomes = null       ## set by SimWorld (GD-38): `shield01` and the CORE_SHIELD_UP flag read it
 var vision: Vision = null             ## set by SimWorld (TA-63): `visible_enemy_ships` reads its per-team lists
 
 
@@ -292,6 +293,8 @@ func team_state(_team: int) -> TeamStateView:
 	if _team < 0 or _team >= PlayerTable.TEAMS:
 		return null
 	TeamStats.fill_team(_teams[_team], _team, _store, _defs, _players, _rules, _state)
+	if shields != null and shields.core_up(_team):
+		_teams[_team].flags |= TeamStateView.CORE_SHIELD_UP
 	return _teams[_team]
 
 
@@ -315,6 +318,11 @@ func supply01(id: int) -> float:
 	var sd: StructureDef = _defs.resolved(_store.owner[s]).structure(_store.def_id[s])
 	var pool: float = Def.num(sd.tower.get("ammo_pool", 0.0)) if sd != null and sd.is_tower() else 0.0
 	return clampf(float(_store.ammo[s]) / pool, 0.0, 1.0) if pool > 0.0 else 0.0
+
+
+## Dome charge / effective cap (SH11); 0 for a collapsed or removed dome and for an entity without one.
+func shield01(id: int) -> float:
+	return shields.charge01(EntityId.slot(id), _state.tick) if shields != null and _store.alive(id) else 0.0
 
 
 func production_queue(factory: int) -> PackedInt32Array:

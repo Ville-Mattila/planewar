@@ -291,6 +291,7 @@ func _wire(rules: MatchRules) -> void:
 	_ground = GroundMotion.new(_store, _inputs, _defs, _terrain, _pathing)
 	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state, _pathing)
 	_view.production = _econ.production
+	_view.shields = _combat.shields
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
 	vision = Vision.new(_store, _defs, rules.tick_hz)
 	_view.vision = vision
