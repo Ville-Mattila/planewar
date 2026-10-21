@@ -7327,8 +7327,10 @@
       "03 s3.7",
       "05 s6"
     ],
-    "status": "todo",
-    "note": "replaces the per-tick TeamPicture walk (222 us local / 302 us CI per team per tick, PR #87 perf note); sim_ai adopts it in a follow-up inside the AI-13 lane, AI-13 does not wait for it."
+    "status": "done",
+    "note": "replaces the per-tick TeamPicture walk (222 us local / 302 us CI per team per tick, PR #87 perf note); sim_ai adopts it in a follow-up inside the AI-13 lane, AI-13 does not wait for it. Ascending EntityId order (state-only), S4 unsorted compare, ~67 us at 258 ships vs ~175 brute force.",
+    "pr": 96,
+    "merged": "2026-10-21"
   },
   {
     "id": "UX-43",
@@ -7429,5 +7431,24 @@
     ],
     "status": "todo",
     "note": "From the NET-07 #97 Opus review 2026-10-21."
+  },
+  {
+    "id": "AI-42",
+    "title": "sim_ai: TeamPicture adopts SimView.visible_enemy_ships (TA-63) instead of walking every ship",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "TA-63",
+      "AI-13"
+    ],
+    "milestone": "M3",
+    "acceptance": "TeamPicture builds from visible_enemy_ships; same enemy set and order as before (ascending EntityId; tie-breaks re-checked); SC-28/SC-29 unchanged; S4 mid-fight restore byte-identical; picture-build PerfGate line shows the drop; hard counters unchanged",
+    "docs": [
+      "R0-amendments-10 A-95",
+      "godot/src/sim/vision/MODULE.md V10"
+    ],
+    "status": "todo",
+    "note": "Follow-up from TA-63 #96."
   }
 ]
