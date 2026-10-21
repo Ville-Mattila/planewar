@@ -7267,8 +7267,10 @@
       "03 s12",
       "TA-42"
     ],
-    "status": "todo",
-    "note": "Flake: run 39519937508 job 118961018294 failed at 15m04s with every step success."
+    "status": "done",
+    "note": "Flake: run 39519937508 job 118961018294 failed at 15m04s with every step success. A/B job timeout 15 -> 25 min (18 runs 317-916 s, p95 ~890 s).",
+    "pr": 89,
+    "merged": "2026-10-21"
   },
   {
     "id": "TA-65",
