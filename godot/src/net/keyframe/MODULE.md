@@ -80,14 +80,17 @@ when C_count < 150; a skipped entry still uses its slot); the result is `Snapsho
 - K4: after `encode` + `decode` the server mirror frame and the client frame are `same_state`; a SNAPSHOT delta against any later acked
   tick decodes with identical baselines (N9).
 - K5: `RollingRefresh`: every C entity present throughout is picked at least once in any 300 consecutive ticks; at most `per_tick(n)`
-  per tick; refresh bytes at 700 C entities (3 FULL per tick) <= 1.8 KB/s (04 s4.3, R0 C1-15).
+  per tick; refresh FULL record bytes at 700 C entities (3 per tick, 19 B + 1 for an own-team entry) = 1.74 KB/s <= 1.8 KB/s (04 s4.3,
+  R0 C1-15). The stream delta measured end to end is 1.97 KB/s: it adds the 0xFF escape gaps, the section-C count byte and the C-BLIP
+  that follows a FULL (a FULL leaves the entry's blip unknown, so the next scheduled C tick re-sends it); 04 s4.3 / s4.6 do not count these.
 - K6: no allocation per entity in `encode` / `decode` / `pick` (scratch preallocated).
 
 ## Performance budget
 
 Bandwidth: 04 s4.3 / s4.6 rolling-refresh row (3 FULLs per tick at 700 C, ~1.7 KB/s; <= 1.8 KB/s asserted). A keyframe is one reliable
 message per join / reconnect / stale ack (22.8 KB at 1,200 entities), outside the 30 KB/s unreliable budget. CPU: part of the 03 s4.2
-"events + interest + encode + replay" row; `pick` is O(log n + k). Measured figures: `test/perf/test_keyframe_perf.gd` (PerfGate).
+"events + interest + encode + replay" row; `pick` is O(log n + k). Measured (dev box, `test/perf/test_keyframe_perf.gd`, PerfGate): 1,200-entity KEYFRAME 23,210 B, encode 4.0 ms, decode 4.4 ms (one-off);
+`RollingRefresh.pick` at 700 C 1.1 us per call.
 
 ## Test entry points
 

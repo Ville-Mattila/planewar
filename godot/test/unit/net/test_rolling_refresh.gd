@@ -11,7 +11,7 @@ func before_test() -> void:
 	_r = RollingRefresh.new()
 
 
-func _set(n: int, step: int = 2, first: int = 40) -> PackedInt32Array:
+func _cs(n: int, step: int = 2, first: int = 40) -> PackedInt32Array:
 	var c: PackedInt32Array = PackedInt32Array()
 	for i: int in n:
 		c.append(first + i * step)
@@ -32,7 +32,7 @@ func test_per_tick_is_ceil_of_count_over_300() -> void:
 
 
 func test_700_c_entities_three_per_tick_each_within_300_ticks() -> void:
-	var c: PackedInt32Array = _set(700)
+	var c: PackedInt32Array = _cs(700)
 	var last: Dictionary[int, int] = {}
 	var worst: int = 0
 	for t: int in range(1, 1201):
@@ -53,7 +53,7 @@ func test_700_c_entities_three_per_tick_each_within_300_ticks() -> void:
 func test_300_and_301_and_899_c_entities_cover_in_300_ticks() -> void:
 	for n: int in [300, 301, 899, 1000, 1536]:
 		var rr: RollingRefresh = RollingRefresh.new()
-		var c: PackedInt32Array = _set(n, 1, 0)
+		var c: PackedInt32Array = _cs(n, 1, 0)
 		var seen: Dictionary[int, int] = {}
 		for t: int in range(1, 301):
 			var _k: int = rr.pick(c, t, _out)
@@ -64,7 +64,7 @@ func test_300_and_301_and_899_c_entities_cover_in_300_ticks() -> void:
 
 
 func test_small_set_one_per_tick_skips_the_recently_refreshed() -> void:
-	var c: PackedInt32Array = _set(100)
+	var c: PackedInt32Array = _cs(100)
 	var last: Dictionary[int, int] = {}
 	var worst: int = 0
 	var best: int = 1000
@@ -83,7 +83,7 @@ func test_small_set_one_per_tick_skips_the_recently_refreshed() -> void:
 
 
 func test_149_entities_still_covered_within_300() -> void:
-	var c: PackedInt32Array = _set(149)
+	var c: PackedInt32Array = _cs(149)
 	var last: Dictionary[int, int] = {}
 	var worst: int = 0
 	for t: int in range(1, 1500):
@@ -96,7 +96,7 @@ func test_149_entities_still_covered_within_300() -> void:
 
 
 func test_note_full_counts_as_refreshed() -> void:
-	var c: PackedInt32Array = _set(20)
+	var c: PackedInt32Array = _cs(20)
 	_r.note_full(c, 10)
 	for t: int in range(11, 150):                          # everything refreshed at 10: nothing due before tick 160
 		assert_int(_r.pick(c, t, _out)).is_equal(0)
@@ -107,7 +107,7 @@ func test_note_full_counts_as_refreshed() -> void:
 
 
 func test_cursor_survives_set_changes_and_empty_sets() -> void:
-	var c: PackedInt32Array = _set(600)
+	var c: PackedInt32Array = _cs(600)
 	var _n: int = _r.pick(c, 1, _out)
 	var first: PackedInt32Array = _out.duplicate()
 	assert_int(_r.pick(PackedInt32Array(), 2, _out)).is_equal(0)           # no C set: nothing, cursor kept
@@ -134,7 +134,7 @@ func test_unsorted_or_duplicate_c_never_throws_and_output_is_cleared() -> void:
 
 
 func test_reset_forgets_everything() -> void:
-	var c: PackedInt32Array = _set(50)
+	var c: PackedInt32Array = _cs(50)
 	for t: int in range(1, 60):
 		var _n: int = _r.pick(c, t, _out)
 	_r.reset()
@@ -144,7 +144,7 @@ func test_reset_forgets_everything() -> void:
 
 
 func test_deterministic() -> void:
-	var c: PackedInt32Array = _set(500, 3, 7)
+	var c: PackedInt32Array = _cs(500, 3, 7)
 	var a: RollingRefresh = RollingRefresh.new()
 	var b: RollingRefresh = RollingRefresh.new()
 	var oa: PackedInt32Array = PackedInt32Array()

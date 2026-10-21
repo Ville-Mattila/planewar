@@ -130,7 +130,7 @@ func test_roster_repair_subset_with_escape_gaps() -> void:
 	var own: int = 0
 	for i: int in idx:
 		own += 1 if _own(i) else 0
-	assert_int(msg.size()).is_equal(KeyframeCodec.size_for(4, own, 1))   # 500 - 2 = 498 needs the 0xFF escape
+	assert_int(msg.size()).is_equal(KeyframeCodec.size_for(4, own, 2))   # gaps 498 and 399 need the 0xFF escape
 	assert_int(KeyframeCodec.scope_of(msg)).is_equal(Protocol.KeyframeScope.ROSTER_REPAIR)
 	assert_int(_kc.decode(msg, _dec)).is_equal(KeyframeCodec.Status.OK)
 	assert_int(_kc.scope).is_equal(Protocol.KeyframeScope.ROSTER_REPAIR)

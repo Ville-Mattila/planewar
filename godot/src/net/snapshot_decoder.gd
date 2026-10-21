@@ -80,6 +80,18 @@ func reset() -> void:
 	records_applied = 0
 
 
+## KEYFRAME (NET-07, KeyframeCodec.decode): forget every frame and packet receipt, begin the frame of `tick` against
+## nothing and make `tick` the newest and the complete (acked) tick. The caller sets the frame's records with set_full.
+## A SNAPSHOT of `tick` itself afterwards is STALE (the keyframe carries that tick's state). Returns the new frame.
+func accept_keyframe(tick: int) -> BaselineFrame:
+	store.reset()
+	_rx_tick.fill(0)
+	var f: BaselineFrame = store.begin(tick, 0)
+	store.newest_tick = tick
+	_mark(tick, 0, true)
+	return f
+
+
 ## Decodes one SNAPSHOT packet. Returns a Status; only OK changes state.
 func decode(bytes: PackedByteArray) -> int:
 	var size: int = bytes.size()
