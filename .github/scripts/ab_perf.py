@@ -4,7 +4,9 @@
 Runs --rounds interleaved runs per side (alternating who goes first) and compares the median of the
 per-run p95. Fails when head is slower than base by more than --threshold percent.
 --noise N : base-vs-base. Runs the A/B N times on one tree and prints each delta.
-Usage: ab_perf.py --base godot_base --head godot [--rounds 5] [--ticks 3600] [--threshold 25]
+--scenario ai : passes --ai to both trees (TEST-04, R0 B.17 A-98: real AiDriver + Dart brain); a base whose harness
+                predates --ai prints the default fingerprint and the comparison is skipped with the notice.
+Usage: ab_perf.py --base godot_base --head godot [--rounds 5] [--ticks 3600] [--threshold 25] [--scenario default|ai]
        ab_perf.py --base godot --head godot --noise 10 --rounds 3
 """
 import argparse
@@ -29,10 +31,15 @@ def parse_output(out: str) -> tuple[int, int, str]:
     return int(m.group(2)), int(m.group(5)), fp.group(1).strip() if fp else "unknown"
 
 
-def run_once(project: str, ticks: int) -> tuple[int, int, str]:
+def scenario_args(scenario: str) -> list[str]:
+    return ["--ai"] if scenario == "ai" else []
+
+
+def run_once(project: str, ticks: int, scenario: str = "default") -> tuple[int, int, str]:
     godot = os.environ.get("GODOT_BIN", "godot")
     out = subprocess.run(
-        [godot, "--headless", "--path", project, "res://test/perf/perf_tick.tscn", "--", f"--ticks={ticks}"],
+        [godot, "--headless", "--path", project, "res://test/perf/perf_tick.tscn", "--", f"--ticks={ticks}",
+         *scenario_args(scenario)],
         check=True, capture_output=True, text=True, timeout=300).stdout
     return parse_output(out)
 
@@ -47,7 +54,7 @@ def decide(base_fp: str, head_fp: str, d95: float, threshold: float) -> tuple[in
     return 0, ""
 
 
-def compare(base: str, head: str, rounds: int, ticks: int) -> tuple[float, float, float, float, str, str]:
+def compare(base: str, head: str, rounds: int, ticks: int, scenario: str = "default") -> tuple[float, float, float, float, str, str]:
     a_p95, a_mean, b_p95, b_mean = [], [], [], []
     fps: dict[str, str] = {}
     for r in range(rounds):
@@ -55,7 +62,7 @@ def compare(base: str, head: str, rounds: int, ticks: int) -> tuple[float, float
         if r % 2:
             order.reverse()
         for proj, p95s, means in order:
-            p95, mean, fps[proj] = run_once(proj, ticks)
+            p95, mean, fps[proj] = run_once(proj, ticks, scenario)
             p95s.append(p95)
             means.append(mean)
     ma, mb = statistics.median(a_p95), statistics.median(b_p95)
@@ -78,22 +85,23 @@ def main() -> int:
     ap.add_argument("--ticks", type=int, default=3600)
     ap.add_argument("--threshold", type=float, default=25.0)
     ap.add_argument("--noise", type=int, default=0)
+    ap.add_argument("--scenario", choices=["default", "ai"], default="default")
     a = ap.parse_args()
     if a.noise:
         deltas = []
         for i in range(a.noise):
-            ma, mb, d95, dmean, _fa, _fb = compare(a.base, a.base, a.rounds, a.ticks)
+            ma, mb, d95, dmean, _fa, _fb = compare(a.base, a.base, a.rounds, a.ticks, a.scenario)
             deltas.append(abs(d95))
             print(f"noise run {i + 1}: p95 {ma:.0f} us vs {mb:.0f} us -> {d95:+.2f} % (mean {dmean:+.2f} %)")
-        text = (f"base-vs-base noise over {a.noise} repeats x {a.rounds} rounds: max |delta| {max(deltas):.2f} %, "
+        text = (f"[{a.scenario}] base-vs-base noise over {a.noise} repeats x {a.rounds} rounds: max |delta| {max(deltas):.2f} %, "
                 f"median {statistics.median(deltas):.2f} % (limit {a.threshold} %)")
         print(text)
         append_summary("### A/B noise (base vs base)\n" + text + "\n")
         if max(deltas) >= a.threshold:
             print(f"::warning::A/B noise {max(deltas):.2f} % is not under {a.threshold} %")
         return 0
-    ma, mb, d95, dmean, fa, fb = compare(a.base, a.head, a.rounds, a.ticks)
-    text = (f"A/B perf_tick: base p95 {ma:.0f} us, head p95 {mb:.0f} us -> {d95:+.2f} % "
+    ma, mb, d95, dmean, fa, fb = compare(a.base, a.head, a.rounds, a.ticks, a.scenario)
+    text = (f"A/B perf_tick [{a.scenario}]: base p95 {ma:.0f} us, head p95 {mb:.0f} us -> {d95:+.2f} % "
             f"(mean {dmean:+.2f} %), threshold +{a.threshold} %")
     print(text)
     append_summary("### A/B perf\n" + text + "\n")

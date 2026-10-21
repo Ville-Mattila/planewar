@@ -10,6 +10,11 @@ class_name PerfTickWorld extends RefCounted
 const SEED: int = 22
 const TEAMS: int = 8
 const ORBIT_M: float = 1200.0
+## TEST-04 / R0 B.17 A-98 (`ai` scenario): the A/B-scale world driven by the real AiDriver + DartBrain instead of OrbitHook.
+const AI_DARTS: int = 48            ## two teams of 24
+const AI_ENGAGED_EVERY: int = 4     ## one Dart in four starts inside gun fire_range of an enemy (A-96 engaged mix f = 0.25)
+const AI_ARENA_M: float = 1200.0    ## half-width of the square the engaged pairs start in (the patrols stay within ~1 km of their Cores)
+const AI_PAIR_M: float = 150.0      ## separation of an engaged pair at the start (fire_range is ~600 m)
 
 var world: SimWorld
 var ships: PackedInt32Array = PackedInt32Array()
@@ -22,10 +27,17 @@ var _bases: PackedVector3Array = PackedVector3Array()
 var _defs: Dictionary = {}
 var _hook: OrbitHook
 var path_load: PerfPathLoad
+var driver: AiDriver = null     ## `ai` scenario only
+var ai_darts: PackedInt32Array = PackedInt32Array()
+var respawns: int = 0
 
 
 ## Counts per kind and the map (&"" = flat datum); perf_tick.gd picks the S-SIM-1 or the A/B scale.
-func _init(n_ships: int, n_ground: int, n_structures: int, n_wrecks: int, n_projectiles: int, map_id: StringName) -> void:
+func _init(n_ships: int, n_ground: int, n_structures: int, n_wrecks: int, n_projectiles: int, map_id: StringName,
+		ai: bool = false) -> void:
+	if ai:
+		_build_ai(map_id)
+		return
 	var c: ContentSet = WorldTestKit.content()
 	var r: MatchRules = WorldTestKit.rules()
 	r.profile_enabled = true
@@ -74,8 +86,74 @@ func _init(n_ships: int, n_ground: int, n_structures: int, n_wrecks: int, n_proj
 	top_up()
 
 
+## `ai` scenario (A-98): two teams, AI_DARTS Darts registered with a real AiDriver running DartBrain (no OrbitHook), a Core per
+## team; every AI_ENGAGED_EVERY-th Dart starts AI_PAIR_M from an enemy Dart (both inside fire_range), the rest patrol around
+## their Core. Hit points are huge so the mix does not decay, guns fire (ammo is large). One Vision pass before the warm-up.
+func _build_ai(map_id: StringName) -> void:
+	var r: MatchRules = DartKit.rules(2000)
+	r.profile_enabled = true
+	r.debug_commands = false
+	world = DartKit.world(SEED, map_id, r)
+	assert(DartKit.def_id(&"dart") == WorldTestKit.def_id(&"dart"), "perf world and DartKit share def ids")
+	for t: int in 2:
+		_bases.push_back(Sphere.from_lat_lon(0.0, deg_to_rad(Sphere.SLOT_LON0_DEG + Sphere.SLOT_SPACING_DEG * t), 1.0))
+		var _core: int = _put(&"core", t, 0.0, 0.0)
+	driver = DartKit.driver(world)
+	var pairs: int = MathX.floori_div(AI_DARTS, AI_ENGAGED_EVERY * 2)
+	for k: int in AI_DARTS:
+		var pair: int = MathX.floori_div(k, 2)
+		var mate: int = ai_darts[k - 1] if k % 2 == 1 and pair < pairs else -1   # team 1 of an engaged pair joins team 0's
+		ai_darts.push_back(_ai_dart(k % 2, mate, pair < pairs))
+	ships = ai_darts
+	world.vision.refresh(0)
+
+
+## `ai` scenario, untimed: a Dart lost to a collision is replaced on its team, a lost pair member as a pair member (the population and the mix hold).
+func _respawn_ai() -> void:
+	var st: EntityStore = world.store()
+	for k: int in ai_darts.size():
+		var s: int = ai_darts[k]
+		if (st.flags[s] & EntityStore.F_ALIVE) != 0 and st.kind[s] == EntityStore.K_SHIP:
+			continue
+		var engaged: bool = k < MathX.floori_div(AI_DARTS, AI_ENGAGED_EVERY)   # a lost pair member re-forms the pair
+		ai_darts[k] = _ai_dart(k % 2, ai_darts[k - 1] if engaged and k % 2 == 1 else -1, engaged)
+		respawns += 1
+
+
+## One AI Dart on `team`; an engaged pair's team-0 member (`mate` -1) is placed freely, its team-1 member AI_PAIR_M east of
+## it on the same velocity (head-on pairs ram each other inside 30 ticks); a patrol Dart is placed around its Core.
+func _ai_dart(team: int, mate: int, engaged: bool) -> int:
+	var st: EntityStore = world.store()
+	var s: int
+	if engaged and mate >= 0:
+		s = _put(&"dart", team, 300.0, 0.0)
+		var n: Vector3 = st.pos[mate].normalized()
+		var e: Vector3 = Sphere.tangent_frame(st.pos[mate]).x
+		st.pos[s] = (n + e * (AI_PAIR_M / Sphere.PLANET_RADIUS)).normalized() * st.pos[mate].length()
+		st.fwd[s] = st.fwd[mate]
+		st.up[s] = st.pos[s].normalized()
+		st.vel[s] = st.vel[mate]
+	else:
+		s = _put(&"dart", team, _rng.range_f(250.0, 450.0), _rng.range_f(100.0, 900.0))
+		if engaged:   # the arena between the two Cores: no patrolling Dart within fire_range of the pairs
+			var mid: Vector3 = (_bases[0] + _bases[1]).normalized()
+			var f: Basis = Sphere.tangent_frame(mid * Sphere.PLANET_RADIUS)
+			var d: Vector3 = (mid + (f.x * _rng.range_f(-1.0, 1.0) + f.y * _rng.range_f(-1.0, 1.0)) * (AI_ARENA_M / Sphere.PLANET_RADIUS)).normalized()
+			st.pos[s] = d * (Sphere.PLANET_RADIUS + world.terrain().height_at(d) + _rng.range_f(250.0, 450.0))
+			st.up[s] = d
+			st.fwd[s] = Sphere.tangent_frame(st.pos[s]).y
+		var p: Vector3 = st.pos[s]
+		st.vel[s] = Sphere.tangent_frame(p).x.rotated(p.normalized(), _rng.range_f(0.0, TAU)) * 110.0
+	st.hp[s] = 1.0e9
+	var _ok: bool = driver.register(st.id_of(s), DartKit.CLS_DART)
+	return s
+
+
 ## Untimed between ticks: keeps the live projectile count at `projectiles_target`.
 func top_up() -> void:
+	if driver != null:
+		_respawn_ai()
+		return
 	var ps: ProjectileStore = world.projectiles()
 	var missing: int = projectiles_target - ps.live_count()
 	for _k: int in missing:
