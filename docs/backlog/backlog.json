@@ -7294,8 +7294,10 @@
       "R0 C1-19",
       "GD-36"
     ],
-    "status": "todo",
-    "note": "Found by AI-13 #87 round 2 (2026-10-21): diff in the projectile store; not reproduced with a possessed Dart firing. AI-13's S4 test currently saves before the first slug. PR #87 round 2 repro: three AI Darts under ATTACK on a Bomber 300 m ahead, AI RNG bound, serialize -> deserialize -> serialize every 10 ticks for 150 ticks differs in the ProjectileStore section at 7 of 12 checks; not with a possessed Dart firing (R0 B.17 A-96)."
+    "status": "done",
+    "note": "Found by AI-13 #87 round 2 (2026-10-21): diff in the projectile store; not reproduced with a possessed Dart firing. AI-13's S4 test currently saves before the first slug. PR #87 round 2 repro: three AI Darts under ATTACK on a Bomber 300 m ahead, AI RNG bound, serialize -> deserialize -> serialize every 10 ticks for 150 ticks differs in the ProjectileStore section at 7 of 12 checks; not with a possessed Dart firing (R0 B.17 A-96). Root cause: read() rebuilt the spatial index from positions; post-step-7 changes (step-9 shots, pushouts, freed slugs, later spawns) differ. Fix: Spatial.write_state/read_state, FORMAT 11; save +5.7 %, serialize +0.5 ms, deserialize +1.1 ms.",
+    "pr": 90,
+    "merged": "2026-10-21"
   },
   {
     "id": "TA-63",
