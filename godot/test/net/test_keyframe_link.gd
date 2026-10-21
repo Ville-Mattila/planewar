@@ -234,4 +234,6 @@ func test_refresh_bytes_at_700_c_entities_within_1_8_kb_per_second() -> void:
 	assert_float(rec_kb_s).is_less_equal(1.8)
 	assert_float(rec_kb_s).is_greater(1.6)
 	assert_float(stream_kb_s).is_less_equal(1.8)       # NET-54 acceptance: records + escapes + count byte
-	assert_float(stream_kb_s).is_greater(rec_kb_s)
+	# A refresh FULL also displaces C-BLIPs the run without refresh sends (the refreshed entry then implies its blip),
+	# so the delta can sit just under the records; a refresh that silently dropped its FULLs would fall far below.
+	assert_float(stream_kb_s).is_greater(0.9 * rec_kb_s)

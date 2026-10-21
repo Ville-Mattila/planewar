@@ -131,3 +131,18 @@ static func blip_pos(cell: int, blip: int) -> int:
 
 static func blip_state(blip: int) -> int:
 	return (blip >> 22) & 3
+
+
+## The blip an entry implies (NET-54, server only): make_blip of its quantised position at its float64 altitude
+## above datum, state DYING (flags), STATIC (zero velocity or DOCKED) or MOVING. Never UNDER_FIRE (server-only state).
+## The tier-C encoder skips a C-BLIP for an entry with an unknown blip while this equals the true blip.
+static func entry_blip(pos_q: int, flag_b: int, fine: int) -> int:
+	var st: int = BlipState.MOVING
+	if flag_b & Codec.FLAG_DYING:
+		st = BlipState.DYING
+	elif fine == 0 or (flag_b & Codec.FLAG_DOCKED) != 0:
+		st = BlipState.STATIC
+	var em: float = float(Codec.pos_e(pos_q)) * Codec.POS_EN_QUANTUM - Codec.POS_EN_HALF
+	var nm: float = float(Codec.pos_n(pos_q)) * Codec.POS_EN_QUANTUM - Codec.POS_EN_HALF
+	var rz: float = Sphere.PLANET_RADIUS + float(Codec.pos_u(pos_q)) * Codec.POS_U_QUANTUM + Codec.POS_U_MIN
+	return make_blip(pos_q, sqrt(em * em + nm * nm + rz * rz) - Sphere.PLANET_RADIUS, st)

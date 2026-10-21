@@ -1,11 +1,10 @@
 class_name SnapshotCodec extends RefCounted
 ## Server half of the SNAPSHOT codec (04 s3.4-s3.5, R0 C1-02, C1-18). prepare_tick(frame) quantises every entity once
-## per tick into the shared cache (packed arrays indexed by roster index == sim slot) and the per-team visible lists;
-## encode() does per-client work only: gap ids, FULL / A-DELTA / B-DELTA / C-BLIP records against that client's acked
-## baseline (gravity-aware dead reckoning), the 15-byte pilot block, splitting at 1,200 B into <= 4 indexed packets
-## (A-36). Every record goes to the client's mirror frame through the BaselineFrame calls SnapshotDecoder makes, so
-## both baselines stay identical. FULL and C-BLIP bytes come from SnapshotByteCache (A-40). No allocation per entity.
-## `append_frame` (replay pseudo-client, NET-25) adds another encode() chunk to the frame already begun for the tick.
+## per tick into the shared cache (indexed by roster index == sim slot) and the per-team visible lists; encode() does
+## per-client work only: gap ids, FULL / A-DELTA / B-DELTA / C-BLIP records against that client's acked baseline (gravity-
+## aware dead reckoning), the 15-byte pilot block, splitting at 1,200 B into <= 4 indexed packets (A-36). Records reach the
+## client's mirror through the BaselineFrame calls SnapshotDecoder makes, so both stay identical. FULL / C-BLIP bytes come
+## from SnapshotByteCache (A-40); no allocation per entity. `append_frame` (replay, NET-25) continues the tick's frame.
 
 const HEADER_BYTES: int = 10
 const MAX_PACKET_BYTES: int = Protocol.MAX_UNRELIABLE_BYTES
@@ -25,8 +24,7 @@ const GAP_MAX: int = 254
 const GAP_ESCAPE: int = 0xFF
 const SMALL_SHIFT: int = 2
 const SMALL_MAX: int = 127
-## A position residual under one POS_SMALL step (4 quanta on every axis) is not sent: a smaller threshold sits
-## inside the +-2 quanta that a 4-quanta correction leaves behind and makes records chatter on rounding noise.
+## Residuals under one POS_SMALL step (4 quanta per axis) are not sent: smaller ones chatter on the +-2 quanta it leaves.
 const POS_SEND_MIN: int = 1 << SMALL_SHIFT
 const LARGE_MAX: int = 32767
 const FULL_BODY_BYTES: int = 1 + Codec.POS_BYTES + Codec.QUAT_BYTES + Codec.VEL_BYTES + 2   # mask .. flags = 18
@@ -239,7 +237,9 @@ func _plan(s: int, tier: int, base: BaselineFrame, own: bool) -> bool:
 			or _force[s] == _enc_id:
 		return _plan_full(s, own)
 	if tier == Tier.C:
-		if blip_of(s) == base.blip[s]:
+		var bb: int = base.blip[s]          # NET-54: unknown (after FULL / DELTA) -> the blip the entry implies
+		bb = bb if bb != DeadReckon.BLIP_UNKNOWN else DeadReckon.entry_blip(base.pos[s], base.flags[s], base.vel[s])
+		if blip_of(s) == bb:
 			return false
 		_k_kind = Kind.BLIP
 		_k_body = 3
