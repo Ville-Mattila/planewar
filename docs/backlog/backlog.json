@@ -2917,7 +2917,8 @@
       "NET-07",
       "TA-18",
       "TEST-02",
-      "NET-48"
+      "NET-48",
+      "NET-56"
     ],
     "milestone": "M3",
     "acceptance": "Contract test green on NetSimView; extrapolation stops at 3 ticks; clock converges within 2 s under TARGET; ClientSession.tick <= 1.0 ms PC",
@@ -7416,8 +7417,10 @@
       "04:494",
       "04:523"
     ],
-    "status": "todo",
-    "note": "From the NET-07 #97 Opus review 2026-10-21."
+    "status": "done",
+    "note": "From the NET-07 #97 Opus review 2026-10-21. Skip uses BaselineFrame.shown_blip (client DR at encode tick); stream delta 1.562 KB/s at 700 C. Nit: assert exact entry_blip == blip_of on skipped ticks.",
+    "pr": 100,
+    "merged": "2026-10-21"
   },
   {
     "id": "NET-55",
@@ -7435,7 +7438,7 @@
       "04 s4.6"
     ],
     "status": "todo",
-    "note": "From the NET-07 #97 Opus review 2026-10-21."
+    "note": "From the NET-07 #97 Opus review 2026-10-21. NET-54 (#100) removed the post-FULL C-BLIP cost: cite it instead of adding a budget row."
   },
   {
     "id": "AI-42",
@@ -7457,5 +7460,22 @@
     "note": "Follow-up from TA-63 #96. Same set and order (ascending EntityId); picture build 542 -> 333 us per team-epoch, 722.7 -> 444 us per tick at 8 teams (cap 450).",
     "pr": 101,
     "merged": "2026-10-21"
+  },
+  {
+    "id": "NET-56",
+    "title": "net: known-blip C entries are presented at their bucket, never dead-reckoned (DYING keeps gravity after a C-BLIP)",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "NET-54"
+    ],
+    "milestone": "M3",
+    "acceptance": "One shared helper shown_levels returns the stored levels for a known blip and dr_levels otherwise; ReplayReader and NetSimView both use it; a DYING entity that gets a C-BLIP then rests 300 ticks stays at blip_pos; A/B and unknown-blip entries still dead-reckon (gravity for bombs and DYING); encoder/decoder DELTA base unchanged; 04 s5.6 holds as written",
+    "docs": [
+      "04 s5.6"
+    ],
+    "status": "todo",
+    "note": "Pre-existing NET-06 issue found in the NET-54 #100 review. Optional Architect question: should a known-blip DYING entry's DELTA base also drop gravity (wire semantics)."
   }
 ]
