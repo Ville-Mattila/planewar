@@ -12,10 +12,31 @@ func test_the_core_starts_with_a_full_integrated_shield_over_its_footprint() -> 
 	var core: int = K.core_slot(w)
 	var eco: Dictionary = K.sdef(&"core").integrated_shield
 	assert_float(w.shields().charge_of(core)).is_equal(float(eco["charge_max"]))     # 2,400, no Ice, no power
-	assert_float(w.shields().dome_radius(core)).is_equal_approx(8.0 * WorldDefs.build_cell_m() * 0.5 * sqrt(2.0) + 20.0, 0.01)   # half-diagonal + the bomb's 20 m structure blast
+	assert_float(w.shields().dome_radius(core)).is_equal(float(eco["dome_radius"]))                    # a def key (A-99): 75 m
+	assert_float(w.shields().dome_radius(core)).is_equal(75.0)
 	assert_bool(w.shields().is_up(core, w.tick())).is_true()
 	assert_bool(w.shields().core_up(0)).is_true()
 	assert_bool(w.shields().core_up(1)).is_false()
+
+
+# 02 s5.1 bound (R0 B.18 A-99): every integrated shield covers the footprint half-diagonal plus the largest structure blast of
+# an absorbed projectile, so a bomb enters the dome before it touches the bounding sphere; 52.07 + 20 = 72.07 m for the Core.
+func test_every_integrated_shield_radius_covers_the_footprint_plus_the_largest_absorbed_blast() -> void:
+	var reach: float = 0.0
+	for pd: ProjectileDef in WorldTestKit.content().projectiles:
+		if pd.shield_absorbed:
+			reach = maxf(reach, pd.blast_radius_structure_m)
+	assert_float(reach).is_equal(20.0)
+	var seen: int = 0
+	for sd: StructureDef in WorldTestKit.content().structures:
+		if sd.integrated_shield.is_empty():
+			continue
+		seen += 1
+		var half_diag: float = Vector2(float(sd.footprint[0]), float(sd.footprint[1])).length() * WorldDefs.build_cell_m() * 0.5
+		assert_float(float(sd.integrated_shield["dome_radius"])).is_greater_equal(half_diag + reach)
+		assert_float(half_diag + reach).is_equal_approx(72.07, 0.01)
+		assert_float(float(sd.integrated_shield["collapse_s"])).is_equal(float(K.sdef(&"shield_projector").shield["collapse_s"]))
+	assert_int(seen).is_equal(1)
 
 
 func test_a_projector_has_its_dome_radius_and_starts_empty() -> void:
