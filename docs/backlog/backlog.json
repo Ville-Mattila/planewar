@@ -2856,7 +2856,10 @@
       " R0 C1-15",
       " 04 NET-07"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 97,
+    "merged": "2026-10-21",
+    "note": "Refresh FULL records 1.740 KB/s at 700 C (04:494/523 meaning); stream delta 1.966 KB/s due to the NET-06 post-FULL C-BLIP -> NET-54. ENTITY_META sent before KEYFRAME (04 inconsistent) -> NET-55. Nits: MOBILE_SWITCH stale count not exact; record KB/s computed not counted."
   },
   {
     "id": "NET-14",
@@ -7387,5 +7390,42 @@
     "note": "perf_tick --ai: 48 Darts, engaged share 0.258; ab_perf --scenario ai fails if head lacks scenario=ai, skips on base lacking it or ai_v mismatch (AI_SCENARIO_VERSION in perf_tick_world.gd). Default noise pass x3; ab-perf job 8m19s.",
     "pr": 93,
     "merged": "2026-10-21"
+  },
+  {
+    "id": "NET-54",
+    "title": "net: C-tier skips the post-FULL C-BLIP when the server mirror implies the blip (rolling refresh stream delta 1.966 -> <= 1.8 KB/s at 700 C)",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "NET-07"
+    ],
+    "milestone": "M3",
+    "acceptance": "Server-only encoder rule in SnapshotCodec: after a FULL, the C-BLIP is skipped when the blip implied by the mirror's position, flags and velocity equals the true blip (float altitude, under_fire); client decoding unchanged (no wire change); NET-07's rolling-refresh stream delta at 700 C <= 1.8 KB/s on the CI log; NET-06/NET-25 byte baselines re-recorded with the change explained; determinism and mutation sweeps green",
+    "docs": [
+      "04 s4.6",
+      "04:494",
+      "04:523"
+    ],
+    "status": "todo",
+    "note": "From the NET-07 #97 Opus review 2026-10-21."
+  },
+  {
+    "id": "NET-55",
+    "title": "docs (04): ENTITY_META is sent before KEYFRAME (04:124, 04:723, 04:250 vs record 04:169 having no def/owner/team); budget the post-FULL C-BLIP in 04 s4.6 (~+0.23 KB/s at 700 C, 100 ms column ~25.35 KB/s, under 25,600 B/s) unless NET-54 removes it",
+    "lane": "docs",
+    "tier": "Fable",
+    "size_days": 0.25,
+    "depends_on": [
+      "NET-07"
+    ],
+    "milestone": "M3",
+    "acceptance": "Architect amendment: 04 sequence diagrams and text state META before KEYFRAME; s4.6 budget row matches the measured stream (or cites NET-54); register Part B line; extract_doc_examples --check and validate_content green",
+    "docs": [
+      "04 s2",
+      "04 s4.6"
+    ],
+    "status": "todo",
+    "note": "From the NET-07 #97 Opus review 2026-10-21."
   }
 ]
