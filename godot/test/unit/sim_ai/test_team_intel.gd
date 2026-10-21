@@ -100,6 +100,53 @@ func test_s4_restore_mid_fight_is_byte_exact() -> void:
 		assert_bool(i2.threat_map(t).ch == ia.threat_map(t).ch).is_true()
 
 
+# Review round 1 (05 C18 capture): a structure that changes team mid-run. The continuous run and a run restored before
+# the flip read the same team every refresh (no stale cache), so they stay byte-exact; the losing team drops the
+# captured Relay's sensor cover (its contact becomes a kept ghost) and the winner lists the Relay as its own.
+func test_capture_keeps_continuous_and_restored_runs_byte_exact() -> void:
+	var w: SimWorld = DartKit.world(17)
+	var d: AiDriver = AiDriver.new(Rng.new(3))   # no class table: the Darts are plain sensors (no brain)
+	var intel: TeamIntel = IntelKit.intel()
+	intel.track(0, true)
+	intel.track(1, true)
+	d.set_intel(intel)
+	w.set_ai_hook(d)
+	var relay: int = IntelKit.spawn(w, &"relay_station", 0, 0, IntelKit.at(w, HOME, 0.0, 0.0))
+	var gun: int = IntelKit.spawn(w, &"autocannon_turret", 1, 1, IntelKit.at(w, HOME, 1000.0, 0.0))   # inside the Relay's deck reveal
+	var _own: int = IntelKit.spawn(w, &"dart", 0, 0, IntelKit.at(w, HOME, -900.0, 0.0, 300.0))        # sees the Relay, not the turret
+	var _foe: int = IntelKit.spawn(w, &"dart", 1, 1, IntelKit.at(w, HOME, 0.0, 800.0, 300.0))         # team 1 knows the Relay as a contact
+	IntelKit.run(w, 40)
+	assert_bool(intel.perception(0).knows(gun, w.tick())).is_true()
+	assert_bool(intel.perception(1).knows(relay, w.tick())).is_true()
+	var bytes: PackedByteArray = w.serialize()
+	var d2: AiDriver = AiDriver.new(Rng.new(99))
+	var i2: TeamIntel = IntelKit.intel()
+	d2.set_intel(i2)
+	var w2: SimWorld = SimWorld.deserialize(bytes, DartKit.content(), d2)
+	assert_object(w2).is_not_null()
+	for world: SimWorld in [w, w2]:   # the capture: team and owner bytes flip to the foe (test-only store write)
+		world.store().team[EntityId.slot(relay)] = DartKit.FOE
+		world.store().owner[EntityId.slot(relay)] = 1
+	for _k: int in 60:
+		w.step()
+		w2.step()
+		var _x: Array[SimEvent] = w.drain_events()
+		var _y: Array[SimEvent] = w2.drain_events()
+	assert_bool(w2.serialize() == w.serialize()).is_true()
+	for t: int in 2:
+		assert_bool(i2.threat_map(t).ch == intel.threat_map(t).ch).is_true()
+		assert_bool(i2.perception(t).serialize() == intel.perception(t).serialize()).is_true()
+	var p0: Perception = intel.perception(0)
+	assert_bool(p0.own_id.slice(0, p0.n_own).has(relay)).is_false()
+	assert_bool(p0.knows(relay, w.tick())).is_true()           # still seen, now an enemy contact
+	assert_bool(p0.cover.covers(w.view().pos(gun), IntelKit.cell(w.view().pos(gun)), false)).is_false()   # the Relay's cover is gone
+	assert_bool(p0.knows(gun, w.tick())).is_true()             # remembered as a ghost: its spot is no longer covered
+	assert_int(p0.k_seen[EntityId.slot(gun)]).is_less(w.tick())
+	var p1: Perception = intel.perception(1)
+	assert_bool(p1.own_id.slice(0, p1.n_own).has(relay)).is_true()
+	assert_bool(p1.knows(relay, w.tick())).is_false()          # joined the team: no longer a contact
+
+
 # [world, intel]: three Darts ENGAGEd on an enemy Bomber near a Core and an enemy turret; intel on teams 0 and 1.
 func _fight(seed_value: int) -> Array:
 	var w: SimWorld = DartKit.world(seed_value)

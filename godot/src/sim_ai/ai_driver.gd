@@ -365,8 +365,9 @@ func deserialize(bytes: PackedByteArray) -> void:
 	pos = b.get_position()
 	if not state.deserialize(bytes.slice(pos, pos + len_st)):
 		return
-	if _intel != null:
-		var _ok_i: bool = _intel.deserialize(_tail(bytes, pos + len_st))
+	if _intel != null and not _intel.deserialize(_tail(bytes, pos + len_st)):
+		var _reset: bool = state.deserialize(PackedByteArray())   # a bad intel section refuses the whole blob
+		return
 	for s: int in state.capacity:
 		if state.cls[s] != AiState.NO_CLASS:
 			var _ok: bool = _batches[state.cls[s]].add(state.eid[s])

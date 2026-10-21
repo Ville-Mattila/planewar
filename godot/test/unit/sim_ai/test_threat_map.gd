@@ -63,17 +63,18 @@ func test_fighters_at_half_dps_and_lancers_on_ground() -> void:
 	var lancer: int = IntelKit.spawn(w2, &"lancer", 1, 1, IntelKit.at(w2, HOME, 700.0, 0.0, 400.0))
 	var m2: ThreatMap = _seen(w2)[1]
 	var c2: int = IntelKit.cell(w2.view().pos(lancer))
-	assert_float(m2.threat_at(c2, ThreatMap.GROUND)).is_equal_approx(0.5 * _dps(&"gun_lancer"), 1e-3)
+	assert_float(m2.threat_at(c2, ThreatMap.GROUND)).is_equal_approx(_dps(&"gun_lancer"), 1e-3)   # its own gun, full DPS
+	var t: ThreatParams = IntelKit.tables()
+	var pl: int = t.profile_by_def[DartKit.def_id(&"lancer")]
+	assert_float(t.class_range[t.prof_gclass[pl]]).is_equal(IntelKit.weapon(&"gun_lancer").range_m)
+	assert_float(t.class_range[t.prof_class[pl]]).is_equal(TargetParams.num(IntelKit.threat_block(), "fighter_radius_m", 0.0))
 
 
 func test_rings_match_the_brute_force_rule() -> void:
 	var t: ThreatParams = IntelKit.tables()
 	assert_int(t.classes).is_greater(2)
 	for k: int in range(1, t.classes):
-		var reach: float = -1.0
-		for p: int in range(1, t.profiles):
-			if t.prof_class[p] == k:
-				reach = _range_of(t, p)
+		var reach: float = t.class_range[k]
 		for c: int in range(0, ThreatParams.CELLS, 7):
 			var got: Dictionary = {}
 			var base: int = k * (ThreatParams.CELLS + 1) + c
@@ -84,19 +85,6 @@ func test_rings_match_the_brute_force_rule() -> void:
 				var want: float = 1.0 if d <= reach else clampf(1.0 - (d - reach) / t.margin_m, 0.0, 1.0)
 				var have: float = float(got.get(h, 0.0))
 				assert_float(have).override_failure_message("class %d c %d h %d" % [k, c, h]).is_equal_approx(want, 1e-4)
-
-
-# The range of profile p (its class ring was built from it): recovered from the defs.
-func _range_of(t: ThreatParams, p: int) -> float:
-	var c: ContentSet = DartKit.content()
-	var fr: float = TargetParams.num(IntelKit.threat_block(), "fighter_radius_m", 0.0)
-	for sd: StructureDef in c.structures:
-		if t.profile_by_def[DartKit.def_id(sd.id)] == p:
-			return IntelKit.weapon(StringName(str(sd.tower.get("weapon", "")))).range_m
-	for gd: GroundUnitDef in c.ground_units:
-		if t.profile_by_def[DartKit.def_id(gd.id)] == p:
-			return IntelKit.weapon(gd.weapon).range_m
-	return fr
 
 
 func test_ghost_decays_with_its_half_life() -> void:
@@ -158,22 +146,9 @@ func test_update_counters_are_bins_times_rings_and_deterministic() -> void:
 	var p: Perception = r[0]
 	var m: ThreatMap = r[1]
 	var t: ThreatParams = IntelKit.tables()
-	var want_bins: Dictionary = {}
-	var want_cells: int = 0
-	for i: int in p.n_known:
-		var s: int = p.known[i]
-		var key: int = p.k_cell[s] * t.classes + t.prof_class[t.profile_by_def[p.k_def[s]]]
-		if not want_bins.has(key):
-			want_bins[key] = true
-			var base: int = (key % t.classes) * (ThreatParams.CELLS + 1) + MathX.floori_div(key, t.classes)
-			want_cells += t.ring_start[base + 1] - t.ring_start[base]
-	var own_bins: int = 0
-	for i: int in p.n_own:
-		if t.profile_by_def[p.own_def[i]] != 0:
-			own_bins += 1
-	assert_int(m.stats_bins).is_equal(want_bins.size() + own_bins)
-	assert_int(m.stats_bins - own_bins).is_equal(2)
-	assert_bool(m.stats_cells >= want_cells).is_true()
+	assert_int(m.stats_bins).is_equal(IntelCount.bins(t, p))
+	assert_int(m.stats_cells).is_equal(IntelCount.cells(t, p))
+	assert_int(m.stats_bins).is_greater_equal(2)
 	var before: PackedFloat32Array = m.ch.duplicate()
 	m.update(w.view(), p, w.tick())
 	assert_bool(m.ch == before).is_true()

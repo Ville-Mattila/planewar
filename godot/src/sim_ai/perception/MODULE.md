@@ -28,7 +28,7 @@ const N: int; const CELLS: int; const AIR_DECK: int; const AIR_LOW: int; const A
 const KEYS: PackedStringArray                       # the `threat` block: ghost_half_life_s, cell_margin_m, fighter_share, fighter_radius_m, route_sample_m, band_agl_m, defence_floor_dps, fighters, ground_attackers
 var decay_per_tick: float; var margin_m: float; var route_step_m: float; var defence_floor: float; var max_sensor_m: float
 var value_by_def: PackedFloat32Array; var sensor_by_def: PackedFloat32Array; var reveal_by_def: PackedFloat32Array; var profile_by_def: PackedByteArray; var sclass_by_def: PackedByteArray
-var profiles: int; var classes: int; var prof_class: PackedByteArray; var prof_dps: PackedFloat32Array; var prof_defence: PackedFloat32Array
+var profiles: int; var classes: int; var prof_class: PackedByteArray; var prof_gclass: PackedByteArray; var class_range: PackedFloat32Array; var prof_dps: PackedFloat32Array; var prof_defence: PackedFloat32Array
 var centre: PackedVector3Array; var circ_m: PackedFloat32Array; var in_cos: PackedFloat32Array; var near_start: PackedInt32Array; var near_cell: PackedInt32Array; var near_gap: PackedFloat32Array
 var ring_start: PackedInt32Array; var ring_cell: PackedInt32Array; var ring_w: PackedFloat32Array   # ring k = range class k, then the sensor classes
 static func from_content(c: ContentSet, threat: Dictionary, tick_hz: int) -> ThreatParams   # null on a missing key
@@ -77,17 +77,25 @@ func serialize() -> PackedByteArray;  func deserialize(bytes: PackedByteArray) -
 
 - P1 (fog fairness, SC-43): a contact enters only from `SimView.visible_ids(team)`, so it was `visible_to(team)` at the
   refresh that entered it; a ghost is only ever a position the observer saw. Nothing reads `alive`, a position, an
-  event or a def of an entity the observer does not see (the id cache holds facts read while it was seen).
+  event or a def of an entity the observer does not see. Team (and owner, for `own` vision) is read for every listed
+  structure at every refresh, so a capture (05 C18: CAPTURED / RELAY_CAPTURED, HaulMode CAPTURE) moves it between the
+  own list (and `SensorCover`) and the contacts at the next refresh: the losing team loses its sensor cover, the
+  winner drops it as a contact.
 - P2 (difficulty only removes, 05 s7.8): `own` vision keeps the team-visible contacts its slot's sensors cover
   (`SensorCover`, base def radii: never more than the team sees); `delay_ticks` postpones a new contact's use
   (`usable`, `knows`, the map); `memory_ticks` forgets a ghost after its last sight. A ghost is also forgotten when its
   last position is inside the observer's sensors and the team does not see it there.
 - P3 (determinism, S4): perception, digest and map are functions of the bytes and the view; `known` keeps first-sight
   order (stable compaction); the digest is rebuilt in `known` order, so `TeamIntel.deserialize` + `ThreatMap.update`
-  on the restored perception reproduces the channels bit for bit. The id cache and `SensorCover` are not state.
+  on the restored perception reproduces the channels bit for bit. The id cache and `SensorCover` are not state: the
+  cache holds only facts fixed for an id's life (def, a structure's position, a ship's or ground unit's team), so a
+  continuous run and one restored from bytes (empty cache) read the same values, including across a capture
+  (`test_capture_keeps_continuous_and_restored_runs_byte_exact`).
 - P4 (map rule, 05 s7.4 at cell resolution): a source's DPS reaches cell h with w = 1 while d = max(D - circ(c), 0)
   <= range, linear to 0 at range + `cell_margin_m` (D: centre arc distance, c: the source's cell); towers by envelope at
-  the band AGLs, `fighters` at `fighter_share` over `fighter_radius_m`, `ground_attackers` on GROUND; ghosts weigh
+  the band AGLs (one range), `fighters` on the air bands at `fighter_share` over `fighter_radius_m`, `ground_attackers`
+  on GROUND at their own weapon's full DPS x `ground_mult` over its `range_m` (a profile's air and GROUND parts may sit
+  in different range classes, `prof_class` / `prof_gclass`); ghosts weigh
   exp(-age ln 2 / half-life); ENEMY_VALUE / OWN_VALUE in the asset's cell; `last_seen` = own cells + sensor rings.
 - P5 (cost, 05 s10 "Threat maps 0.3 ms per team"): `update` is O(digest keys + ghosts + own + bins x ring) with no
   allocation; `refresh` is one `visible_ids` plus O(listed) reads; `TeamIntel` runs one team slice on its tick.
@@ -101,7 +109,7 @@ the S4 bytes through `AiDriver.serialize` (FORMAT 2). `ThreatParams` is session 
 
 05 s10 row "Threat maps (per team, 1 Hz, spread) 0.3 ms"; 05 s7.2 Commander slice 0 (perception + threat) <= 0.7 ms.
 `godot/test/unit/sim_ai/test_intel_perf.gd` on the S-SIM-1 world (`PerfTickWorld` 1,200 entities, 8 teams): figures in
-`sim_ai/MODULE.md` (AI-22 perf note); timing via `PerfGate` (R0 B.17 A-97), work counters hard.
+the AI-22 perf line of `sim_ai/MODULE.md`; timing via `PerfGate` (R0 B.17 A-97), work counters hard.
 
 ## Test entry points
 
@@ -120,5 +128,5 @@ the S4 bytes through `AiDriver.serialize` (FORMAT 2). `ThreatParams` is session 
 
 - `needs sim:` `SimView.visible_ids` allocates and walks every live slot (~135 us of a ~270 us refresh at S-SIM-1);
   TA-63's `visible_enemy_ships(team, out)` (merged, ascending ids) covers enemy ships only, while a refresh also needs
-  structures, ground units and the own assets: an O(visible) all-kinds team list (or a `visible_into`) would remove it. Team / owner are cached per id (they change only at spawn today); a capture needs a re-read.
+  structures, ground units and the own assets: an O(visible) all-kinds team list (or a `visible_into`) would remove it.
 - `needs content:` `bot_profiles.json` (the `perception` entries of `ai22_params.json`) and the `threat` block.

@@ -245,8 +245,8 @@ func _mark_seen(cell: int, k: int, tick: int) -> void:
 		last_seen[t.ring_cell[j]] = tick
 
 
-# Folds the touched enemy profile bins into (cell, range class) DPS vectors (bins zeroed); returns the class keys
-# touched, in bin order.
+# Folds the touched enemy profile bins into (cell, range class) DPS vectors: the air bands at the profile's air class,
+# GROUND at its ground class (bins zeroed); returns the class keys touched, in bin order.
 func _fold_enemy(ne: int) -> int:
 	var t: ThreatParams = tables
 	var acc: PackedFloat32Array = _acc
@@ -258,21 +258,31 @@ func _fold_enemy(ne: int) -> int:
 		var p: int = key - cell * _np
 		var a: float = _bin_e[key]
 		_bin_e[key] = 0.0
-		var ck: int = cell * _nc + t.prof_class[p]
-		var q: int = ck * ThreatParams.BANDS
 		var pq: int = p * ThreatParams.BANDS
-		if acc[q] == 0.0 and acc[q + 1] == 0.0 and acc[q + 2] == 0.0 and acc[q + 3] == 0.0:
-			_touch_c[n] = ck
-			n += 1
-		acc[q] += t.prof_dps[pq] * a
-		acc[q + 1] += t.prof_dps[pq + 1] * a
-		acc[q + 2] += t.prof_dps[pq + 2] * a
-		acc[q + 3] += t.prof_dps[pq + 3] * a
+		if t.prof_class[p] != 0:
+			var q: int = (cell * _nc + t.prof_class[p]) * ThreatParams.BANDS
+			n = _touch(acc, q, n)
+			acc[q] += t.prof_dps[pq] * a
+			acc[q + 1] += t.prof_dps[pq + 1] * a
+			acc[q + 2] += t.prof_dps[pq + 2] * a
+		if t.prof_gclass[p] != 0:
+			var g: int = (cell * _nc + t.prof_gclass[p]) * ThreatParams.BANDS
+			n = _touch(acc, g, n)
+			acc[g + 3] += t.prof_dps[pq + 3] * a
 	_acc = acc
 	return n
 
 
-# Folds the touched own profile bins into (cell, range class) defence sums (bins zeroed); returns the keys touched.
+# Records the class key of vector offset `q` as touched while that vector is still zero; returns the new count.
+func _touch(acc: PackedFloat32Array, q: int, n: int) -> int:
+	if acc[q] == 0.0 and acc[q + 1] == 0.0 and acc[q + 2] == 0.0 and acc[q + 3] == 0.0:
+		_touch_c[n] = MathX.floori_div(q, ThreatParams.BANDS)
+		return n + 1
+	return n
+
+
+# Folds the touched own profile bins into (cell, range class) defence sums: the strongest air band at the air class,
+# GROUND at the ground class (bins zeroed); returns the keys touched.
 func _fold_own(no: int) -> int:
 	var t: ThreatParams = tables
 	var n: int = 0
@@ -280,13 +290,24 @@ func _fold_own(no: int) -> int:
 		var key: int = _touch_o[k]
 		var cell: int = MathX.floori_div(key, _np)
 		var p: int = key - cell * _np
-		var ck: int = cell * _nc + t.prof_class[p]
-		if _acc_o[ck] == 0.0:
-			_touch_oc[n] = ck
-			n += 1
-		_acc_o[ck] += t.prof_defence[p] * _bin_o[key]
+		var a: float = _bin_o[key]
 		_bin_o[key] = 0.0
+		var pq: int = p * ThreatParams.BANDS
+		if t.prof_class[p] != 0:
+			var air: float = maxf(t.prof_dps[pq], maxf(t.prof_dps[pq + 1], t.prof_dps[pq + 2]))
+			n = _add_own(cell * _nc + t.prof_class[p], air * a, n)
+		if t.prof_gclass[p] != 0:
+			n = _add_own(cell * _nc + t.prof_gclass[p], t.prof_dps[pq + 3] * a, n)
 	return n
+
+
+func _add_own(ck: int, v: float, n: int) -> int:
+	var m: int = n
+	if _acc_o[ck] == 0.0:
+		_touch_oc[n] = ck
+		m += 1
+	_acc_o[ck] += v
+	return m
 
 
 # One (cell, range class) DPS vector over the class ring onto the four bands; the vector is zeroed.

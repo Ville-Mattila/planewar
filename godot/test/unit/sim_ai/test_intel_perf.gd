@@ -5,8 +5,8 @@ extends GdUnitTestSuite
 ## world stands) and the stress case "team 0 has every enemy entity in view" (943 contacts). Timing through PerfGate
 ## (R0 B.17 A-97: asserted only on the pinned runner, PERF_REPORT elsewhere); the work counters are hard everywhere.
 ## Dev laptop, standalone (no debugger): per-team update 38-45 us, refresh 260-270 us (visible_ids ~135 us of it);
-## stress update 211-220 us, refresh ~1,240 us. Under the gdUnit runner (debug) ~3-4x: update 194 us worst team,
-## slice 1,296 us; stress update 337 us, slice 3,329 us (report only, no row).
+## stress update 211-220 us. Under the gdUnit runner (debug; best of 7 varies ~3x with machine load): update 85-292 us,
+## slice 560-1,814 us; stress update 337-625 us, slice 2.6-4.3 ms (report only, no row).
 
 const UPDATE_ROW_US: float = 300.0     # 05 s10 threat-map row / AI-22 acceptance, per team (no factor)
 const SLICE_US: float = 700.0          # 05 s7.2 slice 0 (perception + threat)
@@ -75,39 +75,19 @@ func _measure(p: Perception, m: ThreatMap, v: SimView, tick: int) -> Vector2:
 	return best
 
 
-# Hard work counters: a warm refresh is one visible_ids + one pos per listed ship / ground unit (no other reads);
+# Hard work counters: a warm refresh is one visible_ids + one read per listed entity (pos of a ship / ground unit, team
+# of a structure; no other reads);
 # the update spreads exactly one bin per distinct (cell, range class) and writes exactly their ring lengths.
 func _counters(p: Perception, m: ThreatMap, v: SimView) -> void:
 	var vis: PackedInt32Array = v.visible_ids(p.team)
 	var movers: int = 0
 	for id: int in vis:
 		var s: int = EntityId.slot(id)
-		if s < Perception.MAX_SLOT and v.def_id(id) < DefRanges.STRUCTURE_BASE:
-			movers += 1
+		if s < Perception.MAX_SLOT:
+			movers += 1                      # a pos per ship / ground unit, a team per structure (capture)
 	var c0: int = p.stats_view_calls
 	p.refresh(v, p.last_refresh + 1)
 	assert_int(p.stats_view_calls - c0).is_equal(1 + movers)
 	m.update(v, p, p.last_refresh)
-	var t: ThreatParams = IntelKit.tables()
-	var keys: Dictionary = {}
-	var cells: int = 0
-	for i: int in p.n_known:
-		var s: int = p.known[i]
-		cells += _key(t, keys, p.k_cell[s], p.k_def[s], 0)
-	for i: int in p.n_own:
-		cells += _key(t, keys, p.own_cell[i], p.own_def[i], 1)
-	assert_int(m.stats_bins).is_equal(keys.size())
-	assert_int(m.stats_cells).is_equal(cells)
-
-
-func _key(t: ThreatParams, keys: Dictionary, cell: int, def: int, side: int) -> int:
-	var pr: int = t.profile_by_def[def]
-	if pr == 0:
-		return 0
-	var k: int = t.prof_class[pr]
-	var key: int = (cell * t.classes + k) * 2 + side
-	if keys.has(key):
-		return 0
-	keys[key] = true
-	var base: int = k * (ThreatParams.CELLS + 1) + cell
-	return t.ring_start[base + 1] - t.ring_start[base]
+	assert_int(m.stats_bins).is_equal(IntelCount.bins(IntelKit.tables(), p))
+	assert_int(m.stats_cells).is_equal(IntelCount.cells(IntelKit.tables(), p))

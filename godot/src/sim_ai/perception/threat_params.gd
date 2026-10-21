@@ -37,7 +37,9 @@ var profile_by_def: PackedByteArray = PackedByteArray()       ## by def id: thre
 var sclass_by_def: PackedByteArray = PackedByteArray()        ## by def id: sensor class, 0 = none
 var profiles: int = 1                      ## NP: profile 0 (none) + one per armed def
 var classes: int = 1                       ## NC: range class 0 (none) + one per distinct profile range (ring k = class k)
-var prof_class: PackedByteArray = PackedByteArray([0])        ## [p] range class of profile p
+var prof_class: PackedByteArray = PackedByteArray([0])        ## [p] range class of profile p's air bands (0: none)
+var prof_gclass: PackedByteArray = PackedByteArray([0])       ## [p] range class of profile p's GROUND channel (0: none)
+var class_range: PackedFloat32Array = PackedFloat32Array([0.0])   ## [k] range of class k (m)
 var prof_dps: PackedFloat32Array = PackedFloat32Array()       ## [p * BANDS + channel]
 var prof_defence: PackedFloat32Array = PackedFloat32Array()   ## [p]: max air band + GROUND (own_defence)
 var max_sensor_m: float = 0.0
@@ -77,15 +79,18 @@ static func from_content(c: ContentSet, threat: Dictionary, tick_hz: int) -> Thr
 	p.centre = _g_centre
 	p.circ_m = _g_circ
 	p.in_cos = _g_in_cos
-	var ranges: PackedFloat32Array = p._defs(c, threat, bands)
+	var granges: PackedFloat32Array = PackedFloat32Array([0.0])
+	var ranges: PackedFloat32Array = p._defs(c, threat, bands, granges)
 	var reach: float = p.max_sensor_m
+	for r: float in granges:
+		reach = maxf(reach, r + p.margin_m)
 	for r: float in ranges:
 		reach = maxf(reach, r + p.margin_m)
 	_near(reach)
 	p.near_start = _g_near_start
 	p.near_cell = _g_near_cell
 	p.near_gap = _g_near_gap
-	p._rings(p._classes(ranges), p._sensor_radii())
+	p._rings(p._classes(ranges, granges), p._sensor_radii())
 	return p
 
 
@@ -117,8 +122,8 @@ func ring_count() -> int:
 	return MathX.floori_div(ring_start.size(), CELLS + 1)
 
 
-# Per-def tables and profiles; returns the range of every profile (index p).
-func _defs(c: ContentSet, threat: Dictionary, bands: Array) -> PackedFloat32Array:
+# Per-def tables and profiles; returns the air range of every profile (index p), the GROUND range into `granges`.
+func _defs(c: ContentSet, threat: Dictionary, bands: Array, granges: PackedFloat32Array) -> PackedFloat32Array:
 	var e: int = value_by_def.resize(DefRanges.END) | sensor_by_def.resize(DefRanges.END)
 	e |= reveal_by_def.resize(DefRanges.END) | profile_by_def.resize(DefRanges.END) | sclass_by_def.resize(DefRanges.END)
 	assert(e == OK)
@@ -137,13 +142,15 @@ func _defs(c: ContentSet, threat: Dictionary, bands: Array) -> PackedFloat32Arra
 	for sh: ShipDef in c.ships:
 		var w: WeaponDef = _weapon(c, sh.primary_weapon)
 		var air: float = share * sustained_dps(w) if fighters.has(str(sh.id)) else 0.0
-		var gnd: float = share * sustained_dps(w) * (w.ground_mult if w != null else 0.0) if attackers.has(str(sh.id)) else 0.0
-		_def(c, sh.id, float(sh.cost_ore), sh.sensor_radius, 0.0, PackedFloat32Array([air, air, air, gnd]), fr, ranges)
+		var gnd: float = sustained_dps(w) * (w.ground_mult if w != null else 0.0) if attackers.has(str(sh.id)) else 0.0
+		_def(c, sh.id, float(sh.cost_ore), sh.sensor_radius, 0.0, PackedFloat32Array([air, air, air, gnd]), fr,
+			w.range_m if w != null else 0.0, ranges, granges)
 	for gd: GroundUnitDef in c.ground_units:
 		var w: WeaponDef = _weapon(c, gd.weapon)
 		var gnd: float = sustained_dps(w) * w.ground_mult if w != null and attackers.has(str(gd.id)) else 0.0
-		_def(c, gd.id, float(gd.cost_ore), gd.sensor_radius, 0.0, PackedFloat32Array([0.0, 0.0, 0.0, gnd]),
-			w.range_m if w != null else 0.0, ranges)
+		var gr: float = w.range_m if w != null else 0.0
+		_def(c, gd.id, float(gd.cost_ore), gd.sensor_radius, 0.0, PackedFloat32Array([0.0, 0.0, 0.0, gnd]), gr, gr,
+			ranges, granges)
 	for sd: StructureDef in c.structures:
 		var dps: PackedFloat32Array = PackedFloat32Array([0.0, 0.0, 0.0, 0.0])
 		var rng: float = 0.0
@@ -151,13 +158,13 @@ func _defs(c: ContentSet, threat: Dictionary, bands: Array) -> PackedFloat32Arra
 			var w: WeaponDef = _weapon(c, StringName(str(sd.tower.get("weapon", ""))))
 			rng = w.range_m if w != null else 0.0
 			_tower(sd.tower, sustained_dps(w), w.ground_mult if w != null else 0.0, bands, dps)
-		_def(c, sd.id, float(sd.cost_ore), sd.sensor_radius, sd.deck_reveal_radius, dps, rng, ranges)
+		_def(c, sd.id, float(sd.cost_ore), sd.sensor_radius, sd.deck_reveal_radius, dps, rng, rng, ranges, granges)
 	return ranges
 
 
-# One def's row; an armed def (any channel > 0) gets the next profile.
+# One def's row; an armed def (a channel > 0 with its range > 0) gets the next profile.
 func _def(c: ContentSet, name: StringName, value: float, sensor: float, reveal: float, dps: PackedFloat32Array,
-		rng: float, ranges: PackedFloat32Array) -> void:
+		rng: float, grng: float, ranges: PackedFloat32Array, granges: PackedFloat32Array) -> void:
 	var d: int = c.entity_index.get(name, -1)
 	if d < 0 or d >= DefRanges.END:
 		return
@@ -165,13 +172,20 @@ func _def(c: ContentSet, name: StringName, value: float, sensor: float, reveal: 
 	sensor_by_def[d] = sensor
 	reveal_by_def[d] = reveal
 	max_sensor_m = maxf(max_sensor_m, maxf(sensor, reveal))
-	if dps[0] + dps[1] + dps[2] + dps[3] <= 0.0 or rng <= 0.0:
+	if rng <= 0.0:
+		dps[0] = 0.0
+		dps[1] = 0.0
+		dps[2] = 0.0
+	if grng <= 0.0:
+		dps[3] = 0.0
+	if dps[0] + dps[1] + dps[2] + dps[3] <= 0.0:
 		return
 	profile_by_def[d] = profiles
 	profiles += 1
 	prof_dps.append_array(dps)
 	var _a: bool = prof_defence.push_back(maxf(dps[0], maxf(dps[1], dps[2])) + dps[3])
-	var _b: bool = ranges.push_back(rng)
+	var _b: bool = ranges.push_back(rng if dps[0] + dps[1] + dps[2] > 0.0 else 0.0)
+	var _g: bool = granges.push_back(grng if dps[3] > 0.0 else 0.0)
 
 
 # 05 s7.4 tower envelope: a ship band counts when its AGL is inside [h_rel_min, h_rel_max] and >= target_agl_min.
@@ -238,21 +252,23 @@ static func _near(reach: float) -> void:
 	_g_near_gap = gaps
 
 
-# Distinct profile ranges (ascending) -> range classes 1..; fills prof_class; returns [0, r_1, ..].
-func _classes(ranges: PackedFloat32Array) -> PackedFloat32Array:
+# Distinct non-zero profile ranges, air and GROUND (ascending) -> range classes 1..; fills prof_class / prof_gclass /
+# class_range; returns class_range.
+func _classes(ranges: PackedFloat32Array, granges: PackedFloat32Array) -> PackedFloat32Array:
 	var distinct: PackedFloat32Array = PackedFloat32Array()
-	for i: int in range(1, ranges.size()):
-		if not distinct.has(ranges[i]):
-			var _a: bool = distinct.push_back(ranges[i])
+	for list: PackedFloat32Array in [ranges, granges]:
+		for r: float in list:
+			if r > 0.0 and not distinct.has(r):
+				var _a: bool = distinct.push_back(r)
 	distinct.sort()
-	var _r: int = prof_class.resize(ranges.size())
-	prof_class[0] = 0
-	for i: int in range(1, ranges.size()):
-		prof_class[i] = distinct.find(ranges[i]) + 1
+	var _r: int = prof_class.resize(ranges.size()) | prof_gclass.resize(ranges.size())
+	for i: int in ranges.size():
+		prof_class[i] = distinct.find(ranges[i]) + 1 if ranges[i] > 0.0 else 0
+		prof_gclass[i] = distinct.find(granges[i]) + 1 if granges[i] > 0.0 else 0
 	classes = distinct.size() + 1
-	var out: PackedFloat32Array = PackedFloat32Array([0.0])
-	out.append_array(distinct)
-	return out
+	class_range = PackedFloat32Array([0.0])
+	class_range.append_array(distinct)
+	return class_range
 
 
 # Rings for every range class (ranges[k], k >= 1) then every sensor class (sensors[k], k >= 1).

@@ -114,6 +114,7 @@ func test_sc43_commander_fog_fairness() -> void:
 	var hb: Vector3 = DartKit.heading(pb, IntelKit.at(w, HOME, -5000.0, 1200.0, 400.0))
 	var bomber: int = DartKit.spawn(w, &"bomber", DartKit.FOE, pb, hb * 70.0, hb)
 	cruise.heading[bomber] = hb
+	var harv: int = IntelKit.spawn(w, &"harvester", 1, 1, IntelKit.at(w, HOME, -900.0, -600.0))   # a ground unit in view
 	var ever: Dictionary = {}
 	for _t: int in TICKS:
 		_oracle(w, ever)
@@ -142,15 +143,15 @@ func test_sc43_commander_fog_fairness() -> void:
 	assert_int(probe.attacks).is_greater(0)
 	assert_int(named).is_greater(0)
 	assert_bool(ever.has(bomber)).is_true()
+	assert_bool(ever.has(harv) and probe.known_ever.has(harv)).is_true()
 
 
-# Every non-team-0 ship / structure visible to team 0 now.
+# Every non-team-0 entity (ships, ground units, structures, wrecks) visible to team 0 now.
 func _oracle(w: SimWorld, ever: Dictionary) -> void:
 	var v: SimView = w.view()
-	for list: PackedInt32Array in [v.ships(), v.structures()]:
-		for id: int in list:
-			if v.team(id) != 0 and v.visible_to(0, id):
-				ever[id] = true
+	for id: int in v.visible_ids(0):
+		if v.team(id) != 0:
+			ever[id] = true
 
 
 func _own(w: SimWorld, id: int) -> bool:

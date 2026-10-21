@@ -139,10 +139,10 @@ func test_refresh_work_counters() -> void:
 	IntelKit.run(w, VISION_TICKS)
 	var p: Perception = _team()
 	p.refresh(w.view(), w.tick())
-	assert_int(p.stats_view_calls).is_equal(1 + 2 * 4 + 2 + 2)   # visible_ids; def + team per new id; pos per ship and per new structure
+	assert_int(p.stats_view_calls).is_equal(1 + 2 * 4 + 2 + 2 + 2)   # visible_ids; def + team per new id; pos per ship and per new structure; team per structure
 	var c0: int = p.stats_view_calls
 	p.refresh(w.view(), w.tick() + 1)
-	assert_int(p.stats_view_calls - c0).is_equal(1 + 2)          # cached: visible_ids + one pos per ship
+	assert_int(p.stats_view_calls - c0).is_equal(1 + 2 + 2)          # cached: visible_ids + a pos per ship + a team per structure
 	assert_int(p.n_known).is_equal(2)
 	assert_int(p.n_own).is_equal(2)
 

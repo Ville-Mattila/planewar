@@ -12,8 +12,10 @@ class_name Perception extends RefCounted
 ## seen then; for the seen and usable ones the Ore value per cell (`fresh_val`, cells in `fresh_cells`) and the count
 ## per (cell, threat profile) bin (`fresh_bin[cell * profiles + p]`, keys in `fresh_keys`), which `ThreatMap` reads.
 ## Refresh: one `visible_ids` (allocates in the sim, `needs sim:` an O(visible) team list), one `pos` per seen ship /
-## ground unit, `def_id` + `team` (+ `owner` for `own` vision, + `pos` for a structure) once per new id. Team and owner
-## are cached per id: they change only at spawn today (`needs sim:` a capture would need a re-read or an event).
+## ground unit, one `team` (+ `owner` for `own` vision) per seen structure, every refresh (a capture, 05 C18, changes a
+## structure's team and owner; ships and ground units never change team), and `def_id` + `team` (+ `owner`, + a
+## structure's `pos`) once per new id. So the cache holds only facts fixed for the id's life: a restored run (empty
+## cache) reads exactly what a continuous run uses.
 
 const FORMAT: int = 1
 const MAX_SLOT: int = EntityId.WRECK_SLOT_MIN      ## main-range slots only (wrecks are skipped)
@@ -100,7 +102,10 @@ func refresh(v: SimView, tick: int) -> void:
 		var p: Vector3
 		if _c_def[s] >= DefRanges.STRUCTURE_BASE:
 			p = _c_pos[s]
-			stats_view_calls -= 1
+			_c_team[s] = v.team(id)        # re-read every refresh: a structure changes team on capture (05 C18)
+			if prm.own_vision:
+				_c_owner[s] = v.owner(id)
+				stats_view_calls += 1
 		else:
 			p = v.pos(id)
 			var c: int = _c_cell[s]
