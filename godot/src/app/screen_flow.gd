@@ -58,30 +58,36 @@ func start(id: StringName, args: Dictionary = {}) -> bool:
 
 
 ## Navigate along an allowed edge. Going to the stack top pops instead (Pause -> Match).
+## The stack changes only after the new screen showed.
 func go(id: StringName, args: Dictionary = {}) -> bool:
 	if current == null or not ScreenId.targets(current_id).has(id):
 		return false
-	if not _stack.is_empty() and _stack.back().id == id:
-		_stack.pop_back()
-		return _show(id, args)
 	var prev_id: StringName = current_id
 	var prev_args: Dictionary = _current_args
-	if ScreenId.clears_stack(id):
+	var popping: bool = not _stack.is_empty() and _stack.back().id == id
+	if not _show(id, args):
+		return false
+	if popping:
+		_stack.pop_back()
+	elif ScreenId.clears_stack(id):
 		_stack.clear()
 	elif not ScreenId.is_transient(prev_id):
 		_stack.append(Entry.new(prev_id, prev_args))
-	return _show(id, args)
+	return true
 
 
-## Back action. Returns true when something handled it.
+## Back action. Returns true when something handled it. Pops only along a reverse edge of the table.
 func back() -> bool:
 	if current == null:
 		return false
 	if current.handle_back():
 		return true
 	if not _stack.is_empty():
-		var e: Entry = _stack.pop_back()
-		return _show(e.id, e.args)
+		var e: Entry = _stack.back()
+		if not ScreenId.targets(e.id).has(current_id) or not _show(e.id, e.args):
+			return false
+		_stack.pop_back()
+		return true
 	if current_id == ScreenId.MAIN_MENU and not OS.has_feature("web"):
 		quit_requested.emit()  # main menu asks to quit (native only)
 		return true
@@ -95,6 +101,9 @@ func on_intent(kind: StringName, _payload: Dictionary) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Gamepad B arrives as Intents.BACK; ui_cancel also maps joypad B, so ignore joypad events here.
+	if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+		return
 	if event.is_action_pressed(&"ui_cancel") and back():
 		get_viewport().set_input_as_handled()
 
@@ -128,7 +137,7 @@ func _show(id: StringName, args: Dictionary) -> bool:
 ## Focus rule: initial_focus() if focusable, else the first focusable descendant.
 func _focus(screen: FlowScreen) -> void:
 	var target: Control = screen.initial_focus()
-	if target == null or target.focus_mode == Control.FOCUS_NONE:
+	if target == null or target.focus_mode == Control.FOCUS_NONE or not target.is_visible_in_tree():
 		target = _first_focusable(screen)
 	if target != null and target.is_inside_tree():
 		target.grab_focus()

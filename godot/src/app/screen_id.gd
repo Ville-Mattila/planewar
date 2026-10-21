@@ -35,7 +35,10 @@ static func all_ids() -> Array[StringName]:
 	]
 
 
-## Allowed targets from `from` (the s8 mermaid edges). Returning to the stack top is also allowed.
+## Allowed targets from `from`: the 06 s8 mermaid edges (docs/06 lines 745-767) plus these, each cited:
+## AGE_GATE->LOADING (06:748, Age -> M1, a match, so it loads); PAUSE->SETTINGS, PAUSE->MAIN_MENU (Leave),
+## PAUSE->SAVE_LOAD and SAVE_LOAD->PAUSE / SAVE_LOAD->LOADING (Load restarts via Loading), all from the
+## Pause items list (06:796).
 static func targets(from: StringName) -> Array[StringName]:
 	match from:
 		BOOT:
@@ -69,7 +72,7 @@ static func targets(from: StringName) -> Array[StringName]:
 		SAVE_LOAD:
 			return [PAUSE, LOADING]
 		RECONNECTING:
-			return [MATCH, MAIN_MENU]
+			return [MATCH]
 		RESULTS:
 			return [LOBBY, MAIN_MENU]
 	return []
@@ -77,9 +80,9 @@ static func targets(from: StringName) -> Array[StringName]:
 
 ## Entering these clears the back stack (nothing meaningful to go back to).
 static func clears_stack(id: StringName) -> bool:
-	return id == MAIN_MENU or id == RESULTS
+	return id == MAIN_MENU or id == RESULTS or id == LOADING
 
 
-## Leaving these never pushes them (one-shot gates and loading).
+## Leaving these never pushes them (one-shot gates, loading, results).
 static func is_transient(id: StringName) -> bool:
-	return id == BOOT or id == START_GATE or id == AGE_GATE or id == LOADING
+	return id == BOOT or id == START_GATE or id == AGE_GATE or id == LOADING or id == RESULTS
