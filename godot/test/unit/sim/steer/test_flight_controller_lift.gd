@@ -2,6 +2,7 @@ extends GdUnitTestSuite
 ## AI-38: the lift-law parts of sim/steer/flight_controller.gd and flight_gains.gd (05 s5.2, s5.3 as amended):
 ## the weight-support throttle floor, the lift-optimal nose-lead cap, the best-climb PULL_UP attitude and the
 ## pull-up budget, under both lift models (R0 B.12 A-68: one law, the lift model is physics, not a gain set).
+## timing: runaway guards only (R0 B.17 A-97)
 
 const MODELS: Array[StringName] = [RulesDef.LIFT_SPEED_SCALED, RulesDef.LIFT_DAMPING_ONLY]
 
@@ -385,6 +386,7 @@ func test_perf_lift_law_calls() -> void:
 		build_ms = minf(build_ms, float(Time.get_ticks_usec() - t0) / 4000.0)
 	print("PERF AI-38 floor+lead_cap %.2f us, pull_up %.2f us, pull_up_loss %.2f us, FlightGains.from_dict %.2f ms (%.0f)" % [
 		us[0], us[1], us[2], build_ms, sink])
+	# runaway guards (R0 B.17 A-97): measured 9.5 ms for from_dict (bound 200 ms) and <= 7.6 us per call (bound 100 us)
 	assert_float(build_ms).is_less(200.0)
 	_assert_bounds(us)
 

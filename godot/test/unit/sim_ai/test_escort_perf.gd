@@ -209,9 +209,6 @@ func _closing_case(w: SimWorld, pilot: EscortPilot, st: AiState, escort: int) ->
 func _best(a: Vector3, b: Vector3) -> Vector3:
 	return b if b.x < a.x else a
 
-## R0 B.17 A-97 inline gate (until TEST-03's PerfGate): one PERF_REPORT line; the bound is asserted only on the pinned
-## runner (PLANEWAR_PINNED_RUNNER == "1"); on hosted runners timing never fails a test.
+## R0 B.17 A-97: report-only on hosted runners, asserted with PLANEWAR_PINNED_RUNNER=1. The verdict is on the host-scaled figure.
 static func _gate(name: String, us: float, bound_us: float, host: float, cite: String) -> bool:
-	var pinned: bool = OS.get_environment("PLANEWAR_PINNED_RUNNER") == "1"
-	print("PERF_REPORT name=%s us=%.2f bound_us=%.2f host=%.2f pinned=%d cite=%s" % [name, us, bound_us, host, 1 if pinned else 0, cite])
-	return not pinned or us / host < bound_us
+	return PerfGate.check(name, us / host, bound_us, cite, host)

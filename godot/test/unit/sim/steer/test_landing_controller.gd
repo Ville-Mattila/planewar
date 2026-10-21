@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 ## every phase transition of the L1-L6 table, every abort rule, the go-around geometry, bearing choice (alignment,
 ## terrain, threat, ties), the L4-L6 law's floor and tilt limits, purity, determinism and cost per call.
 ## Closed-loop success rates live in test/sim/ai (test_landing_dock_sets.gd, test_sc_landing.gd).
+## timing: runaway guards only (R0 B.17 A-97)
 
 const R: float = Sphere.PLANET_RADIUS
 
@@ -370,6 +371,7 @@ func test_perf_cost_per_call() -> void:
 		us[2] = minf(us[2], float(Time.get_ticks_usec() - t0) / float(n / 10))
 	print("PERF LandingController.step approach %.2f us/call, hover %.2f us/call; choose_bearing %.1f us/call" % [
 		us[0], us[1], us[2]])
+	# runaway guards (R0 B.17 A-97), measured 11.8 / 8.1 us per step and 34.8 us per choose_bearing: bounds are >= 10x
 	assert_float(us[0]).is_less(200.0)
 	assert_float(us[1]).is_less(200.0)
 	assert_float(us[2]).is_less(2000.0)

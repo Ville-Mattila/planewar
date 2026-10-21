@@ -144,7 +144,11 @@ func test_tiny_test_loads_in_under_50_ms() -> void:
 	var err: Error = _terrain.load_map(MAP_TINY)
 	var ms: float = float(Time.get_ticks_usec() - t0) / 1000.0
 	assert_int(err).is_equal(OK)
-	assert_float(ms).is_less(50.0)
+	# Hard counter (A-97): the loader read every face at the baked resolution of the map's meta.json.
+	var meta: Variant = JSON.parse_string(FileAccess.get_file_as_string(MAP_TINY + "/meta.json"))
+	assert_int(_terrain.face_resolution).is_equal(int((meta as Dictionary)["face_resolution"]))
+	assert_int(_terrain.face_resolution).is_greater(0)
+	assert_bool(PerfGate.check("terrain.load_tiny", ms * 1000.0, 50000.0, "03 s8 tiny-map load < 50 ms")).is_true()
 
 
 func test_flipped_byte_fails_the_load_and_leaves_flat_stub() -> void:

@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 ## scenario headless through ScenarioRunner and expects no mismatch; planned scenarios are counted, not run. Each
 ## scenario must also fail when its expectation is broken (a corrupted copy reports mismatches), and the whole
 ## directory must run in under 60 s (TA-33 acceptance).
+## timing: runaway guards only (R0 B.17 A-97)
 
 const DIR: String = "res://test/sim/scenarios"
 const BUDGET_MS: int = 60000
@@ -39,6 +40,7 @@ func test_every_active_scenario_holds() -> void:
 		assert_array(Array(fails)).override_failure_message("scenario %s (%s): %s" % [stem, sc["refs"], "; ".join(fails)]).is_empty()
 		ran += 1
 	assert_int(ran).is_greater_equal(7)
+	# runaway guard, measured about 1.5 s for the whole suite on the dev box (bound 60 s, 40x): ran >= 7 above is the hard counter
 	assert_int(Time.get_ticks_msec() - started).is_less(BUDGET_MS)
 
 

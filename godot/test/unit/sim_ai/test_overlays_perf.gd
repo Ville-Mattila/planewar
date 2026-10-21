@@ -4,9 +4,14 @@ extends GdUnitTestSuite
 ## is the scan); (2) one overlay tick (Overlays.run: one TerrainProbe.probe, 6 samples, + track_velocity + drive);
 ## (3) one Assist.link_bridge (step 4, at most one per player slot). Best of 6 batches (the desktop's scheduler noise
 ## is larger than the code); printed for the PR, bounds are loose regression guards.
+## timing: runaway guards only (R0 B.17 A-97)
 
 const UNITS: int = 400
 const TICKS: int = 300
+
+var _thinks_base: int = 0
+var _thinks: int = 0
+var _last_thinks: int = 0
 
 
 func _driver(params: bool) -> AiDriver:
@@ -26,15 +31,21 @@ func _us_per_tick(d: AiDriver) -> float:
 		d.reset_stats()
 		AiTestKit.run(d, v, 0, TICKS / 6)
 		best = minf(best, float(d.stats()["us_per_tick"]))
+		_last_thinks = int(d.stats()["thinks"])
 	return best
 
 
 func test_perf_scan_400_units() -> void:
 	var base: float = _us_per_tick(_driver(false))
+	_thinks_base = _last_thinks
 	var scan: float = _us_per_tick(_driver(true))
+	_thinks = _last_thinks
 	print("AI-08 perf: 400 units no-op brain: %.1f us/tick without overlays, %.1f with the scan (+%.1f us, %.2f us/unit)" % [
 		base, scan, scan - base, (scan - base) / float(UNITS)])
-	assert_float(scan).is_less(2000.0)
+	# Measured 144 us/tick dev box, 251 us hosted (bound 2000 = 8x): under 10x on hosted, so a budget bound: PerfGate beside the
+	# hard counter (both drivers ran the same number of thinks, the scan adds none).
+	assert_int(_thinks).override_failure_message("thinks with vs without the scan").is_equal(_thinks_base)
+	assert_bool(PerfGate.check("overlays.scan_400_units", scan, 2000.0, "03 s4.2 AI row 6 ms (loose guard 2000 us)")).is_true()
 
 
 func test_perf_overlay_tick_and_link_bridge() -> void:
@@ -50,13 +61,15 @@ func test_perf_overlay_tick_and_link_bridge() -> void:
 	var id: int = EntityId.make(5, 1)
 	var n: int = 2000
 	var us_run: float = INF
+	var ended: int = 0
 	var us_bridge: float = INF
 	for _b: int in 6:
 		Overlays.enter(id, v, st, p, 0)
 		var t0: int = Time.get_ticks_usec()
 		for k: int in n:
 			st.overlay_since[5] = k              # never settles: every call is a full SAFETY tick
-			var _e: bool = Overlays.run(id, v, st, p, t, sink, k, probe, out)
+			if Overlays.run(id, v, st, p, t, sink, k, probe, out):
+				ended += 1
 		var t1: int = Time.get_ticks_usec()
 		for _k: int in n:
 			Assist.link_bridge(v.basis(id), v.pos(id), v.vel(id), t, p.bridge, probe, out)
@@ -64,7 +77,10 @@ func test_perf_overlay_tick_and_link_bridge() -> void:
 		us_run = minf(us_run, float(t1 - t0) / float(n))
 		us_bridge = minf(us_bridge, float(t2 - t1) / float(n))
 	print("AI-08 perf: Overlays.run (SAFETY tick) %.1f us/call, Assist.link_bridge %.1f us/call" % [us_run, us_bridge])
-	assert_float(us_run).is_less(200.0)
+	# Overlays.run: dev box 10.9 us, hosted 24.2 us (bound 200 = 8.3x), under 10x on hosted: budget bound, PerfGate beside the hard
+	# counter (no timed call ended the overlay early, so each was a full SAFETY tick). link_bridge: 7.6 us dev / 17.2 us hosted: runaway guard (>= 11x).
+	assert_int(ended).override_failure_message("Overlays.run calls that ended the overlay early").is_equal(0)
+	assert_bool(PerfGate.check("overlays.run_safety", us_run, 200.0, "05 s10 act row 6 us (loose guard 200 us)")).is_true()
 	assert_float(us_bridge).is_less(200.0)
 
 

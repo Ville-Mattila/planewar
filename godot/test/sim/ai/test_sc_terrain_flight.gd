@@ -3,6 +3,7 @@ extends GdUnitTestSuite
 ## flown by FlightController.track_velocity with the TerrainProbe lift and the 1.0 s PULL_UP re-check
 ## (TerrainFlightRig, the think / act shape of 05 s4.3). Clearance = centre height above the terrain under the
 ## ship (05 s5.3 convention). Run under both lift models.
+## timing: runaway guards only (R0 B.17 A-97)
 
 const MAP: String = "res://content/maps/cradle"
 const LON: float = 45.0       # wedge meridian through the big crater (lat 30) and the highland (lat 42-45)
@@ -114,5 +115,6 @@ func test_perf_think_and_act() -> void:
 	var act: float = float(act_us) / float(maxi(ticks, 1))
 	print("PERF per ship: think %.1f us (every %d ticks), act %.1f us/tick, per think period %.1f us" % [think, period,
 		act, think + act * float(period)])
+	# runaway guards (R0 B.17 A-97), measured think 15.6 us (bound 500) and act 6.6 us/tick (bound 200)
 	assert_float(think).is_less(500.0)
 	assert_float(act).is_less(200.0)

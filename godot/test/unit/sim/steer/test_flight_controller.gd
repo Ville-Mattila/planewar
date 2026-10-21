@@ -2,6 +2,7 @@ extends GdUnitTestSuite
 ## Unit tests for sim/steer/flight_controller.gd and flight_gains.gd (AI-05; 05 s5.2). Acceptance: from trimmed
 ## flight at v_cruise the velocity converges within 5 degrees of a step command in <= 2.0 s with < 15 % overshoot,
 ## against Kinematics.step_ship under both lift_model values. Gains: test/sim/ai/ai05_params.json (flight block).
+## timing: runaway guards only (R0 B.17 A-97)
 
 const CLASSES: Array[StringName] = [&"dart", &"lancer", &"bomber", &"scout", &"hauler"]
 const SETTLE_TICKS: int = 900         # 30 s on the initial heading: integrators converge under damping_only too
@@ -286,6 +287,7 @@ func test_perf_cost_per_call() -> void:
 			FlightController.track_thrust_vector(b, up, 0.4, up, g, inp)
 		us_t = minf(us_t, float(Time.get_ticks_usec() - t0) / float(n))
 	print("PERF FlightController.track_velocity %.2f us/call, track_thrust_vector %.2f us/call" % [us_v, us_t])
+	# runaway guard, measured 4.44 us (track_velocity) / 1.31 us (track_thrust_vector): 100 us is >= 10x (R0 B.17 A-97)
 	assert_float(us_v).is_less(100.0)
 	assert_float(us_t).is_less(100.0)
 # endregion
