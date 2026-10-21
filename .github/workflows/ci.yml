@@ -318,7 +318,7 @@ jobs:
     name: same-job A/B perf (base vs head)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
