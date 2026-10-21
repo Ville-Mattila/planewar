@@ -225,39 +225,14 @@ func service_state(id: int) -> int:
 	return 2 if (f & EntityStore.F_TETHERED) != 0 else 0
 
 
-## The docked ship linked to `pad`, or 0.
+## The docked ship linked to `pad`, or 0 (PadQueries).
 func pad_occupant(pad: int) -> int:
-	if not _store.alive(pad):
-		return 0
-	for s: int in _store.ships:
-		if (_store.flags[s] & EntityStore.F_DOCKED) != 0 and _store.link[s] == pad and _pad_serves(pad):
-			return _store.id_of(s)
-	return 0
-
-
-# A-19: a launch-only pad (no `pad_radius_m`, the Shipyard) is never a service pad, so it has no occupant.
-func _pad_serves(pad: int) -> bool:
-	var d: int = _store.def_id[EntityId.slot(pad)]
-	return d < _defs.pad_radius_by_def.size() and _defs.pad_radius_by_def[d] > 0.0
+	return PadQueries.occupant(_store, _defs, pad)
 
 
 ## Nearest live friendly structure with a pad (`pad_radius_by_def` > 0), or 0.
 func nearest_friendly_pad(id: int) -> int:
-	if not _store.alive(id):
-		return 0
-	var s0: int = EntityId.slot(id)
-	var p: Vector3 = _store.pos[s0]
-	var best: int = 0
-	var best_d2: float = INF
-	for s: int in _store.structures:
-		var d: int = _store.def_id[s]
-		if _store.team[s] != _store.team[s0] or d >= _defs.pad_radius_by_def.size() or _defs.pad_radius_by_def[d] <= 0.0:
-			continue
-		var d2: float = p.distance_squared_to(_store.pos[s])
-		if d2 < best_d2:
-			best_d2 = d2
-			best = _store.id_of(s)
-	return best
+	return PadQueries.nearest_friendly(_store, _defs, id)
 
 
 func order_head(id: int) -> OrderSpec:
