@@ -7,7 +7,6 @@ class_name Salvage extends RefCounted
 
 enum Hook { OK, NOT_HAULER, NO_SLOT, BAD_WRECK, TOO_FAR }
 
-const CAUSE_EXPIRED: int = 1   ## DEATH cause of an expired wreck (0 is DEBUG, CommandApplier)
 
 var orders: OrderQueue = null  ## set by SimWorld: the head standing order of a ship decides the auto-hook
 var cap: int = 0               ## live wreck cap (`caps.wrecks`); 0 = the whole wreck range
@@ -19,6 +18,7 @@ var _events: SimEvents
 var _terrain: Terrain
 var _life_ticks: int = 0
 var _reach: float = 0.0
+var _deliver: float = 0.0
 var _pod_max: int = 1
 var _gone: PackedInt32Array = PackedInt32Array()      ## scratch: wreck slots to free after the pass
 var _touched: PackedInt32Array = PackedInt32Array()   ## scratch: hauler slots whose F_TETHERED needs a refresh
@@ -43,8 +43,8 @@ func _init(store: EntityStore, defs: WorldDefs, economy: Economy, events: SimEve
 	if defs.economy != null:
 		_life_ticks = roundi(defs.economy.wreck_lifetime_s * float(hz))
 		_pod_max = maxi(defs.economy.salvage_pod_max_ore, 1)
-	if defs.common != null:
-		_reach = defs.common.tether_len_m + defs.common.tether_drop_m
+		_reach = defs.economy.salvage_hook_m
+		_deliver = defs.economy.salvage_deliver_m
 
 
 ## W1: Ore value of the wrecks `def_id` leaves (from the undoctrined defs); 0 = none.
@@ -72,6 +72,10 @@ static func pod_value(value: int, pods: int, i: int) -> int:
 
 func reach_m() -> float:
 	return _reach
+
+
+func deliver_m() -> float:
+	return _deliver
 
 
 ## Step 9, before the deferred free of `s`: its wrecks (W1-W3, W5). Returns how many were created.
@@ -213,7 +217,7 @@ func _spawn(s: int, def: int, value: int, i: int, n: int, tick: int) -> bool:
 
 
 func _expire(s: int, tethered: bool) -> void:
-	var _e: SimEvent = _events.emit(SimEvent.Kind.DEATH, _store.id_of(s), 0, _store.pos[s], 0.0, -1, CAUSE_EXPIRED)
+	var _e: SimEvent = _events.emit(SimEvent.Kind.DEATH, _store.id_of(s), 0, _store.pos[s], 0.0, -1, SimEvent.DeathCause.EXPIRED)
 	var _a: bool = _gone.push_back(s)
 	if tethered:
 		_touch(_store.link[s])
@@ -310,7 +314,7 @@ func _refinery_near(h: int) -> int:
 	for r: int in _refs:
 		if _store.team[r] != team or (_store.flags[r] & (EntityStore.F_ALIVE | EntityStore.F_BUILDING)) != EntityStore.F_ALIVE:
 			continue
-		var d: float = _store.radius[r] + _reach
+		var d: float = _store.radius[r] + _deliver
 		if p.distance_squared_to(_store.pos[r]) <= d * d:
 			return r
 	return -1
