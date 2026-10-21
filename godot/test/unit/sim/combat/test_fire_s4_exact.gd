@@ -213,12 +213,13 @@ func test_restore_keeps_the_step_7_index_and_cells() -> void:
 	assert_int(w2.spatial.touched_count).is_equal(w.spatial.touched_count)
 
 
-# FORMAT 11 (TA-65 added the Spatial section): bytes stamped 10 are refused as OLD_FORMAT and do not load.
-func test_format_11_refuses_format_10_bytes() -> void:
-	assert_int(SimSerialize.FORMAT).is_equal(11)
+# FORMAT 12 (GD-10 added the shield domes after the fire state; TA-65 had added the Spatial section): bytes stamped 11 are
+# refused as OLD_FORMAT and do not load.
+func test_format_12_refuses_format_11_bytes() -> void:
+	assert_int(SimSerialize.FORMAT).is_equal(12)
 	assert_str(SimSerialize.SECTIONS[SimSerialize.SECTIONS.size() - 1]).is_equal("spatial")
 	var w: SimWorld = _setup(7, false)[0]
 	var bytes: PackedByteArray = w.serialize()
-	bytes.encode_u32(4, 10)
+	bytes.encode_u32(4, 11)
 	assert_int(SimSerialize.check(bytes)).is_equal(SimSerialize.Status.OLD_FORMAT)
 	assert_object(SimWorld.deserialize(bytes, WorldTestKit.content(), BurstHook.new())).is_null()

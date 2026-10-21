@@ -6,7 +6,7 @@ same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines (ADR
 
 | Field | Value |
 |---|---|
-| Responsibility | The team pools (`PlayerTable.team_ore` / `team_ice`), storage caps (sum of `storage_ore` / `storage_ice`), power ratio, payment (`try_pay`) with the early share lock, refunds, credit with the cap clamp, the Core trickle, and the LOW_POWER / STORAGE_FULL notices. The supply network (`SupplyNet`: Pylon graph, supplied flags, tower ammo refill; GD-18). Not here: Harvester cycles, Refinery docks, Extractors, salvage and the Core shield (GD-xx; `credit(..., player)` is their seam), placement (`sim/build/`), queues (`sim/production/`). |
+| Responsibility | The team pools (`PlayerTable.team_ore` / `team_ice`), storage caps (sum of `storage_ore` / `storage_ice`), power ratio, payment (`try_pay`) with the early share lock, refunds, credit with the cap clamp, the Core trickle, and the LOW_POWER / STORAGE_FULL notices. The supply network (`SupplyNet`: Pylon graph, supplied flags, tower ammo refill; GD-18). Not here: Harvester cycles, Refinery docks, Extractors and salvage (GD-xx; `credit(..., player)` is their seam); the shield domes and the Core shield are `sim/combat/` `ShieldDomes` (GD-10), which reads `shield_recharge_mult`, `tower_rates`, `try_spend`, `structure_epoch` and `SupplyNet.is_supplied`, placement (`sim/build/`), queues (`sim/production/`). |
 | Lane owner tier | Sonnet against this file (Opus review) |
 | May depend on | `core`, `content`, `sim` (incl. `sim/world/`: `WorldDefs`, `PlayerTable`, `SimEvents`, `StateIO`; `sim/build/` `Build` for the ledgers) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads, RNG |
