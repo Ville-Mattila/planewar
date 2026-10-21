@@ -6,7 +6,7 @@
       "status": "core",
       "tags": ["structure"],
       "presentation": {},
-      "_doc": "02 s5.1 core: HP 3000; no build cost; Core storage 3000 Ore / 800 Ice (R0 B.7 Core 3,000/800); Refinery +1500/+500 on top; pad_radius_m 12 (R0 B.1); integrated_shield 2400 / 40 per s / 5 s (02 s5.1 note); buildable false, one per player",
+      "_doc": "02 s5.1 core: HP 3000; no build cost; Core storage 3000 Ore / 800 Ice (R0 B.7 Core 3,000/800); Refinery +1500/+500 on top; pad_radius_m 12 (R0 B.1); integrated_shield 2400 / 40 per s / 5 s (02 s5.1 note); dome_radius 75 (R0 B.18 A-99: >= half-diagonal 52.07 + bomb blast_radius_structure_m 20 = 72.07), collapse_s 10 (02 s4.3 rule 6); buildable false, one per player",
       "hp": 3000,
       "cost_ore": 0,
       "cost_ice": 0,
@@ -26,7 +26,9 @@
       "integrated_shield": {
         "charge_max": 2400,
         "recharge_per_s": 40,
-        "recharge_delay_s": 5
+        "recharge_delay_s": 5,
+        "dome_radius": 75,
+        "collapse_s": 10
       }
     },
     {

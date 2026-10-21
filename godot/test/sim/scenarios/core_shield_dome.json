@@ -1,8 +1,32 @@
 {
   "schema_version": 1,
   "id": "core_shield_dome",
-  "title": "A Core's shield dome intercepts shots until it collapses (SHIELD_COLLAPSE), then the Core takes damage",
-  "refs": ["02 s4.3", "02 GD-10"],
-  "status": "planned",
-  "planned_reason": "shield domes (combat rule 6, shield_intercept) are GD-10 and not implemented; sim/combat/MODULE.md lists them as out of scope"
+  "title": "C-13: 4 Darts drop 8 bombs on a tower-less Core; the integrated shield absorbs 6, collapses on the 7th (SHIELD_COLLAPSE), the last 2 pass; the Core keeps at least 600 HP",
+  "refs": ["02 s4.3", "02 s5.1", "02 GD-10", "02 C-13", "R0 C3-05"],
+  "status": "active",
+  "world": { "kind": "combat", "seed": 7 },
+  "ticks": 360,
+  "script": [
+    { "at": 1, "do": "spawn", "def": "core", "owner": 0, "team": 0, "alt": 0, "as": "core" },
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 4, "team": 1, "alt": 200, "east": -20, "north": -20, "pin": true, "as": "d1" },
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 4, "team": 1, "alt": 200, "east": 20, "north": -20, "pin": true, "as": "d2" },
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 4, "team": 1, "alt": 200, "east": -20, "north": 20, "pin": true, "as": "d3" },
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 4, "team": 1, "alt": 200, "east": 20, "north": 20, "pin": true, "as": "d4" },
+    { "at": 3, "do": "hold", "entity": "d1", "buttons": ["FIRE2"] },
+    { "at": 3, "do": "hold", "entity": "d2", "buttons": ["FIRE2"] },
+    { "at": 3, "do": "hold", "entity": "d3", "buttons": ["FIRE2"] },
+    { "at": 3, "do": "hold", "entity": "d4", "buttons": ["FIRE2"] }
+  ],
+  "event_filter": ["SHIELD_COLLAPSE", "BOMB_IMPACT"],
+  "events": [
+    { "tick": 96, "kind": "SHIELD_COLLAPSE", "a": "core" },
+    { "tick": 109, "kind": "BOMB_IMPACT", "a": "d3" },
+    { "tick": 109, "kind": "BOMB_IMPACT", "a": "d4" }
+  ],
+  "checks": [
+    { "at": 2, "query": "hp01", "entity": "core", "value": 1.0 },
+    { "at": 360, "query": "event_count", "kind": "SHIELD_COLLAPSE", "value": 1 },
+    { "at": 360, "query": "event_count", "kind": "BOMB_IMPACT", "value": 2 },
+    { "at": 360, "query": "hp01", "entity": "core", "op": "ge", "value": 0.2 }
+  ]
 }

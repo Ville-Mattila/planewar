@@ -287,7 +287,9 @@
           "required": [
             "charge_max",
             "recharge_per_s",
-            "recharge_delay_s"
+            "recharge_delay_s",
+            "dome_radius",
+            "collapse_s"
           ],
           "properties": {
             "charge_max": {
@@ -301,6 +303,16 @@
               "maximum": 1000
             },
             "recharge_delay_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 120
+            },
+            "dome_radius": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2000
+            },
+            "collapse_s": {
               "type": "number",
               "minimum": 0,
               "maximum": 120

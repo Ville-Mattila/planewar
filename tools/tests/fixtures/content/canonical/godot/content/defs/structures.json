@@ -31,7 +31,9 @@
    "integrated_shield": {
     "charge_max": 2400,
     "recharge_per_s": 40,
-    "recharge_delay_s": 5
+    "recharge_delay_s": 5,
+    "dome_radius": 75,
+    "collapse_s": 10
    }
   },
   {

@@ -31,7 +31,7 @@ class StructureSpotValues(unittest.TestCase):
 
     def test_core_shield_and_pad(self) -> None:
         core = self.s["core"]
-        self.assertEqual(core["integrated_shield"], {"charge_max": 2400, "recharge_per_s": 40, "recharge_delay_s": 5})
+        self.assertEqual(core["integrated_shield"], {"charge_max": 2400, "recharge_per_s": 40, "recharge_delay_s": 5, "dome_radius": 75, "collapse_s": 10})
         self.assertEqual(core["pad_radius_m"], 12)
         self.assertEqual((core["storage_ore"], core["storage_ice"]), (3000, 800))
         self.assertFalse(core["buildable"])
