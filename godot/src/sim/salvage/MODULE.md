@@ -108,7 +108,7 @@ changed FORMAT), `test_salvage_perf.gd` (W10 counters; PerfGate).
 ## How to add X (recipes for the cheapest tier)
 
 - **A new wreck source:** nothing; any def with a base Ore cost leaves a wreck through `EconomyHub.on_death`.
-- **The tether follow (GD-37):** move the wreck in step 5 from `link`; do not add a second link table.
+- **The tether follow (GD-37):** move the wreck in step 5; where the tow state lives (`link[wreck]` here vs the R0 C3-17 `tether_target` side table) is pending the GD-19 Architect ruling.
 
 ## Open items
 
