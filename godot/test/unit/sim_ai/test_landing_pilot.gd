@@ -162,6 +162,7 @@ func test_think_and_act_cost() -> void:
 	var n: int = 2000
 	var us_t: float = INF
 	var us_a: float = INF
+	var acts_done: int = 0
 	for batch: int in 6:
 		var t0: int = Time.get_ticks_usec()
 		for i: int in n:
@@ -170,8 +171,12 @@ func test_think_and_act_cost() -> void:
 		t0 = Time.get_ticks_usec()
 		for i: int in n:
 			var _p: int = _pilot.act(id, _world, _st, out)
+			if is_finite(out.thrust):
+				acts_done += 1
 		us_a = minf(us_a, float(Time.get_ticks_usec() - t0) / float(n))
 	print("PERF LandingPilot.think %.2f us/call, act %.2f us/call (LandingWorld view)" % [us_t, us_a])
-	# runaway guards (R0 B.17 A-97): measured think 19.5 us (bound 500), act 19.9 us (bound 200, 10x)
+	# think: runaway guard (R0 B.17 A-97), measured 19.5 us dev box / 21.2 us hosted (bound 500, >= 23x).
+	# act: hosted CI measured 29.0 us (bound 200 = 6.9x), under 10x, so it is a budget bound: PerfGate beside a hard counter.
 	assert_float(us_t).is_less(500.0)
-	assert_float(us_a).is_less(200.0)
+	assert_int(acts_done).override_failure_message("every timed act wrote a finite PilotInput").is_equal(6 * n)
+	assert_bool(PerfGate.check("landing_pilot.act", us_a, 200.0, "05 s10 act row 6 us (loose guard 200 us)")).is_true()

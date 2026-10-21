@@ -40,7 +40,7 @@ func test_every_active_scenario_holds() -> void:
 		assert_array(Array(fails)).override_failure_message("scenario %s (%s): %s" % [stem, sc["refs"], "; ".join(fails)]).is_empty()
 		ran += 1
 	assert_int(ran).is_greater_equal(7)
-	# runaway guard, measured about 1.5 s for the whole suite (bound 60 s, TA-33): ran >= 7 above is the hard counter
+	# runaway guard, measured about 1.5 s for the whole suite on the dev box (bound 60 s, 40x): ran >= 7 above is the hard counter
 	assert_int(Time.get_ticks_msec() - started).is_less(BUDGET_MS)
 
 

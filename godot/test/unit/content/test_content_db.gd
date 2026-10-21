@@ -209,6 +209,6 @@ func test_load_time_budget_n6() -> void:
 		best = mini(best, Time.get_ticks_usec() - t0)
 		assert_bool(r.ok).is_true()
 	print("ContentDB.load_all best of 5: %.1f ms" % (best / 1000.0))
-	# Hard counter: the load really built the v1 set (the work the 150 ms row bounds). The 4x bound is report-only on hosted runners.
-	assert_int(ContentDB.def_index(&"dart")).is_greater_equal(0)
-	assert_bool(PerfGate.check("content_db.load_all", float(best), 600000.0, "N6 (150 ms) x 4 CI")).is_true()
+	# Hard counter (A-97): every def file under DEFS was ingested (the work the 150 ms row bounds). The 4x bound is report-only on hosted runners.
+	assert_int(ContentDB._texts.size()).override_failure_message("def files ingested").is_equal(_texts().size())
+	assert_bool(PerfGate.check("content_db.load_all", float(best), 600000.0, "N6 (150 ms) x 4 CI; hosted 29.0 ms")).is_true()
