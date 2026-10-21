@@ -26,7 +26,7 @@ const ACT_ROW_US: float = 6.0
 const CI_FACTOR: float = 2.0
 const REF_ANCHOR_US: float = 1.25
 const MAX_HOST: float = 1.5
-## TeamPicture: one ships() pass per team per Vision epoch; its per-tick share at PlayerTable.TEAMS teams is asserted
+## TeamPicture: one visible_enemy_ships() call per team per Vision epoch; its per-tick share at PlayerTable.TEAMS teams is asserted
 ## against a stated part of the 05 s10 think slice (1.8 ms): a quarter.
 const PICTURE_CAP_US: float = 450.0
 ## R0 B.17 A-96 (the author never raises these): the 05 s10 act row is a fleet mean, priced at the engaged mix

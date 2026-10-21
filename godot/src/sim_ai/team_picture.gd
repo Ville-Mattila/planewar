@@ -6,11 +6,13 @@ class_name TeamPicture extends RefCounted
 ## the S4 bytes). A fresh enemy ship starts with no visibility bits (EntityStore.alloc) and stays out until the next
 ## pass, as the list does; `near` skips the dead and reads live positions. A choice point filters the list by distance
 ## instead of an `ids_near` over its 1.2-2 km radius (beyond `Spatial.ring2_m` that walks every touched hash cell).
-## **Needs sim:** a per-team visible-enemy list from Vision itself would remove the `ships()` pass.
+## Built from `SimView.visible_enemy_ships` (TA-63, V10: live ships of other teams, ascending EntityId, the team's last
+## Vision pass) instead of a `ships()` walk; same set and order as the old walk, so every tie-break is unchanged.
 
 var _tick: PackedInt32Array = PackedInt32Array()     ## by team: Vision epoch of the cached list (-1: none)
 var _ids: Array[PackedInt32Array] = []                ## by team: visible enemy ships of that epoch
 var _near: PackedInt32Array = PackedInt32Array()      ## scratch of `near` (grown on demand, reused)
+var _buf: PackedInt32Array = PackedInt32Array()      ## scratch of the Vision list (grown by the view, reused)
 var builds: int = 0                                   ## lists built (tests, perf)
 var period: int = 1                                   ## Vision pass period in ticks (DartParams.vision_period; the session's rungs)
 
@@ -30,11 +32,8 @@ func enemies(view: SimView, team: int, tick: int) -> PackedInt32Array:
 	if _tick[team] != e:
 		_tick[team] = e
 		builds += 1
-		var out: PackedInt32Array = PackedInt32Array()
-		for id: int in view.ships():
-			if view.team(id) != team and view.visible_to(team, id):
-				var _a: bool = out.push_back(id)
-		_ids[team] = out
+		var n: int = view.visible_enemy_ships(team, _buf)   # Vision's list, ascending EntityId (V10), the old ships() order
+		_ids[team] = _buf.slice(0, n)
 	return _ids[team]
 
 
