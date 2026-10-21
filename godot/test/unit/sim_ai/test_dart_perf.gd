@@ -11,7 +11,8 @@ extends GdUnitTestSuite
 ##             ENGAGE on a Bomber ~400 m ahead (in fire range: the per-tick lead, the burst).
 ## TeamPicture is asserted as its own line (per tick, all teams, once per Vision epoch), and deterministic counters
 ## (choice / refresh shares, exact pull_up_loss calls, picture builds per epoch) catch regressions without timer noise.
-## Statistics and host normalisation are AI-40's (test_escort_perf.gd): best batch mean, a frozen reference kernel timed
+## Timing bounds are report-only on hosted runners (R0 B.17 A-97: PERF_REPORT lines; asserted with
+## PLANEWAR_PINNED_RUNNER=1); the counters are hard everywhere. Statistics and host normalisation are AI-40's (test_escort_perf.gd): best batch mean, a frozen reference kernel timed
 ## before and after, figures divided by host = clamp(ref / REF_ANCHOR_US, 1, MAX_HOST); CI bound = row x CI_FACTOR.
 
 const CALLS: int = 600
@@ -147,15 +148,16 @@ func test_perf_think_and_act() -> void:
 	assert_float(quiet["loss_per_sinking_act"]).is_equal_approx(1.0 / float(DartKit.params().check_ticks), 1e-6)   # A-96 counter
 	assert_int(fight["builds_per_epoch"]).is_equal(1)                     # one picture per team per Vision epoch
 	# timings against the 05 s10 rows x CI_FACTOR (AI-40 / AI-11 precedent; no other factor)
-	assert_float(qt.x / host).is_less(THINK_ROW_US * CI_FACTOR)
-	assert_float(it.x / host).is_less(THINK_ROW_US * CI_FACTOR)
+	assert_bool(_gate("test_dart_perf.quiet_think", qt.x, THINK_ROW_US * CI_FACTOR, host, "05 s10 / R0 A-96")).is_true()
+	assert_bool(_gate("test_dart_perf.engaged_think", it.x, THINK_ROW_US * CI_FACTOR, host, "05 s10 / R0 A-96")).is_true()
 	var mix: float = (1.0 - ENGAGED_MIX) * float(quiet["act"]) + ENGAGED_MIX * float(fight["act"])
 	print("AI-13 act fleet mix (A-96, f %.2f): %.2f us (asserted %.2f < %.1f); act engage %.2f < %.1f" % [ENGAGED_MIX, mix,
 		mix / host, ACT_ROW_US * CI_FACTOR, float(fight["act"]) / host, ACT_ENGAGE_CEILING_US])
-	assert_float(float(quiet["act"]) / host).is_less(ACT_ROW_US * CI_FACTOR)
-	assert_float(mix / host).is_less(ACT_ROW_US * CI_FACTOR)
-	assert_float(float(fight["act"]) / host).is_less(ACT_ENGAGE_CEILING_US)
-	assert_float(pic_tick / host).is_less(PICTURE_CAP_US)
+	assert_bool(_gate("test_dart_perf.act_patrol", float(quiet["act"]), ACT_ROW_US * CI_FACTOR, host, "05 s10 / R0 A-96")).is_true()
+	assert_bool(_gate("test_dart_perf.act_mix", mix, ACT_ROW_US * CI_FACTOR, host, "05 s10 / R0 A-96")).is_true()
+	assert_bool(_gate("test_dart_perf.act_engage", float(fight["act"]), ACT_ENGAGE_CEILING_US, host, "05 s10 / R0 A-96")).is_true()
+	assert_bool(_gate("test_dart_perf.team_picture_tick", pic_tick, PICTURE_CAP_US, host, "05 s10 / R0 A-96")).is_true()
+	assert_float(fight["visible_per_engage_act"]).is_equal(1.0)   # A-97: one visible_to per ENGAGE act (the round-1 lever)
 
 
 # The timings and counters of one world: quiet (no enemy in reach) or fight (two enemies near, a Bomber in gun range).
@@ -207,7 +209,10 @@ func _case(enemies: bool) -> Dictionary:
 		st.aim_lead[s] = v.pos(close)
 		st.mode[s] = AiTag.Tag.ENGAGE
 		assert_float(v.pos(ids[i]).distance_to(v.pos(close))).is_less(brain.prm.fire_range)
+	var e0: Vector2i = Vector2i(brain.modes.combat.stats_engage_acts, brain.modes.combat.stats_engage_visible)
 	out["act"] = _acts(brain, v, st, sink, ids)
+	var e1: Vector2i = Vector2i(brain.modes.combat.stats_engage_acts, brain.modes.combat.stats_engage_visible)
+	out["visible_per_engage_act"] = float(e1.y - e0.y) / float(maxi(e1.x - e0.x, 1))
 	var pic: float = INF
 	for b: int in BATCHES:
 		var t0: int = Time.get_ticks_usec()
@@ -258,3 +263,10 @@ static func _ref_step(pts: PackedVector3Array, k: int) -> float:
 		c = (c + a * 0.5).normalized()
 		acc += c.dot(b) + atan2(c.y, c.x) + (1.0 if c.z > 0.0 else -1.0)
 	return acc
+
+## R0 B.17 A-97 inline gate (until TEST-03's PerfGate): one PERF_REPORT line; the bound is asserted only on the pinned
+## runner (PLANEWAR_PINNED_RUNNER == "1"); on hosted runners timing never fails a test.
+static func _gate(name: String, us: float, bound_us: float, host: float, cite: String) -> bool:
+	var pinned: bool = OS.get_environment("PLANEWAR_PINNED_RUNNER") == "1"
+	print("PERF_REPORT name=%s us=%.2f bound_us=%.2f host=%.2f pinned=%d cite=%s" % [name, us, bound_us, host, 1 if pinned else 0, cite])
+	return not pinned or us / host < bound_us
