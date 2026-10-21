@@ -35,7 +35,7 @@ func test_every_integrated_shield_radius_covers_the_footprint_plus_the_largest_a
 		var half_diag: float = Vector2(float(sd.footprint[0]), float(sd.footprint[1])).length() * WorldDefs.build_cell_m() * 0.5
 		assert_float(float(sd.integrated_shield["dome_radius"])).is_greater_equal(half_diag + reach)
 		assert_float(half_diag + reach).is_equal_approx(72.07, 0.01)
-		assert_float(float(sd.integrated_shield["collapse_s"])).is_equal(float(K.sdef(&"shield_projector").shield["collapse_s"]))
+		assert_float(float(sd.integrated_shield["collapse_s"])).is_equal(10.0)             # 02 s4.3 rule 6: "collapses to 0 for 10 s"
 	assert_int(seen).is_equal(1)
 
 

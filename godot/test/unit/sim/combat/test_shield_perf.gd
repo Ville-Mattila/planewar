@@ -6,6 +6,11 @@ extends GdUnitTestSuite
 ## the pass may use 25 % of it (300 us) under the stress load (60 absorbed per tick, the worst a bomber wing drops in one
 ## tick) and 12.5 % (150 us) under the S-SIM-1 load.
 
+# Why 60 absorbed shots per tick is the worst case: a ship releases at most one absorbable shot per tick (one bomb, one
+# rocket or one shell per weapon, rate of fire <= 10 per s at 30 Hz), a dome takes 3 bombs (Projector 1,200 / 400) or 6
+# (Core 2,400 / 400) before it collapses and stops absorbing, and at S-SIM-1 scale (<= 80 units per player, a wing per
+# base) a tick in which 60 shots enter domes is a bomber wing hitting a fortress. Cost is linear in absorbed shots,
+# about 3.3-4.4 us each (CI and dev box), so the 300 us bound leaves room for ~70.
 const R: float = Sphere.PLANET_RADIUS
 const STRESS: int = 60
 const CALLS: int = 12
