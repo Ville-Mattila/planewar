@@ -36,13 +36,24 @@ func test_unknown_blip_still_dead_reckons() -> void:
 	assert_that(f.shown_levels(SLOT, 70, true, G, DT)).is_not_equal(f.shown_levels(SLOT, 70, false, G, DT))
 
 
+func _blip_of_levels(f: BaselineFrame, lv: Vector3i) -> int:
+	var moved: int = Codec.pack_pos(Codec.pos_cell(f.pos[SLOT]), lv.x, lv.y, lv.z)
+	return DeadReckon.entry_blip(moved, f.flags[SLOT], f.vel[SLOT], 0, false, G, DT)
+
+
 func test_shown_blip_agrees_with_shown_levels() -> void:
 	var f: BaselineFrame = BaselineFrame.new()
 	var fine: int = DeadReckon.pack_fine(3 * DeadReckon.FINE_PER_MPS, 0, 0)
-	f.set_full_cached(SLOT, 10, _q(), 0, 0, fine, 255, 0, -1)
-	var lv: Vector3i = f.shown_levels(SLOT, 50, false, G, DT)
-	var moved: int = Codec.pack_pos(Codec.pos_cell(f.pos[SLOT]), lv.x, lv.y, lv.z)
-	assert_int(f.shown_blip(SLOT, 50, false, G, DT)).is_equal(DeadReckon.entry_blip(moved, 0, fine, 0, false, G, DT))
+	for flag: int in [0, Codec.FLAG_DYING]:
+		for grav: bool in [false, true]:
+			f.set_full_cached(SLOT, 10, _q(), 0, 0, fine, 255, flag, -1)
+			for t: int in [10, 50, 200]:
+				var lv: Vector3i = f.shown_levels(SLOT, t, grav, G, DT)
+				assert_int(f.shown_blip(SLOT, t, grav, G, DT)).is_equal(_blip_of_levels(f, lv))
+	# known blip: the stored blip, and the levels are its bucket
+	f.set_blip(SLOT, 40, 0x0A1B2C)
+	assert_int(f.shown_blip(SLOT, 300, true, G, DT)).is_equal(0x0A1B2C)
+	assert_that(f.shown_levels(SLOT, 300, true, G, DT)).is_equal(Vector3i(Codec.pos_e(f.pos[SLOT]), Codec.pos_n(f.pos[SLOT]), Codec.pos_u(f.pos[SLOT])))
 
 
 func test_replay_reader_position_of_known_dying_blip_is_stable() -> void:
