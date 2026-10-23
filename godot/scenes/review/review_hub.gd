@@ -22,10 +22,13 @@ const BLURBS: PackedStringArray = [
 func _ready() -> void:
 	var back: ReviewBackLayer = ReviewBackLayer.ensure(get_tree().root)
 	back.set_hub_visible(true)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var center: CenterContainer = CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(center)
 	var box: VBoxContainer = VBoxContainer.new()
-	box.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	box.add_theme_constant_override("separation", 14)
-	add_child(box)
+	center.add_child(box)
 	var title: Label = Label.new()
 	title.text = "PLANEWAR review build"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

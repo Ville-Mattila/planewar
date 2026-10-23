@@ -24,7 +24,10 @@ func _init() -> void:
 func _ready() -> void:
 	_button = Button.new()
 	_button.text = "Back to hub (Esc)"
-	_button.position = Vector2(8.0, 8.0)
+	_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	_button.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_button.offset_top = 8.0
+	_button.offset_right = -8.0
 	_button.focus_mode = Control.FOCUS_NONE
 	var _c: Error = _button.pressed.connect(go_back)
 	add_child(_button)
