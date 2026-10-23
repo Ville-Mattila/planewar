@@ -19,7 +19,7 @@ func _setup(seed_value: int) -> Array:
 	var refinery: int = DartKit.spawn(w, &"refinery", DartKit.FOE, DartKit.above(w, tgt_dir, 0.0), Vector3.ZERO, Vector3(0, 1, 0))
 	var mast_p: Vector3 = DartKit.above(w, DartKit.offset(tgt_dir, -1000.0, 0.0), 0.0)
 	var _mast: int = DartKit.spawn(w, &"sensor_mast", 0, mast_p, Vector3.ZERO, DartKit.heading(mast_p, Vector3(0, 1, 0)))
-	var core: int = Ai14Kit.core(w, DartKit.offset(tgt_dir, -5500.0, 200.0), 0)   # the home pad (Ai14Kit.core: the RAM stand-in)
+	var core: int = Ai14Kit.core(w, DartKit.offset(tgt_dir, -5500.0, 200.0), 0)   # the home pad (real Core radius; R0 B.21 A-109)
 	var p0: Vector3 = DartKit.above(w, DartKit.offset(tgt_dir, -4500.0, 150.0), 300.0)
 	var h0: Vector3 = DartKit.heading(p0, DartKit.above(w, tgt_dir, 300.0))
 	var bomber: int = DartKit.spawn(w, &"bomber", 0, p0, h0 * 70.0, h0)

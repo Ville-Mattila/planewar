@@ -112,14 +112,11 @@ static func make_driver(t: Terrain, with_intel: bool = true, rng_seed: int = 3, 
 	return d
 
 
-## A Core of `team` on the ground under `dir` (its pad is a home pad). Workaround for BUG-1 (sim): the structure
-## collision sphere (footprint half-diagonal, ~52 m for the Core, WorldDefs.radius_of) covers the Core's own landing
-## approach, so a ship rams it before the A-53 column (offset <= pad_radius_m); the pad radius stands in for it here.
+## A Core of `team` on the ground under `dir` (its pad is a home pad). The Core keeps its real collision radius
+## (WorldDefs.radius_of, 52.07 m); a ship above its deck is not RAM-tested against it (R0 B.21 A-109).
 static func core(w: SimWorld, dir: Vector3, team: int) -> int:
 	var p: Vector3 = DartKit.above(w, dir, 0.0)
-	var id: int = DartKit.spawn(w, &"core", team, p, Vector3.ZERO, DartKit.heading(p, Vector3(0, 1, 0)))
-	w.store().radius[EntityId.slot(id)] = structure(&"core").pad_radius_m
-	return id
+	return DartKit.spawn(w, &"core", team, p, Vector3.ZERO, DartKit.heading(p, Vector3(0, 1, 0)))
 
 
 ## The brain the driver runs for `def` (tests read its counters).
