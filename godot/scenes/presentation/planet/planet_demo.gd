@@ -59,7 +59,36 @@ func _ready() -> void:
 	add_child(layer)
 
 
+## REVIEW-02: the web review hub (no command line on web) sets this ProjectSettings key to a Dictionary with
+## any of map, lat, lon, alt, pitch, yaw before change_scene; absent in every other launch path.
+const REVIEW_KEY: String = "planewar/review/planet_demo"
+
+
+func _apply_review_overrides() -> void:
+	if not ProjectSettings.has_setting(REVIEW_KEY):
+		return
+	var o: Dictionary = ProjectSettings.get_setting(REVIEW_KEY)
+	_map = str(o.get("map", _map))
+	_lat_deg = _num(o, "lat", _lat_deg)
+	_lon_deg = _num(o, "lon", _lon_deg)
+	_alt = _num(o, "alt", _alt)
+	_pitch_deg = _num(o, "pitch", _pitch_deg)
+	_yaw = deg_to_rad(_num(o, "yaw", rad_to_deg(_yaw)))
+
+
+static func _num(o: Dictionary, key: String, fallback: float) -> float:
+	var v: Variant = o.get(key, fallback)
+	if v is float:
+		var f: float = v
+		return f
+	if v is int:
+		var i: int = v
+		return float(i)
+	return fallback
+
+
 func _parse_args() -> void:
+	_apply_review_overrides()
 	for arg: String in OS.get_cmdline_user_args():
 		if arg.begins_with("--tier="):
 			_tier = arg.substr(7)

@@ -9,7 +9,7 @@ const HUB_PATH: String = "res://scenes/review/review_hub.tscn"
 const TITLES: PackedStringArray = ["Flight spike", "Planet demo", "Entity demo"]
 const PATHS: PackedStringArray = [
 	"res://spikes/s_flight_1/flight_spike.tscn",
-	"res://scenes/presentation/planet/planet_demo.tscn",
+	PLANET_SCENE,
 	"res://scenes/presentation/entities/entity_demo.tscn",
 ]
 const BLURBS: PackedStringArray = [
@@ -47,7 +47,15 @@ func _ready() -> void:
 		box.add_child(l)
 
 
+## Planet demo start (cradle, lat 30 / lon 22.5, 1800 m up, pitched down): the 1200 m crater crater_0_w0 rim and
+## floor plus small craters are in frame; set here because the web build has no command-line args.
+const PLANET_REVIEW: Dictionary = {"map": "cradle", "lat": 30.0, "lon": 22.5, "alt": 1800.0, "pitch": -50.0, "yaw": 0.0}
+const PLANET_SCENE: String = "res://scenes/presentation/planet/planet_demo.tscn"
+
+
 func _launch(path: String) -> void:
+	if path == PLANET_SCENE:
+		ProjectSettings.set_setting(PlanetDemo.REVIEW_KEY, PLANET_REVIEW)
 	ReviewBackLayer.ensure(get_tree().root).set_hub_visible(false)
 	var err: Error = get_tree().change_scene_to_file(path)
 	if err != OK:
