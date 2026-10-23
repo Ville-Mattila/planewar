@@ -53,6 +53,14 @@ static func from_dict(d: Dictionary) -> TargetParams:
 	return p
 
 
+## AI-17: the tower choice point's numbers from an `ap_tower` entry: only the optional `tower_*` / `guard_mult` /
+## `attacked_*` / `max_candidates` keys (the ship keys are not required of a tower), defaults as the 05 s6.8 values.
+static func for_tower(d: Dictionary) -> TargetParams:
+	var p: TargetParams = TargetParams.new()
+	p._optional(d)
+	return p
+
+
 ## Resolves class names to def ids (`ContentSet.entity_index`) so a weight lookup is one array read.
 func bind(entity_index: Dictionary) -> void:
 	var _r: int = w_by_def.resize(DefRanges.END)
