@@ -99,6 +99,8 @@ func _vitals() -> void:
 	_t(&"landing_grade_last", _v.landing_grade_last(s.a) == -1)
 	_t(&"supply01", _near(_v.supply01(s.tower), SimViewScene.TOWER_SUPPLY01) and _v.supply01(s.core) == 0.0
 			and _v.supply01(s.a) == 0.0 and _v.supply01(s.dead) == 0.0)
+	_t(&"wreck_ore", _near(_v.wreck_ore(s.wreck), SimViewScene.WRECK_ORE) and _v.wreck_ore(s.a) == 0.0 and _v.wreck_ore(s.core) == 0.0
+			and _v.wreck_ore(s.dead) == 0.0 and _v.wreck_ore(0) == 0.0)
 	_t(&"shield01", _near(_v.shield01(s.core), SimViewScene.SHIELD01) and _v.shield01(s.tower) == 0.0
 			and _v.shield01(s.a) == 0.0 and _v.shield01(s.dead) == 0.0)
 

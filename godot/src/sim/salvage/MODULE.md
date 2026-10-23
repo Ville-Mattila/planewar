@@ -31,6 +31,7 @@ func towed_count(hauler: int) -> int                                         # w
 func tow_slots_of(hauler: int) -> int                                        # resolved ShipDef.tow_slots of a live ship slot, else 0
 func try_attach(hauler: int, wreck: int) -> Hook                             # slots; sets link and F_TETHERED on both
 func drop(hauler: int) -> int                                                # releases every wreck of the ship, returns the count
+# Reads: `SimView.wreck_ore(id)` = `hp` of a live K_WRECK, 0 otherwise, -1 on a view without data (GD-41, A-108; test_wreck_ore_view)
 ```
 
 Constants come from `economy.json` (`wreck_fraction`, `wreck_lifetime_s`, `salvage_pod_max_ore`), `match_rules.json`

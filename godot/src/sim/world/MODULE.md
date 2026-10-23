@@ -85,11 +85,14 @@ var ship_table: Array[ShipDef]; var ship_count: int
 func resolve(slot: int, doctrine: StringName) -> bool;  func resolved(owner: int) -> ResolvedDefs;  func ship(owner: int, def_id: int) -> ShipDef
 func entity_kind(def_id: int) -> int;  func hp_max(owner: int, def_id: int) -> float;  func cost(owner: int, def_id: int) -> Vector2i
 func possessable(def_id: int) -> bool;  func radius_of(def_id: int) -> float;  static func build_cell_m() -> float
+class_name ProjectileQueries extends RefCounted                                # (GD-41, A-73) LocalSimView.incoming_rockets / projectiles_near bodies
+static func incoming_rockets(proj: ProjectileStore, id: int) -> int;  static func near(proj: ProjectileStore, spatial: Spatial, p: Vector3, r: float, team_mask: int) -> PackedInt32Array
 class_name TeamStats                                                         # LocalSimView's team aggregates, O(structures), never on the tick path
 static func stockpile_cap(store: EntityStore, defs: WorldDefs, team: int) -> Vector2i;  static func power_balance(store: EntityStore, defs: WorldDefs, team: int) -> Vector2
 static func tech_available(store: EntityStore, defs: WorldDefs, team: int, def_id: int) -> bool;  static func has_structure(store: EntityStore, team: int, def_id: int) -> bool
 static func count_owned(store: EntityStore, player: int, live: PackedInt32Array) -> int;  static func fill_player(v: PlayerStateView, pl: PlayerTable, slot: int) -> void
 static func fill_team(v: TeamStateView, team: int, store: EntityStore, defs: WorldDefs, pl: PlayerTable, rules: MatchRules, state: MatchState) -> void   # (GD-18, A-73 extract)
+static func supply01(store: EntityStore, defs: WorldDefs, id: int) -> float   # (GD-41, A-73) LocalSimView.supply01 body
 class_name EconomyHub extends RefCounted                                     # (TA-19) composes Build, Economy, Construction, Production; routes their commands, deaths and step 10
 var build: Build; var economy: Economy; var construction: Construction; var production: Production; var supply: SupplyNet   # (GD-18) supply: step 10 after production; var salvage: Salvage   # (GD-19) wrecks: spawned in `on_death`, stepped after production (sim/salvage/MODULE.md)
 static func handles(kind: Command.Kind) -> bool;  func apply(cmd: Command) -> void;  func begin_tick(t: int) -> void;  func step(t: int, dt: float) -> void;  func on_death(s: int) -> void
