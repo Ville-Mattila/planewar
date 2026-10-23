@@ -175,8 +175,8 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
 - CQ-2 closed by A-111: net may name `TeamStateView`, `PlayerStateView`, `OrderSpec`; `team_state` / `player_state` /
   `order_head` / `pending_order` are NET-39's (exempt "NET-39, A-111"). CORE_SHIELD_UP travels meanwhile in TEAM_STATE
   (`team_flags`).
-- CQ-3 (A-113, TEST-5): after TEST-5 (`SimViewScene.CONTROL` 2, `SimViewFactory.tolerance`) the factory drops the
-  `control_state` / `flip_cooldown01` exemptions with a 1 / 255 tolerance for u8 fields.
+- CQ-3 closed by A-113 (TEST-5): the scene's CONTROL is 2 and the factory's `tolerance` is one wire quantum (1 / 255)
+  for the u8 fields of 04 s3.3; `control_state` and `flip_cooldown01` pass the contract unexempted.
 - CQ-4 closed by A-114: a split wreck's radius is the def radius with `field_unknown(radius)` (hull / n is not sent).
 - CQ-5 (Architect): `overlay`, `cargo`, `cargo_kind`, `link` have no 04 s3.7 row; listed in `NetUnknown.NEVER`. Ask: rows
   (e.g. flags bit 6 for cargo, DOCKED / LAUNCHED events for link) or confirm non-replicated.
