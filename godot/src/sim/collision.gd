@@ -1,7 +1,7 @@
 class_name Collision extends RefCounted
 ## Tick step 8 (03 s6.1, R0 B.5, TA-14): reads the coherent Spatial hash of step 7 and writes `Contact` records
-## (flat typed arrays, `contact_count` valid entries) for Combat (step 9) and Docking (step 10). Detects and
-## classifies only; it never changes HP, flags or positions. Tests in 03 s6.1 order:
+## (flat typed arrays, `contact_count` valid entries) for Combat and Docking (step 9). Detects and classifies only;
+## it never changes HP, flags or positions (pure math: `ContactMath`). Tests in 03 s6.1 order:
 ##   8  projectile vs entity: segment prev_pos -> pos vs sphere (entity radius + projectile radius), the earliest
 ##      entry t in [0, 1] wins; same team skipped unless `friendly_fire`, the shooter skipped for
 ##      `shooter_grace_ticks` from the projectile's first collision tick, wrecks skipped -> C_HIT;
@@ -16,11 +16,10 @@ class_name Collision extends RefCounted
 ##   ship vs ship (each pair once) and ship vs structure (from the ship side) sphere-sphere -> C_RAM; a docked ship
 ##      is exempt against its own pad, a not-docked ship above a friendly pad structure's deck (A-53 widened by BUG-1:
 ##      altitude above the pad plane >= -(radius + 0.5), any horizontal offset; the sphere's body lies below the deck)
-##      against that structure. The landing volume (C_PAD) keeps offset <= pad_radius_m.
-## A-87: a ship is never RAM-tested against an own-team structure whose def has `launch_pad: true` (the Shipyard), docked
-## or not; enemy ships still ram it.
-## The pad plane passes through the structure's `pos` with normal `up` (GD-15 may add a deck offset).
-## Per-slot state (`ep_gen`, `ep_last`, `born_gen`, `born_tick`) is sim state for serialization (S4, TA-18).
+##      against that structure. The landing volume (C_PAD) keeps offset <= pad_radius_m. A-87: never RAM against an
+##      own-team `launch_pad: true` structure (the Shipyard), docked or not; enemy ships still ram it.
+## The pad plane passes through the structure's `pos` with normal `up` (no deck offset, GD-15). Per-slot state
+## (`ep_gen`, `ep_last`, `born_gen`, `born_tick`) is sim state for serialization (S4, TA-18).
 
 const C_HIT: int = 0
 const C_GROUND: int = 1
@@ -39,7 +38,8 @@ const _RAM_CAP: int = 64                                 # rams per ship per tic
 
 ## Contact records, index < contact_count. a / b: EntityIds. value: HIT entry t, GROUND terrain height,
 ## TERRAIN hit_normal_speed, RAM centre distance, PAD horizontal offset. point: HIT entry point, GROUND surface
-## point, else the ship position. vec: PAD (v_vert, v_hor, tilt_deg). cls: TERRAIN class or PAD band.
+## point, else the ship position. vec: PAD (v_vert, v_hor, tilt_deg; v_vert = max(post-move descent, the tick's terrain
+## hit_normal_speed), GD-15). cls: TERRAIN class or PAD band.
 var launch_pad: PackedByteArray = PackedByteArray()   ## by EntityStore.def_id: 1 = `launch_pad: true` structure (A-19, A-87); set by SimWorld
 var contact_count: int = 0
 var c_kind: PackedByteArray = PackedByteArray()
@@ -134,44 +134,15 @@ func step(tick: int) -> void:
 		_ship(s, tick)
 
 
-## 03 s6.1 ship-terrain classes from flight_common: > terrain_kill_speed destroy, > terrain_damage_speed damage,
-## else scrape.
+## Pure math, bodies in `ContactMath` (A-73 extract, GD-15): the 03 s6.1 ship-terrain class (T_*) from flight_common;
+## the 03 s6.4 / R0 B.5 landing band (L_*; v_vert = descent along the pad normal); the entry t in [0, 1] of the segment
+## a -> b into the sphere (c, r), 0 if a starts inside, -1.0 on a miss.
 static func classify_terrain(hit_normal_speed: float, common: FlightCommonDef) -> int:
-	if hit_normal_speed > common.terrain_kill_speed:
-		return T_DESTROY
-	if hit_normal_speed > common.terrain_damage_speed:
-		return T_DAMAGE
-	return T_SCRAPE
-
-
-## 03 s6.4 / R0 B.5 landing band: safe within all landing_safe_* limits, destroyed beyond any landing_damage_*
-## limit (tilt: landing_damage_tilt_deg), else damage. v_vert is the descent speed along the pad normal.
+	return ContactMath.classify_terrain(hit_normal_speed, common)
 static func landing_band(v_vert: float, v_hor: float, tilt_deg: float, common: FlightCommonDef) -> int:
-	if v_vert > common.landing_damage_v_vert or v_hor > common.landing_damage_v_hor \
-			or tilt_deg > common.landing_damage_tilt_deg:
-		return L_DESTROY
-	if v_vert > common.landing_safe_v_vert or v_hor > common.landing_safe_v_hor \
-			or tilt_deg > common.landing_safe_pitch_deg:
-		return L_DAMAGE
-	return L_SAFE
-
-
-## Entry parameter t in [0, 1] of the segment a -> b into the sphere (c, r); 0 if a starts inside; -1.0 on a miss.
+	return ContactMath.landing_band(v_vert, v_hor, tilt_deg, common)
 static func sweep_sphere(a: Vector3, b: Vector3, c: Vector3, r: float) -> float:
-	var d: Vector3 = b - a
-	var f: Vector3 = a - c
-	var cc: float = f.length_squared() - r * r
-	if cc <= 0.0:
-		return 0.0
-	var aa: float = d.length_squared()
-	var bb: float = f.dot(d)
-	if bb >= 0.0 or aa <= 0.0:
-		return -1.0
-	var disc: float = bb * bb - aa * cc
-	if disc < 0.0:
-		return -1.0
-	var t: float = (-bb - sqrt(disc)) / aa
-	return t if t <= 1.0 else -1.0
+	return ContactMath.sweep_sphere(a, b, c, r)
 
 
 # 8 and 8b over every live projectile. Hot path: arrays through locals, ring 1 inside a face by index arithmetic
@@ -204,7 +175,7 @@ func _projectile_pass(tick: int) -> void:
 				var s: int = items[s0 + k]
 				var rr: float = erad[s] + pr
 				if mid.distance_squared_to(epos[s]) <= (half + rr) * (half + rr) and _hittable(i, s, tick):
-					var t: float = sweep_sphere(a, b, epos[s], rr)
+					var t: float = ContactMath.sweep_sphere(a, b, epos[s], rr)
 					if t >= 0.0 and (best < 0 or t < _best_t):
 						_best_t = t
 						best = s
@@ -229,8 +200,9 @@ func _ground(i: int, b: Vector3, pr: float, cell: int) -> void:
 	if r2 > lim * lim:
 		return
 	prefilter_passed += 1
-	if _hmax_ok[cell] == 0:
-		_fill_hmax(cell)
+	if _hmax_ok[cell] == 0:                                  # TerrainCellMax: the cell's highest baked height, cached
+		_hmax_ok[cell] = 1
+		_hmax[cell] = TerrainCellMax.of_cell(_terrain, cell)
 	lim = Sphere.PLANET_RADIUS + _hmax[cell] + pr + 1.0
 	if r2 > lim * lim:
 		return
@@ -238,12 +210,6 @@ func _ground(i: int, b: Vector3, pr: float, cell: int) -> void:
 	var h: float = _terrain.height_at(b)
 	if sqrt(r2) - Sphere.PLANET_RADIUS < h + pr:
 		_emit(C_GROUND, 0, _proj.id_of(i), EntityId.NULL_ID, h, b.normalized() * (Sphere.PLANET_RADIUS + h), Vector3.ZERO)
-
-
-# Highest baked height over the hash cell, cached (`TerrainCellMax`).
-func _fill_hmax(cell: int) -> void:
-	_hmax_ok[cell] = 1
-	_hmax[cell] = TerrainCellMax.of_cell(_terrain, cell)
 
 
 # Ship pass: pads, rams, then the terrain episode for one live ship slot. Candidates are rejected by centre
@@ -278,7 +244,7 @@ func _ship(s: int, tick: int) -> void:
 					_ship_structure(s, o, p, r, docked)
 	if not docked:
 		if _pad_slot >= 0:
-			_emit_pad(s, _pad_slot, p)
+			_emit_pad(s, _pad_slot, p, tick)
 		_terrain_episode(s, tick, _pad_slot >= 0)
 	for k: int in _ram_n:
 		var o: int = _ram[k]
@@ -309,13 +275,16 @@ func _ship_structure(s: int, o: int, p: Vector3, r: float, docked: bool) -> void
 		_add_ram(o)
 
 
-func _emit_pad(s: int, pad: int, p: Vector3) -> void:
+# GD-15: a ship that also touched the terrain this tick was pushed out with its normal speed zeroed (Kinematics step
+# 6); its descent is the larger of the post-move one and that tick's hit_normal_speed, so a fast arrival is not graded 0.
+func _emit_pad(s: int, pad: int, p: Vector3, tick: int) -> void:
 	var up_p: Vector3 = _store.up[pad]
 	var v: Vector3 = _store.vel[s]
-	var v_vert: float = -v.dot(up_p)
-	var v_hor: float = (v + up_p * v_vert).length()
+	var v_n: float = -v.dot(up_p)
+	var v_hor: float = (v + up_p * v_n).length()
+	var v_vert: float = maxf(v_n, _t_hns[s]) if _t_tick[s] == tick and _t_gen[s] == _store.generation[s] else v_n
 	var tilt: float = rad_to_deg(_store.fwd[s].angle_to(up_p))
-	_emit(C_PAD, landing_band(v_vert, v_hor, tilt, _common), _store.id_of(s), _store.id_of(pad), _pad_off, p,
+	_emit(C_PAD, ContactMath.landing_band(v_vert, v_hor, tilt, _common), _store.id_of(s), _store.id_of(pad), _pad_off, p,
 		Vector3(v_vert, v_hor, tilt))
 
 
@@ -329,7 +298,7 @@ func _terrain_episode(s: int, tick: int, on_pad: bool) -> void:
 	var fresh: bool = ep_gen[s] != g or float(tick - ep_last[s] - 1) >= _clear_ticks
 	ep_gen[s] = g
 	ep_last[s] = tick
-	var cls: int = classify_terrain(hns, _common)
+	var cls: int = ContactMath.classify_terrain(hns, _common)
 	if cls == T_DESTROY or (fresh and not on_pad):
 		_emit(C_TERRAIN, cls, _store.id_of(s), EntityId.NULL_ID, hns, _store.pos[s], Vector3.ZERO)
 

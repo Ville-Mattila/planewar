@@ -2,8 +2,7 @@ class_name LocalSimView extends SimView
 ## `SimView` over a local `SimWorld`'s arrays (03 s15.4): presentation offline, `sim_ai`, tests, `net`'s encoder.
 ## Reads are valid until the next `step()` and allocate nothing except the list getters (S3): `order_head` /
 ## `pending_order` refill one reused `OrderSpec` each, `team_state` / `player_state` one reused view per slot.
-## Accessors whose system has not landed return the `SimView` default: service / pad queue (Docking GD-15),
-## field_remaining (Economy), scores and landing grade (sim/scoring); path_grid_version: TA-50.
+## Accessors whose system has not landed return the `SimView` default: field_remaining (Economy), scores (GD-27).
 ## `visible_to` / `visible_ids` (walks every live slot) / `visible_enemy_ships` (Vision's list): `visible_mask` bit t (Vision, sim/vision/, team t's last staggered pass) or the own team.
 ## basis(id) = Basis(right, up, -fwd) with right = fwd x up (Godot's -Z forward).
 
@@ -24,6 +23,7 @@ var _pathing: Pathing = null
 var production: Production = null   ## set by SimWorld (TA-19): queue and progress reads
 var shields: ShieldDomes = null       ## set by SimWorld (GD-38): `shield01` and the CORE_SHIELD_UP flag read it
 var vision: Vision = null             ## set by SimWorld (TA-63): `visible_enemy_ships` reads its per-team lists
+var docking: Docking = null           ## set by SimWorld (GD-15): service progress, pad queues, landing grades
 
 
 func _init(store: EntityStore, projectiles: ProjectileStore, spatial: Spatial, terrain: Terrain, players: PlayerTable,
@@ -138,12 +138,7 @@ func tick() -> int:
 
 
 func visible_ids(_team: int) -> PackedInt32Array:
-	var out: PackedInt32Array = PackedInt32Array()
-	for live: PackedInt32Array in [_store.structures, _store.ships, _store.ground, _store.wrecks]:
-		for s: int in live:
-			if _store.team[s] == _team or (_team >= 0 and _team < PlayerTable.TEAMS and ((_store.visible_mask[s] >> _team) & 1) != 0):
-				var _a: bool = out.push_back(_store.id_of(s))
-	return out
+	return TeamStats.visible_ids(_store, _team)
 
 
 ## Vision's per-team list, not the store (V10, TA-63).
@@ -187,43 +182,33 @@ func link(id: int) -> int:
 	return _store.link[EntityId.slot(id)] if _store.alive(id) else 0
 
 
-## 0 ready, 1 boosting, 2 cooling down.
 func boost_state(id: int) -> int:
-	var sd: ShipDef = _ship_def(id)
-	if sd == null:
-		return 0
-	var b: float = _store.boost_time[EntityId.slot(id)]
-	return 1 if b > 0.0 else (0 if b <= -sd.boost_cooldown_s else 2)
+	return ShipReads.boost_state(_store, _ship_def(id), id)
 
 
-## Share of the flip cooldown still to run: 1 while flipping, 0 when FLIP is ready.
 func flip_cooldown01(id: int) -> float:
-	var sd: ShipDef = _ship_def(id)
-	if sd == null or sd.flip_cooldown_s <= 0.0:
-		return 0.0
-	var f: float = _store.flip_time[EntityId.slot(id)]
-	return 1.0 if f > 0.0 else clampf(1.0 + f / sd.flip_cooldown_s, 0.0, 1.0)
+	return ShipReads.flip_cooldown01(_store, _ship_def(id), id)
 
 
 func rockets(id: int) -> int:
 	return _store.rockets[EntityId.slot(id)] if _store.alive(id) else 0
 
 
-## FLYING (0) or DOCKED (2); LANDING_ASSIST and LAUNCHING arrive with Assist (AI-10) and Docking (GD-15).
 func dock_state(id: int) -> int:
-	return 2 if _store.alive(id) and (_store.flags[EntityId.slot(id)] & EntityStore.F_DOCKED) != 0 else 0
+	return ShipReads.dock_state(_store, id)
 
 
-## DOCKED 1, TOWING 2 (tethered), BUILDING 4 from the entity flags; CAPTURING arrives with Economy.
 func service_state(id: int) -> int:
-	if not _store.alive(id):
-		return 0
-	var f: int = _store.flags[EntityId.slot(id)]
-	if (f & EntityStore.F_BUILDING) != 0:
-		return 4
-	if (f & EntityStore.F_DOCKED) != 0:
-		return 1
-	return 2 if (f & EntityStore.F_TETHERED) != 0 else 0
+	return ShipReads.service_state(_store, id)
+
+
+## (fuel01, rearm line, hp01) of a ship docked on a service pad, ZERO otherwise (Docking, GD-15).
+func service_progress(id: int) -> Vector3:
+	return docking.service_progress(id) if docking != null else Vector3.ZERO
+
+
+func pad_queue(pad: int) -> PackedInt32Array:
+	return docking.pad_queue(pad) if docking != null else PackedInt32Array()
 
 
 ## The docked ship linked to `pad`, or 0 (PadQueries).
@@ -340,6 +325,10 @@ func match_phase() -> int:
 
 func match_clock_s() -> float:
 	return float(_state.tick) / float(_rules.tick_hz) if _rules.tick_hz > 0 else 0.0
+
+
+func landing_grade_last(id: int) -> int:
+	return docking.landing_grade_last(id) if docking != null else -1
 
 
 func read_poses(ids: PackedInt32Array, _pos: PackedVector3Array, _rot: PackedVector4Array) -> int:

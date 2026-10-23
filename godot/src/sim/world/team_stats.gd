@@ -111,3 +111,13 @@ static func supply01(store: EntityStore, defs: WorldDefs, id: int) -> float:
 	var sd: StructureDef = defs.resolved(store.owner[s]).structure(store.def_id[s])
 	var pool: float = Def.num(sd.tower.get("ammo_pool", 0.0)) if sd != null and sd.is_tower() else 0.0
 	return clampf(float(store.ammo[s]) / pool, 0.0, 1.0) if pool > 0.0 else 0.0
+
+
+## Every live entity team `team` sees: its own or `visible_mask` bit `team` (LocalSimView.visible_ids; A-73 extract, GD-15).
+static func visible_ids(store: EntityStore, team: int) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for live: PackedInt32Array in [store.structures, store.ships, store.ground, store.wrecks]:
+		for s: int in live:
+			if store.team[s] == team or (team >= 0 and team < PlayerTable.TEAMS and ((store.visible_mask[s] >> team) & 1) != 0):
+				var _a: bool = out.push_back(store.id_of(s))
+	return out

@@ -2,10 +2,10 @@ class_name SimWorld extends RefCounted
 ## The tick driver (03 s3.5, s4.1; R0 B.5 tick order). Content is injected at `_init` (no autoload in the sim);
 ## `load_map` builds every system for one match. `step()` runs, in order: 1 queued commands (+ disconnect releases),
 ## 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-50), 4 assist
-## substitution (`AssistStep`: `Assist.link_bridge`, AI-08; auto-dock AI-10), 5 kinematics (ships: DOCKED skipped,
+## substitution (`AssistStep`: `Assist.link_bridge`, AI-08; auto-dock AI-10; then `Docking.track`), 5 kinematics (ships: DOCKED skipped,
 ## A-41, terrain contacts to Collision; ground: GroundMotion, TA-38), 6 projectiles, 7 spatial rebuild, 8 collision,
-## 9 weapon fire, damage from the contacts and fuses (Combat), deferred deaths (+ footprints, sites, queues),
-## 10 Economy, Construction, Production and the match timers (Docking and scoring land later), 11 vision, 12 the
+## 9 weapon fire, damage from the contacts and fuses (Combat), landings (`Docking.land`, GD-15), deferred deaths (+ footprints,
+## sites, queues), 10 Economy, Construction, Production, docking service and the match timers, 11 vision, 12 the
 ## caller drains events. Helpers: `sim/world/`; control transitions: `sim/control/` (05 s2, AI-02).
 
 const _MAPS_ROOT: String = "res://content/maps/"
@@ -294,6 +294,7 @@ func _wire(rules: MatchRules) -> void:
 	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state, _pathing)
 	_view.production = _econ.production
 	_view.shields = _combat.shields
+	_view.docking = _econ.docking
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
 	vision = Vision.new(_store, _defs, rules.tick_hz)
 	_view.vision = vision
@@ -320,6 +321,7 @@ func _load_pathing(map_dir: String) -> Error:
 # `Assist.link_bridge`. Assist.auto_dock() joins with AI-10.
 func _assist_substitution() -> void:
 	AssistStep.run(_store, _players, _inputs, _terrain, _bridge, _assist_probe, _assist_in)
+	_econ.docking.track(_inputs)                              # GD-15: the manual-landing record, DOCK held
 
 
 # Step 9: Combat fires weapons (GD-36), applies the step-8 contacts (GD-08: damage, blasts, ramming) and the fuses,
@@ -329,6 +331,7 @@ func _step_combat(t: int) -> void:
 	_combat.fire.tower_power = _econ.economy.tower_rates()   # 02 s8.4: from the step-10 power cache
 	var _absorbed: int = _combat.shields.absorb(t)           # 02 s4.3 rule 6, before the contacts (GD-10)
 	_combat.step(t, rng)
+	_econ.docking.land(t, collision)                         # GD-15: PAD contacts -> LANDING / DOCKED, crash deaths join below
 	for s: int in _applier.dying:
 		_combat.forget(s)
 		_econ.on_death(s)
