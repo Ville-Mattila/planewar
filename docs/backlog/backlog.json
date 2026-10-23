@@ -7662,8 +7662,10 @@
       "03 s12",
       "TA-30"
     ],
-    "status": "todo",
-    "note": "Owner request 2026-10-23: quick web build of the current state to review on Vercel. The orchestrator deploys the artifact."
+    "status": "done",
+    "note": "Owner request 2026-10-23: quick web build of the current state to review on Vercel. The orchestrator deploys the artifact. Deployed to https://planewar-play.vercel.app (hub: flight spike, planet demo, entity demo). web_spike_flight preset has the same missing non-resource files issue (not fixed).",
+    "pr": 115,
+    "merged": "2026-10-23"
   },
   {
     "id": "GD-42",
