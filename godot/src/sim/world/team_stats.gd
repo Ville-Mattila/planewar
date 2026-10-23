@@ -99,3 +99,15 @@ static func fill_team(v: TeamStateView, team: int, store: EntityStore, defs: Wor
 	v.flags = TeamStateView.CORE_EXPOSURE if state.exposure_tick >= 0 else 0
 	if pb.x < pb.y:
 		v.flags |= TeamStateView.LOW_POWER
+
+
+## Tower ammo pool fill 0..1 (GD-18, A-73 extraction); 0 for a site, a non-tower or a dead id.
+static func supply01(store: EntityStore, defs: WorldDefs, id: int) -> float:
+	if not store.alive(id):
+		return 0.0
+	var s: int = EntityId.slot(id)
+	if store.kind[s] != EntityStore.K_STRUCTURE or (store.flags[s] & EntityStore.F_BUILDING) != 0:
+		return 0.0
+	var sd: StructureDef = defs.resolved(store.owner[s]).structure(store.def_id[s])
+	var pool: float = Def.num(sd.tower.get("ammo_pool", 0.0)) if sd != null and sd.is_tower() else 0.0
+	return clampf(float(store.ammo[s]) / pool, 0.0, 1.0) if pool > 0.0 else 0.0

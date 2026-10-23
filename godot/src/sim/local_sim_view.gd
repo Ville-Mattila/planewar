@@ -249,20 +249,11 @@ func pending_order(id: int) -> OrderSpec:
 
 
 func incoming_rockets(id: int) -> int:
-	var n: int = 0
-	for i: int in _proj.live:
-		if _proj.kind[i] == ProjectileStore.ROCKET and _proj.target[i] == id:
-			n += 1
-	return n
+	return ProjectileQueries.incoming_rockets(_proj, id)
 
 
 func projectiles_near(p: Vector3, r: float, team_mask: int) -> PackedInt32Array:
-	var out: PackedInt32Array = PackedInt32Array()
-	for id: int in _spatial.ids_near(p, r, Spatial.MASK_PROJECTILE):
-		var t: int = _proj.team[_proj.index_of(id)]
-		if t < PlayerTable.TEAMS and ((team_mask >> t) & 1) != 0:
-			var _a: bool = out.push_back(id)
-	return out
+	return ProjectileQueries.near(_proj, _spatial, p, r, team_mask)
 
 
 func ai_tag(id: int) -> int:
@@ -308,16 +299,9 @@ func player_state(slot: int) -> PlayerStateView:
 	return v
 
 
-## Tower ammo pool fill 0..1 (02 s5.4 pool bars); 0 for a site, a non-tower or a dead id.
+## Tower ammo pool fill 0..1 (02 s5.4 pool bars); 0 for a site, a non-tower or a dead id (TeamStats).
 func supply01(id: int) -> float:
-	if not _store.alive(id):
-		return 0.0
-	var s: int = EntityId.slot(id)
-	if _store.kind[s] != EntityStore.K_STRUCTURE or (_store.flags[s] & EntityStore.F_BUILDING) != 0:
-		return 0.0
-	var sd: StructureDef = _defs.resolved(_store.owner[s]).structure(_store.def_id[s])
-	var pool: float = Def.num(sd.tower.get("ammo_pool", 0.0)) if sd != null and sd.is_tower() else 0.0
-	return clampf(float(_store.ammo[s]) / pool, 0.0, 1.0) if pool > 0.0 else 0.0
+	return TeamStats.supply01(_store, _defs, id)
 
 
 ## Dome charge / effective cap (SH11); 0 for a collapsed or removed dome and for an entity without one.
