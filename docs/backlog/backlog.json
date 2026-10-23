@@ -3203,7 +3203,10 @@
       "06 s5.3",
       " 06 UX-13"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 121,
+    "merged": "2026-10-23",
+    "note": "OrbitController (RefCounted, time-stepped); K9-K11. Intent wiring -> UX-44. Nit: tests read private fields."
   },
   {
     "id": "UX-14",
