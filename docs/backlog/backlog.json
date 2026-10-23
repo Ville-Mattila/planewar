@@ -2943,7 +2943,7 @@
       " 04 NET-17"
     ],
     "status": "todo",
-    "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56); R0 B.19 A-103 / 04 s5.6: NetSimView presents a known-blip entry at BaselineFrame.shown_levels (stored bucket, no gravity even when DYING) and never extrapolates it; a contract test shares the fixture of test_dying_blip_rests_300_ticks_at_blip_pos; NetSimView carries GD-38: shield01 (inherit -1.0 until replicated, listed in the TEST-02 factory exempt()) and TeamStateView.CORE_SHIELD_UP via map flag 0x85, with a codec item"
+    "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56); R0 B.19 A-103 / 04 s5.6: NetSimView presents a known-blip entry at BaselineFrame.shown_levels (stored bucket, no gravity even when DYING) and never extrapolates it; a contract test shares the fixture of test_dying_blip_rests_300_ticks_at_blip_pos; NetSimView carries GD-38: shield01 (inherit -1.0 until replicated, listed in the TEST-02 factory exempt()) and TeamStateView.CORE_SHIELD_UP via map flag 0x85, with a codec item; NetSimView carries GD-41 wreck_ore (inherit -1.0 until replicated, listed in the TEST-02 factory exempt() with a 04 s5.6 cite, plus a net/MODULE.md open item)"
   },
   {
     "id": "UX-24",
