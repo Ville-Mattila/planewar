@@ -7564,7 +7564,8 @@
       "03 s6.1",
       "03 s3.6"
     ],
-    "status": "todo"
+    "status": "todo",
+    "note": "Open Architect question from review: which task owns blocking path cells under structure footprints (sim/pathing MODULE.md lines 138/155 say TA-19, but nothing calls set_weight for structures); the wreck restore must check structure occupancy once it lands."
   },
   {
     "id": "GD-40",
@@ -7621,5 +7622,20 @@
     ],
     "status": "todo",
     "note": "Found by the AI-14 #109 Opus review 2026-10-23 (comment 6366106106)."
+  },
+  {
+    "id": "TA-66",
+    "title": "ci: soak (and other tee-piped) steps swallow the python exit code — add set -o pipefail in ci.yml and nightly.yml so a failing slope/gate fails the job",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [],
+    "milestone": "M2",
+    "acceptance": "Every run step in .github/workflows/ci.yml and nightly.yml that pipes a gate into tee (or any pipe) fails when the gate fails (shell: bash with set -o pipefail, or equivalent); a deliberate failing run on a scratch branch shows the job red; no threshold changed",
+    "docs": [
+      "03 s12"
+    ],
+    "status": "todo",
+    "note": "Found by the GD-39 #112 review 2026-10-23: soak slope printed +4.34 %/min vs 2.0 but the job was green (ci.yml:309)."
   }
 ]
