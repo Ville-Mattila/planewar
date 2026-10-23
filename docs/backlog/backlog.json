@@ -7604,7 +7604,10 @@
       "01 s9.4",
       "R0 C2-05"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 113,
+    "merged": "2026-10-23",
+    "note": "wreck_ore = hp of a live K_WRECK (W3), 0 otherwise, base -1.0; TeamStats.supply01 and ProjectileQueries extracted (A-73). Nit: no towed-wreck test."
   },
   {
     "id": "BUG-1",
