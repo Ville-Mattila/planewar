@@ -7766,8 +7766,10 @@
       "03 s8",
       "REVIEW-01"
     ],
-    "status": "todo",
-    "note": "Owner feedback 2026-10-23: the deployed planet demo is a smooth sphere (s_world1_r6000 faces 1/3/4/5 are identical flat bakes)."
+    "status": "done",
+    "note": "Owner feedback 2026-10-23: the deployed planet demo is a smooth sphere (s_world1_r6000 faces 1/3/4/5 are identical flat bakes). Hub launches planet demo on cradle (lat 30, lon 22.5, 1800 m); web_review ships cradle minus path.u8; Brotli 15.96 MiB. Deployed to planewar-play.vercel.app.",
+    "pr": 123,
+    "merged": "2026-10-23"
   },
   {
     "id": "UX-44",
