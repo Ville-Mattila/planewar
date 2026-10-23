@@ -3,10 +3,10 @@ class_name NetSimView extends SimView
 ## fractional render tick (NetPose), the pilot block of its own possessed unit, POSSESSED / RELEASED events and its
 ## team's TEAM_STATE. `sample(render_tick)` (R0 C2-12) must be called before reads; reads stay valid until the next
 ## sample. Ids are EntityIds (roster index == sim slot, generation from ENTITY_META). A field the client does not
-## receive returns the SimView default and sets the entity's `unknown` bit (04 s3.7 table): C-tier basis / vel, the
-## pilot-block fields of every entity but the own possessed unit, the ai_tag of other teams, everything team-private
-## of other teams. Not replicated at all (SimView default): overlay, cargo, cargo_kind, link, TEAM_DETAIL accessors
-## (NET-39), shield01 / wreck_ore (-1.0, GD-38 / GD-41), path_grid_version. team_state / player_state / order_head /
+## receive returns the SimView default and is reported by `field_unknown` (NetUnknown: 04 s3.7 table): C-tier basis /
+## vel, the pilot-block fields of every entity but the own possessed unit, the ai_tag of other teams, a wreck's radius,
+## and accessors no wire carries yet (overlay, cargo, cargo_kind, link, TEAM_DETAIL rows of NET-39, shield01 / wreck_ore
+## at -1.0 per GD-38 / GD-41, landing_grade_last); `unknown(id)` is any of them. team_state / player_state / order_head /
 ## pending_order stay the SimView default until net may name TeamStateView / PlayerStateView / OrderSpec (D1;
 ## `team_flags` carries TEAM_STATE.flags incl. CORE_SHIELD_UP meanwhile). Constants below mirror EntityStore /
 ## Spatial / SimView enums; test_net_sim_view.gd pins them.
@@ -92,12 +92,17 @@ func team_flags(t: int) -> int:
 	return team_wire.flags if t == team_id and team_wire.tick > 0 else 0
 
 
-## True when some SimView field of `id` is not received by this client (04 s3.7 "unknown" bit).
+## True when some SimView field of `id` is not received by this client (04 s3.7 / s5.6 "unknown" bit), or `id` is not
+## live. While NetUnknown.NEVER is non-empty (CQ-5, NET-39, GD-38, GD-41) that holds for every entity: ask field_unknown.
 func unknown(id: int) -> bool:
 	var i: int = index_of(id)
-	if i < 0:
-		return true
-	return i != _own() or not pose.has_ori(i) or roster.team_of(i) != team_id
+	return i < 0 or not NetUnknown.NEVER.is_empty() or NetUnknown.field(self, i, &"basis") or i != _own()
+
+
+## True when accessor `accessor` of `id` is not received (it returns the SimView default); true for a dead id.
+func field_unknown(id: int, accessor: StringName) -> bool:
+	var i: int = index_of(id)
+	return i < 0 or NetUnknown.field(self, i, accessor)
 
 
 ## Roster index of a live replicated EntityId, else -1.
@@ -119,6 +124,11 @@ func live(i: int) -> bool:
 ## EntityId of roster index `i`.
 func id_at(i: int) -> int:
 	return EntityId.make(i, roster.generation_of(i))
+
+
+## The own possessed unit's roster index while a pilot block has arrived, else -1.
+func own_index() -> int:
+	return _own()
 
 
 func _own() -> int:
@@ -234,7 +244,9 @@ func flags(id: int) -> int:
 
 func radius(id: int) -> float:
 	var i: int = index_of(id)
-	return defs.radius[roster.def_of(i)] if i >= 0 and defs.valid(roster.def_of(i)) else 0.0
+	if i < 0 or not defs.valid(roster.def_of(i)) or defs.kind_of(roster.def_of(i), i) == K_WRECK:
+		return 0.0                                  # a split wreck's radius (hull / n) is not on the wire: unknown (CQ-4)
+	return defs.radius[roster.def_of(i)]
 
 
 func def_kind(id: int) -> int:

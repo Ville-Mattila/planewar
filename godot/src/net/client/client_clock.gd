@@ -11,12 +11,12 @@ class_name ClientClock extends RefCounted
 const INTERP_DELAY_TICKS: int = 3
 const INPUT_LEAD_TICKS: int = 1
 const DRIFT_ALPHA: float = 0.05
-const RTT_ALPHA: float = 0.2                ## PONG is 1 Hz: a faster filter than the 30 Hz offset
+const RTT_ALPHA: float = 0.2                ## NET-17 choice (not in 04): PONG is 1 Hz, so a faster filter than the 30 Hz offset
 const DILATION_MAX: float = 0.05            ## 1.05x / 0.95x
-const DILATION_GAIN: float = 0.1            ## rate change per tick of clock error (saturates at 0.5 tick)
+const DILATION_GAIN: float = 0.1            ## NET-17 choice (not in 04): rate change per tick of error (saturates at 0.5 tick)
 const RESYNC_MS: float = 500.0
 const EARLY_TICKS: int = 6                  ## inputs arriving more than this many ticks early slow the input clock
-const LEAD_MAX: float = 8.0                 ## the server's jitter window (InputBuffer.WINDOW_FUTURE)
+const LEAD_MAX: float = float(InputBuffer.WINDOW_FUTURE)   ## the server's jitter window (04 s5.1 [current, current + 8])
 
 var tick_ms: float = 1000.0 / 30.0
 var synced: bool = false
