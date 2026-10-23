@@ -7745,5 +7745,23 @@
       "R0 B.3"
     ],
     "status": "todo"
+  },
+  {
+    "id": "REVIEW-02",
+    "title": "web review build: planet demo shows the real cradle map (craters, relief) instead of the s_world1_r6000 spike map, which is flat on 4 of 6 faces",
+    "lane": "tools+app",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "REVIEW-01"
+    ],
+    "milestone": "M2",
+    "acceptance": "From the review hub the planet demo loads content/maps/cradle (face_resolution 1024) and the default camera starts over visible relief (craters/maria in view); the web_review export ships only the cradle files the renderer needs (exclude what the planet demo does not read, e.g. path.u8, if the loader permits) and stays under the 20 MB Brotli size gate (report the number); the loader's SHA checks still pass; if cradle cannot fit, pick the best map that fits and say why; standalone planet_demo defaults unchanged",
+    "docs": [
+      "03 s8",
+      "REVIEW-01"
+    ],
+    "status": "todo",
+    "note": "Owner feedback 2026-10-23: the deployed planet demo is a smooth sphere (s_world1_r6000 faces 1/3/4/5 are identical flat bakes)."
   }
 ]
