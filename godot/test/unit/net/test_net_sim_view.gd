@@ -203,7 +203,7 @@ func test_factory_exempts_exactly_the_failing_clauses() -> void:
 	var scene: SimViewScene = SimViewScene.build()
 	var f: NetSimViewFactory = NetSimViewFactory.new()
 	var c: SimViewContract = SimViewContract.new()
-	c.run(f.make(scene), scene)
+	c.run(f.make(scene), scene, f)
 	var failed: Array = Array(c.failed)
 	var ex: Array = Array(f.exempt())
 	failed.sort()
