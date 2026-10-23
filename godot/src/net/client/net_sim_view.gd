@@ -7,8 +7,8 @@ class_name NetSimView extends SimView
 ## vel, the pilot-block fields of every entity but the own possessed unit, the ai_tag of other teams, a wreck's radius,
 ## and accessors no wire carries yet (overlay, cargo, cargo_kind, link, TEAM_DETAIL rows of NET-39, shield01 / wreck_ore
 ## at -1.0 per GD-38 / GD-41, landing_grade_last); `unknown(id)` is any of them. team_state / player_state / order_head /
-## pending_order stay the SimView default until net may name TeamStateView / PlayerStateView / OrderSpec (D1;
-## `team_flags` carries TEAM_STATE.flags incl. CORE_SHIELD_UP meanwhile). Constants below mirror EntityStore /
+## pending_order stay the SimView default until NET-39 (R0 B.22 A-111; `team_flags` carries TEAM_STATE.flags incl.
+## CORE_SHIELD_UP meanwhile). Constants below mirror EntityStore /
 ## Spatial / SimView enums; test_net_sim_view.gd pins them.
 
 const K_STRUCTURE: int = 0                  ## EntityStore.K_* (def_kind)
@@ -244,9 +244,9 @@ func flags(id: int) -> int:
 
 func radius(id: int) -> float:
 	var i: int = index_of(id)
-	if i < 0 or not defs.valid(roster.def_of(i)) or defs.kind_of(roster.def_of(i), i) == K_WRECK:
-		return 0.0                                  # a split wreck's radius (hull / n) is not on the wire: unknown (CQ-4)
-	return defs.radius[roster.def_of(i)]
+	if i < 0 or not defs.valid(roster.def_of(i)):
+		return 0.0
+	return defs.radius[roster.def_of(i)]            # a split wreck: the hull's def radius, field_unknown (R0 B.22 A-114)
 
 
 func def_kind(id: int) -> int:

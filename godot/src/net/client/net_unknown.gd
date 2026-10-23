@@ -32,5 +32,5 @@ static func field(v: NetSimView, i: int, accessor: StringName) -> bool:
 		"ai_tag":
 			return v.roster.team_of(i) != v.team_id
 		"radius":
-			return v.defs.kind_of(v.roster.def_of(i), i) == NetSimView.K_WRECK   # split wrecks: hull / n, n not sent (CQ-4)
+			return v.defs.kind_of(v.roster.def_of(i), i) == NetSimView.K_WRECK   # split wrecks show the hull's def radius (R0 B.22 A-114)
 	return false
