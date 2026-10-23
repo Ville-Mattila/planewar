@@ -19,6 +19,11 @@ permissions:
 env:
   GODOT_VERSION: 4.7.2-stable
 
+# TA-66: explicit bash = `bash -eo pipefail`, so `gate | tee` fails when the gate fails.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   tools:
     name: tools (python checks)

@@ -12,6 +12,11 @@ on:
 permissions:
   contents: read
 
+# TA-66: explicit bash = `bash -eo pipefail`, so `gate | tee` fails when the gate fails.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   soak-30:
     name: soak 30 sim-minutes (real time)
