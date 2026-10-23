@@ -15,6 +15,16 @@ func _hit(c: OrbitController, local: Vector3) -> Vector3:
 	return OrbitMath.ray_sphere_point(p.origin, p.basis * local.normalized(), c.focus_length())
 
 
+## Screen error in radians between the finger ray and the ray to the grabbed point g0. 2 du at 1080 p and a
+## 60 deg vertical FOV is about 0.002 rad (UX-13 acceptance).
+func _screen_err(c: OrbitController, local: Vector3, g0: Vector3) -> float:
+	var p: Transform3D = c.pose()
+	return local.normalized().angle_to(p.basis.inverse() * (g0 - p.origin))
+
+
+const TWO_DU: float = 0.002
+
+
 func _run(c: OrbitController, secs: float) -> void:
 	for i in int(secs / DT):
 		c.update(DT)
@@ -39,7 +49,7 @@ func test_grab_keeps_ground_point_under_finger() -> void:
 		var l: Vector3 = Vector3(0.1 + 0.01 * i, -0.1 + 0.006 * i, -1.0).normalized()
 		var q: Transform3D = c.pose()
 		c.grab_move(q.origin, q.basis * l, DT)
-		assert_float(_hit(c, l).distance_to(g0)).is_less(0.5)
+		assert_float(_screen_err(c, l, g0)).is_less(TWO_DU)
 		c.update(DT)
 
 
@@ -53,7 +63,7 @@ func test_grab_across_pole_stays_finite_and_pinned() -> void:
 		var l: Vector3 = Vector3(0.0, 0.2 - 0.012 * i, -1.0).normalized()
 		q = c.pose()
 		c.grab_move(q.origin, q.basis * l, DT)
-		assert_float(_hit(c, l).distance_to(g0)).is_less(0.5)
+		assert_float(_screen_err(c, l, g0)).is_less(TWO_DU)
 		assert_bool(_has_nan(c)).is_false()
 
 
