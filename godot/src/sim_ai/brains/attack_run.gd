@@ -1,5 +1,5 @@
 class_name AttackRun extends RefCounted
-## The 05 s6.3 AttackRun sub-machine (AI-13; Dart now, Lancer / Bomber with AI-14): R1 ROUTE to an initial point
+## The 05 s6.3 AttackRun sub-machine (AI-13 Dart; AI-14 Lancer and Bomber): R1 ROUTE to an initial point
 ## `ip_dist_m` from the aim point at the ingress band, R2 RUN-IN straight at it (Deck and Low level; the Dart's dive
 ## from `band_high_agl_m` at `dive_angle_deg` otherwise), R3 RELEASE on the bomb sight (`Ballistics.predict_impact`
 ## at think, the closed-form refinement each tick: `flat_impact` now plus the think's stepped-minus-flat offset, which
@@ -12,6 +12,11 @@ class_name AttackRun extends RefCounted
 ## State in AiState: `sub` = step | band << 4, `passes`, `goal` (aim point), `guidance_point` (IP, then the egress
 ## heading), `aim_lead` (bomb-sight offset), `wp` (bombs left when the stick ends), `timer` (step start tick), and the
 ## `bflags` bits below. No allocation except `ids_near` (the SimView list getter).
+## AI-14: `rockets` runs (Lancer) release by the rocket lock instead of the bomb sight: R2 level at the band, R3 from
+## `release_range` (rocket lock range) with the nose on the target until the pass's salvo is gone (`wp` = rockets left
+## at its end, `reserve_rounds` kept when the brain marks the bomber reserve in `fire_mask`) or the target is closer
+## than `breakaway`; the brain's act holds FIRE2 (the sim's seeker locks over `lock_time_s`). `abort_on_hit` (Bomber,
+## 05 s6.4): damage taken during R1 aborts to egress. `resume` re-plans after a release (05 s2.5).
 
 enum Step { NONE, ROUTE, RUN_IN, RELEASE, EGRESS, REATTACK, DONE }
 enum Band { LOW, DECK, HIGH }
@@ -24,6 +29,17 @@ const F_FLIP: int = 32           ## bflags: FLIP on the next act (shared with th
 var prm: DartParams
 var terrain: Terrain
 var dart_dive: bool = true       ## the Dart dives from the High band; a level bomber clears this (AI-14)
+var rockets: bool = false        ## AI-14: release by the rocket lock (Lancer), not the bomb sight
+var abort_on_hit: bool = false   ## AI-14: damage during R1 aborts the run (Bomber, 05 s6.4)
+var release_range: float = 0.0  ## AI-14 rockets: R3 starts this close to the aim point (the rocket lock range)
+var breakaway: float = 0.0       ## AI-14 rockets: R3 ends this close to the aim point
+var round_damage: float = 0.0    ## AI-14 rockets: damage of one rocket on the target (the salvo size)
+var reserve_rounds: int = 0      ## AI-14 rockets: rounds kept while `fire_mask & FIRE_RESERVE` (bombers known)
+var intel: TeamIntel = null      ## AI-14: the driver's intel (DartBrain.bind_intel): R1 reads its Perception's towers
+var stats_band_scans: int = 0    ## AI-14: R1 band evaluations (work counter)
+var stats_band_queries: int = 0  ## AI-14: of them, structure queries (`ids_near`; only without intel)
+const FIRE_RESERVE: int = 8      ## AI-14 fire_mask bit: keep `reserve_rounds` (05 s6.4: rockets saved for bombers)
+const FIRE_CHECKED: int = 16     ## AI-14 fire_mask bit: FIRE_RESERVE has been evaluated at least once
 var _ps: ProjectileState = ProjectileState.new()
 
 
@@ -49,6 +65,27 @@ func begin(id: int, view: SimView, st: AiState, aim: Vector3, tick: int) -> void
 	_route(id, view, st, tick)
 
 
+## 05 s2.5 release mid-run (AI-14): after the SAFETY overlay the run is re-planned from where the ship is. No rounds
+## left: DONE (the order is complete; the brain asks for RETURN). In R1-R3: the IP route with the continue rule (within
+## `ip_dist_m` and `continue_deg` of the nose: RUN_IN from here, no re-route), passes kept. EGRESS / REATTACK go on.
+func resume(id: int, view: SimView, st: AiState, tick: int) -> int:
+	var s: int = EntityId.slot(id)
+	var step: int = step_of(st, s)
+	if step == Step.NONE or step == Step.DONE or step == Step.EGRESS or step == Step.REATTACK:
+		return step
+	if rounds(id, view) <= 0:
+		st.bflags[s] &= ~(F_RELEASING | F_DIVING)
+		return _set_step(st, s, Step.DONE, tick)
+	st.bflags[s] &= ~(F_RELEASING | F_DIVING)
+	_route(id, view, st, tick)
+	return step_of(st, s)
+
+
+## Rounds the run releases: rockets for a rocket run, else bombs.
+func rounds(id: int, view: SimView) -> int:
+	return view.rockets(id) if rockets else view.bombs(id)
+
+
 ## One think of the run on `target` (0: a ground point, `goal`). Writes `guidance_vel`; returns the step.
 func think(id: int, target: int, view: SimView, st: AiState, tick: int) -> int:
 	var s: int = EntityId.slot(id)
@@ -61,7 +98,12 @@ func think(id: int, target: int, view: SimView, st: AiState, tick: int) -> int:
 	var agl: float = p.length() - Sphere.PLANET_RADIUS - st.ground_h[s]
 	if step == Step.ROUTE:
 		_set_band(id, view, st, s)
-		if Guidance.ground_dist(p, st.guidance_point[s]) < prm.ip_arrive:
+		var hp: float = view.hp01(id)
+		if abort_on_hit and hp < st.hp_mark[s]:
+			st.bflags[s] |= F_ABORTED
+			step = _egress(id, view, st, tick)   # 05 s6.4 Bomber: under attack before R2 -> egress
+		st.hp_mark[s] = hp
+		if step == Step.ROUTE and Guidance.ground_dist(p, st.guidance_point[s]) < prm.ip_arrive:
 			step = _set_step(st, s, Step.RUN_IN, tick)
 	elif step == Step.RUN_IN or step == Step.RELEASE:
 		step = _run_in(id, s, p, v, view, st, tick)
@@ -82,8 +124,8 @@ func act(id: int, view: SimView, st: AiState, out: PilotInput) -> void:
 		if view.incoming_rockets(id) > 0 and view.flip_cooldown01(id) <= 0.0:
 			out.buttons |= PilotInput.FLIP
 		return
-	if step != Step.RELEASE:
-		return
+	if step != Step.RELEASE or rockets:
+		return   # a rocket release is the brain's (the lock)
 	if (st.bflags[s] & F_RELEASING) != 0:
 		if view.bombs(id) > st.wp[s]:
 			out.buttons |= PilotInput.FIRE2
@@ -139,11 +181,40 @@ func _route(id: int, view: SimView, st: AiState, tick: int) -> void:
 		var _r: int = _set_step(st, s, Step.RUN_IN, tick)   # 05 s2.5: within the IP distance and 30 degrees of the nose
 
 
-# R1 band from the visible enemy towers covering the aim point (one structure query).
+# R1 band from the visible enemy towers covering the aim point. With intel: the team Perception's contacts seen at its
+# last refresh (O(contacts), no SimView query; AI-14: the 2.5 km structure query cost ~170 us per think); without: one
+# structure query of `threat_scan` round the aim point (AI-13).
 func _set_band(id: int, view: SimView, st: AiState, s: int) -> void:
 	var aim: Vector3 = st.goal[s]
 	var team: int = view.team(id)
+	var perc: Perception = intel.perception(team) if intel != null else null
+	stats_band_scans += 1
+	var seen: int = _perceived_towers(perc, aim) if perc != null else _visible_towers(view, team, aim)
+	var band: int = Band.LOW
+	if (seen & DartParams.THREAT_GUN) == 0 and (seen & (DartParams.THREAT_FLAK | DartParams.THREAT_MISSILE)) != 0:
+		band = Band.DECK
+	elif seen == DartParams.THREAT_GUN:
+		band = Band.HIGH
+	st.sub[s] = (st.sub[s] & 15) | (band << 4)
+
+
+# THREAT_* bits of the Perception contacts (seen at the last refresh) that are towers covering `aim`.
+func _perceived_towers(perc: Perception, aim: Vector3) -> int:
 	var seen: int = 0
+	for i: int in perc.n_known:
+		var sl: int = perc.known[i]
+		var d: int = perc.k_def[sl]
+		if perc.k_seen[sl] != perc.last_refresh or d < 0 or d >= DefRanges.END or prm.threat_kind[d] == DartParams.THREAT_NONE:
+			continue
+		if perc.k_pos[sl].distance_to(aim) <= prm.threat_range[d]:
+			seen |= prm.threat_kind[d]
+	return seen
+
+
+# THREAT_* bits of the visible enemy towers covering `aim` (one structure query).
+func _visible_towers(view: SimView, team: int, aim: Vector3) -> int:
+	var seen: int = 0
+	stats_band_queries += 1
 	for t: int in view.ids_near(aim, prm.threat_scan, Spatial.MASK_STRUCTURE):
 		var d: int = view.def_id(t)
 		if d < 0 or d >= DefRanges.END or prm.threat_kind[d] == DartParams.THREAT_NONE:
@@ -152,12 +223,7 @@ func _set_band(id: int, view: SimView, st: AiState, s: int) -> void:
 			continue
 		if view.pos(t).distance_to(aim) <= prm.threat_range[d]:
 			seen |= prm.threat_kind[d]
-	var band: int = Band.LOW
-	if (seen & DartParams.THREAT_GUN) == 0 and (seen & (DartParams.THREAT_FLAK | DartParams.THREAT_MISSILE)) != 0:
-		band = Band.DECK
-	elif seen == DartParams.THREAT_GUN:
-		band = Band.HIGH
-	st.sub[s] = (st.sub[s] & 15) | (band << 4)
+	return seen
 
 
 func _set_step(st: AiState, s: int, step: int, tick: int) -> int:
@@ -174,8 +240,10 @@ func _run_in(id: int, s: int, p: Vector3, v: Vector3, view: SimView, st: AiState
 		if view.hp01(id) < prm.abort_hp01:
 			st.bflags[s] |= F_ABORTED
 			return _egress(id, view, st, tick)
-	if view.bombs(id) <= 0:
+	if rounds(id, view) <= 0:
 		return _egress(id, view, st, tick)
+	if rockets:
+		return _rocket_run(id, s, p, view, st, tick)
 	if (st.bflags[s] & F_RELEASING) != 0:
 		return step
 	var aim: Vector3 = st.goal[s]
@@ -198,6 +266,34 @@ func _run_in(id: int, s: int, p: Vector3, v: Vector3, view: SimView, st: AiState
 	return _set_step(st, s, Step.RELEASE, tick) if step == Step.RUN_IN else step
 
 
+# Rocket R2 -> R3 inside `release_range` (the salvo fixed then: `wp` = rockets left at its end); R3 -> egress once the
+# salvo is gone or the target is closer than `breakaway`.
+func _rocket_run(id: int, s: int, p: Vector3, view: SimView, st: AiState, tick: int) -> int:
+	var step: int = step_of(st, s)
+	var d: float = p.distance_to(st.goal[s])
+	if step == Step.RUN_IN:
+		if d > release_range:
+			return step
+		var keep: int = reserve_rounds if (st.fire_mask[s] & FIRE_RESERVE) != 0 else 0
+		var n: int = mini(_salvo(id, view, st), view.rockets(id) - keep)
+		if n <= 0:
+			return _egress(id, view, st, tick)
+		st.wp[s] = view.rockets(id) - n
+		return _set_step(st, s, Step.RELEASE, tick)
+	if view.rockets(id) <= st.wp[s] or d < breakaway:
+		return _egress(id, view, st, tick)
+	return step
+
+
+# Rockets for the target: ceil(hp / round_damage), at least 1 (a ground point: 1).
+func _salvo(id: int, view: SimView, st: AiState) -> int:
+	var t: int = st.target[EntityId.slot(id)]
+	if t == 0 or not view.alive(t) or round_damage <= 0.0:
+		return 1
+	var hp: float = view.hp01(t) * prm.hp_by_def[clampi(view.def_id(t), 0, DefRanges.END - 1)]
+	return maxi(ceili(hp / round_damage), 1)
+
+
 func _egress(id: int, view: SimView, st: AiState, tick: int) -> int:
 	var s: int = EntityId.slot(id)
 	var p: Vector3 = view.pos(id)
@@ -215,7 +311,7 @@ func _egress(id: int, view: SimView, st: AiState, tick: int) -> int:
 func _reattack(id: int, target: int, view: SimView, st: AiState, tick: int) -> int:
 	var s: int = EntityId.slot(id)
 	var alive: bool = target == 0 or view.alive(target)
-	if view.bombs(id) > 0 and alive and (st.bflags[s] & F_ABORTED) == 0 and st.passes[s] + 1 < prm.max_passes:
+	if rounds(id, view) > 0 and alive and (st.bflags[s] & F_ABORTED) == 0 and st.passes[s] + 1 < prm.max_passes:
 		st.passes[s] += 1
 		_route(id, view, st, tick)
 		return step_of(st, s)
@@ -235,6 +331,10 @@ func _guide(s: int, step: int, p: Vector3, v: Vector3, up: Vector3, agl: float, 
 		var g: Vector3 = st.guidance_point[s]
 		dir = (g - up * g.dot(up)).normalized() if step == Step.EGRESS else dir
 		band = prm.deck_agl
+	elif rockets and step == Step.RELEASE:
+		var to: Vector3 = st.goal[s] - p   # the nose on the target: the seeker cone is the nose's
+		st.guidance_vel[s] = to.normalized() * speed
+		return
 	elif dart_dive and band_of(st, s) != Band.DECK:
 		band = prm.band_high
 		if _dive(s, p, st, agl):

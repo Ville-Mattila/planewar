@@ -1,6 +1,6 @@
 class_name DartModes extends RefCounted
 ## The Dart's per-order thinks (05 s6.2, s3.2; AI-13), called by `DartBrain` once per think: RETURN (LandingPilot; no
-## pad: LOITER over home at `no_pad_loiter_altitude_m`, pad selection retried each choice period), ESCORT (EscortPilot;
+## pad: LOITER over home at `no_pad_loiter_altitude_m`, pad selection retried every `no_pad_retry_s`, AI-14), ESCORT (EscortPilot;
 ## its engagements fly DartCombat), ATTACK (a ship: DartCombat on it; a structure / ground unit / point: AttackRun),
 ## MOVE (band: Deck with FLAG_LOW at `deck_speed_mps`, else the point's AGL or `default_move_agl_m`; orbits the point
 ## once arrived),
@@ -8,6 +8,10 @@ class_name DartModes extends RefCounted
 ## around home at `cruise_alt_agl_m`). The target choice point (TargetChooser.choose_ship over the TeamPicture's visible
 ## enemy ships within the radius) runs every `choice_period_thinks`, staggered by slot (TC2: at most every other think).
 ## Each returns the next DartBrain.Mode and leaves the command in `guidance_vel` (shaped by the brain).
+## AI-14 switches: `engages` false (Bomber, Scout) flies PATROL / GUARD / AUTO without the choice point; `auto_guard`
+## (Lancer) makes AUTO a GUARD orbit around `home`; `ground` (Lancer) adds the team's seen enemy ground units and
+## structures (its Perception contacts of the last refresh, `intel`) to the candidates, and a ground pick flies an
+## AttackRun (mode BOMB) instead of DartCombat.
 
 const B_RUN_DONE: int = 2
 
@@ -20,6 +24,13 @@ var combat: DartCombat
 var targets: TargetParams
 var stats_choices: int = 0
 var picture: TeamPicture = TeamPicture.new()   ## per-tick visible enemy ships per team (the choice points' candidates)
+var intel: TeamIntel = null      ## AI-14: the driver's per-team intel (AiBrain.bind_intel); null: none
+var engages: bool = true         ## AI-14: the choice point runs (false: Bomber, Scout)
+var auto_guard: bool = false     ## AI-14: AUTO is a GUARD orbit around home (Lancer, 05 s6.4)
+var ground: bool = false         ## AI-14: ground units and structures are candidates (Lancer, 05 s6.4)
+var stats_ground: int = 0        ## AI-14: ground candidates added (work counter)
+var stats_pad_retries: int = 0   ## AI-14: pad choices of think_return (RETURN start + one per no_pad_retry_s while LOITER)
+var _cand: PackedInt32Array = PackedInt32Array()
 var _ctx: Array[TargetContext] = []
 var _pick: PackedInt32Array = PackedInt32Array()
 
@@ -56,7 +67,9 @@ static func is_combat(m: int) -> bool:
 func think_return(id: int, s: int, m: int, head: OrderSpec, view: SimView, st: AiState, tick: int) -> int:
 	if m != AiTag.Tag.RETURN:
 		var pad: int = head.target if head.target != 0 and view.alive(head.target) else 0
-		if pad == 0 and (m != AiTag.Tag.LOITER or choice_due(s, tick)):
+		if pad == 0 and (m != AiTag.Tag.LOITER or tick - roundi(st.timer[s]) >= prm.no_pad_retry_ticks):
+			stats_pad_retries += 1
+			st.timer[s] = float(tick)   # LOITER: the last pad choice (05 s3.2: retry every no_pad_retry_s)
 			pad = landing.select_pad(id, view, 0, st)
 		if pad == 0:
 			return _orbit(id, s, st.home[s], prm.hold_orbit, prm.loiter_alt, view, st, AiTag.Tag.LOITER)
@@ -93,7 +106,7 @@ func think_attack(id: int, s: int, m: int, head: OrderSpec, view: SimView, st: A
 		st.bflags[s] |= B_RUN_DONE
 		return think_patrol(id, s, m, null, -1, view, st, tick)
 	if m != AiTag.Tag.BOMB:
-		if view.bombs(id) <= 0:
+		if run.rounds(id, view) <= 0:
 			st.bflags[s] |= B_RUN_DONE
 			return think_patrol(id, s, m, null, -1, view, st, tick)
 		var seen: bool = t != 0 and view.alive(t) and view.visible_to(view.team(id), t)
@@ -126,26 +139,53 @@ func think_patrol(id: int, s: int, m: int, head: OrderSpec, kind: int, view: Sim
 	var p: Vector3 = view.pos(id)
 	var origin: Vector3 = st.home[s]
 	var radius: float = prm.intercept_radius
+	var guard: bool = kind == OrderSpec.Kind.GUARD or (auto_guard and kind != OrderSpec.Kind.PATROL
+		and kind != OrderSpec.Kind.HOLD)
 	if kind == OrderSpec.Kind.PATROL:
 		origin = p
 		radius = prm.patrol_engage
-	elif kind == OrderSpec.Kind.GUARD:
-		origin = view.pos(head.target) if head.target != 0 and view.alive(head.target) else head.point
+	elif guard:
+		if kind == OrderSpec.Kind.GUARD:
+			origin = view.pos(head.target) if head.target != 0 and view.alive(head.target) else head.point
 		radius = prm.guard_engage
+	if engages and kind != OrderSpec.Kind.HOLD:
+		var cm: int = _engagements(id, s, m, origin, radius, view, st, tick)
+		if cm != AiTag.Tag.NONE:
+			return cm
+	if kind == OrderSpec.Kind.HOLD:
+		var hold_agl: float = head.point.length() - Sphere.PLANET_RADIUS - terrain.height_at(head.point)
+		return _orbit(id, s, head.point, prm.hold_orbit, maxf(prm.deck_agl, hold_agl), view, st, AiTag.Tag.HOLD)
+	if guard:
+		return _orbit(id, s, origin, prm.guard_orbit, prm.cruise_agl, view, st, AiTag.Tag.GUARD)
+	return _legs(id, s, m, p, head if kind == OrderSpec.Kind.PATROL and head.points.size() >= 2 else null, view, st)
+
+
+# Engaged modes and the choice point of think_patrol: an AUTO / PATROL / GUARD AttackRun on a picked ground target
+# (Lancer), DartCombat on a ship, else a new pick on the choice period. NONE: nothing to fight.
+func _engagements(id: int, s: int, m: int, origin: Vector3, radius: float, view: SimView, st: AiState, tick: int) -> int:
+	if m == AiTag.Tag.BOMB:
+		if st.target[s] != 0 and run.think(id, st.target[s], view, st, tick) != AttackRun.Step.DONE:
+			return AiTag.Tag.BOMB
+		st.set_target(s, 0)
 	if is_combat(m):
 		var cm: int = _engaged(id, s, m, origin, radius, view, st, tick)
 		if cm != AiTag.Tag.NONE:
 			return cm
-	if kind != OrderSpec.Kind.HOLD and (choice_due(s, tick) or is_combat(m)):
+	if choice_due(s, tick) or is_combat(m):
 		if _choose(id, s, view, st, origin, radius, tick, true) != 0:
 			st.seen_tick[s] = tick
-			return combat.think(id, AiTag.Tag.INTERCEPT, view, st, tick)
-	if kind == OrderSpec.Kind.HOLD:
-		var hold_agl: float = head.point.length() - Sphere.PLANET_RADIUS - terrain.height_at(head.point)
-		return _orbit(id, s, head.point, prm.hold_orbit, maxf(prm.deck_agl, hold_agl), view, st, AiTag.Tag.HOLD)
-	if kind == OrderSpec.Kind.GUARD:
-		return _orbit(id, s, origin, prm.guard_orbit, prm.cruise_agl, view, st, AiTag.Tag.GUARD)
-	return _legs(id, s, m, p, head if kind == OrderSpec.Kind.PATROL and head.points.size() >= 2 else null, view, st)
+			return _engage(id, s, view, st, tick)
+	return AiTag.Tag.NONE
+
+
+# A fresh pick: a ship -> INTERCEPT (DartCombat); a ground unit or structure (Lancer) -> an AttackRun on it.
+func _engage(id: int, s: int, view: SimView, st: AiState, tick: int) -> int:
+	var t: int = st.target[s]
+	if view.def_kind(t) == EntityStore.K_SHIP or not ground:
+		return combat.think(id, AiTag.Tag.INTERCEPT, view, st, tick)
+	run.begin(id, view, st, view.pos(t), tick)
+	var _step: int = run.think(id, t, view, st, tick)
+	return AiTag.Tag.BOMB
 
 
 # Engaged: the choice point re-runs on its period while the target is inside the radius (hysteresis keeps it); a target
@@ -157,7 +197,7 @@ func _engaged(id: int, s: int, m: int, origin: Vector3, radius: float, view: Sim
 		if pick != cur and pick != 0:
 			st.set_target(s, pick)
 			st.seen_tick[s] = tick
-			return combat.think(id, AiTag.Tag.INTERCEPT, view, st, tick)
+			return _engage(id, s, view, st, tick)
 	var cm: int = combat.think(id, m, view, st, tick)
 	if cm == AiTag.Tag.NONE:
 		st.set_target(s, 0)
@@ -175,6 +215,11 @@ func _legs(id: int, s: int, m: int, p: Vector3, legs: OrderSpec, view: SimView, 
 		st.wp[s] = (st.wp[s] + 1) % n
 		st.guidance_point[s] = _wp_pos(st.home[s], legs, st.wp[s], n)
 	return _fly(id, s, Guidance.toward(p, wp, p.normalized()), prm.cruise_agl, view, st, AiTag.Tag.PATROL)
+
+
+## AI-14: `_fly` for the class brains (the Scout's search leg).
+func fly(id: int, s: int, dir: Vector3, band: float, view: SimView, st: AiState, m: int, speed: float = -1.0) -> int:
+	return _fly(id, s, dir, band, view, st, m, speed)
 
 
 ## Level flight along `dir` at `speed` (default cruise) in the `band` (AGL) hold.
@@ -210,7 +255,7 @@ func choice_due(s: int, tick: int) -> bool:
 ## the team's TargetContext scratch.
 func _choose(id: int, s: int, view: SimView, st: AiState, origin: Vector3, radius: float, tick: int, take: bool) -> int:
 	var cur: int = st.target[s] if take else 0
-	var pick: int = _pick_near(id, view, st, origin, radius, cur, tick)
+	var pick: int = _pick_near(id, view, st, origin, radius, cur, tick, take)
 	if take:
 		st.set_target(s, pick)
 	return pick
@@ -225,7 +270,8 @@ func _choose_engaged(id: int, s: int, view: SimView, st: AiState, origin: Vector
 	return pick
 
 
-func _pick_near(id: int, view: SimView, st: AiState, origin: Vector3, radius: float, cur: int, tick: int) -> int:
+func _pick_near(id: int, view: SimView, st: AiState, origin: Vector3, radius: float, cur: int, tick: int,
+		with_ground: bool = true) -> int:
 	var team: int = view.team(id)
 	if team < 0 or team >= _ctx.size():
 		return 0
@@ -233,10 +279,35 @@ func _pick_near(id: int, view: SimView, st: AiState, origin: Vector3, radius: fl
 	var ctx: TargetContext = _ctx[team]
 	var n: int = picture.near(view, team, tick, origin, radius)
 	var cand: PackedInt32Array = picture.near_ids()
+	var perc: Perception = intel.perception(team) if ground and with_ground and intel != null else null
+	if perc != null:
+		n = _with_ground(perc, cand, n, origin, radius)
+		cand = _cand
 	for i: int in n:
 		var cs: int = EntityId.slot(cand[i])
 		ctx.targeted_by[cs] = st.target_count[cs]
 	return TargetChooser.choose_ship(view, team, cand, n, origin, radius, cur, tick, ctx, targets, _pick)
+
+
+# The picture's `n` ships copied into `_cand`, then the Perception's enemy ground units and structures seen at its last
+# refresh within `radius` of `origin` (their last-seen positions; the chooser re-checks visibility and position now).
+func _with_ground(perc: Perception, ships: PackedInt32Array, n: int, origin: Vector3, radius: float) -> int:
+	var need: int = n + perc.n_known
+	if _cand.size() < need:
+		var _r: int = _cand.resize(need)
+	for i: int in n:
+		_cand[i] = ships[i]
+	var r2: float = radius * radius
+	for i: int in perc.n_known:
+		var sl: int = perc.known[i]
+		var kind: int = DefRanges.kind_of(perc.k_def[sl])
+		if perc.k_seen[sl] != perc.last_refresh or (kind != DefRanges.K_GROUND and kind != DefRanges.K_STRUCTURE):
+			continue
+		if origin.distance_squared_to(perc.k_pos[sl]) <= r2:
+			_cand[n] = perc.k_id[sl]
+			n += 1
+			stats_ground += 1
+	return n
 
 
 func _wp_pos(home: Vector3, legs: OrderSpec, k: int, n: int) -> Vector3:
