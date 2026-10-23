@@ -41,6 +41,7 @@ func request(from: Vector3, to: Vector3, mask: int) -> int                   # R
 func result(ticket: int) -> PackedVector3Array;  func result_cells(ticket: int) -> PackedInt32Array
 func advance() -> int                                                        # step 3b, once per tick; returns units spent
 func set_weight(cell: int, w: int) -> void;  func weight(cell: int) -> int;  func version(face: int) -> int
+func baked_weight(cell: int) -> int                                          # P10 (GD-39): the loaded map's bake weight of a cell, from the in-memory bake; 1 on the flat datum
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # S4 (TA-50): needs the same map loaded
 
 class_name PathGrid extends RefCounted                                       # weights, slopes, versions, centres, neighbours
@@ -122,13 +123,14 @@ func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPee
   in lockstep, gives the same units, tickets and cells, also with a cell or region search in flight
   (`test_state_round_trip_mid_search_continues_identically`; world level: `test_serialize.gd` S4). A search's tags
   outside its own sid and the start cell's parent are never read; the reader zeroes them.
+- P10 (GD-39): `baked_weight(cell)` is the byte of the bake `load_weights` read (and SHA-256 checked) and keeps as a read-only `_bake` array (384 KB, never written by `set_weight`, not saved: deserialize reloads the map, so S4 and FORMAT are unchanged); no file access in the tick. `set_weights` (fixtures) clears it and the flat datum has none: every cell bakes to 1. `sim/salvage` `WreckPaths` calls `set_weight(cell, 255)` for a resting wreck and `set_weight(cell, baked_weight(cell))` when it leaves (salvage W11).
 - P8: no per-expansion allocation; no packed array inside a container; other classes never index another object's
   large packed arrays (copy-on-write; use the accessor methods).
 
 ## Data owned
 
 Weights 384 KB, slope 384 KB, labels 2 x 384 KB, search g 1.5 MB + u8 tag 384 KB + u8 parent index 384 KB, corridor 48 KB,
-region graph ~0.9 MB, ticket pool 640 KB, cache 256 KB: **5.67 MB measured** (TA-50, MEMORY_STATIC after load + two prepares,
+region graph ~0.9 MB, ticket pool 640 KB, cache 256 KB: **5.67 MB measured** (the P10 `_bake` is the loaded bytes, 384 KB; the measurement did not move) (TA-50, MEMORY_STATIC after load + two prepares,
 `test_mem_mb_after_load_and_prepare_is_at_most_6`; TA-20 measured 8.8 MB). The 03 s11.3 row is re-baselined to this (A-55).
 
 ## Events emitted / consumed
