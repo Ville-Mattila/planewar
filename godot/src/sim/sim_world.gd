@@ -289,6 +289,7 @@ func _wire(rules: MatchRules) -> void:
 	_econ.salvage.orders = _orders           # GD-19: the head HAUL / TOW order of a ship hooks wrecks in step 10
 	_pathing = Pathing.from_rules(_defs.rules)
 	_pathing.set_terrain(_terrain)
+	_econ.salvage.paths.pathing = _pathing   # GD-39: a resting wreck blocks its path cell (255)
 	_ground = GroundMotion.new(_store, _inputs, _defs, _terrain, _pathing)
 	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state, _pathing)
 	_view.production = _econ.production

@@ -10,6 +10,7 @@ enum Hook { OK, NOT_HAULER, NO_SLOT, BAD_WRECK, TOO_FAR }
 
 var orders: OrderQueue = null  ## set by SimWorld: the head standing order of a ship decides the auto-hook
 var cap: int = 0               ## live wreck cap (`caps.wrecks`); 0 = the whole wreck range
+var paths: WreckPaths = null   ## GD-39: path weight 255 under resting wrecks; SimWorld sets `paths.pathing`
 
 var _store: EntityStore
 var _defs: WorldDefs
@@ -38,6 +39,7 @@ func _init(store: EntityStore, defs: WorldDefs, economy: Economy, events: SimEve
 	_events = events
 	_terrain = terrain
 	cap = wreck_cap
+	paths = WreckPaths.new(store)
 	var _r: int = _load.resize(EntityId.WRECK_SLOT_MIN)
 	_load.fill(0)
 	if defs.economy != null:
@@ -118,6 +120,7 @@ func step(t: int) -> void:
 			_tow_pass(s)
 	for k: int in _gone.size():
 		var _f: bool = _store.free_slot(_gone[k], t)
+	paths.settle()
 	for h: int in _touched:
 		_sync_flag(h)
 	if not _store.wrecks.is_empty() and orders != null:
@@ -167,6 +170,7 @@ func _link(hauler: int, wreck: int) -> void:
 	_store.dirty[wreck] |= EntityStore.DIRTY_CONTROL
 	_store.dirty[hauler] |= EntityStore.DIRTY_CONTROL
 	_count(hauler, 1)
+	paths.lift(wreck)
 
 
 func _count(hauler: int, by: int) -> void:
@@ -213,6 +217,7 @@ func _spawn(s: int, def: int, value: int, i: int, n: int, tick: int) -> bool:
 	_store.radius[w] = _store.radius[s] / float(n)
 	_store.hp[w] = float(value)
 	var _e: SimEvent = _events.emit(SimEvent.Kind.WRECK_SPAWNED, id, def, at, float(value), -1)
+	paths.rest(w)
 	return true
 
 
@@ -221,6 +226,8 @@ func _expire(s: int, tethered: bool) -> void:
 	var _a: bool = _gone.push_back(s)
 	if tethered:
 		_touch(_store.link[s])
+	else:
+		paths.defer(s)
 
 
 # A tethered wreck: release it when its Hauler is gone, deliver it when the Hauler is at a friendly Refinery.
@@ -249,6 +256,7 @@ func _release(w: int) -> void:
 	_store.link[w] = 0
 	_store.flags[w] &= ~EntityStore.F_TETHERED
 	_store.dirty[w] |= EntityStore.DIRTY_CONTROL
+	paths.rest(w)
 	_touch(hid)
 
 

@@ -41,6 +41,7 @@ func request(from: Vector3, to: Vector3, mask: int) -> int                   # R
 func result(ticket: int) -> PackedVector3Array;  func result_cells(ticket: int) -> PackedInt32Array
 func advance() -> int                                                        # step 3b, once per tick; returns units spent
 func set_weight(cell: int, w: int) -> void;  func weight(cell: int) -> int;  func version(face: int) -> int
+func baked_weight(cell: int) -> int                                          # P10 (GD-39): the loaded map's bake weight of a cell, read from the file; 1 on the flat datum
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # S4 (TA-50): needs the same map loaded
 
 class_name PathGrid extends RefCounted                                       # weights, slopes, versions, centres, neighbours
@@ -122,6 +123,7 @@ func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPee
   in lockstep, gives the same units, tickets and cells, also with a cell or region search in flight
   (`test_state_round_trip_mid_search_continues_identically`; world level: `test_serialize.gd` S4). A search's tags
   outside its own sid and the start cell's parent are never read; the reader zeroes them.
+- P10 (GD-39): `baked_weight(cell)` is the byte of `face<f>.path.u8` in the directory of the last `load_weights` (nothing stored, S4 unchanged); `set_weights` (fixtures) and the flat datum give 1. `sim/salvage` `WreckPaths` calls `set_weight(cell, 255)` for a resting wreck and `set_weight(cell, baked_weight(cell))` when it leaves (salvage W11).
 - P8: no per-expansion allocation; no packed array inside a container; other classes never index another object's
   large packed arrays (copy-on-write; use the accessor methods).
 

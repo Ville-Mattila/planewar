@@ -90,10 +90,10 @@ func test_a_dead_hauler_releases_its_wreck_onto_a_blocked_cell() -> void:
 
 func test_delivery_leaves_the_cell_at_its_baked_weight() -> void:
 	var w: SimWorld = K.world()
-	var wr: int = _one_wreck(w, 1500.0)
+	var wr: int = _one_wreck(w, 1560.0)
 	var cell: int = _cell_of_slot(w, wr)
-	var h: int = K.put(w, &"hauler", 0, 0, 20.0, 1500.0)
-	var _ref: int = K.put(w, &"refinery", 0, 0, 0.0, 1520.0)
+	var h: int = K.put(w, &"hauler", 0, 0, 20.0, 1560.0)
+	var _ref: int = K.put(w, &"refinery", 0, 0, 0.0, 1500.0)                    # 60 m off: clear of the ram, inside radius + reach
 	assert_int(w.economy().salvage.try_attach(h, wr)).is_equal(Salvage.Hook.OK)
 	var v: int = w.view().path_grid_version(_face(cell))
 	var _ev: Array[SimEvent] = K.steps(w, 2)
@@ -115,7 +115,7 @@ func test_a_resting_wreck_expiring_restores_the_cell_but_a_towed_one_touches_not
 	assert_int(w.store().wrecks.size()).is_equal(0)
 	assert_int(_p(w).weight(rcell)).is_equal(1)
 	assert_int(_p(w).weight(tcell)).is_equal(1)
-	assert_int(w.view().path_grid_version(_face(tcell))).is_equal(v)
+	assert_int(w.view().path_grid_version(_face(tcell))).is_equal(v + 1)   # only the resting wreck's cell changed (same face)
 
 
 func test_two_wrecks_on_one_cell_stay_blocked_until_the_last_leaves() -> void:
@@ -172,14 +172,13 @@ func test_the_restored_weight_is_re_read_from_the_map_bake() -> void:
 	var w: SimWorld = WorldTestKit.world(7, WorldTestKit.rules(), MAP)
 	var baked: PackedByteArray = PathGrid.read_faces("res://content/maps/%s" % String(MAP))
 	assert_int(baked.size()).is_equal(PathGrid.CELLS)
-	var spot: Vector3 = Vector3.ZERO
-	for k: int in 40:                                                             # a cell whose bake is neither 1 nor impassable
-		var d: Vector3 = Vector3(1.0, 0.02 * float(k) - 0.4, 0.15).normalized()
-		var wt: int = baked[PathGrid.cell_of(d)]
-		if wt > 1 and wt < 255:
-			spot = d
+	var found: int = -1
+	for c: int in PathGrid.CELLS:                                                 # the first cell whose bake is neither 1 nor impassable
+		if baked[c] > 1 and baked[c] < 255:
+			found = c
 			break
-	assert_bool(spot != Vector3.ZERO).override_failure_message("no weighted cell near +X in the bake").is_true()
+	assert_int(found).override_failure_message("no weighted cell in the bake").is_greater_equal(0)
+	var spot: Vector3 = Sphere.cell_center_dir(found, N)
 	var cell: int = PathGrid.cell_of(spot)
 	assert_int(_p(w).weight(cell)).is_equal(baked[cell])
 	_doom(w, spot)

@@ -6,7 +6,7 @@ change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check
 
 | Field | Value |
 |---|---|
-| Responsibility | A dying ship, ground unit or finished structure leaves wrecks worth `wreck_fraction` of its Ore cost: one wreck for a unit, `ceil(value / salvage_pod_max_ore)` pods for a structure or the Core. A wreck lives `wreck_lifetime_s`, is hooked by a Hauler within tether reach (at most its `tow_slots`; Foundry 2) and is turned into Ore when its Hauler reaches a friendly Refinery. Not here: the tether follow motion, the 25 m / 8 m geometry, the towing turn-rate cap and "no collision while towed" (GD-37), path weights under wrecks, scoring points for salvage (GD-26), completing the HAUL order (the Hauler brain does, from SALVAGE_DELIVERED). |
+| Responsibility | A dying ship, ground unit or finished structure leaves wrecks worth `wreck_fraction` of its Ore cost: one wreck for a unit, `ceil(value / salvage_pod_max_ore)` pods for a structure or the Core. A wreck lives `wreck_lifetime_s`, is hooked by a Hauler within tether reach (at most its `tow_slots`; Foundry 2) and is turned into Ore when its Hauler reaches a friendly Refinery. Not here: the tether follow motion, the 25 m / 8 m geometry, the towing turn-rate cap and "no collision while towed" (GD-37), scoring points for salvage (GD-26), completing the HAUL order (the Hauler brain does, from SALVAGE_DELIVERED). |
 | Lane owner tier | Sonnet against this file (Opus review) |
 | May depend on | `core`, `content`, `sim` (incl. `sim/world/`: `WorldDefs`, `SimEvents`; `sim/orders/` `OrderQueue`; `sim/economy/` `Economy`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads, RNG |
@@ -19,6 +19,7 @@ change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check
 class_name Salvage extends RefCounted
 enum Hook { OK, NOT_HAULER, NO_SLOT, BAD_WRECK, TOO_FAR }                    # try_attach outcomes
 var orders: OrderQueue                                                       # set by SimWorld; the head standing order of a ship decides the auto-hook
+var paths: WreckPaths                                                        # GD-39 W11: set by SimWorld (`paths.pathing`); path weight 255 under resting wrecks
 var cap: int                                                                 # live wreck cap (`caps.wrecks`; 0 = the whole wreck range)
 func _init(store: EntityStore, defs: WorldDefs, economy: Economy, events: SimEvents, terrain: Terrain, hz: int, wreck_cap: int)
 static func value_of(defs: WorldDefs, def_id: int) -> int                    # W1: Ore value of the wrecks a def leaves (0 = none)
@@ -79,6 +80,18 @@ per owner so the Foundry doctrine gives 2). Slots in the API are entity slots; `
 - W10 Cost. `step` returns at once while no wreck lives; otherwise one pass over the wreck list plus one over the ships
   for the byte compare `order_kind == HAUL`; no Dictionary, no per-entity allocation.
 
+- W11 Path weights (GD-39; R0 B.20 A-108; 03 s6.1). `WreckPaths` (`wreck_paths.gd`) keeps the path cell of every *resting* wreck (alive, not F_TETHERED)
+  at weight 255 and a towed wreck blocks nothing. Hooks: a wreck comes to rest (`_spawn` in step 9, `_release` in step 10 or `drop`) ->
+  `rest`: `Pathing.set_weight(cell_of(pos, GRID_PATH), 255)`; it is hooked (`_link`, after F_TETHERED is set) -> `lift`; a resting wreck
+  expires -> `defer`, then `settle` after the pass freed its wrecks. A delivered or tether-expired wreck was lifted at its hook and
+  touches nothing. `lift`/`settle` restore the cell's baked weight, `Pathing.baked_weight(cell)` (read from the loaded map's
+  `face<f>.path.u8`, nothing stored; flat datum = 1), unless another live untethered wreck still rests on the cell (one scan of the
+  wreck list per leave, distance pre-filtered), so two wrecks on one cell keep it blocked until the last leaves. A call that would not
+  change the weight is skipped (no version bump). Every change goes through `Pathing.set_weight`, so `path_grid_version` and the route
+  cache follow. No saved state: the weights are in the S4 path section, so `SimSerialize.FORMAT` is unchanged and a restore gives
+  the same expiry restores. Cost per wreck event only (counters `sets`, `scans`, `reads`); no per-tick scan. Open: when Build
+  blocks cells under structures (TA-19), the restore must not unblock a structure footprint.
+
 ## Data owned
 
 Nothing of its own (W9): scratch lists `_gone`, `_touched`, the derived Refinery list and one `OrderSpec`.
@@ -102,6 +115,7 @@ pods, Foundry-independent value, sites and Relay Station leave nothing, ground p
 `test_salvage_life.gd` (W4, W5: expiry at tick 2,700 exactly, DEATH cause, cap),
 `test_salvage_tow.gd` (W6, W7, W8: slots 1 / 2, hook order and reach, auto-hook by order, release on death, delivery
 credit, cap clamp, events, no hook without order),
+`test_wreck_paths.gd` (W11: block / lift / restore, two on one cell, map bake restore, route before / after, S4), `test_wreck_paths_perf.gd` (W11 counters; PerfGate),
 `test_salvage_state.gd` (W9: save / restore / continue byte-exact mid-lifetime and mid-tow, FORMAT unchanged, refusal of a
 changed FORMAT), `test_salvage_perf.gd` (W10 counters; PerfGate).
 
@@ -112,4 +126,4 @@ changed FORMAT), `test_salvage_perf.gd` (W10 counters; PerfGate).
 
 ## Open items
 
-- Ruled by R0 B.20 (`docs/reviews/R0-amendments-14.md`): A-104 tow state, A-105 reach fields, A-106 `SimEvent.DeathCause`, A-107 the step-9 event order (W3). Follow-up tasks (A-108): path weight 255 under wrecks (GD-39), the possessed Hauler's hook on DOCK (GD-40), `SimView` wreck Ore value (GD-41), ORDER_DONE for HAUL/TOW (AI-15).
+- Ruled by R0 B.20 (`docs/reviews/R0-amendments-14.md`): A-104 tow state, A-105 reach fields, A-106 `SimEvent.DeathCause`, A-107 the step-9 event order (W3). Follow-up tasks (A-108): path weight 255 under wrecks (GD-39, done: W11), the possessed Hauler's hook on DOCK (GD-40), `SimView` wreck Ore value (GD-41), ORDER_DONE for HAUL/TOW (AI-15).
