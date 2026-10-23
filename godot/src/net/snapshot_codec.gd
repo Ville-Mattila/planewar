@@ -258,11 +258,11 @@ func _plan_delta(s: int, tier: int, base: BaselineFrame, own: bool) -> bool:
 	var bq: int = base.pos[s]
 	var cq: int = c_pos[s]
 	var dtk: int = _tick - base.etick[s]
-	var grav: bool = c_grav[s] != 0 or (base.flags[s] & Codec.FLAG_DYING) != 0
+	var grav: bool = base.base_grav(s, c_grav[s] != 0)       # A-103: false for a known blip
 	var mask: int = 0
 	var lv: Vector3i = Vector3i((bq >> 16) & 0xFFFF, (bq >> 32) & 0xFFFF, (bq >> 48) & 0xFFFF)
 	if cq != bq or grav or base.vel[s] != 0:
-		var dr: Vector3i = DeadReckon.dr_levels(bq, base.vel[s], dtk, grav, gravity, dt)
+		var dr: Vector3i = base.shown_levels(s, _tick, c_grav[s] != 0, gravity, dt)
 		var res: Vector3i = Vector3i((cq >> 16) & 0xFFFF, (cq >> 32) & 0xFFFF, (cq >> 48) & 0xFFFF) - dr
 		mask = SnapshotCodec.pos_mask(res)
 		if mask < 0 or not DeadReckon.levels_ok(dr):
