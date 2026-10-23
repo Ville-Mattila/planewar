@@ -4,16 +4,16 @@ class_name AiState extends RefCounted
 ## `wake_pending`), the landing fields of AI-09, the overlay state of AI-08 (`overlay`, `ov_flags`; the overlays use
 ## `integ`), the escort fields of AI-11 and the brain fields of AI-13 (FORMAT 5: `sub`, `passes`, `prev_mode`, `wp`,
 ## `bflags`, `seen_tick`, `mark_tick`, `burst_tick`, `order_tick`, `hp_mark`, `clear_m`, `home`, `goal`, `aim_err`) and
-## the Lancer's rocket lock of AI-14 (FORMAT 6: `lock_tick`).
+## the Lancer's rocket lock of AI-14 (FORMAT 6: `lock_tick`) and the last HIT each entity landed (AI-17, FORMAT 7: `hits`).
 ## `serialize` writes only registered slots (`cls != NO_CLASS`), ascending, so bytes are a function of state.
 
 const NO_CLASS: int = 255
-const FORMAT: int = 6
+const FORMAT: int = 7
 const WAKE_NEVER: int = -1000000
 const LAND_BUSY: int = 1                ## land_flags: the pad is occupied, queued or claimed by another ship
 const LAND_THREAT: int = 2              ## land_flags: an enemy projectile is inbound to the pad
 const LAND_FOREIGN: int = 4             ## land_flags: the pad is no longer this ship's team's
-const RECORD_MIN: int = 237             ## slot u32, 17 u8, 15 i32, 27 f32 (9 Vector3), 11 f32, path count i32
+const RECORD_MIN: int = 258             ## slot u32, 17 u8, 15 i32, 27 f32 (9 Vector3), 11 f32, the hit record (AiHitLog), path count i32
 const ROSTER_WIDTH: int = 8             ## form_roster entries per escortee (class slots are at most this many)
 const NO_SLOT: int = 255                ## form_slot: no formation slot assigned
 ## `ov_flags` bits (AI-08): PULL_UP running, system RETURN already requested, POSSESSED at the last check.
@@ -75,6 +75,7 @@ var target_count: PackedByteArray = PackedByteArray()     ## AI-13: by slot, reg
 var ground_h: PackedFloat32Array = PackedFloat32Array()   ## terrain height under the ship at the last think (m)
 var lift: PackedFloat32Array = PackedFloat32Array()       ## TerrainProbe lift of the last think (m/s)
 var pad_claim: PackedInt32Array = PackedInt32Array()      ## by pad slot: EntityId of the ship landing on it, or 0
+var hits: AiHitLog = AiHitLog.new()                       ## AI-17: the last HIT each entity landed (tower scoring), by attacker slot
 var capacity: int = 0
 
 
@@ -100,6 +101,7 @@ func ensure_capacity(slots: int) -> void:
 		seen_tick.resize(slots), mark_tick.resize(slots), burst_tick.resize(slots), order_tick.resize(slots),
 		hp_mark.resize(slots), clear_m.resize(slots), home.resize(slots), goal.resize(slots), aim_err.resize(slots),
 		target_count.resize(slots), rtb_floor.resize(slots), lock_tick.resize(slots)]
+	hits.resize(slots)
 	capacity = slots
 	for s: int in range(old, slots):
 		clear_slot(s)
@@ -165,6 +167,7 @@ func _clear_brain(s: int) -> void:
 	goal[s] = Vector3.ZERO
 	aim_err[s] = Vector2.ZERO
 	rtb_floor[s] = 0.0
+	hits.clear(s)
 
 
 ## AI-13: the one writer of `target`: keeps `target_count` (the focus-fire count of 05 s6.2) equal to the number of
@@ -250,6 +253,7 @@ func _write_slot(b: StreamPeerBuffer, s: int) -> void:
 	b.put_float(aim_err[s].x)
 	b.put_float(aim_err[s].y)
 	b.put_float(rtb_floor[s])
+	hits.write(b, s)
 	var pts: PackedVector3Array = path.get(s, PackedVector3Array())
 	b.put_32(pts.size())
 	for p: Vector3 in pts:
@@ -372,6 +376,7 @@ func _read_slot(b: StreamPeerBuffer) -> bool:
 	var ex: float = b.get_float()
 	aim_err[s] = Vector2(ex, b.get_float())
 	rtb_floor[s] = b.get_float()
+	hits.read(b, s)
 	var m: int = b.get_32()
 	if m < 0 or m * 12 > b.get_available_bytes():
 		return false

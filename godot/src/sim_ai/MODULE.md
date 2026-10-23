@@ -11,7 +11,7 @@ writes only through `CommandSinkBase`.
 | May depend on | `core`, `content`, `sim` |
 | Must never touch | Nodes, `net`, `presentation`, `ui`; no `await`, signals, `Thread`, autoloads |
 | Autoloads used | None |
-| Status | AI-03 (2026-10-14): `CommandSink`. AI-04 (2026-10-14): `AiState`, `AiBatch`, `AiBrain`, `AiDriver` scheduling. AI-09 (2026-10-14): `LandingPilot`, AiState landing fields. AI-12 (2026-10-14): target choice points (`TargetParams`, `TargetContext`, `TowerEnvelope`, `TargetChooser`). AI-08 (2026-10-14): `Overlays` SAFETY / RECOVER_CEILING, `OverlayParams`, the driver's release-edge check. AI-11 (2026-10-20): `Separation`, `Formation`, `FormationParams`, `EscortPilot`, AiState FORMAT 4 (`form_slot`, `form_state`, `form_order`, `sep_age`, `sep_push`). AI-13 (2026-10-21): `DartBrain` (+ `DartModes`, `DartCombat`, `AttackRun`, `DartParams`), `Guidance`, `TeamPicture`, AiState FORMAT 5, the A-89 budget OR in `Overlays.run_safety`. AI-22 (2026-10-21): sub-module `sim_ai/perception` (`Perception`, `ThreatMap`, `TeamIntel`; own MODULE.md), `AiDriver` FORMAT 2 with the intel section. AI-14: Lancer, Bomber, Scout brains; the class brains (Dart included) move to the sub-module `sim_ai/brains` (own MODULE.md); AiState FORMAT 6 (`lock_tick`), `AiBrain.bind_intel`. Other brains follow. |
+| Status | AI-03 (2026-10-14): `CommandSink`. AI-04 (2026-10-14): `AiState`, `AiBatch`, `AiBrain`, `AiDriver` scheduling. AI-09 (2026-10-14): `LandingPilot`, AiState landing fields. AI-12 (2026-10-14): target choice points (`TargetParams`, `TargetContext`, `TowerEnvelope`, `TargetChooser`). AI-08 (2026-10-14): `Overlays` SAFETY / RECOVER_CEILING, `OverlayParams`, the driver's release-edge check. AI-11 (2026-10-20): `Separation`, `Formation`, `FormationParams`, `EscortPilot`, AiState FORMAT 4 (`form_slot`, `form_state`, `form_order`, `sep_age`, `sep_push`). AI-13 (2026-10-21): `DartBrain` (+ `DartModes`, `DartCombat`, `AttackRun`, `DartParams`), `Guidance`, `TeamPicture`, AiState FORMAT 5, the A-89 budget OR in `Overlays.run_safety`. AI-22 (2026-10-21): sub-module `sim_ai/perception` (`Perception`, `ThreatMap`, `TeamIntel`; own MODULE.md), `AiDriver` FORMAT 2 with the intel section. AI-14: Lancer, Bomber, Scout brains; the class brains (Dart included) move to the sub-module `sim_ai/brains` (own MODULE.md); AiState FORMAT 6 (`lock_tick`), `AiBrain.bind_intel`. AI-17: the tower brain (`TowerBrain`, `TowerParams` in `sim_ai/brains`), `AiHitLog` + AiState FORMAT 7, one shared tower class in `AiClassTable`, `TeamPicture.near_built`, `TurretAim` (sim/steer). Other brains follow. |
 
 ## Public API
 
@@ -40,6 +40,8 @@ const NO_SLOT: int; const ROSTER_WIDTH: int      # form_roster (by escortee slot
 const OV_PULL_UP: int; const OV_RTB_SENT: int; const OV_POSSESSED: int      # ov_flags bits
 # AI-13 (FORMAT 5): sub / passes / prev_mode / wp / bflags (u8) after land_flags, seen_tick / mark_tick / burst_tick / order_tick (i32) after form_order, home / goal (Vector3) after sep_push, hp_mark / clear_m / aim_err (f32) after lift
 # AI-14 (FORMAT 6): lock_tick (i32) after order_tick: the start tick of the Lancer's current rocket lock hold (0 = none); FORMAT 5 bytes are refused
+# AI-17 (FORMAT 7): the AiHitLog record (21 bytes: tick i32, victim i32, team u8, pos 3 x f32) per slot after rtb_floor, before the path; FORMAT 6 bytes are refused
+var hits: AiHitLog                                 # AI-17: the last HIT each registered entity landed, by attacker slot (written by AiDriver.on_event(HIT), read by the tower choice point)
 var target_count: PackedByteArray                  # AI-13: by slot, registered slots whose target is it (derived: rebuilt by deserialize, not in the bytes)
 var rtb_floor: PackedFloat32Array                  # AI-13 (FORMAT 5, after aim_err): the cached RTB fuel floor, 0 = unset
 func set_target(s: int, t: int) -> void            # AI-13: the one writer of `target` (keeps target_count)
@@ -63,9 +65,10 @@ func phase(id: int, st: AiState) -> int
 func think(id: int, view: SimView, st: AiState) -> void      # pad validity / divert, one probe, busy / threat flags, bearing, claim
 func act(id: int, view: SimView, st: AiState, out: PilotInput) -> int   # LandingController.step into `out`; the brain drives it
 func select_pad(id: int, view: SimView, exclude: int, st: AiState) -> int   # 05 s5.5 score, fuel rejection, nearest fallback
-class_name AiClassTable extends RefCounted          # AI-37: def id -> class batch; ships then ground units in def order, NONE (255) for the rest
+class_name AiClassTable extends RefCounted          # AI-37: def id -> class batch; ships then ground units in def order, AI-17: then ONE class shared by every tower def, NONE (255) for the rest
 const NONE: int
 static func from_content(c: ContentSet) -> PackedByteArray;  static func class_of(table: PackedByteArray, def_id: int) -> int
+static func tower_class(c: ContentSet) -> int       # AI-17: the tower class index (NONE without a tower def or when the 16 classes are full)
 class_name AiDriver extends SimAiHook              # AI-04
 func _init(rng: Rng = null, think_period_ticks: int = 10, cut_period_ticks: int = 15, bot_periods: PackedInt32Array = PackedInt32Array([90, 30, 30, 30])) -> void
 func think_period() -> int;  func set_offline_profile(lite: bool) -> void;  func set_cut_rung1(on: bool) -> void;  func ai_rng() -> Rng
@@ -125,6 +128,7 @@ class_name TeamPicture extends RefCounted          # AI-13: per team, the visibl
 var builds: int; var period: int
 func epoch(team: int, tick: int) -> int;  func reset() -> void
 func enemies(view: SimView, team: int, tick: int) -> PackedInt32Array;  func near(view: SimView, team: int, tick: int, origin: Vector3, radius: float) -> int;  func near_ids() -> PackedInt32Array
+func near_built(view: SimView, team: int, tick: int, origin: Vector3, radius: float) -> int   # AI-17: near on the positions of the build (no SimView read per ship; the caller adds the one-epoch drift to `radius` and re-checks live)
 ```
 
 ```gdscript
@@ -148,13 +152,16 @@ func bind(entity_index: Dictionary) -> void;  func weight(def_id: int, loaded: b
 const BUILDING_KEY: StringName; var w_building: float   # AI-14: the structure_building weight (0: off; the chooser reads the flags only then)
 static func num(d: Dictionary, key: String, fallback: float) -> float;  static func as_num(v: Variant, fallback: float) -> float   # typed JSON readers
 static func dict_of(d: Dictionary, key: String) -> Dictionary;  static func entity_def(entity_index: Dictionary, name: StringName) -> int
+static func for_tower(d: Dictionary) -> TargetParams   # AI-17: an `ap_tower` entry's optional tower_* / guard_mult / attacked_* / max_candidates keys only (no ship keys required)
 var max_candidates: int   # default 8: cost bound of a choice point
 var switch_margin: float; var tower_switch_margin: float; var rank_weights: PackedFloat32Array   # + the 05 inline multipliers (optional keys)
 class_name TowerEnvelope extends RefCounted        # AI-12: one tower def's envelope + priority, built from the towers.json `tower` block (C2-15)
 static func from_block(block: Dictionary, entity_index: Dictionary, params: TargetParams) -> TowerEnvelope
 func in_envelope(h_rel: float, agl: float) -> bool;  func kind_ok(def_id: int) -> bool;  func base_weight(def_id: int, loaded: bool) -> float
+func has_floor() -> bool                           # AI-17: target_agl_min > 0, i.e. the caller must read the terrain at all; in_envelope tests AGL only then
 func eligible(p_tower: Vector3, p_t: Vector3, def_id: int, range_m: float, terrain_h: float) -> bool
-class_name TargetContext extends RefCounted        # AI-12: per-team preallocated facts (attacked_until / targeted_by by slot, enemy tower list, score scratch)
+class_name TargetContext extends RefCounted        # AI-12: per-team preallocated facts (attacked_until / guard_until / targeted_by by slot, enemy tower list, score scratch)
+var guard_until: PackedInt32Array;  func guard_attacked(id: int, tick: int) -> bool   # AI-17: attackers of the GUARDed structure (the x2 of choose_tower); attacked_until is the separate x1.5 mark
 func mark_attacker(id: int, tick: int, window_ticks: int) -> void;  func attacked_recently(id: int, tick: int) -> bool;  func add_targeter(id: int) -> void;  func remove_targeter(id: int) -> void
 func add_tower(pos: Vector3, range_m: float, env: TowerEnvelope) -> bool;  func clear_towers() -> void;  func under_tower(p_t: Vector3, def_id: int, terrain_h: float) -> bool
 class_name TargetChooser extends RefCounted        # AI-12: static choice points with hysteresis
@@ -162,7 +169,12 @@ static func score_ship(w: float, dist: float, hp01: float, attacked: bool, under
 static func score_tower(base: float, attacking: bool, hp01: float, towers_on_it: int, guard_attacker: bool, slew_s: float, p: TargetParams) -> float
 static func pick(ids: PackedInt32Array, scores: PackedFloat32Array, n: int, current: int, margin: float) -> int
 static func choose_ship(view: SimView, team: int, cand: PackedInt32Array, n: int, origin: Vector3, radius: float, current: int, tick: int, ctx: TargetContext, p: TargetParams, out: PackedInt32Array) -> int
-static func choose_tower(view: SimView, team: int, tower_pos: Vector3, aim: Vector3, env: TowerEnvelope, range_m: float, cand: PackedInt32Array, n: int, current: int, tick: int, ctx: TargetContext, p: TargetParams, guarded: int, out: PackedInt32Array) -> int
+static func choose_tower(view: SimView, team: int, tower_pos: Vector3, aim: Vector3, env: TowerEnvelope, range_m: float, cand: PackedInt32Array, n: int, current: int, tick: int, ctx: TargetContext, p: TargetParams, guarded: int, out: PackedInt32Array) -> int   # AI-17: x2 by ctx.guard_attacked (not attacked_recently); scores[j] of the first pass is the base weight (no second def read)
+class_name AiHitLog extends RefCounted             # AI-17: the last HIT an attacker landed, by attacker slot (05 s6.8 x1.5 / GUARD x2); in AiState FORMAT 7
+const NO_TEAM: int; const RECORD_BYTES: int;  var tick: PackedInt32Array; var victim: PackedInt32Array; var team: PackedByteArray; var pos: PackedVector3Array
+func resize(slots: int) -> void;  func clear(s: int) -> void;  func record(s: int, hit_tick: int, victim_id: int, victim_team: int, at: Vector3) -> void
+func attacking(s: int, of_team: int, now: int, window: int, near: Vector3, r2: float) -> bool;  func guarding(s: int, guarded: int, now: int, window: int) -> bool
+func write(b: StreamPeerBuffer, s: int) -> void;  func read(b: StreamPeerBuffer, s: int) -> void
 ```
 
 **Overlays (AI-08).** `ControlMachine` sets the store's overlay on release; `SimView` does not expose it, so `AiDriver`
@@ -201,6 +213,8 @@ does not think; at the end it is woken. LINK_BRIDGE is `Assist.link_bridge` in `
 - Open (needs content, AI-19): `autopilots.json` with the `safety_*`, probe and `flight` keys and the AI-08 additions `recover_ceiling_gamma_deg` (-20) and `recover_ceiling_exit_alt_m` (1400) in the schema; the session builds `OverlayParams` per class and calls `set_terrain(world.terrain())`.
 - TC1: choice points read only `SimView` candidates that are alive, enemy and `visible_to(team, id)`; ties go to the earlier candidate; a new choice must exceed `switch_margin` (tower: `tower_switch_margin`) times the current's score, a current no longer a candidate is dropped (`test_target_chooser.gd`). No envelope or priority literal in `sim_ai/`: both come from `towers.json` via `TowerEnvelope`.
 - TC2: cost is bounded by `TargetParams.max_candidates` (8): one cheap pass keeps the best N by `w / (1 + dist / falloff)` (insertion into the caller's `out`), then only those are fully scored; `out` and `ctx.scores` must hold N (asserted). 05 s10 think row = 25 us for 6 probes + 1 neighbour query + 1 choice point; measured `choose_ship` N=8 ~43 us with a typed-array fake view (3x CI tolerance bound 75 us), n=64 ~207 us (`test_cost_of_one_choice_point_at_the_budget_row`): over the row on this desktop debug build, so brains call it at most every other think or with a pre-filtered N <= 4 until the Architect revisits the row. The modifiers can reorder candidates the pre-score ranks 9th or lower; accepted.
+- TC4 (AI-17): the tower choice point separates the two marks: `ctx.attacked_until` = the candidate hit an asset of the tower's team (any ship, ground unit or structure, `AiHitLog`) within `attacked_window_s` with the hit inside `tower_attack_radius_m` of the tower (x1.5); `ctx.guard_until` = it hit the GUARDed structure within the window (x2, only under a GUARD order). The brain writes both per candidate at each think (scratch, never state). The `target_count` crowd term counts every registered unit targeting it, not only towers (as the Dart's focus fire). `TowerEnvelope.in_envelope` tests the AGL floor only when `target_agl_min` > 0 and the chooser reads `terrain_height` only then (`has_floor`).
+- HL1 (AI-17): `AiDriver.on_event(HIT)` records `(tick, victim, victim team, position)` for a registered attacker (`state.eid` = `ev.b`) and nothing for another; the record is cleared with the slot and is in the S4 bytes (FORMAT 7; `test_ai_hit_log.gd`: round trip, FORMAT 6 refused, growth with capacity). `TeamPicture.near_built` returns the ships whose position at the build was within `radius`: the caller widens `radius` by the farthest a ship moves in one epoch (`TowerParams.slack_m`) and the chooser filters by the live range.
 - TC3: `ctx.targeted_by` counts the chooser itself when it holds `current`; the chooser subtracts it, so focus fire counts the other ships only.
 - Resolved by AI-13 (R0 B.15 A-89): `Overlays.run_safety` starts PULL_UP at TTI < `safety_pull_up_tti_s` OR when the visible clearance (AGL, one height sample, or the probe's worst drop-free clearance) is below `FlightController.pull_up_loss` (`test_safety_overlay_ors_the_pull_up_budget_into_its_trigger`; SC-11 on cradle).
 - Open (AI-12): optional `autopilots` keys read by `TargetParams` (`attacked_mult`, `low_hp_mult`, `focus_mult`, `tower_*`, `guard_mult`, `tower_rank_weights`) **need content** in `autopilots.schema.json`; they default to the 05 literals (`TargetParams` constants and `DEFAULT_RANK_WEIGHTS`; flagged, not yet read from a def). The bomb-prediction step and horizon for `Ballistics.predict_impact` are brain parameters from the same def.
@@ -233,5 +247,5 @@ does not think; at the end it is woken. LINK_BRIDGE is `Assist.link_bridge` in `
 SC-25, determinism and S4; fixtures `overlay_kit.gd`, `ai08_autopilots.json`).
 `test_formation.gd`, `test_escort_pilot.gd`, `test_escort_perf.gd` (AI-11; fixtures `godot/test/sim/ai/formation_kit.gd`, `swarm_world.gd`, `ai11_params.json`); `godot/test/sim/ai/test_sc39_escort_formation.gd` (SC-39), `test_swarm_separation.gd` (50-seed swarm).
 `test_perception.gd`, `test_threat_map.gd`, `test_team_intel.gd`, `test_intel_perf.gd`, scenario `godot/test/sim/ai/test_sc43_fog_fairness.gd` (AI-22; contract in the perception sub-module MODULE.md).
-`test_ai14_contract.gd` (AI-14 contract: AiState FORMAT 6, `bind_intel`, separation-only FormationParams, the structure_building weight). The class brains' tests (also listed in the brains sub-module):
+`test_ai_hit_log.gd`, `test_tower_params.gd` (AI-17: AiHitLog, AiState FORMAT 7, the class table's tower class, the envelope-literal grep check; the tower brain's tests are in the brains sub-module). `test_ai14_contract.gd` (AI-14 contract: AiState lock_tick round trip, `bind_intel`, separation-only FormationParams, the structure_building weight). The class brains' tests (also listed in the brains sub-module):
 `test_dart_brain.gd`, `test_dart_perf.gd` (AI-13; fixtures `godot/test/sim/ai/dart_kit.gd`, `ai13_autopilots.json`); scenarios `godot/test/sim/ai/test_sc_dart.gd` (SC-01, SC-28, SC-29), `test_sc_dart_terrain.gd` (SC-09, SC-10, SC-11 on cradle, the dive bound).
