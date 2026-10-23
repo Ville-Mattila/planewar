@@ -616,7 +616,7 @@
       " 03 TA-42"
     ],
     "status": "todo",
-    "acceptance_append": "; nightly perf_tick.gd --full and bench_snapshot canonical rows appended to perf/history.jsonl with the runner id (R0 B.11 A-62); every job on the pinned runner exports PLANEWAR_PINNED_RUNNER=1 (R0 B.17 A-97) so PerfGate asserts there and nowhere else; the first pinned run records the test_escort_perf.gd / test_dart_perf.gd reference-kernel figure in perf/history.jsonl and a follow-up sim_ai task re-anchors REF_ANCHOR_US to it"
+    "acceptance_append": "; nightly perf_tick.gd --full and bench_snapshot canonical rows appended to perf/history.jsonl with the runner id (R0 B.11 A-62); every job on the pinned runner exports PLANEWAR_PINNED_RUNNER=1 (R0 B.17 A-97) so PerfGate asserts there and nowhere else; the first pinned run records the test_escort_perf.gd / test_dart_perf.gd reference-kernel figure in perf/history.jsonl and a follow-up sim_ai task re-anchors REF_ANCHOR_US to it; the planewar-perf runner has bash on PATH (workflows default to shell: bash since TA-66)"
   },
   {
     "id": "TA-27",
@@ -7642,8 +7642,10 @@
     "docs": [
       "03 s12"
     ],
-    "status": "todo",
-    "note": "Found by the GD-39 #112 review 2026-10-23: soak slope printed +4.34 %/min vs 2.0 but the job was green (ci.yml:309)."
+    "status": "done",
+    "note": "Found by the GD-39 #112 review 2026-10-23: soak slope printed +4.34 %/min vs 2.0 but the job was green (ci.yml:309). Workflow-level defaults shell: bash (-e -o pipefail) in ci.yml and nightly.yml; red proof run 39965956743. Self-hosted planewar-perf runner (TA-42) needs bash on PATH.",
+    "pr": 116,
+    "merged": "2026-10-23"
   },
   {
     "id": "REVIEW-01",
