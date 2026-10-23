@@ -35,7 +35,8 @@ func receive(channel: int, bytes: PackedByteArray) -> void   # transport packet 
 
 class_name ClientClock extends RefCounted             # net/client/client_clock.gd (04 s5.1)
 const INTERP_DELAY_TICKS: int; const INPUT_LEAD_TICKS: int; const DRIFT_ALPHA: float; const RTT_ALPHA: float   # 3, 1, 0.05, 0.2
-const DILATION_MAX: float; const DILATION_GAIN: float; const RESYNC_MS: float; const EARLY_TICKS: int; const LEAD_MAX: float   # 0.05, 0.1, 500, 6, 8
+const DILATION_MAX: float; const DILATION_GAIN: float; const RESYNC_MS: float; const EARLY_TICKS: int; const LEAD_MAX: float   # 0.05, 0.1, 500, 6, InputBuffer.WINDOW_FUTURE
+# 04 s5.1: INTERP_DELAY_TICKS, INPUT_LEAD_TICKS, DRIFT_ALPHA, DILATION_MAX, RESYNC_MS, EARLY_TICKS; NET-17 choices (not in 04): RTT_ALPHA, DILATION_GAIN
 var tick_ms: float; var synced: bool; var offset: float; var clock: float; var rate: float; var rtt_ms: float; var lead: float; var samples: int; var resyncs: int
 func _init(tick_hz: int = 30) -> void;  func reset() -> void
 func observe(server_tick: int, now_ms: float) -> void;  func observe_rtt(rtt: float) -> void;  func estimate(now_ms: float) -> float
@@ -49,7 +50,8 @@ var roster: Roster; var decoder: SnapshotDecoder; var defs: NetDefs; var terrain
 func _init(roster_ref: Roster, decoder_ref: SnapshotDecoder) -> void;  func bind(net_defs: NetDefs, map_terrain: Terrain) -> void
 func sample(at_render_tick: float) -> void            # R0 C2-12 signature
 func set_possessor(index: int, player: int) -> void;  func set_team_state(w: TeamStateWire) -> void
-func team_flags(t: int) -> int;  func team_flags_known(t: int) -> bool;  func unknown(id: int) -> bool   # 04 s3.7 unknown bit
+func team_flags(t: int) -> int;  func team_flags_known(t: int) -> bool;  func own_index() -> int
+func unknown(id: int) -> bool;  func field_unknown(id: int, accessor: StringName) -> bool   # 04 s3.7 unknown bit: any field / one accessor (NetUnknown)
 func index_of(id: int) -> int;  func live(i: int) -> bool;  func id_at(i: int) -> int   # roster index of a live EntityId (-1); replicated entry; EntityId of an index
 func alive(id: int) -> bool;  func pos(id: int) -> Vector3;  func vel(id: int) -> Vector3;  func basis(id: int) -> Basis;  func def_id(id: int) -> int;  func owner(id: int) -> int;  func team(id: int) -> int
 func hp01(id: int) -> float;  func fuel01(id: int) -> float;  func ammo(id: int) -> int;  func bombs(id: int) -> int;  func rockets(id: int) -> int;  func control_state(id: int) -> int;  func possessor(id: int) -> int
@@ -62,6 +64,10 @@ func read_poses(ids: PackedInt32Array, out_pos: PackedVector3Array, out_rot: Pac
 # inherited SimView defaults (not received, 04 s5.6 / s3.7): overlay, cargo, cargo_kind, link, pad_queue, pad_occupant, order_head, order_issuer,
 #   pending_order, projectiles_near, field_remaining, path_grid_version, supply01, shield01 (-1.0, GD-38), wreck_ore (-1.0, GD-41), production_queue,
 #   production_progress01, auto_replenish_target, player_score, landing_grade_last, team_state, player_state, match_arc, match_phase
+
+class_name NetUnknown                                 # net/client/net_unknown.gd; static: which accessor of which entity is not received
+const NEVER: PackedStringArray; const PILOT: PackedStringArray
+static func field(v: NetSimView, i: int, accessor: StringName) -> bool
 
 class_name NetRosterQueries                           # net/client/net_roster_queries.gd; static roster walks of NetSimView's list accessors
 static func of_kinds(v: NetSimView, mask: int) -> PackedInt32Array;  static func visible_ids(v: NetSimView, t: int) -> PackedInt32Array
@@ -138,6 +144,10 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
   `BaselineFrame.base_grav`) for at most 3 ticks, then frozen with `stale`; a known blip shows its stored bucket
   (`shown_levels`' rule: no gravity even when DYING) and is never interpolated or extrapolated (A-103); at integer ticks the
   float dr(t) equals `Codec.dequantize_pos(shown_levels)` within one quantum. No allocation per entity.
+- CS8: `field_unknown(id, accessor)` is true exactly for what the client does not receive (`NetUnknown`: never-carried
+  accessors, pilot-block fields off the own possessed unit, C-tier basis / vel, other teams' ai_tag, a wreck's radius);
+  such an accessor returns the SimView default. `unknown(id)` = any field unknown: true for every entity while
+  `NetUnknown.NEVER` is non-empty. Late / reordered snapshots and reliable KEYFRAMEs never feed the clock.
 - CS6: `NetSimView` passes TEST-02 (`factories/net_sim_view_factory.gd`); its `exempt()` names exactly the failing clauses,
   each with a 04 s5.6 / s3.7 reason or an Open item (`test_factory_exempts_exactly_the_failing_clauses`).
 - CS7: no Nodes, `await`, `Thread` or `WorkerThreadPool`; `tick()` is the only per-frame entry (web single-threaded).
@@ -167,6 +177,17 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
   `NetSimView.team_flags`. Ask: append the three to net's named sim types (R0 B.4).
 - CQ-3 (sim lane / TEST-02): the scene writes `control_state` 5 (outside B.3's 0-2 and the 2-bit wire field) and checks
   `flip_cooldown01` to 1e-4 although the pilot block carries a u8 fraction (0.5 -> 128/255).
+- CQ-4 (Architect): a split wreck's radius is hull / n (`sim/salvage/salvage.gd`), n is not on the wire (04 s3.7 has no
+  row); NetSimView returns 0.0 with `field_unknown(radius)`. Ask: a radius byte in ENTITY_META / WRECK_SPAWNED, or accept.
+- CQ-5 (Architect): `overlay`, `cargo`, `cargo_kind`, `link` have no 04 s3.7 row; listed in `NetUnknown.NEVER`. Ask: rows
+  (e.g. flags bit 6 for cargo, DOCKED / LAUNCHED events for link) or confirm non-replicated.
+- CQ-6 (Architect): 03 s10.2 "ClientSession.tick 1.0 ms" names no percentile; the test gates p50 (0.49-0.60 ms dev box,
+  0.92 ms CI; p95 1.1-1.3 ms / 2.0 ms on the tier-C ticks). Server rows are p95 (R0 B.7); NET-18 adds prediction.
+- `projectiles_near` is not overridden (SimView default, empty): its 04 s3.7 source is client-spawned PROJECTILE_BATCH
+  projectiles (owner: net, the client half of `ShotTracker` / NET-18's cosmetic-slug path, to be filed) plus replicated
+  projectile entities (CQ-1).
+- `read_poses` over the canonical 940 entities costs 3.4 ms dev box / 5.1 ms CI, over the 03 s10.2 "entity sync 2.4 ms"
+  row it is charged to; owner TA-52 (EntityViewPool.sync switch and re-measure, R0 B.11 A-56) with net support.
 - GD-41 `wreck_ore` and GD-38 `shield01` inherit -1.0 (no codec carries wreck ore or dome charge yet; 04 s5.6 default);
   a future codec task replicates them and removes the two exemptions.
 - TEAM_DETAIL-sourced accessors (`supply01`, `pad_occupant`, `order_head`, `order_issuer`, `auto_replenish_target`) land

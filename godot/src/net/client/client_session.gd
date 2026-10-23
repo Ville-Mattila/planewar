@@ -47,6 +47,7 @@ var _loaded: bool = false
 var _cmd_seq: int = 0
 var _clock_src: LocalClock = null
 var _held_kf: PackedByteArray = PackedByteArray()
+var _clock_tick: int = 0                    # newest snapshot tick fed to the clock
 var _team_wire: TeamStateWire = TeamStateWire.new()
 var _scratch: PackedInt64Array = PackedInt64Array()
 var _ready_ticks: PackedInt32Array = PackedInt32Array()
@@ -179,6 +180,7 @@ func _on_session(id: int, b: PackedByteArray) -> void:
 		_view.team_id = team
 		_view.slot_id = welcome.slot
 		clock.reset()
+		_clock_tick = welcome.tick
 		clock.observe(welcome.tick, now_ms())
 		_set_state(State.LOADING)
 	elif id == Protocol.REFUSE:
@@ -230,9 +232,12 @@ func _on_world(id: int, b: PackedByteArray) -> void:
 
 func _on_snapshot(b: PackedByteArray) -> void:
 	var st: int = decoder.decode(b)
-	if st == SnapshotDecoder.Status.OK or st == SnapshotDecoder.Status.STALE:
-		clock.observe(b.decode_u32(1), now_ms())
-		snapshots_ok += 1 if st == SnapshotDecoder.Status.OK else 0
+	if st == SnapshotDecoder.Status.OK:
+		snapshots_ok += 1
+		var t: int = b.decode_u32(1)
+		if t > _clock_tick:                     # newest only: a reordered / late packet never pulls the clock back
+			_clock_tick = t
+			clock.observe(t, now_ms())
 	elif st == SnapshotDecoder.Status.MISSING_ROSTER:
 		held += 1
 		roster_sync.hold(_now_tick(), b.decode_u32(1), b, decoder.missing.duplicate())
@@ -244,8 +249,7 @@ func _on_keyframe(b: PackedByteArray) -> void:
 	var st: int = keyframes.decode(b, decoder)
 	if st == KeyframeCodec.Status.OK:
 		_held_kf = PackedByteArray()
-		keyframes_applied += 1
-		clock.observe(keyframes.tick, now_ms())
+		keyframes_applied += 1                  # reliable channel: its arrival time is not a clock sample
 	elif st == KeyframeCodec.Status.MISSING_ROSTER:
 		_held_kf = b
 	elif st == KeyframeCodec.Status.MALFORMED:
