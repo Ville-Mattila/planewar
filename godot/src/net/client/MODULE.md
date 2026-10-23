@@ -12,7 +12,7 @@ contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check` must p
 | May depend on | `core`, `content`; `net` (`Protocol`, `Codec`, `Roster`, `RosterSync`, `RosterCodec`, `SnapshotDecoder`, `BaselineStore`, `BaselineFrame`, `DeadReckon`, `PilotBlock`, `Transport`, `LocalTransport`, `LocalClock`, `KeyframeCodec`, `EventCodec`, `WireEvent`, `CommandCodec`); named `sim` types `SimView`, `Command`, `PilotInput`, `Terrain` (A-27) |
 | Must never touch | Nodes, `await`, `Thread`, `WorkerThreadPool` (web is single-threaded, 03 s11); other `sim` types (`EntityStore` / `Spatial` constants are mirrored and pinned by `test_net_sim_view.gd`); `server/`, `presentation`, `ui` |
 | Autoloads used | None |
-| Status | implemented (NET-17); `team_state` / `player_state` / `order_head` / `pending_order` blocked on D1 (Open items CQ-2). |
+| Status | implemented (NET-17); `team_state` / `player_state` / `order_head` / `pending_order` are NET-39's (R0 B.22 A-111). |
 
 ## Public API
 
@@ -145,7 +145,8 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
   (`shown_levels`' rule: no gravity even when DYING) and is never interpolated or extrapolated (A-103); at integer ticks the
   float dr(t) equals `Codec.dequantize_pos(shown_levels)` within one quantum. No allocation per entity.
 - CS8: `field_unknown(id, accessor)` is true exactly for what the client does not receive (`NetUnknown`: never-carried
-  accessors, pilot-block fields off the own possessed unit, C-tier basis / vel, other teams' ai_tag, a wreck's radius);
+  accessors, pilot-block fields off the own possessed unit, C-tier basis / vel, other teams' ai_tag, a wreck's radius,
+  which shows the def radius per A-114);
   such an accessor returns the SimView default. `unknown(id)` = any field unknown: true for every entity while
   `NetUnknown.NEVER` is non-empty. Late / reordered snapshots and reliable KEYFRAMEs never feed the clock.
 - CS6: `NetSimView` passes TEST-02 (`factories/net_sim_view_factory.gd`); its `exempt()` names exactly the failing clauses,
@@ -156,7 +157,7 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
 
 03 s10.2 "ClientSession.tick (decode + NetSimView + prediction) 1.0 ms PC / 3.0 ms mobile-web per 30 Hz tick" (R0 C1-23);
 `NetSimView.sample` is O(1) (frame selection), poses are computed on first read per sample and the presentation read
-(`read_poses`) belongs to 03 s10.2 "entity sync 2.4 ms". Bandwidth: TEAM_STATE 51 B x 2/s (04 s4.6 row). Measured
+(`read_poses`) belongs to 03 s10.2 "entity sync 2.4 ms". Rows are p95 (R0 B.22 A-115). Bandwidth: TEAM_STATE 51 B x 2/s (04 s4.6 row). Measured
 (`test/net/test_client_session_perf.gd`, canonical 940 entities, dev box): see the PR perf note; PerfGate report-only.
 
 ## Test entry points
@@ -168,24 +169,23 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
 
 ## Open items
 
-- CQ-1 (Architect): projectile entities (rockets, bombs, siege shells; 04 s3.6 "replicated as entities") have no roster
-  index: the roster is sim slots 0-1,535 (A-54) and projectile slots are 4,096-6,143. TEST-02's rocket clauses (`alive`,
-  `ids_in_cell`, `projectiles_near`, `read_poses`) are exempt until a mapping exists.
-- CQ-2 (Architect, BLOCKED part): `deps.json` lets net name `SimView` but not the types its B.5 signatures return
-  (`TeamStateView`, `PlayerStateView`, `OrderSpec`), so `NetSimView` cannot override `team_state` / `player_state` /
-  `order_head` / `pending_order` without a D1 violation. CORE_SHIELD_UP (GD-38) is carried meanwhile: TEAM_STATE codec +
-  `NetSimView.team_flags`. Ask: append the three to net's named sim types (R0 B.4).
-- CQ-3 (sim lane / TEST-02): the scene writes `control_state` 5 (outside B.3's 0-2 and the 2-bit wire field) and checks
-  `flip_cooldown01` to 1e-4 although the pilot block carries a u8 fraction (0.5 -> 128/255).
-- CQ-4 (Architect): a split wreck's radius is hull / n (`sim/salvage/salvage.gd`), n is not on the wire (04 s3.7 has no
-  row); NetSimView returns 0.0 with `field_unknown(radius)`. Ask: a radius byte in ENTITY_META / WRECK_SPAWNED, or accept.
+- CQ-1 closed by R0 B.22 A-112: projectile entities get a roster block (index 1,536 + slot - 4,096, capacity 3,584) in
+  NET-58; until then TEST-02's rocket clauses (`alive`, `ids_in_cell`, `projectiles_near`, `read_poses`, with the wreck
+  clauses `radius`, `def_kind`, `wrecks`) stay exempt citing NET-58.
+- CQ-2 closed by A-111: net may name `TeamStateView`, `PlayerStateView`, `OrderSpec`; `team_state` / `player_state` /
+  `order_head` / `pending_order` are NET-39's (exempt "NET-39, A-111"). CORE_SHIELD_UP travels meanwhile in TEAM_STATE
+  (`team_flags`).
+- CQ-3 (A-113, TEST-5): after TEST-5 (`SimViewScene.CONTROL` 2, `SimViewFactory.tolerance`) the factory drops the
+  `control_state` / `flip_cooldown01` exemptions with a 1 / 255 tolerance for u8 fields.
+- CQ-4 closed by A-114: a split wreck's radius is the def radius with `field_unknown(radius)` (hull / n is not sent).
 - CQ-5 (Architect): `overlay`, `cargo`, `cargo_kind`, `link` have no 04 s3.7 row; listed in `NetUnknown.NEVER`. Ask: rows
   (e.g. flags bit 6 for cargo, DOCKED / LAUNCHED events for link) or confirm non-replicated.
-- CQ-6 (Architect): 03 s10.2 "ClientSession.tick 1.0 ms" names no percentile; the test gates p50 (0.49-0.60 ms dev box,
-  0.92 ms CI; p95 1.1-1.3 ms / 2.0 ms on the tier-C ticks). Server rows are p95 (R0 B.7); NET-18 adds prediction.
+- A-115: every 03 budget row is p95; `test_client_session_perf.gd` gates p95 through PerfGate (report-only off the pinned
+  runner). Dev box: ClientSession.tick p50 0.49-0.60 ms, p95 1.09-1.30 ms (hosted CI 0.92 / 1.97 ms; tier-C ticks);
+  no row re-priced. NET-18 adds prediction to the same row.
 - `projectiles_near` is not overridden (SimView default, empty): its 04 s3.7 source is client-spawned PROJECTILE_BATCH
   projectiles (owner: net, the client half of `ShotTracker` / NET-18's cosmetic-slug path, to be filed) plus replicated
-  projectile entities (CQ-1).
+  projectile entities (NET-58).
 - `read_poses` over the canonical 940 entities costs 3.4 ms dev box / 5.1 ms CI, over the 03 s10.2 "entity sync 2.4 ms"
   row it is charged to; owner TA-52 (EntityViewPool.sync switch and re-measure, R0 B.11 A-56) with net support.
 - GD-41 `wreck_ore` and GD-38 `shield01` inherit -1.0 (no codec carries wreck ore or dome charge yet; 04 s5.6 default);
