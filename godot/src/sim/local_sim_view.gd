@@ -22,6 +22,7 @@ var _teams: Array[TeamStateView] = []
 var _player_views: Array[PlayerStateView] = []
 var _pathing: Pathing = null
 var production: Production = null   ## set by SimWorld (TA-19): queue and progress reads
+var shields: ShieldDomes = null       ## set by SimWorld (GD-38): `shield01` and the CORE_SHIELD_UP flag read it
 var vision: Vision = null             ## set by SimWorld (TA-63): `visible_enemy_ships` reads its per-team lists
 
 
@@ -225,39 +226,14 @@ func service_state(id: int) -> int:
 	return 2 if (f & EntityStore.F_TETHERED) != 0 else 0
 
 
-## The docked ship linked to `pad`, or 0.
+## The docked ship linked to `pad`, or 0 (PadQueries).
 func pad_occupant(pad: int) -> int:
-	if not _store.alive(pad):
-		return 0
-	for s: int in _store.ships:
-		if (_store.flags[s] & EntityStore.F_DOCKED) != 0 and _store.link[s] == pad and _pad_serves(pad):
-			return _store.id_of(s)
-	return 0
-
-
-# A-19: a launch-only pad (no `pad_radius_m`, the Shipyard) is never a service pad, so it has no occupant.
-func _pad_serves(pad: int) -> bool:
-	var d: int = _store.def_id[EntityId.slot(pad)]
-	return d < _defs.pad_radius_by_def.size() and _defs.pad_radius_by_def[d] > 0.0
+	return PadQueries.occupant(_store, _defs, pad)
 
 
 ## Nearest live friendly structure with a pad (`pad_radius_by_def` > 0), or 0.
 func nearest_friendly_pad(id: int) -> int:
-	if not _store.alive(id):
-		return 0
-	var s0: int = EntityId.slot(id)
-	var p: Vector3 = _store.pos[s0]
-	var best: int = 0
-	var best_d2: float = INF
-	for s: int in _store.structures:
-		var d: int = _store.def_id[s]
-		if _store.team[s] != _store.team[s0] or d >= _defs.pad_radius_by_def.size() or _defs.pad_radius_by_def[d] <= 0.0:
-			continue
-		var d2: float = p.distance_squared_to(_store.pos[s])
-		if d2 < best_d2:
-			best_d2 = d2
-			best = _store.id_of(s)
-	return best
+	return PadQueries.nearest_friendly(_store, _defs, id)
 
 
 func order_head(id: int) -> OrderSpec:
@@ -317,6 +293,8 @@ func team_state(_team: int) -> TeamStateView:
 	if _team < 0 or _team >= PlayerTable.TEAMS:
 		return null
 	TeamStats.fill_team(_teams[_team], _team, _store, _defs, _players, _rules, _state)
+	if shields != null and shields.core_up(_team):
+		_teams[_team].flags |= TeamStateView.CORE_SHIELD_UP
 	return _teams[_team]
 
 
@@ -340,6 +318,11 @@ func supply01(id: int) -> float:
 	var sd: StructureDef = _defs.resolved(_store.owner[s]).structure(_store.def_id[s])
 	var pool: float = Def.num(sd.tower.get("ammo_pool", 0.0)) if sd != null and sd.is_tower() else 0.0
 	return clampf(float(_store.ammo[s]) / pool, 0.0, 1.0) if pool > 0.0 else 0.0
+
+
+## Dome charge / effective cap (SH11); 0 for a collapsed or removed dome and for an entity without one.
+func shield01(id: int) -> float:
+	return shields.charge01(EntityId.slot(id), _state.tick) if shields != null and _store.alive(id) else 0.0
 
 
 func production_queue(factory: int) -> PackedInt32Array:

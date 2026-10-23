@@ -224,6 +224,10 @@ func supply01(_id: int) -> float:
 	return _f(&"supply01", _inner.supply01(_id))
 
 
+func shield01(_id: int) -> float:
+	return _f(&"shield01", _inner.shield01(_id))
+
+
 func production_queue(_factory: int) -> PackedInt32Array:
 	return _pia(&"production_queue", _inner.production_queue(_factory))
 

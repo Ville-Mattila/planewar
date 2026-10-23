@@ -27,6 +27,9 @@ func submit_system(cmd: Command) -> CommandResult                           # (T
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name PoseReader extends RefCounted                                      # (TA-59, A-73) LocalSimView.read_poses body
 static func read(store: EntityStore, proj: ProjectileStore, ids: PackedInt32Array, pos: PackedVector3Array, rot: PackedVector4Array) -> int
+class_name PadQueries extends RefCounted                                      # (GD-38, A-73) LocalSimView.pad_occupant / nearest_friendly_pad bodies; static, allocation-free
+static func occupant(store: EntityStore, defs: WorldDefs, pad: int) -> int;  static func serves(store: EntityStore, defs: WorldDefs, s: int) -> bool
+static func nearest_friendly(store: EntityStore, defs: WorldDefs, id: int) -> int
 class_name CommandValidator extends RefCounted                               # S10 rate + state rules, S12
 const RATE_PER_S: int; const BURST: int; const QUEUE_MAX: int;  var order_rules: OrderRules
 var build: Build; var production: Production; var last_reject: int   # (TA-19) set by EconomyHub: BUILD -> can_place (REJECTED_PLACEMENT + reject), PRODUCE -> team factory, queue room, REJECTED_LOCKED, S12 by queuer
