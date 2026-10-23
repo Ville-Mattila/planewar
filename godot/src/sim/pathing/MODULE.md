@@ -130,7 +130,7 @@ func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPee
 ## Data owned
 
 Weights 384 KB, slope 384 KB, labels 2 x 384 KB, search g 1.5 MB + u8 tag 384 KB + u8 parent index 384 KB, corridor 48 KB,
-region graph ~0.9 MB, ticket pool 640 KB, cache 256 KB: **5.67 MB measured** (TA-50, MEMORY_STATIC after load + two prepares,
+region graph ~0.9 MB, ticket pool 640 KB, cache 256 KB: **5.67 MB measured** (the P10 `_bake` is the loaded bytes, 384 KB; the measurement did not move) (TA-50, MEMORY_STATIC after load + two prepares,
 `test_mem_mb_after_load_and_prepare_is_at_most_6`; TA-20 measured 8.8 MB). The 03 s11.3 row is re-baselined to this (A-55).
 
 ## Events emitted / consumed

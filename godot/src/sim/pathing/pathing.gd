@@ -30,7 +30,7 @@ var abstract_units: int = 0                ## share of expansions_total spent on
 var _phase: int = _PH_NONE
 var _join_e: int = -1
 var _join_k: int = 0
-var _baked_dir: String = ""            ## map directory of the last load_weights (baked_weight reads it); "" = flat datum
+var _bake: PackedByteArray = PackedByteArray()   ## read-only copy of the loaded map's baked weights (baked_weight); empty = flat datum; never saved
 
 
 func _init(expansions: int) -> void:
@@ -46,7 +46,7 @@ func load_weights(map_dir: String) -> Error:
 	if not set_weights(all):
 		return ERR_INVALID_DATA
 	grid.weights_custom = false
-	_baked_dir = map_dir
+	_bake = all
 	return OK
 
 
@@ -54,7 +54,7 @@ func load_weights(map_dir: String) -> Error:
 func set_weights(bytes: PackedByteArray) -> bool:
 	if not grid.set_weights(bytes):
 		return false
-	_baked_dir = ""                       # a fixture's weights have no file bake (load_weights sets it after)
+	_bake = PackedByteArray()             # a fixture's weights have no bake (load_weights sets it after)
 	clusters.invalidate()
 	cache.clear()
 	return true
@@ -184,16 +184,13 @@ func weight(cell: int) -> int:
 	return grid.weight_at(cell)
 
 
-## The weight `cell` has in the loaded map's bake (`face<f>.path.u8`), read from the file: nothing is stored, so S4 is
-## untouched (GD-39). Without a loaded map (flat datum, `set_weights` fixtures) every cell bakes to weight 1.
+## The weight `cell` has in the loaded map's bake (the SHA-256 checked bytes `load_weights` read), kept in memory and
+## never written, so it is not saved (deserialize reloads the map) and the tick does no file access (GD-39, P10).
+## Without a loaded map (flat datum, `set_weights` fixtures) every cell bakes to weight 1.
 func baked_weight(cell: int) -> int:
-	if _baked_dir.is_empty() or cell < 0 or cell >= PathGrid.CELLS:
+	if _bake.is_empty() or cell < 0 or cell >= PathGrid.CELLS:
 		return 1
-	var f: FileAccess = FileAccess.open(_baked_dir.path_join("face%d.path.u8" % (cell >> (PathGrid.SHIFT + PathGrid.SHIFT))), FileAccess.READ)
-	if f == null:
-		return 1
-	f.seek(cell & (PathGrid.N * PathGrid.N - 1))
-	return f.get_8()
+	return _bake[cell]
 
 
 ## Change counter of `face` (SimView.path_grid_version).
