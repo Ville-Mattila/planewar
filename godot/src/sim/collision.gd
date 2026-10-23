@@ -14,8 +14,9 @@ class_name Collision extends RefCounted
 ##      pad_radius_m, |altitude above the pad plane| <= radius + 0.5) -> C_PAD with the landing band; its terrain
 ##      contact is then the landing's, not a scrape or damage (kill speed still destroys);
 ##   ship vs ship (each pair once) and ship vs structure (from the ship side) sphere-sphere -> C_RAM; a docked ship
-##      is exempt against its own pad, a ship in a friendly pad's approach column (A-53: offset <= pad_radius_m, altitude
-##      >= -(radius + 0.5)) against that pad.
+##      is exempt against its own pad, a not-docked ship above a friendly pad structure's deck (A-53 widened by BUG-1:
+##      altitude above the pad plane >= -(radius + 0.5), any horizontal offset; the sphere's body lies below the deck)
+##      against that structure. The landing volume (C_PAD) keeps offset <= pad_radius_m.
 ## A-87: a ship is never RAM-tested against an own-team structure whose def has `launch_pad: true` (the Shipyard), docked
 ## or not; enemy ships still ram it.
 ## The pad plane passes through the structure's `pos` with normal `up` (GD-15 may add a deck offset).
@@ -299,8 +300,8 @@ func _ship_structure(s: int, o: int, p: Vector3, r: float, docked: bool) -> void
 			var rel: Vector3 = p - _store.pos[o]
 			var alt: float = rel.dot(up_p)
 			var off: float = (rel - up_p * alt).length()
-			in_col = alt >= -(r + 0.5) and off <= pad_r
-			in_pad = in_col and alt <= r + 0.5
+			in_col = alt >= -(r + 0.5)   # BUG-1: the whole half-space above the deck, not only the column over the pad
+			in_pad = in_col and off <= pad_r and alt <= r + 0.5
 			if in_pad and (_pad_slot < 0 or off < _pad_off):
 				_pad_slot = o
 				_pad_off = off
