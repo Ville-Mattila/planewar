@@ -11,6 +11,8 @@ run/main_scene="res://scenes/app/boot.tscn"
 ; TA-30: the web_spike_flight export preset adds the custom feature "spike_flight"; this override makes the
 ; S-FLIGHT-1 spike its main scene. Every other preset and the editor keep boot.tscn.
 run/main_scene.spike_flight="res://spikes/s_flight_1/flight_spike.tscn"
+; REVIEW-01: the web_review preset (custom feature "review") boots the demo hub.
+run/main_scene.review="res://scenes/review/review_hub.tscn"
 config/version="0.1.0+0"
 boot_splash/show_image=false
 
