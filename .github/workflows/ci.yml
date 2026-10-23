@@ -195,7 +195,7 @@ jobs:
       fail-fast: false
       matrix:
         # web_spike_flight (TA-30): the S-FLIGHT-1 spike as the web main scene (custom feature spike_flight).
-        preset: [linux_server, windows_x64, web, linux_x64, web_spike_flight]
+        preset: [linux_server, windows_x64, web, linux_x64, web_spike_flight, web_review]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -208,12 +208,12 @@ jobs:
       - name: Export ${{ matrix.preset }}
         run: .github/scripts/export_preset.sh ${{ matrix.preset }} release
       - name: Web size gate (Brotli sum)
-        if: matrix.preset == 'web' || matrix.preset == 'web_spike_flight'
+        if: matrix.preset == 'web' || matrix.preset == 'web_spike_flight' || matrix.preset == 'web_review'
         run: |
           sudo apt-get install -y --no-install-recommends brotli >/dev/null
           python .github/scripts/size_gate.py build/${{ matrix.preset }} --budget-mb 20
       - name: Upload build
-        if: matrix.preset != 'web_spike_flight'
+        if: matrix.preset != 'web_spike_flight' && matrix.preset != 'web_review'
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.preset }}
@@ -225,6 +225,13 @@ jobs:
         with:
           name: web-spike-flight
           path: build/web_spike_flight
+          retention-days: 14
+      - name: Upload web-review (REVIEW-01; the orchestrator deploys it for the owner's progress review)
+        if: matrix.preset == 'web_review'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-review
+          path: build/web_review
           retention-days: 14
 
   android:
