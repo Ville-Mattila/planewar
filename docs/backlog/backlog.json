@@ -2439,7 +2439,7 @@
     ],
     "status": "done",
     "acceptance_append": "; every brain writes AiTag.Tag values only through set_ai_tag (R0 B.17 A-94: FLEE 16, SEARCH 17 for the Scout; a new word is appended at the end of the sim_ai/MODULE.md AiTag bullet in the same PR, never inserted); PULL_UP in every brain exits by the A-92 rule (TTI >= safety_clear_tti_s and pull_up_min_hold_s held and climb_need_mps <= 0); which of the guidance / intercept / attack_run blocks ap_lancer / ap_bomber / ap_scout require is stated in the PR as a content note for AI-19 (A-93)",
-    "note": "A-94 reserves 16-33 so the Lancer / Bomber / Scout brains need no new ordinals unless a word is missing; AttackRun's Deck ingress and attack_run block are AI-13's (A-93). Lancer/Bomber/Scout extend DartBrain hooks; AiState FORMAT 6. Dart changes: re-plan after release, R1 band via Perception, no fighting under HOLD, no-pad retry reads no_pad_retry_s (5 s). Hosted perf for A-62 (report-only): Bomber think 103 us vs 50, Bomber/Scout acts 13.6/14.7 vs 12, Lancer ENGAGE act 43.5 us. Core radius test workaround until BUG-1. Not done: threat-map IP choice (needs attack_run key, AI-19/Architect); SC-21 docking re-run after GD-15.",
+    "note": "A-94 reserves 16-33 so the Lancer / Bomber / Scout brains need no new ordinals unless a word is missing; AttackRun's Deck ingress and attack_run block are AI-13's (A-93). Lancer/Bomber/Scout extend DartBrain hooks; AiState FORMAT 6. Dart changes: re-plan after release, R1 band via Perception, no fighting under HOLD, no-pad retry reads no_pad_retry_s (5 s). Hosted perf for A-62 (report-only): Bomber think 103 us vs 50, Bomber/Scout acts 13.6/14.7 vs 12, Lancer ENGAGE act 43.5 us. Core radius test workaround until BUG-1. Not done: threat-map IP choice (needs attack_run key, AI-19/Architect); SC-21 docking re-run after GD-15. Ai14Kit.core shrinks the Core radius to pad_radius_m as a BUG-1 workaround; AI-43 removes it after BUG-1 merges (R0 B.21 A-110).",
     "pr": 109,
     "merged": "2026-10-23"
   },
@@ -7619,14 +7619,14 @@
     "size_days": 0.5,
     "depends_on": [],
     "milestone": "M3",
-    "acceptance": "A ship descending onto a Core pad docks without a RAM contact against its own Core (own-team pad structure exemption or a footprint/pad-aware collision shape per 03 s6.1 / A-82 / A-87); enemy ships still ram it; AI-14's test workaround that shrinks the Core radius is removed; SC-21 and the AI landing tests pass with the real Core radius",
+    "acceptance": "A ship descending onto a Core pad docks without a RAM contact against its own Core under R0 B.21 A-109: a not-DOCKED own-team ship whose altitude above the pad plane of an own-team structure with pad_radius_m > 0 is >= -(ship radius + 0.5) is never RAM-tested against it at any horizontal offset; below the deck, enemy ships and pad-free structures still ram; the landing volume keeps offset <= pad_radius_m; proven by test_collision.gd::test_core_sized_sphere_does_not_ram_a_friendly_ship_above_the_deck, test_pad_free_structure_still_rams_a_friendly_ship_above_its_deck and the moved below-deck case of test_approach_column_exempts_friendly_descent_from_ram_but_not_enemy_or_outsiders; sim/MODULE.md Collision line cites A-109; the AI-14 workaround removal is AI-43 (sim_ai lane), the structure body shape is GD-42",
     "docs": [
       "03 s6.1",
       "R0 A-82",
       "R0 A-87"
     ],
     "status": "done",
-    "note": "Found by the AI-14 #109 Opus review 2026-10-23 (comment 6366106106). Merged under R0 B.21 A-109. Nit: sim/MODULE.md:194 should cite A-109. Workaround removal -> AI-43; root cause (sphere over-reach) -> GD-42.",
+    "note": "Found by the AI-14 #109 Opus review 2026-10-23 (comment 6366106106). Merged under R0 B.21 A-109. Nit: sim/MODULE.md:194 should cite A-109. Workaround removal -> AI-43; root cause (sphere over-reach) -> GD-42. Contract ruling R0-amendments-15 (A-109 ratifies the PR #114 half-space rule; A-110 splits off GD-42 shape and AI-43 workaround removal).",
     "pr": 114,
     "merged": "2026-10-23"
   },
@@ -7662,5 +7662,41 @@
     ],
     "status": "todo",
     "note": "Owner request 2026-10-23: quick web build of the current state to review on Vercel. The orchestrator deploys the artifact."
+  },
+  {
+    "id": "GD-42",
+    "title": "sim/collision: structure body = footprint puck (offset <= radius, -(r + 0.5) <= alt <= height_m + r) replacing the interim half-diagonal sphere for ship-vs-structure; StructureDef.height_m required from the 07 s4.2 recipes (R0 B.21 A-110)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1.0,
+    "depends_on": [
+      "BUG-1"
+    ],
+    "milestone": "M4",
+    "acceptance": "structures.json and towers.json carry a required height_m per def taken from the 07 s4.2 recipe tables (Core 30), structures.schema.json / towers.schema.json require it as {number, minimum 1, maximum 100} with a $comment citing R0 B.21 A-110, _doc updated, the canonical fixture updated, validate_content green; _ship_structure RAM-tests a ship against a structure of either team only when its pad-frame horizontal offset <= store.radius[o] and -(r + 0.5) <= alt <= height_m + r (alt = altitude above the pad plane), the A-109 own-team half-space exemption and A-87 unchanged; projectile test 8 keeps the sphere; tests: an enemy Dart 45 m above a Core takes no RAM, one 20 m above it does, one 20 m above a Refinery does, a Hauler 30 m over its own Refinery takes none, below-deck and enemy cases of test_collision.gd still pass; perf note cites perf_tick.gd step-8 delta (same branch count per candidate); sim/MODULE.md Collision line cites A-110",
+    "docs": [
+      "R0-amendments-15 A-110",
+      "03 s6.1",
+      "07 s4.2",
+      "R0 B.1"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "AI-43",
+    "title": "sim_ai tests: drop the Ai14Kit.core radius-shrinking workaround now that A-109 exempts the deck half-space (R0 B.21 A-110)",
+    "lane": "sim_ai",
+    "tier": "Haiku",
+    "size_days": 0.1,
+    "depends_on": [
+      "BUG-1"
+    ],
+    "milestone": "M3",
+    "acceptance": "ai14_kit.gd Ai14Kit.core no longer writes store.radius (the Core keeps WorldDefs.radius_of, 52.07 m); sim_ai/brains/MODULE.md:168 drops the BUG-1 sentence and cites R0 B.21 A-109; SC-21, test_ai14_brains.gd and the AI landing tests (AI-09 / AI-10) pass unchanged with the real radius; no src change",
+    "docs": [
+      "R0-amendments-15 A-110",
+      "R0-amendments-15 A-109"
+    ],
+    "status": "todo"
   }
 ]
