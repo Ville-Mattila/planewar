@@ -7642,5 +7642,21 @@
     ],
     "status": "todo",
     "note": "Found by the GD-39 #112 review 2026-10-23: soak slope printed +4.34 %/min vs 2.0 but the job was green (ci.yml:309)."
+  },
+  {
+    "id": "REVIEW-01",
+    "title": "web review build: a launcher scene (flight spike, planet demo, entity demo) exported by a web_review preset and uploaded by CI for the owner's progress review",
+    "lane": "tools+app",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [],
+    "milestone": "M2",
+    "acceptance": "godot/scenes/review/review_hub.tscn (typed script, class_name) lists the playable demos with one button each (flight spike, planet demo, entity demo) and a short line on what each shows; Esc / back returns to the hub; a web_review export preset (custom feature + run/main_scene.<feature> like web_spike_flight) does not exclude the scenes it launches; CI exports it in the export matrix with the 20 MB Brotli size gate and uploads artifact web-review (retention 14 days); validate_scenes and all gates green; the boot scene and other presets unchanged",
+    "docs": [
+      "03 s12",
+      "TA-30"
+    ],
+    "status": "todo",
+    "note": "Owner request 2026-10-23: quick web build of the current state to review on Vercel. The orchestrator deploys the artifact."
   }
 ]
