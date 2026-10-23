@@ -12,7 +12,7 @@ math (`CamMath`, `OrbitMath`); the Node classes are tracked under "Open items".
 | May depend on | `core`, `presentation` (`tools/deps.json`) |
 | Must never touch | `sim`, `net`, `content` loaders, `ui`, `input`; no hard-coded 6,000 (use `Sphere.PLANET_RADIUS`, D6) |
 | Autoloads used | none |
-| Status | UX-10 math implemented; controllers planned (UX-11, UX-13, UX-14) |
+| Status | UX-10 math and UX-13 `OrbitController` implemented; UX-11, UX-14 planned |
 
 ## Public API
 
@@ -54,6 +54,27 @@ static func heading_error(a: Vector3, b: Vector3, d: Vector3) -> float
 static func ray_sphere_point(origin: Vector3, dir: Vector3, radius: float) -> Vector3
 static func grab_pan(d_f: Vector3, h: Vector3, g0: Vector3, g1: Vector3) -> PackedVector3Array   # [d_f', h']
 static func pan_speed(a: float, g_f: float) -> float
+
+class_name OrbitController extends RefCounted   # UX-13; time-stepped orbit state machine, no Nodes/signals
+enum HeadingMode { FREE, NORTH_UP }
+const TAU_ZOOM: float; const TAU_FLING: float; const FLING_STOP: float; const FLING_MAX_AGE: float; const FLING_BLEND: float
+const TAU_NORTH: float; const POLAR_CAP_DEG: float; const RESUME_ERR_DEG: float; const COMPASS_TIME: float
+const TAU_FOLLOW: float; const ZOOM_SETTLE_LN: float; const HOME_ALTITUDE: float; const DIVE_ALTITUDE: float; const DIVE_TIME: float
+var d_f: Vector3; var h: Vector3; var ground_h: float; var mode: HeadingMode; var delta_deg: float
+func _init(start_dir: Vector3 = Vector3.RIGHT, altitude_m: float = HOME_ALTITUDE) -> void
+func set_focus(dir: Vector3, heading: Vector3, altitude_m: float) -> void       # hard set, clears motion
+func altitude() -> float;  func zoom_level() -> float;  func is_tactical() -> bool
+func is_following() -> bool;  func is_flinging() -> bool;  func is_north_suspended() -> bool
+func focus_length() -> float;  func pose() -> Transform3D
+func grab_begin(ray_origin: Vector3, ray_dir: Vector3) -> void                  # rays are cast from the current pose()
+func grab_move(ray_origin: Vector3, ray_dir: Vector3, dt: float) -> void
+func grab_end() -> void                                                         # starts fling if still moving
+func pan_velocity(vec: Vector2, dt: float) -> void                              # x right, y up the screen
+func zoom(log_delta: float, anchor_origin: Vector3 = Vector3.ZERO, anchor_dir: Vector3 = Vector3.ZERO) -> void   # > 0 zooms in
+func tilt(d_deg: float) -> void;  func rotate_heading(rad: float) -> void       # rotate leaves NORTH_UP
+func set_heading_mode(m: HeadingMode) -> void;  func compass_tap(core_dir: Vector3) -> void
+func follow(dir: Vector3, on: bool = true) -> void;  func dive_to_build() -> void;  func home(core_dir: Vector3) -> void
+func update(dt: float) -> void
 ```
 
 ## Invariants
@@ -70,6 +91,11 @@ static func pan_speed(a: float, g_f: float) -> float
 - K6: `near_plane(h)` = `clamp(0.3 + 0.004 h, 0.3, 20)` (R0 C2-28), continuous and monotonic;
   `near_plane_orbit_alt` is only the named alternative; far is 40,000 m.
 - K7: `up_reference` and `view_basis` never return NaN, even for degenerate (parallel) inputs.
+- K9: `OrbitController` grab keeps the grabbed ground point under the finger within 2 du (0.002 rad at 1080 p);
+  anchored zoom keeps the anchor ground point fixed every frame while the altitude settles.
+- K10: NORTH_UP never spins at a pole crossing: no frame-to-frame heading step above 2 deg; slewing is suspended
+  inside the polar cap and after it until the error is < 100 deg or the compass is tapped. Never NaN.
+- K11: fling decays with tau 0.35 s and stops below 0.002 rad/s; any grab, velocity pan or zoom dive cancels follow/fling as specified.
 - K8: no function hard-codes the planet radius; `R` is `Sphere.PLANET_RADIUS`.
 
 ## Data owned
@@ -91,6 +117,7 @@ hot sim path (one camera, one call per frame). Measured by the UX-02 spike.
 ## Test entry points
 
 - `godot/test/unit/camera/test_cam_math.gd` (K5, K6, K7, bank, roll, smootherstep)
+- `godot/test/unit/camera/test_orbit_controller.gd` (K9 to K11, tilt curve, follow, dive, compass)
 - `godot/test/unit/camera/test_orbit_math.gd` (K1 to K4, poles and cube edges, grab pan, zoom and tilt curves)
 
 ## How to add X (recipes for the cheapest tier)
@@ -101,7 +128,7 @@ hot sim path (one camera, one call per frame). Measured by the UX-02 spike.
 
 ## Open items
 
-- UX-11 `ChaseController`, UX-13 `OrbitController`, UX-14 `TransitionPlayer` and `NearFarPolicy` (RefCounted)
+- UX-11 `ChaseController`, UX-14 `TransitionPlayer` and `NearFarPolicy` (RefCounted)
   consume this math. UX-02 records the final constants in `camera.json`.
 - Near/far and orbit constants are `const` here until `camera.json` exists: interim confirmed by R0 B.10 A-43
   (`docs/reviews/R0-amendments-03.md`). ADR-09 binds sim-affecting constants; camera tuning is presentation (06 s5.1).
