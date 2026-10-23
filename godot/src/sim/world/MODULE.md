@@ -30,6 +30,12 @@ static func read(store: EntityStore, proj: ProjectileStore, ids: PackedInt32Arra
 class_name PadQueries extends RefCounted                                      # (GD-38, A-73) LocalSimView.pad_occupant / nearest_friendly_pad bodies; static, allocation-free
 static func occupant(store: EntityStore, defs: WorldDefs, pad: int) -> int;  static func serves(store: EntityStore, defs: WorldDefs, s: int) -> bool
 static func nearest_friendly(store: EntityStore, defs: WorldDefs, id: int) -> int
+class_name ShipReads extends RefCounted                                       # (GD-15, A-73) LocalSimView ship reads; static, allocation-free
+static func boost_state(store: EntityStore, sd: ShipDef, id: int) -> int;  static func flip_cooldown01(store: EntityStore, sd: ShipDef, id: int) -> float
+static func dock_state(store: EntityStore, id: int) -> int;  static func service_state(store: EntityStore, id: int) -> int
+class_name ContactMath extends RefCounted                                     # (GD-15, A-73) Collision's pure math; Collision.classify_terrain / landing_band / sweep_sphere delegate
+static func classify_terrain(hit_normal_speed: float, common: FlightCommonDef) -> int;  static func landing_band(v_vert: float, v_hor: float, tilt_deg: float, common: FlightCommonDef) -> int
+static func sweep_sphere(a: Vector3, b: Vector3, c: Vector3, r: float) -> float
 class_name CommandValidator extends RefCounted                               # S10 rate + state rules, S12
 const RATE_PER_S: int; const BURST: int; const QUEUE_MAX: int;  var order_rules: OrderRules
 var build: Build; var production: Production; var last_reject: int   # (TA-19) set by EconomyHub: BUILD -> can_place (REJECTED_PLACEMENT + reject), PRODUCE -> team factory, queue room, REJECTED_LOCKED, S12 by queuer
@@ -93,8 +99,10 @@ static func tech_available(store: EntityStore, defs: WorldDefs, team: int, def_i
 static func count_owned(store: EntityStore, player: int, live: PackedInt32Array) -> int;  static func fill_player(v: PlayerStateView, pl: PlayerTable, slot: int) -> void
 static func fill_team(v: TeamStateView, team: int, store: EntityStore, defs: WorldDefs, pl: PlayerTable, rules: MatchRules, state: MatchState) -> void   # (GD-18, A-73 extract)
 static func supply01(store: EntityStore, defs: WorldDefs, id: int) -> float   # (GD-41, A-73) LocalSimView.supply01 body
+static func visible_ids(store: EntityStore, team: int) -> PackedInt32Array   # (GD-15, A-73) LocalSimView.visible_ids body (allocates)
 class_name EconomyHub extends RefCounted                                     # (TA-19) composes Build, Economy, Construction, Production; routes their commands, deaths and step 10
 var build: Build; var economy: Economy; var construction: Construction; var production: Production; var supply: SupplyNet   # (GD-18) supply: step 10 after production; var salvage: Salvage   # (GD-19) wrecks: spawned in `on_death`, stepped after production (sim/salvage/MODULE.md)
+var docking: Docking                                                         # (GD-15) landing, pad queues, service: step 10 after production; SimWorld calls track (step 4) and land (end of step 9) (sim/docking/MODULE.md)
 static func handles(kind: Command.Kind) -> bool;  func apply(cmd: Command) -> void;  func begin_tick(t: int) -> void;  func step(t: int, dt: float) -> void;  func on_death(s: int) -> void
 func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3, tick: int) -> bool;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name StateIO                                                           # S4 bytes: named properties via put_var / get_var, type-checked
@@ -110,7 +118,7 @@ static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: 
 - W4: `ShipMotion` and `ProjectileMotion` allocate nothing per entity: one `ShipState`, one `PilotInput`, one `ProjectileState` scratch; each SoA array is copied at most once per tick (copy-on-write of the local handle).
 - W5: every class holding state has `write_state` / `read_state`; `SimWorld.serialize` writes them in a fixed order and `deserialize(serialize())` reproduces each byte for byte (S4).
 - W6: Control state, overlay and `ReleaseReason` are `ControlMachine`'s enums (AI-02, sim/control/MODULE.md CM1); nothing here redefines them.
-- W7: `EconomyHub` owns no state of its own; `on_death` runs for every dying entity before the deferred free (structures: footprint, site, queue; GD-19: ships, ground units and finished structures: their wrecks, `Salvage.on_death`), so a freed slot never keeps a footprint or a queue.
+- W7: `EconomyHub` owns no state of its own (Docking's is saved after Production's in its section, format 13); `on_death` runs for every dying entity before the deferred free (structures: footprint, site, queue; GD-19: ships, ground units and finished structures: their wrecks, `Salvage.on_death`), so a freed slot never keeps a footprint or a queue.
 
 ## Data owned
 
