@@ -2943,7 +2943,7 @@
       " 04 NET-17"
     ],
     "status": "todo",
-    "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56); R0 B.19 A-103 / 04 s5.6: NetSimView presents a known-blip entry at BaselineFrame.shown_levels (stored bucket, no gravity even when DYING) and never extrapolates it; a contract test shares the fixture of test_dying_blip_rests_300_ticks_at_blip_pos"
+    "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56); R0 B.19 A-103 / 04 s5.6: NetSimView presents a known-blip entry at BaselineFrame.shown_levels (stored bucket, no gravity even when DYING) and never extrapolates it; a contract test shares the fixture of test_dying_blip_rests_300_ticks_at_blip_pos; NetSimView carries GD-38: shield01 (inherit -1.0 until replicated, listed in the TEST-02 factory exempt()) and TeamStateView.CORE_SHIELD_UP via map flag 0x85, with a codec item"
   },
   {
     "id": "UX-24",
@@ -7521,8 +7521,10 @@
       "06 s7.1",
       "R0 A-73"
     ],
-    "status": "todo",
-    "note": "Filed from the Opus review of PR #102 ('file the follow-up as a task'). The Core shield timer on the HUD (UX-18, 06 s7.1) needs CORE_SHIELD_UP from this task and core_shield_until_s from match_rules; it does not need shield01."
+    "status": "done",
+    "note": "shield01 (0 for non-dome/dead/collapsed), CORE_SHIELD_UP per team; PadQueries extracted (A-73). Nits: simview_scene writes private shields._charge; no test for unpowered Projector reads 0.",
+    "pr": 110,
+    "merged": "2026-10-23"
   },
   {
     "id": "NET-57",
