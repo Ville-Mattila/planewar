@@ -138,7 +138,7 @@ func overlay(id: int) -> int                                                 # (
 func ai_tag(id: int) -> int;  func field_remaining(node: int) -> int;  func path_grid_version(face: int) -> int
 func stockpile_cap(team: int) -> Vector2i;  func power_balance(team: int) -> Vector2;  func unit_count(player: int) -> int
 func supply01(id: int) -> float;  func shield01(id: int) -> float            # tower ammo / ammo_pool, 0 otherwise (GD-18); dome charge / cap, 0 none / down, -1 no data (GD-38, sim/combat SH11)
-func production_queue(factory: int) -> PackedInt32Array;  func production_progress01(factory: int) -> float
+func production_queue(factory: int) -> PackedInt32Array;  func production_progress01(factory: int) -> float;  func wreck_ore(id: int) -> float   # wreck_ore: a live wreck's remaining Ore (hp), 0 otherwise, -1 no data (GD-41, A-108)
 func tech_available(team: int, def_id: int) -> bool;  func auto_replenish_target(player: int, def_id: int) -> int
 func player_score(slot: int) -> Vector2i                                     # pilot, commander (banked == total; no banking)
 func landing_grade_last(id: int) -> int                                      # LandingGrade.Grade

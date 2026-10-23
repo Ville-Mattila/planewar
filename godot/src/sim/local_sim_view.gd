@@ -309,6 +309,11 @@ func shield01(id: int) -> float:
 	return shields.charge01(EntityId.slot(id), _state.tick) if shields != null and _store.alive(id) else 0.0
 
 
+## Remaining Ore of a live wreck (its `hp`, GD-19); 0.0 for any other entity or a dead id.
+func wreck_ore(id: int) -> float:
+	return _store.hp[EntityId.slot(id)] if _store.alive(id) and _store.kind[EntityId.slot(id)] == EntityStore.K_WRECK else 0.0
+
+
 func production_queue(factory: int) -> PackedInt32Array:
 	return production.queue_of(EntityId.slot(factory)) if production != null and _store.alive(factory) else PackedInt32Array()
 
