@@ -7763,5 +7763,24 @@
     ],
     "status": "todo",
     "note": "Owner feedback 2026-10-23: the deployed planet demo is a smooth sphere (s_world1_r6000 faces 1/3/4/5 are identical flat bakes)."
+  },
+  {
+    "id": "UX-44",
+    "title": "app/ui: wire Intents.CAM_* (pan, fling, zoom, tilt, north-up, compass, follow, build dive, home) from InputRouter to the camera OrbitController",
+    "lane": "app+ui",
+    "tier": "Sonnet",
+    "size_days": 0.75,
+    "depends_on": [
+      "UX-13",
+      "UX-03"
+    ],
+    "milestone": "M3",
+    "acceptance": "In RTS mode every Intents.CAM_* from mouse, gamepad and touch drives the matching OrbitController call per 06 s5.3; a scene-level test feeds synthetic input through InputRouter and asserts the camera pose changes as specified; no new autoload or deps edge",
+    "docs": [
+      "06 s5.3",
+      "godot/src/camera/MODULE.md K9-K11"
+    ],
+    "status": "todo",
+    "note": "Follow-up from the UX-13 #121 review 2026-10-23."
   }
 ]
