@@ -10,6 +10,7 @@ const AMMO: int = 37
 const TOWER_AMMO: int = 120         ## of the autocannon turret's 300-round pool: supply01 = 0.4
 const TOWER_SUPPLY01: float = 0.4
 const SHIELD01: float = 0.375      ## the Core dome's charge as a share of its cap (it starts full)
+const WRECK_ORE: float = 85.0     ## the scripted wreck's remaining Ore (EntityStore.hp)
 const BOMBS: int = 3
 const ROCKETS: int = 2
 const CONTROL: int = 5
@@ -112,6 +113,7 @@ func _make_wreck(p: Vector3) -> int:
 	st.fwd[sw] = Vector3(0, 1, 0)
 	st.up[sw] = Vector3(1, 0, 0)
 	st.radius[sw] = 5.0
+	st.hp[sw] = WRECK_ORE
 	st.owner[sw] = EntityStore.NONE_U8
 	st.team[sw] = EntityStore.NONE_U8
 	st.possessor[sw] = EntityStore.NONE_U8

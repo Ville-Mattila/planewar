@@ -219,6 +219,12 @@ func shield01(_id: int) -> float:
 	return -1.0
 
 
+## Remaining Ore of a live wreck (its `hp`, GD-19); 0.0 for any other entity or a dead id; -1.0 when the view has no data
+## (NetSimView until a codec task carries it; R0 B.20 A-108, GD-41).
+func wreck_ore(_id: int) -> float:
+	return -1.0
+
+
 func production_queue(_factory: int) -> PackedInt32Array:
 	return PackedInt32Array()
 
