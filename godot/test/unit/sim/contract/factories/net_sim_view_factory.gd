@@ -8,16 +8,14 @@ class_name NetSimViewFactory extends SimViewFactory
 ## the default with `unknown`), or for a contract question listed in net/client/MODULE.md Open items. The replicable
 ## part of every exempt clause is asserted in test/unit/net/test_net_sim_view.gd and test/net/test_client_session.gd.
 
+const U8_QUANTUM: float = 1.0 / 255.0
+const U8_FIELDS: PackedStringArray = ["hp01", "flip_cooldown01", "supply01", "production_progress01"]
 const _EXEMPT: PackedStringArray = [
 	# The scene's wreck is not visible to team 0 (visible_to(0, wreck) is false in the clause itself), so a team-0
 	# client never receives it (04 s4.1 interest = team vision; net/interest I1); the rocket is a projectile entity
 	# with no roster index until NET-58's projectile block (R0 B.22 A-112). A received wreck is covered by
 	# test_net_sim_view.gd::test_a_received_wreck (radius = the hull's def radius with unknown set, A-114).
 	"alive", "radius", "def_kind", "wrecks", "ids_in_cell", "projectiles_near", "read_poses",
-	# The scene writes control_state 5, outside R0 B.3 (0-2) and the 2-bit wire field (04 s3.3 flags bits 0-1; CQ-3).
-	"control_state",
-	# u8 pilot-block fraction (04 s3.3): 0.5 travels as 128/255, 0.002 off, above the clause's 1e-4 (CQ-3).
-	"flip_cooldown01",
 	# No wire source in the 04 s3.7 replication map: SimView default + unknown (04 s5.6).
 	"overlay", "cargo", "cargo_kind", "link",
 	# TEAM_DETAIL sources (04 s3.7 rows supply01, pads, orders, factories): NET-39.
@@ -46,6 +44,12 @@ func make(scene: SimViewScene) -> SimView:
 	var v: NetSimView = cs.view()
 	v.sample(float(scene.world.tick()))
 	return v
+
+
+## One wire quantum for the fields 04 s3.3 carries as a u8 fraction (R0 B.22 A-113): hp (`round(hp01 * 255)`), the pilot
+## block's flip_cooldown01, and TEAM_DETAIL's supply01 / progress01 bytes; EPS (exact) for everything else.
+func tolerance(accessor: StringName) -> float:
+	return U8_QUANTUM if U8_FIELDS.has(String(accessor)) else SimViewContract.EPS
 
 
 func exempt() -> PackedStringArray:
