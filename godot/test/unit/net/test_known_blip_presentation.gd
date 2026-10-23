@@ -13,13 +13,11 @@ func _q() -> int:
 
 func test_dying_blip_rests_300_ticks_at_blip_pos() -> void:
 	var f: BaselineFrame = BaselineFrame.new()
-	var fine: int = DeadReckon.pack_fine(0, 0, 0)
-	f.set_full_cached(SLOT, 10, _q(), 0, 0, fine, 255, Codec.FLAG_DYING, -1)
-	f.set_blip(SLOT, 20, 0x0A1B2C)
-	var at: Vector3i = Vector3i(Codec.pos_e(f.pos[SLOT]), Codec.pos_n(f.pos[SLOT]), Codec.pos_u(f.pos[SLOT]))
-	for dt_ticks: int in [0, 1, 30, 111, 300]:
-		assert_that(f.shown_levels(SLOT, 20 + dt_ticks, true, G, DT)).is_equal(at)
-		assert_that(f.shown_levels(SLOT, 20 + dt_ticks, false, G, DT)).is_equal(at)
+	KnownBlipFixture.apply(f)                  # shared with test_net_sim_view.gd (NET-17)
+	var at: Vector3i = KnownBlipFixture.bucket(f)
+	for dt_ticks: int in KnownBlipFixture.RESTS:
+		assert_that(f.shown_levels(SLOT, KnownBlipFixture.BLIP_TICK + dt_ticks, true, G, DT)).is_equal(at)
+		assert_that(f.shown_levels(SLOT, KnownBlipFixture.BLIP_TICK + dt_ticks, false, G, DT)).is_equal(at)
 	# The old rule (dead-reckon with the DYING gravity term) drifts away: this is the bug.
 	var old: Vector3i = DeadReckon.dr_levels(f.pos[SLOT], f.vel[SLOT], 300, true, G, DT)
 	assert_that(old).is_not_equal(at)
