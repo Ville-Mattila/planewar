@@ -112,8 +112,8 @@ static func make_driver(t: Terrain, with_intel: bool = true, rng_seed: int = 3, 
 	return d
 
 
-## A Core of `team` on the ground under `dir` (its pad is a home pad). needs sim (TA-19 / GD-15): the interim
-## structure sphere (footprint half-diagonal, ~52 m for the Core, WorldDefs.radius_of) covers the Core's own landing
+## A Core of `team` on the ground under `dir` (its pad is a home pad). Workaround for BUG-1 (sim): the structure
+## collision sphere (footprint half-diagonal, ~52 m for the Core, WorldDefs.radius_of) covers the Core's own landing
 ## approach, so a ship rams it before the A-53 column (offset <= pad_radius_m); the pad radius stands in for it here.
 static func core(w: SimWorld, dir: Vector3, team: int) -> int:
 	var p: Vector3 = DartKit.above(w, dir, 0.0)

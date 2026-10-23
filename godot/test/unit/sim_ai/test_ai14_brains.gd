@@ -331,3 +331,67 @@ func test_class_brains_are_deterministic_and_restore_s4_mid_lock() -> void:
 		var _y: Array[SimEvent] = w2.drain_events()
 	assert_int(wa.view().rockets(lancer)).is_less(rockets0)   # the lock fired after the save point
 	assert_bool(w2.serialize() == wa.serialize()).is_true()
+
+
+# AI-14 R1 band from the team Perception (the AttackRun path whenever intel is bound): a seen enemy Flak Battery
+# covering the aim point -> Deck; an Autocannon only -> High; no tower -> Low; never a structure query on this path.
+func test_attack_run_band_reads_the_perceived_towers() -> void:
+	var cases: Array = [[&"flak_battery", AttackRun.Band.DECK], [&"autocannon_turret", AttackRun.Band.HIGH], [&"", AttackRun.Band.LOW]]
+	for c: Array in cases:
+		var w: SimWorld = Ai14Kit.world(81)
+		var d: AiDriver = Ai14Kit.driver(w)
+		var brain: DartBrain = Ai14Kit.brain_of(d, &"dart") as DartBrain
+		var tgt: Vector3 = Vector3(1, 0, 0)
+		var refinery: int = DartKit.spawn(w, &"refinery", DartKit.FOE, DartKit.above(w, tgt, 0.0), Vector3.ZERO, Vector3(0, 1, 0))
+		var tower_def: StringName = c[0]
+		var tower: int = 0
+		if tower_def != &"":
+			var tp: Vector3 = DartKit.above(w, DartKit.offset(tgt, 0.0, 400.0), 0.0)
+			tower = DartKit.spawn(w, tower_def, DartKit.FOE, tp, Vector3.ZERO, DartKit.heading(tp, Vector3(0, 1, 0)))
+		var mast_p: Vector3 = DartKit.above(w, DartKit.offset(tgt, -1000.0, 0.0), 0.0)
+		var _m: int = DartKit.spawn(w, &"sensor_mast", 0, mast_p, Vector3.ZERO, DartKit.heading(mast_p, Vector3(0, 1, 0)))
+		var p0: Vector3 = DartKit.above(w, DartKit.offset(tgt, -5000.0, 0.0), 300.0)
+		var h0: Vector3 = DartKit.heading(p0, tgt)
+		var dart: int = DartKit.spawn(w, &"dart", 0, p0, h0 * 110.0, h0)
+		for _k: int in 2 * HZ:   # past a Perception refresh (1 Hz)
+			var _e: Array[SimEvent] = Ai14Kit.step(w)
+		if tower != 0:
+			assert_bool(w.view().visible_to(0, tower)).is_true()
+		var run: AttackRun = brain.modes.run
+		var s: int = EntityId.slot(dart)
+		d.state.goal[s] = w.view().pos(refinery)
+		d.state.sub[s] = AttackRun.Step.ROUTE
+		var q0: int = run.stats_band_queries
+		var n0: int = run.stats_band_scans
+		run._set_band(dart, w.view(), d.state, s)
+		var what: String = "%s: band %d" % [tower_def, AttackRun.band_of(d.state, s)]
+		assert_int(AttackRun.band_of(d.state, s)).override_failure_message(what).is_equal(c[1])
+		assert_int(run.stats_band_scans - n0).is_equal(1)
+		assert_int(run.stats_band_queries - q0).is_equal(0)   # the Perception path, no ids_near
+
+
+# 05 s3.2 / s6.4 NO_PAD: with no friendly pad a RETURN loiters over home and retries the pad choice every
+# order_rules `no_pad_retry_s` (5 s), not on the 2 s choice period: one choice at RETURN start + one per 5 s.
+func test_no_pad_loiter_retries_every_no_pad_retry_s() -> void:
+	var w: SimWorld = Ai14Kit.world(82)
+	var d: AiDriver = Ai14Kit.driver(w)
+	var brain: BomberBrain = Ai14Kit.brain_of(d, &"bomber") as BomberBrain
+	assert_int(brain.prm.no_pad_retry_ticks).is_equal(5 * HZ)
+	var p: Vector3 = DartKit.above(w, Vector3(1, 0, 0), 400.0)
+	var h: Vector3 = DartKit.heading(p, Vector3(0, 1, 0))
+	var bomber: int = DartKit.spawn(w, &"bomber", 0, p, h * 70.0, h)
+	var s: int = EntityId.slot(bomber)
+	var t0: int = -1
+	var r0: int = 0
+	for _k: int in 40 * HZ:
+		var _e: Array[SimEvent] = Ai14Kit.step(w)
+		if t0 < 0 and d.state.mode[s] == AiTag.Tag.LOITER:
+			t0 = w.tick()
+			r0 = brain.modes.stats_pad_retries
+		if t0 >= 0 and w.tick() - t0 >= 30 * HZ:
+			break
+	var n: int = brain.modes.stats_pad_retries - r0
+	var what: String = "loiter from %d, pad choices in 30 s: %d" % [t0, n]
+	assert_int(t0).override_failure_message(what).is_greater(0)
+	assert_int(w.view().ai_tag(bomber)).override_failure_message(what).is_equal(AiTag.Tag.LOITER)
+	assert_int(n).override_failure_message(what).is_between(5, 6)   # 30 s / 5 s (the choice period would give 15)

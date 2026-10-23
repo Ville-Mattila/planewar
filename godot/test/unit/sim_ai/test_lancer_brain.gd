@@ -79,7 +79,7 @@ func test_rocket_lock_holds_lock_time_s_before_the_first_rocket() -> void:
 	assert_int(lp.lock_ticks).is_equal(24)
 	assert_int(first_lock).override_failure_message(what).is_greater(0)
 	assert_int(gaps).override_failure_message(what).is_equal(0)
-	assert_int(first_rocket - first_lock).override_failure_message(what).is_between(lp.lock_ticks - 1, lp.lock_ticks)
+	assert_int(first_rocket - first_lock).override_failure_message(what).is_equal(lp.lock_ticks)   # exactly lock_time_s x tick_hz
 	assert_int(acquired).override_failure_message(what).is_equal(first_rocket)
 	assert_int(held_outside).override_failure_message(what).is_less_equal(1)   # the boundary tick at most
 

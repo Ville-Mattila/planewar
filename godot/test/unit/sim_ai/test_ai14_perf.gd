@@ -9,8 +9,8 @@ extends GdUnitTestSuite
 ##   bomber   ATTACK run thinks and acts (R1 / R2 at the band, the bomb sight);
 ##   scout    SEARCH thinks in their natural mix (the cell scan at most once per choice period) and forced scan thinks.
 ## Timing bounds are report-only on hosted runners (R0 B.17 A-97, PerfGate; asserted with PLANEWAR_PINNED_RUNNER=1);
-## the deterministic counters are hard everywhere: one structure query per Lancer AUTO start, exactly one visible_to per
-## Lancer weapons act, the choice share <= 1 / choice_period_thinks, Scout scans <= one per choice period per Scout, one
+## the deterministic counters are hard everywhere: one structure query per Lancer AUTO start, one visible_to per Lancer
+## INTERCEPT act and two per ENGAGE act (DartCombat.act_engage's + the rocket act's; counted at the calls), the choice share <= 1 / choice_period_thinks, Scout scans <= one per choice period per Scout, one
 ## TeamPicture build per team per Vision epoch.
 
 const HZ: int = 30
@@ -136,8 +136,25 @@ func test_perf_class_brains_think_and_act() -> void:
 		st.aim_lead[s] = v.pos(foe_b)
 		st.mode[s] = AiTag.Tag.INTERCEPT
 	var wa0: Vector2i = Vector2i(lancer.stats_weapon_acts, lancer.stats_weapon_visible)
+	var ce0: Vector2i = Vector2i(lancer.modes.combat.stats_engage_acts, lancer.modes.combat.stats_engage_visible)
 	var la: float = _acts(lancer, v, st, lids)
 	var wa1: Vector2i = Vector2i(lancer.stats_weapon_acts, lancer.stats_weapon_visible)
+	var ce1: Vector2i = Vector2i(lancer.modes.combat.stats_engage_acts, lancer.modes.combat.stats_engage_visible)
+	# INTERCEPT acts: the weapons act's one visible_to and no DartCombat ENGAGE read (1 per act)
+	assert_int(ce1.x - ce0.x).is_equal(0)
+	assert_int(wa1.x - wa0.x).is_greater(0)
+	assert_int(wa1.y - wa0.y).is_equal(wa1.x - wa0.x)
+	for id: int in lids:   # ENGAGE on the Bomber: DartCombat.act_engage's visible_to + the weapons act's (2 per act)
+		var s: int = EntityId.slot(id)
+		st.mode[s] = AiTag.Tag.ENGAGE
+	var ew0: Vector2i = Vector2i(lancer.stats_weapon_acts, lancer.stats_weapon_visible)
+	var le: float = _acts(lancer, v, st, lids)
+	var ew1: Vector2i = Vector2i(lancer.stats_weapon_acts, lancer.stats_weapon_visible)
+	var ce2: Vector2i = Vector2i(lancer.modes.combat.stats_engage_acts, lancer.modes.combat.stats_engage_visible)
+	var engage_acts: int = ce2.x - ce1.x
+	assert_int(engage_acts).is_greater(0)
+	assert_int(ew1.x - ew0.x).is_equal(engage_acts)
+	assert_int((ew1.y - ew0.y) + (ce2.y - ce1.y)).is_equal(2 * engage_acts)
 	var bids: PackedInt32Array = ids[&"bomber"]
 	var bt: Vector3 = _thinks(bomber, v, st, bids, tick)
 	var ba: float = _acts(bomber, v, st, bids)
@@ -159,19 +176,19 @@ func test_perf_class_brains_think_and_act() -> void:
 	var modes_l: Dictionary = {}
 	for id: int in lids:
 		modes_l[st.mode[EntityId.slot(id)]] = true
-	print("AI-14 perf (%d far ships; best of %d batches of %d per-call thinks): lancer guard think mean %.1f / median %.1f / p95 %.1f us (choice share %.3f), act engaged %.2f us/ship (weapons acts %d, visible_to %d); bomber run think %.1f / %.1f / %.1f us, act %.2f; scout search think %.1f / %.1f / %.1f us (scans %d in %d thinks), act %.2f, scan think %.1f us (bound %.0f: once per choice period); lancer modes %s" % [
-		FAR_SHIPS, BATCHES, CALLS, lt.x, lt.y, lt.z, choice_share, la, wa1.x - wa0.x, wa1.y - wa0.y, bt.x, bt.y, bt.z, ba,
+	print("AI-14 perf (%d far ships; best of %d batches of %d per-call thinks): lancer guard think mean %.1f / median %.1f / p95 %.1f us (choice share %.3f), act intercept %.2f us/ship (weapons acts %d, visible_to %d), act engage %.2f; bomber run think %.1f / %.1f / %.1f us, act %.2f; scout search think %.1f / %.1f / %.1f us (scans %d in %d thinks), act %.2f, scan think %.1f us (bound %.0f: once per choice period); lancer modes %s" % [
+		FAR_SHIPS, BATCHES, CALLS, lt.x, lt.y, lt.z, choice_share, la, wa1.x - wa0.x, wa1.y - wa0.y, le, bt.x, bt.y, bt.z, ba,
 		stt.x, stt.y, stt.z, scans, BATCHES * CALLS, sa, forced, scan_bound, str(modes_l.keys())])
 	# deterministic counters (hard on every runner)
 	assert_float(choice_share).is_less_equal(1.0 / float(lancer.prm.choice_period) + 0.01)
-	assert_int(wa1.x - wa0.x).is_greater(0)
-	assert_int(wa1.y - wa0.y).is_equal(wa1.x - wa0.x)   # exactly one visible_to per weapons act
+
 	assert_int(scans).is_less_equal(MathX.floori_div(BATCHES * CALLS, scout.prm.choice_period) + sids.size())
 	assert_int(lancer.modes.picture.builds - builds0).is_greater(0)
 	# timings: report-only on hosted runners (R0 B.17 A-97)
 	var cite: String = "05 s10 / R0 A-96"
 	assert_bool(PerfGate.check("test_ai14_perf.lancer_think", lt.x, THINK_ROW_US * CI_FACTOR, cite)).is_true()
-	assert_bool(PerfGate.check("test_ai14_perf.lancer_act_engaged", la, ACT_ENGAGE_CEILING_US, cite)).is_true()
+	assert_bool(PerfGate.check("test_ai14_perf.lancer_act_intercept", la, ACT_ENGAGE_CEILING_US, cite)).is_true()
+	assert_bool(PerfGate.check("test_ai14_perf.lancer_act_engage", le, ACT_ENGAGE_CEILING_US, cite)).is_true()
 	assert_bool(PerfGate.check("test_ai14_perf.bomber_think", bt.x, THINK_ROW_US * CI_FACTOR, cite)).is_true()
 	assert_bool(PerfGate.check("test_ai14_perf.bomber_act", ba, ACT_ROW_US * CI_FACTOR, cite)).is_true()
 	assert_bool(PerfGate.check("test_ai14_perf.scout_think", stt.x, THINK_ROW_US * CI_FACTOR, cite)).is_true()
