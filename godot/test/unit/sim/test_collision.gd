@@ -295,13 +295,37 @@ func test_approach_column_exempts_friendly_descent_from_ram_but_not_enemy_or_out
 	_kit.store.pos[ps.y] = _at(-7.0, 3.0)                              # below the column: terrain and structures apply
 	_kit.detect(3)
 	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
-	_kit.store.pos[ps.y] = _at(15.0, _kit.pad_radius + 0.1)            # beside the column
+	_kit.store.pos[ps.y] = _at(-7.0, _kit.pad_radius + 0.1)            # beside the column and below the deck (BUG-1)
 	assert_float(_kit.pad_radius + 0.1).is_less(15.0 + 6.0)
 	_kit.detect(4)
 	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
 	_kit.store.pos[ps.y] = _at(15.0, 3.0)
 	_kit.store.team[ps.y] = 1                                          # an enemy ship in the same column still rams
 	_kit.detect(5)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
+
+func test_core_sized_sphere_does_not_ram_a_friendly_ship_above_the_deck() -> void:
+	# BUG-1: a Core's interim sphere (~52 m) covers its own 12 m pad; a friendly ship descending diagonally,
+	# outside the approach column but above the pad plane, is never RAM-tested against it.
+	var st: int = _kit.entity(EntityStore.K_STRUCTURE, _at(0.0, 0.0), 52.0, 0, CollisionTestKit.PAD_DEF)
+	var sh: int = _kit.entity(EntityStore.K_SHIP, _at(20.0, 30.0), 6.0, 0)
+	assert_float(_kit.pad_radius).is_less(30.0)
+	_kit.detect(1)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(0)
+	_kit.store.pos[sh] = _at(-7.0, 30.0)                               # below the deck: structure body, rams
+	_kit.detect(2)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
+	_kit.store.pos[sh] = _at(20.0, 30.0)
+	_kit.store.team[sh] = 1                                            # an enemy ship above the deck still rams
+	_kit.detect(3)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
+	assert_int(st).is_greater(0)
+
+
+func test_pad_free_structure_still_rams_a_friendly_ship_above_its_deck() -> void:
+	var _st: int = _kit.entity(EntityStore.K_STRUCTURE, _at(0.0, 0.0), 52.0, 0, CollisionTestKit.PLAIN_DEF)
+	var _sh: int = _kit.entity(EntityStore.K_SHIP, _at(20.0, 30.0), 6.0, 0)
+	_kit.detect(1)
 	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
 # endregion
 
