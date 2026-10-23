@@ -147,6 +147,37 @@ func test_clock_converges_within_2_s_under_target() -> void:
 	assert_int(cs.clock.resyncs).is_less_equal(2)                           # WELCOME sync + at most one first-snapshot resync
 
 
+## Only OK snapshots newer than the last sample feed the clock: a late (> 500 ms) or reordered packet and a reliable
+## KEYFRAME never move it (CS4: no back-and-forth resync).
+func test_late_and_reliable_packets_do_not_feed_the_clock() -> void:
+	_history = {}
+	var rig: NetViewRig = NetViewRig.new(_world(), WorldTestKit.content())
+	var cs: ClientSession = rig.add_client(0, 0)
+	_join(rig)
+	_step(rig)
+	rig.fill_frame()
+	rig.codec.prepare_tick(rig.frame)
+	var vis: PackedInt32Array = PackedInt32Array()
+	for r: int in rig.frame.count:
+		var _a: bool = vis.push_back(rig.frame.slot[r])
+	var old: Array[PackedByteArray] = []
+	var _n: int = rig.codec.encode(BaselineStore.new(0), rig.tick, vis, PackedInt32Array(), PackedInt32Array(), null, old)
+	var kc: KeyframeCodec = KeyframeCodec.new()
+	var kf: PackedByteArray = kc.encode(rig.codec, BaselineStore.new(0), rig.tick, 7, Protocol.KeyframeScope.ALL, vis)
+	for _t: int in 30:                                                       # 1 s later: the old packet is > 500 ms late
+		_step(rig)
+	var samples: int = cs.clock.samples
+	var resyncs: int = cs.clock.resyncs
+	var offset: float = cs.clock.offset
+	for p: PackedByteArray in old:
+		cs.receive(Protocol.CH_SNAPSHOT, p)
+	cs.receive(Protocol.CH_EVENTS, kf)
+	assert_int(cs.keyframes_applied).is_equal(1)
+	assert_int(cs.clock.samples).is_equal(samples)
+	assert_int(cs.clock.resyncs).is_equal(resyncs)
+	assert_float(cs.clock.offset).is_equal(offset)
+
+
 func test_extrapolation_stops_after_3_ticks_end_to_end() -> void:
 	_history = {}
 	var rig: NetViewRig = NetViewRig.new(_world(), WorldTestKit.content())

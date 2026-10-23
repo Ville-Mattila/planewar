@@ -96,6 +96,14 @@ func test_input_tick_and_lead_dilation() -> void:
 	assert_float(c.lead).is_equal(ClientClock.LEAD_MAX)
 
 
+func test_tuning_constants_are_pinned() -> void:
+	assert_float(ClientClock.LEAD_MAX).is_equal(float(InputBuffer.WINDOW_FUTURE))   # the server jitter window
+	assert_float(ClientClock.DRIFT_ALPHA).is_equal(0.05)                           # 04 s5.1
+	assert_float(1.0 + ClientClock.DILATION_MAX).is_equal(1.05)                    # 04 s5.1
+	assert_float(ClientClock.RESYNC_MS).is_equal(500.0)                            # 04 s5.1
+	assert_int(ClientClock.INTERP_DELAY_TICKS).is_equal(3)                         # 04 s5.1, ADR-07
+
+
 func test_reset_unsyncs_and_time_never_runs_backwards() -> void:
 	var c: ClientClock = ClientClock.new(30)
 	c.observe(50, 1000.0)
