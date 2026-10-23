@@ -1,0 +1,22 @@
+{
+  "_doc": "AI-17 test fixture in the autopilots.json shape (05 s4.4, s6.8; needs content: AI-19 writes ap_tower into autopilots.json). One shared `ap_tower` entry read by every tower def: fire_cone_k = ap_dart gun.fire_cone_k (05 s6.2 fire cone), think_period_ticks 10 (05 s10), and the 05 s6.8 choice-point numbers written out (the defaults of TargetParams.for_tower): hysteresis 1.3, attacking x1.5 within 600 m for 5 s, hp gain 0.5, crowd x0.7 above 2 towers, GUARD x2, rank weights 100..20 (R0 C2-15), 8 candidates scored in full. Envelopes, priority, range and lock time are NOT here: towers.json and the weapon defs own them.",
+  "autopilots": [
+    {
+      "id": "ap_tower",
+      "status": "core",
+      "tags": [],
+      "think_period_ticks": 10,
+      "fire_cone_k": 1.5,
+      "tower_switch_margin": 1.3,
+      "tower_attacking_mult": 1.5,
+      "tower_attack_radius_m": 600,
+      "attacked_window_s": 5,
+      "tower_hp_gain": 0.5,
+      "tower_crowd_mult": 0.7,
+      "tower_crowd_count": 2,
+      "guard_mult": 2.0,
+      "tower_rank_weights": [100, 80, 60, 50, 40, 30, 25, 20],
+      "max_candidates": 8
+    }
+  ]
+}
