@@ -1,6 +1,6 @@
 class_name DartModes extends RefCounted
 ## The Dart's per-order thinks (05 s6.2, s3.2; AI-13), called by `DartBrain` once per think: RETURN (LandingPilot; no
-## pad: LOITER over home at `no_pad_loiter_altitude_m`, pad selection retried each choice period), ESCORT (EscortPilot;
+## pad: LOITER over home at `no_pad_loiter_altitude_m`, pad selection retried every `no_pad_retry_s`, AI-14), ESCORT (EscortPilot;
 ## its engagements fly DartCombat), ATTACK (a ship: DartCombat on it; a structure / ground unit / point: AttackRun),
 ## MOVE (band: Deck with FLAG_LOW at `deck_speed_mps`, else the point's AGL or `default_move_agl_m`; orbits the point
 ## once arrived),
@@ -29,6 +29,7 @@ var engages: bool = true         ## AI-14: the choice point runs (false: Bomber,
 var auto_guard: bool = false     ## AI-14: AUTO is a GUARD orbit around home (Lancer, 05 s6.4)
 var ground: bool = false         ## AI-14: ground units and structures are candidates (Lancer, 05 s6.4)
 var stats_ground: int = 0        ## AI-14: ground candidates added (work counter)
+var stats_pad_retries: int = 0   ## AI-14: pad choices of think_return (RETURN start + one per no_pad_retry_s while LOITER)
 var _cand: PackedInt32Array = PackedInt32Array()
 var _ctx: Array[TargetContext] = []
 var _pick: PackedInt32Array = PackedInt32Array()
@@ -66,7 +67,9 @@ static func is_combat(m: int) -> bool:
 func think_return(id: int, s: int, m: int, head: OrderSpec, view: SimView, st: AiState, tick: int) -> int:
 	if m != AiTag.Tag.RETURN:
 		var pad: int = head.target if head.target != 0 and view.alive(head.target) else 0
-		if pad == 0 and (m != AiTag.Tag.LOITER or choice_due(s, tick)):
+		if pad == 0 and (m != AiTag.Tag.LOITER or tick - roundi(st.timer[s]) >= prm.no_pad_retry_ticks):
+			stats_pad_retries += 1
+			st.timer[s] = float(tick)   # LOITER: the last pad choice (05 s3.2: retry every no_pad_retry_s)
 			pad = landing.select_pad(id, view, 0, st)
 		if pad == 0:
 			return _orbit(id, s, st.home[s], prm.hold_orbit, prm.loiter_alt, view, st, AiTag.Tag.LOITER)

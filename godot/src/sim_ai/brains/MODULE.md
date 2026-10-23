@@ -31,7 +31,7 @@ func think_one(id: int, view: SimView, st: AiState, sink: CommandSink, tick: int
 class_name DartModes extends RefCounted            # AI-13: the per-order thinks (RETURN, ESCORT, ATTACK, MOVE, PATROL / HOLD / GUARD / AUTO) and the choice point
 const B_RUN_DONE: int
 var prm: DartParams; var terrain: Terrain; var landing: LandingPilot; var escort: EscortPilot; var run: AttackRun; var combat: DartCombat; var targets: TargetParams; var stats_choices: int; var picture: TeamPicture
-var intel: TeamIntel; var engages: bool; var auto_guard: bool; var ground: bool; var stats_ground: int   # AI-14 class switches (Invariants CB2)
+var intel: TeamIntel; var engages: bool; var auto_guard: bool; var ground: bool; var stats_ground: int; var stats_pad_retries: int   # AI-14 class switches (Invariants CB2)
 func _init(params: DartParams, t: Terrain, lp: LandingPilot, ep: EscortPilot, ar: AttackRun, dc: DartCombat, tp: TargetParams) -> void
 static func patrol_point(home: Vector3, k: int, n: int, radius: float) -> Vector3;  static func is_combat(m: int) -> bool
 func choice_due(s: int, tick: int) -> bool         # the think phase of the choice point (every choice_period_thinks, staggered by slot)
@@ -75,7 +75,7 @@ var continue_rad: float; var egress_turn_rad: float; var egress_ticks: int; var 
 var pitch_over_agl: float; var launch_climb_agl: float; var launch_max_speed: float; var arrival: float; var move_agl: float; var patrol_engage: float; var hold_orbit: float
 var guard_orbit: float; var guard_engage: float; var loiter_alt: float; var ghost_ticks: int; var bomb_def: ProjectileDef; var bomb_damage: float; var bomb_interval: float; var rules: RulesDef
 var threat_kind: PackedByteArray; var threat_range: PackedFloat32Array; var threat_scan: float; var hp_by_def: PackedFloat32Array; var rtb_ammo: int
-var has_gun: bool; var has_bombs: bool; var has_rockets: bool; var secondary: WeaponDef   # AI-14: the blocks a class needs follow its weapons
+var has_gun: bool; var has_bombs: bool; var has_rockets: bool; var secondary: WeaponDef; var no_pad_retry_ticks: int   # AI-14: the blocks a class needs follow its weapons; order_rules no_pad_retry_s
 static func from_content(ap: Dictionary, def: ShipDef, c: ContentSet) -> DartParams;  func ticks(s: float) -> int;  static func block(d: Dictionary, k: String) -> Dictionary
 class_name LancerBrain extends DartBrain           # AI-14: 05 s6.4 Lancer (AUTO GUARD on the structure cluster, ground-first, rockets on the lock)
 var lp: LancerParams; var stats_lock_starts: int; var stats_fire2_acts: int; var stats_cluster_queries: int; var stats_weapon_acts: int; var stats_weapon_visible: int
@@ -122,11 +122,12 @@ static func from_content(ap: Dictionary, def: ShipDef, c: ContentSet) -> ScoutPa
   `lock_tick` = the start of that continuous hold; the sim's seeker fires `lock_ticks` later (LOCK_ACQUIRED on the same
   tick). `bomber_reserve` rockets are kept unless the target is a bomber while a bomber contact (seen or a Perception
   ghost) is within `bomber_known_m` (`fire_mask` FIRE_RESERVE, evaluated on the first think and every choice period).
-  Exactly one `visible_to` per weapons act (`stats_weapon_visible == stats_weapon_acts`). ESCORT is DartModes'
+  `visible_to` per act, counted at the call: one per INTERCEPT act (the rocket act's), two per ENGAGE act
+  (`DartCombat.act_engage`'s + the rocket act's). ESCORT is DartModes'
   (EscortPilot) as for the Dart.
 - BB Bomber (05 s6.4; `test_ai14_brains.gd`, `test_sc_bomber.gd`): AUTO = DOCKED; airborne with no order
-  (`order_tick` -1) it asks once for a system RETURN (no pad free: LOITER over home, pad choice retried each choice
-  period); PATROL / GUARD without a choice point; an ATTACK on a ship is DONE at once; after any ATTACK: RETURN.
+  (`order_tick` -1) it asks once for a system RETURN (no pad: LOITER over home, the pad choice retried every
+  order_rules `no_pad_retry_s`, 5 s, for every class brain; `stats_pad_retries`); PATROL / GUARD without a choice point; an ATTACK on a ship is DONE at once; after any ATTACK: RETURN.
 - SB Scout (05 s6.4; `test_ai14_brains.gd`, `test_sc38_scout.gd`): SEARCH picks max `staleness_s / (1 + dist_km)` over
   the 384 cells of the team map's `last_seen` (never seen: the match age) with no AIR_HIGH threat whose round trip
   (here -> cell -> home) fits `(fuel - rtb.fuel_reserve_s) x v_cruise`; it re-picks when the team has seen the cell
@@ -152,7 +153,7 @@ static func from_content(ap: Dictionary, def: ShipDef, c: ContentSet) -> ScoutPa
   first rocket exactly `lock_ticks` (24) after the hold began.
 - Perf (`test_dart_perf.gd`, guards row x CI_FACTOR 2 only; counters asserted: choice share 1/6, refresh share <= 0.5, <= 1 `pull_up_loss` per shaped think and per act check, 1 picture per team per epoch). Dev laptop, host scale 1.00: quiet think 41 / median 36 / p95 72 us; engaged think 56 / 41 / 83; act patrol 8.5, act engage in fire range 18.4 us; TeamPicture 221 us for 261 ships = 295 us per tick at 8 teams (cap 450). Engaged think components: hold 29, separation refresh think 68, choice think 73 (choose_engaged 33, combat.think 8.5); act engage: act_engage 8.9 (track_velocity 3.2, lead 1.6) + act_batch reads and the check 5-6. Priced by R0 B.17 A-96: the act row is a fleet mean, asserted as (1 - 0.25) act_patrol + 0.25 act_engage < 12 us, act_engage < 18 us (3 x row) until the pinned runner; engaged think < 50 us; `pull_up_loss` calls per act while sinking == 1 / `pull_up_check_ticks`. R0 B.17 A-97: the timing bounds assert only with PLANEWAR_PINNED_RUNNER=1 (PERF_REPORT lines on hosted runners); the counters (and one `visible_to` per ENGAGE act) are hard everywhere. `_send_rtb` allocates an OrderSpec and a Command per send (rare).
 - Perf AI-14 (`test_ai14_perf.gd`, 05 s10 think row 25 us, act row 6 us; PerfGate report-only on hosted runners,
-  R0 B.17 A-97; counters hard: one structure query per Lancer AUTO start, one `visible_to` per Lancer weapons act,
+  R0 B.17 A-97; counters hard: one structure query per Lancer AUTO start, one `visible_to` per Lancer INTERCEPT act and two per ENGAGE act,
   choice share <= 1/6, Scout scans <= one per choice period). Dev laptop, full unit run, beside the same run's
   `test_dart_perf.gd` (Dart quiet think 47.3, engaged 69.5, act patrol 9.3, act engage 19.5 us): Lancer guard think
   46.6 / median 47 / p95 78 us, engaged act with the rocket lock 16.9 us; Bomber run think 61.8 / 61 / 67 (its R1
@@ -164,8 +165,7 @@ static func from_content(ap: Dictionary, def: ShipDef, c: ContentSet) -> ScoutPa
 - Open (needs sim): order completion (05 C4) is not wired, so a finished ATTACK stays the head (`B_RUN_DONE`: AUTO patrol under it) and a MOVE orbits its point; Docking (GD-15) is not built, so DOCKED waits; `Spatial.ids_near` beyond `ring2_m` is O(touched cells), and `TeamPicture` builds once per team per Vision epoch from `SimView.visible_enemy_ships` (AI-42, ascending EntityId as the old `ships()` walk). Open (needs content, AI-19): the AI-13 keys of `ai13_autopilots.json` (`guidance`, `intercept`, `attack_run` blocks, `gun.aoa_comp_max_deg`, `evade.heading_change_deg`, `rtb.ammo`). Open (threat map, s7.4; the map exists since AI-22, not wired: AI-13's acceptance does not ask): the IP bearing is the direct one (AI-22 enables R1: score candidate IPs by `driver.threat_map(team).route_risk(ip, target, band)` over the last 5 km), the Autocannon "stay > 450 m" rule (enabled: `threat_at(cell(target), AIR_DECK) > 0` with `AIR_HIGH == 0` marks a gun-only cell) and the `attacked` factor (HIT feed: a `Perception` contact that hit a friendly, recorded only when `visible_to`) are not applied; rail towers do not set a band.
 - Open AI-14 (needs sim): GD-15 docking (SC-21 docks by the test's stand-in on an R0 B.5 safe touchdown); the interim
   structure collision sphere (`WorldDefs.radius_of`: footprint half-diagonal, Core ~52 m) covers a pad's own approach,
-  so a ship rams its home Core before the A-53 column (the tests set the Core's radius to its pad radius: TA-19 /
-  GD-15); order completion for brains (C4 `complete_head`, A-61 / AI-15): a finished ATTACK stays queued behind the
+  so a ship rams its home Core before the A-53 column (the tests set the Core's radius to its pad radius: BUG-1); order completion for brains (C4 `complete_head`, A-61 / AI-15): a finished ATTACK stays queued behind the
   RETURN. Open (content, AI-19): the content note above. Open (threat map): the IP bearing is still the direct one.
 
 ## Test entry points

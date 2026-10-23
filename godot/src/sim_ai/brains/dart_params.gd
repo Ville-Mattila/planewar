@@ -24,7 +24,8 @@ const RUN_KEYS: PackedStringArray = ["ip_dist_m", "ip_arrive_m", "band_low_agl_m
 const LAUNCH_KEYS: PackedStringArray = ["pitch_over_agl_m", "launch_climb_agl_m", "approach_min_speed_mps"]
 const RTB_KEYS: PackedStringArray = ["ammo"]
 const ORDER_KEYS: PackedStringArray = ["arrival_radius_ship_m", "default_move_agl_m", "patrol_engage_radius_m",
-	"hold_orbit_radius_m", "guard_orbit_radius_m", "guard_engage_radius_m", "no_pad_loiter_altitude_m", "ghost_timeout_s"]
+	"hold_orbit_radius_m", "guard_orbit_radius_m", "guard_engage_radius_m", "no_pad_loiter_altitude_m", "ghost_timeout_s",
+	"no_pad_retry_s"]
 ## Tower threat classes of 05 s6.3 R1 (by the tower weapon's kind): gun = Autocannon, flak, rocket = Missile.
 const THREAT_NONE: int = 0
 const THREAT_GUN: int = 1
@@ -102,6 +103,7 @@ var guard_orbit: float = 0.0
 var guard_engage: float = 0.0
 var loiter_alt: float = 0.0
 var ghost_ticks: int = 0
+var no_pad_retry_ticks: int = 0                            ## AI-14: order_rules no_pad_retry_s (05 s3.2 NO_PAD retry)
 var bomb_def: ProjectileDef = null
 var bomb_damage: float = 0.0
 var bomb_interval: float = 0.0                             ## 1 / the bomb weapon's rof: the stick spacing in time
@@ -260,6 +262,7 @@ func _orders(o: Dictionary) -> void:
 	guard_engage = _f(o, "guard_engage_radius_m")
 	loiter_alt = _f(o, "no_pad_loiter_altitude_m")
 	ghost_ticks = ticks(_f(o, "ghost_timeout_s"))
+	no_pad_retry_ticks = ticks(_f(o, "no_pad_retry_s"))
 
 
 # Tower threat table by def id: the class of each tower's weapon (05 s6.3 R1) and its range; the scan radius is the

@@ -19,7 +19,7 @@ var stats_lock_starts: int = 0   ## lock attempts begun (lock_tick set)
 var stats_fire2_acts: int = 0    ## acts holding FIRE2
 var stats_cluster_queries: int = 0   ## structure queries of `_on_home` (one per AUTO start)
 var stats_weapon_acts: int = 0   ## acts that ran the rocket / R3 weapons (INTERCEPT, ENGAGE, R3)
-var stats_weapon_visible: int = 0   ## visible_to calls of those acts (exactly one each)
+var stats_weapon_visible: int = 0   ## visible_to calls of those acts, counted at the call (one each; ENGAGE adds DartCombat's)
 
 
 ## The Lancer brain from content (`ap` = ap_lancer's dictionary); null when a required block is missing.
@@ -95,8 +95,7 @@ func _weapons(id: int, s: int, m: int, view: SimView, st: AiState, out: PilotInp
 		return
 	var t: int = st.target[s]
 	stats_weapon_acts += 1
-	stats_weapon_visible += 1
-	if t == 0 or not view.visible_to(view.team(id), t):
+	if t == 0 or not _visible(view, view.team(id), t):
 		st.lock_tick[s] = 0
 		return
 	var p: Vector3 = view.pos(id)
@@ -116,6 +115,12 @@ func _weapons(id: int, s: int, m: int, view: SimView, st: AiState, out: PilotInp
 	if release and d > 0.0 and d < prm.fire_range and view.ammo(id) > 0 \
 			and AimSolver.in_fire_cone(nose, rel / d, prm.fire_cone_k, view.radius(t), d):
 		out.buttons |= PilotInput.FIRE1
+
+
+# Every visibility read of the weapons act goes through here (stats_weapon_visible counts the calls themselves).
+func _visible(view: SimView, team: int, t: int) -> bool:
+	stats_weapon_visible += 1
+	return view.visible_to(team, t)
 
 
 # Rockets that must stay: in R3 the pass's end count (`wp`, the reserve included); in ENGAGE the bomber reserve unless
