@@ -274,9 +274,9 @@ func _parse_delta(b: PackedByteArray, at: int, tier_b: bool, src: BaselineFrame,
 	var bq: int = src.pos[i]
 	var dtk: int = _tick - src.etick[i]
 	var def_id: int = roster.def_of(i)
-	var grav: bool = (def_id >= 0 and def_id < gravity_def.size() and gravity_def[def_id] != 0) \
-			or (src.flags[i] & Codec.FLAG_DYING) != 0
-	var dr: Vector3i = DeadReckon.dr_levels(bq, src.vel[i], dtk, grav, gravity, dt)
+	var def_grav: bool = def_id >= 0 and def_id < gravity_def.size() and gravity_def[def_id] != 0
+	var grav: bool = src.base_grav(i, def_grav)              # A-103: false for a known blip
+	var dr: Vector3i = src.shown_levels(i, _tick, def_grav, gravity, dt)
 	at += 1
 	var res: Vector3i = Vector3i.ZERO
 	if m & SnapshotCodec.MASK_POS_SMALL:

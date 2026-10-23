@@ -146,15 +146,21 @@ func set_blip_at(i: int, t: int, blip_bits: int, pos_q: int) -> void:
 	etick[i] = t
 
 
-## The (e, n, u) levels entry `i` shows at tick `t` in its stored cell (NET-56, 04 s5.6): a known blip is presented at
-## its stored bucket (pos is the bucket centre, velocity zero; never dead-reckoned, so a DYING flag brings no gravity);
-## every other entry dead-reckons from `etick` (gravity term for `def_grav` or DYING, as the DELTA rule). Server mirror,
-## ReplayReader and NetSimView (NET-17, must) use this one rule; the DELTA base (DeadReckon.dr_levels on pos/vel) is unchanged.
+## Whether entry `i` dead-reckons with the gravity term (04 s3.4 dr(t)): `def_grav` or DYING, but never for a known
+## blip (A-103 policy (4): its pos is a bucket, its velocity zero, so neither end advances it). The one branch the
+## DELTA base (SnapshotCodec / SnapshotDecoder), the velocity advance (DeadReckon.dr_fine) and shown_levels share.
+func base_grav(i: int, def_grav: bool) -> bool:
+	return blip[i] == DeadReckon.BLIP_UNKNOWN and (def_grav or (flags[i] & Codec.FLAG_DYING) != 0)
+
+
+## The (e, n, u) levels entry `i` shows at tick `t` in its stored cell (NET-56, 04 s5.6) and the DELTA base of both
+## codecs (NET-57, 04 s3.4 (4)): a known blip is its stored bucket (never dead-reckoned, a DYING flag brings no
+## gravity); every other entry dead-reckons from `etick` (gravity term per base_grav). Server mirror, both codecs,
+## ReplayReader and NetSimView (NET-17, must) use this one rule.
 func shown_levels(i: int, t: int, def_grav: bool, g: float, dt: float) -> Vector3i:
 	if blip[i] != DeadReckon.BLIP_UNKNOWN:
 		return Vector3i(Codec.pos_e(pos[i]), Codec.pos_n(pos[i]), Codec.pos_u(pos[i]))
-	var grav: bool = def_grav or (flags[i] & Codec.FLAG_DYING) != 0
-	return DeadReckon.dr_levels(pos[i], vel[i], t - etick[i], grav, g, dt)
+	return DeadReckon.dr_levels(pos[i], vel[i], t - etick[i], base_grav(i, def_grav), g, dt)
 
 
 ## The blip entry `i` shows at tick `t` (NET-54): the stored blip when known, else the blip of the bucket levels
