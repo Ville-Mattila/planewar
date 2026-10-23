@@ -90,8 +90,8 @@ per owner so the Foundry doctrine gives 2). Slots in the API are entity slots; `
   at weight 255 and a towed wreck blocks nothing. Hooks: a wreck comes to rest (`_spawn` in step 9, `_release` in step 10 or `drop`) ->
   `rest`: `Pathing.set_weight(cell_of(pos, GRID_PATH), 255)`; it is hooked (`_link`, after F_TETHERED is set) -> `lift`; a resting wreck
   expires -> `defer`, then `settle` after the pass freed its wrecks. A delivered or tether-expired wreck was lifted at its hook and
-  touches nothing. `lift`/`settle` restore the cell's baked weight, `Pathing.baked_weight(cell)` (read from the loaded map's
-  `face<f>.path.u8`, nothing stored; flat datum = 1), unless another live untethered wreck still rests on the cell (one scan of the
+  touches nothing. `lift`/`settle` restore the cell's baked weight, `Pathing.baked_weight(cell)` (from the in-memory bake of the loaded
+  map, no file access in the tick; flat datum = 1), unless another live untethered wreck still rests on the cell (one scan of the
   wreck list per leave, distance pre-filtered), so two wrecks on one cell keep it blocked until the last leaves. A call that would not
   change the weight is skipped (no version bump). Every change goes through `Pathing.set_weight`, so `path_grid_version` and the route
   cache follow. No saved state: the weights are in the S4 path section, so `SimSerialize.FORMAT` is unchanged and a restore gives

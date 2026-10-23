@@ -51,4 +51,20 @@ func test_a_core_death_sets_seven_cells_and_no_idle_tick_touches_pathing() -> vo
 	var idle: int = w.economy().salvage.paths.sets
 	var _i: Array[SimEvent] = K.steps(w, 100)
 	assert_int(w.economy().salvage.paths.sets).is_equal(idle)
-	assert_bool(PerfGate.check("wreck_paths_core_death_tick", us, 3000.0, CITE)).is_true()
+	assert_bool(PerfGate.check("wreck_paths_core_death_tick", us, 800.0, CITE)).is_true()
+
+
+func test_a_leave_that_reads_the_bake_costs_one_read_and_no_file_access() -> void:
+	var w: SimWorld = WorldTestKit.world(7, WorldTestKit.rules(), &"tiny_test")
+	var paths: WreckPaths = w.economy().salvage.paths
+	var s: int = K.wreck_at(w, &"dart", 60.0, _arc(3000.0))
+	paths.rest(s)
+	w.store().flags[s] |= EntityStore.F_TETHERED                                   # hooked: the cell is left alone
+	var reads: int = paths.reads
+	var t0: int = Time.get_ticks_usec()
+	for i: int in REPS:
+		paths.lift(s)
+	var us: float = float(Time.get_ticks_usec() - t0) / float(REPS)
+	assert_int(paths.reads - reads).is_equal(REPS)                                 # every leave read the bake once
+	assert_int(w._pathing.weight(PathGrid.cell_of(w.store().pos[s]))).is_equal(w._pathing.baked_weight(PathGrid.cell_of(w.store().pos[s])))
+	assert_bool(PerfGate.check("wreck_paths_leave_reads_bake", us, 100.0, CITE)).is_true()

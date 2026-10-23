@@ -193,6 +193,34 @@ func test_the_restored_weight_is_re_read_from_the_map_bake() -> void:
 	assert_int(_p(w).baked_weight(cell)).is_equal(baked[cell])
 
 
+func test_baked_weight_is_the_bake_after_set_weight_and_after_deserialize() -> void:
+	var w: SimWorld = WorldTestKit.world(7, WorldTestKit.rules(), MAP)
+	var baked: PackedByteArray = PathGrid.read_faces("res://content/maps/%s" % String(MAP))
+	var cells: PackedInt32Array = PackedInt32Array()
+	for c: int in PathGrid.CELLS:
+		if baked[c] > 1 and baked[c] < 255:
+			var _a: bool = cells.push_back(c)
+		if cells.size() == 4:
+			break
+	assert_int(cells.size()).is_equal(4)
+	for c: int in cells:
+		_p(w).set_weight(c, PathGrid.W_BLOCKED)
+		assert_int(_p(w).baked_weight(c)).is_equal(baked[c])                     # the bake is not the live weight
+	var r: SimWorld = SimWorld.deserialize(w.serialize(), WorldTestKit.content(), null)
+	assert_object(r).is_not_null()
+	for c: int in cells:
+		assert_int(_p(r).weight(c)).is_equal(PathGrid.W_BLOCKED)
+		assert_int(_p(r).baked_weight(c)).is_equal(baked[c])
+	assert_int(_p(w).baked_weight(-1)).is_equal(1)
+	assert_int(_p(w).baked_weight(PathGrid.CELLS)).is_equal(1)
+
+
+func test_set_weights_drops_the_bake() -> void:
+	var w: SimWorld = WorldTestKit.world(7, WorldTestKit.rules(), MAP)
+	assert_bool(_p(w).set_weights(_p(w).grid.weights.duplicate())).is_true()
+	assert_int(_p(w).baked_weight(0)).is_equal(1)
+
+
 func test_baked_weight_of_the_flat_datum_is_one() -> void:
 	var w: SimWorld = K.world()
 	assert_int(_p(w).baked_weight(PathGrid.cell_of(K.at(0.0, 100.0)))).is_equal(1)
