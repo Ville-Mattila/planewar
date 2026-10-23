@@ -7625,8 +7625,10 @@
       "R0 A-82",
       "R0 A-87"
     ],
-    "status": "todo",
-    "note": "Found by the AI-14 #109 Opus review 2026-10-23 (comment 6366106106)."
+    "status": "done",
+    "note": "Found by the AI-14 #109 Opus review 2026-10-23 (comment 6366106106). Merged under R0 B.21 A-109. Nit: sim/MODULE.md:194 should cite A-109. Workaround removal -> AI-43; root cause (sphere over-reach) -> GD-42.",
+    "pr": 114,
+    "merged": "2026-10-23"
   },
   {
     "id": "TA-66",
