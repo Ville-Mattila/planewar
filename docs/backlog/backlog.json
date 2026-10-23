@@ -7699,6 +7699,9 @@
       "R0-amendments-15 A-110",
       "R0-amendments-15 A-109"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 119,
+    "merged": "2026-10-23",
+    "note": "Workaround removed; SC-19/20/21 pass with the real 52.07 m Core radius. Leftover: godot/src/sim_ai/brains/MODULE.md:168 still mentions the BUG-1 workaround (fix in the next sim_ai PR)."
   }
 ]
