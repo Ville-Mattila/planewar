@@ -296,8 +296,8 @@ func test_a_received_wreck() -> void:
 	assert_int(v.owner(s.wreck)).is_equal(-1)
 	assert_int(v.team(s.wreck)).is_equal(-1)
 	assert_bool(v.visible_to(0, s.wreck)).is_true()
-	# CQ-4: a split wreck's radius is hull / n (sim/salvage/salvage.gd); n is not on the wire: default + unknown
-	assert_float(v.radius(s.wreck)).is_equal(0.0)
+	# R0 B.22 A-114: a split wreck's radius is hull / n in the sim; n is not on the wire: the def radius + unknown
+	assert_float(v.radius(s.wreck)).is_equal(s.ship_def().bounding_radius)
 	assert_bool(v.field_unknown(s.wreck, &"radius")).is_true()
 	assert_float(st.radius[sw]).is_equal(5.0)
 	var ids: PackedInt32Array = PackedInt32Array([s.a, s.wreck, s.dead, s.b])

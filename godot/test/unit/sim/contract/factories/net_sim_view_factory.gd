@@ -11,8 +11,8 @@ class_name NetSimViewFactory extends SimViewFactory
 const _EXEMPT: PackedStringArray = [
 	# The scene's wreck is not visible to team 0 (visible_to(0, wreck) is false in the clause itself), so a team-0
 	# client never receives it (04 s4.1 interest = team vision; net/interest I1); the rocket is a projectile entity
-	# with no roster index (roster = sim slots 0-1,535, 04 s3.1 / R0 B.11 A-54; contract question CQ-1). A received
-	# wreck is covered by test_net_sim_view.gd::test_a_received_wreck (its radius is not on the wire either: CQ-4).
+	# with no roster index until NET-58's projectile block (R0 B.22 A-112). A received wreck is covered by
+	# test_net_sim_view.gd::test_a_received_wreck (radius = the hull's def radius with unknown set, A-114).
 	"alive", "radius", "def_kind", "wrecks", "ids_in_cell", "projectiles_near", "read_poses",
 	# The scene writes control_state 5, outside R0 B.3 (0-2) and the 2-bit wire field (04 s3.3 flags bits 0-1; CQ-3).
 	"control_state",
@@ -26,7 +26,7 @@ const _EXEMPT: PackedStringArray = [
 	"shield01", "wreck_ore",
 	# Other teams' vision and TEAM_STATE are not sent to this client (04 s3.7 "Unknown when: other teams").
 	"visible_enemy_ships", "stockpile", "unit_count",
-	# BLOCKED (CQ-2): the override must name TeamStateView / PlayerStateView, not on net's D1 named-type list.
+	# NET-39 (R0 B.22 A-111: net may name the types now; the TEAM_DETAIL / TEAM_STATE player rows are NET-39's).
 	"team_state", "player_state",
 ]
 

@@ -86,7 +86,7 @@ func test_client_session_tick_on_the_canonical_scene() -> void:
 	var p95: float = _pct(tick_us, 0.95)
 	print("PERF_REPORT name=test_client_session_perf.tick p50_us=%.0f p95_us=%.0f records_per_tick=%.1f poses_p50_us=%.0f alive=%d" % [
 			p50, p95, float(records) / float(TICKS), _pct(pose_us, 0.5), alive_last])
-	assert_bool(PerfGate.check("test_client_session_perf.tick_p50", p50, 1000.0, CITE)).is_true()
+	assert_bool(PerfGate.check("test_client_session_perf.tick_p95", p95, 1000.0, CITE)).is_true()   # rows are p95 (R0 B.22 A-115)
 	# Presentation's row, not this task's: reported only (the dev box measures 3.4 ms p50 for all 940, over the 2.4 ms
 	# entity-sync row; EntityViewPool.sync / TA-52 re-measures with its real read set).
 	print("PERF_REPORT name=test_client_session_perf.read_poses_940_p50 us=%.0f row_us=2400 cite=%s" % [_pct(pose_us, 0.5), CITE_POSES])
