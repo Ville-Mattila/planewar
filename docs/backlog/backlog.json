@@ -2437,9 +2437,11 @@
       "05 s6.3-6.6",
       " 05 AI-14"
     ],
-    "status": "todo",
+    "status": "done",
     "acceptance_append": "; every brain writes AiTag.Tag values only through set_ai_tag (R0 B.17 A-94: FLEE 16, SEARCH 17 for the Scout; a new word is appended at the end of the sim_ai/MODULE.md AiTag bullet in the same PR, never inserted); PULL_UP in every brain exits by the A-92 rule (TTI >= safety_clear_tti_s and pull_up_min_hold_s held and climb_need_mps <= 0); which of the guidance / intercept / attack_run blocks ap_lancer / ap_bomber / ap_scout require is stated in the PR as a content note for AI-19 (A-93)",
-    "note": "A-94 reserves 16-33 so the Lancer / Bomber / Scout brains need no new ordinals unless a word is missing; AttackRun's Deck ingress and attack_run block are AI-13's (A-93)."
+    "note": "A-94 reserves 16-33 so the Lancer / Bomber / Scout brains need no new ordinals unless a word is missing; AttackRun's Deck ingress and attack_run block are AI-13's (A-93). Lancer/Bomber/Scout extend DartBrain hooks; AiState FORMAT 6. Dart changes: re-plan after release, R1 band via Perception, no fighting under HOLD, no-pad retry reads no_pad_retry_s (5 s). Hosted perf for A-62 (report-only): Bomber think 103 us vs 50, Bomber/Scout acts 13.6/14.7 vs 12, Lancer ENGAGE act 43.5 us. Core radius test workaround until BUG-1. Not done: threat-map IP choice (needs attack_run key, AI-19/Architect); SC-21 docking re-run after GD-15.",
+    "pr": 109,
+    "merged": "2026-10-23"
   },
   {
     "id": "AI-15",
