@@ -18,7 +18,7 @@ func test_contract_holds_for_every_registered_view() -> void:
 		var view: SimView = f.make(scene)
 		assert_object(view).override_failure_message("%s: factory returned no view" % f.label()).is_not_null()
 		var c: SimViewContract = SimViewContract.new()
-		c.run(view, scene)
+		c.run(view, scene, f)
 		var failed: PackedStringArray = PackedStringArray()
 		for n: String in c.failed:
 			if not f.exempt().has(n):
@@ -100,6 +100,36 @@ func test_read_poses_equals_pos_and_basis_element_wise_on_every_view() -> void:
 			assert_float(rot[i].w).is_equal_approx(q.w, 1e-6)
 
 
+## A-113 / 01 s9.4: the scene's control state is a legal B.3 value (ControlMachine.State: 0 AUTO, 1 ORDERED, 2 POSSESSED).
+func test_scene_control_state_is_possessed() -> void:
+	assert_int(SimViewScene.CONTROL).is_equal(2)
+	assert_int(SimViewScene.CONTROL).is_equal(ControlMachine.State.POSSESSED)
+
+
+## A-113: the LocalSimView factory keeps the contract EPS (1e-4) for every accessor; the base factory is the default.
+func test_local_factory_keeps_contract_eps_for_every_accessor() -> void:
+	assert_float(SimViewContract.EPS).is_equal(0.0001)
+	var local: SimViewFactory = LocalSimViewFactory.new()
+	var base: SimViewFactory = SimViewFactory.new()
+	for n: String in _accessors():
+		assert_float(local.tolerance(StringName(n))).override_failure_message("LocalSimViewFactory.tolerance(%s)" % n).is_equal(SimViewContract.EPS)
+		assert_float(base.tolerance(StringName(n))).override_failure_message("SimViewFactory.tolerance(%s)" % n).is_equal(SimViewContract.EPS)
+
+
+## A-113: a replicated view compares u8-encoded fields within one wire quantum (1 / 255, 04 s3.3). With that tolerance
+## the clean view still passes the four fields, and every SimViewMutant (delta +0.25 on floats) still fails its accessor.
+func test_mutants_on_u8_fields_still_fail_under_one_wire_quantum() -> void:
+	var f: WireQuantumFactory = WireQuantumFactory.new()
+	for n: String in ["hp01", "flip_cooldown01", "supply01", "shield01"]:
+		var scene: SimViewScene = SimViewScene.build()
+		var clean: SimViewContract = SimViewContract.new()
+		clean.run(scene.world.view(), scene, f)
+		assert_bool(clean.failed.has(n)).override_failure_message("%s fails on the unbroken view under 1/255" % n).is_false()
+		var c: SimViewContract = SimViewContract.new()
+		c.run(SimViewMutant.new(scene.world.view(), StringName(n)), scene, f)
+		assert_bool(c.failed.has(n)).override_failure_message("a view broken in %s passed under 1/255" % n).is_true()
+
+
 ## Every public method of SimView (a method is an accessor: SimView holds no other API).
 static func _accessors() -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
@@ -115,3 +145,11 @@ static func _param_rows() -> Array:
 	for n: String in _accessors():
 		rows.append([n])
 	return rows
+
+
+## Test-local stand-in for a replicated factory (A-113): one wire quantum (1 / 255) on the four u8 fields, EPS elsewhere.
+class WireQuantumFactory extends SimViewFactory:
+	const QUANTUM_FIELDS: PackedStringArray = ["hp01", "flip_cooldown01", "supply01", "shield01"]
+
+	func tolerance(accessor: StringName) -> float:
+		return 1.0 / 255.0 if QUANTUM_FIELDS.has(String(accessor)) else SimViewContract.EPS

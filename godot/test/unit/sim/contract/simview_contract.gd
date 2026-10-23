@@ -13,11 +13,14 @@ var covered: PackedStringArray = PackedStringArray()
 var _v: SimView
 var _s: SimViewScene
 var _st: EntityStore
+var _factory: SimViewFactory   # supplies the float tolerance per accessor (A-113); the base class keeps EPS
 
 
-func run(view: SimView, scene: SimViewScene) -> void:
+## `factory` is the implementation under test; null means the default tolerance (SimViewFactory: EPS for every accessor).
+func run(view: SimView, scene: SimViewScene, factory: SimViewFactory = null) -> void:
 	_v = view
 	_s = scene
+	_factory = factory if factory != null else SimViewFactory.new()
 	_st = scene.world.store()
 	failed = PackedStringArray()
 	covered = PackedStringArray()
@@ -38,8 +41,9 @@ func _t(accessor: StringName, ok: bool) -> void:
 		var _b: bool = failed.push_back(n)
 
 
-static func _near(a: float, b: float) -> bool:
-	return absf(a - b) <= EPS
+## Float comparison within the factory's tolerance for `accessor` (04 s5.6; a replicated view may be one wire quantum wide).
+func _near(a: float, b: float, accessor: StringName) -> bool:
+	return absf(a - b) <= _factory.tolerance(accessor)
 
 
 static func _sorted(ids: PackedInt32Array) -> Array:
@@ -73,17 +77,17 @@ func _identity() -> void:
 	_t(&"team", _v.team(s.a) == 0 and _v.team(s.b) == 1 and _v.team(s.wreck) == -1 and _v.team(s.dead) == -1)
 	_t(&"flags", (_v.flags(s.a) & EntityStore.F_POSSESSABLE) != 0 and (_v.flags(s.a) & EntityStore.F_ALIVE) != 0
 			and (_v.flags(s.c) & EntityStore.F_DOCKED) != 0 and (_v.flags(s.a) & EntityStore.F_DOCKED) == 0 and _v.flags(s.dead) == 0)
-	_t(&"radius", _near(_v.radius(s.a), s.ship_def().bounding_radius) and _near(_v.radius(s.wreck), 5.0) and _v.radius(s.dead) == 0.0)
+	_t(&"radius", _near(_v.radius(s.a), s.ship_def().bounding_radius, &"radius") and _near(_v.radius(s.wreck), 5.0, &"radius") and _v.radius(s.dead) == 0.0)
 	_t(&"def_kind", _v.def_kind(s.a) == EntityStore.K_SHIP and _v.def_kind(s.core) == EntityStore.K_STRUCTURE
 			and _v.def_kind(s.wreck) == EntityStore.K_WRECK and _v.def_kind(s.dead) == -1)
 	_t(&"tick", _v.tick() == s.world.tick() and _v.tick() > 0)
-	_t(&"terrain_height", _near(_v.terrain_height(Vector3.RIGHT), 0.0) and _near(_v.terrain_height(Vector3.UP), 0.0))   # flat datum map
+	_t(&"terrain_height", _near(_v.terrain_height(Vector3.RIGHT), 0.0, &"terrain_height") and _near(_v.terrain_height(Vector3.UP), 0.0, &"terrain_height"))   # flat datum map
 
 
 func _vitals() -> void:
 	var s: SimViewScene = _s
-	_t(&"hp01", _near(_v.hp01(s.a), SimViewScene.HP01) and _near(_v.hp01(s.b), 1.0) and _v.hp01(s.dead) == 0.0)
-	_t(&"fuel01", _near(_v.fuel01(s.a), SimViewScene.FUEL01) and _v.fuel01(s.core) == 0.0 and _v.fuel01(s.dead) == 0.0)
+	_t(&"hp01", _near(_v.hp01(s.a), SimViewScene.HP01, &"hp01") and _near(_v.hp01(s.b), 1.0, &"hp01") and _v.hp01(s.dead) == 0.0)
+	_t(&"fuel01", _near(_v.fuel01(s.a), SimViewScene.FUEL01, &"fuel01") and _v.fuel01(s.core) == 0.0 and _v.fuel01(s.dead) == 0.0)
 	_t(&"ammo", _v.ammo(s.a) == SimViewScene.AMMO and _v.ammo(s.dead) == 0)
 	_t(&"bombs", _v.bombs(s.a) == SimViewScene.BOMBS and _v.bombs(s.dead) == 0)
 	_t(&"rockets", _v.rockets(s.a) == SimViewScene.ROCKETS and _v.rockets(s.dead) == 0)
@@ -91,17 +95,17 @@ func _vitals() -> void:
 	_t(&"possessor", _v.possessor(s.a) == 0 and _v.possessor(s.b) == -1 and _v.possessor(s.dead) == -1)
 	_t(&"ai_tag", _v.ai_tag(s.a) == SimViewScene.AI_TAG and _v.ai_tag(s.b) == 0 and _v.ai_tag(s.dead) == 0)
 	_t(&"overlay", _v.overlay(s.a) == SimViewScene.OVERLAY and _v.overlay(s.b) == 0 and _v.overlay(s.dead) == 0)
-	_t(&"cargo", _near(_v.cargo(s.a), SimViewScene.CARGO) and _v.cargo(s.b) == 0.0 and _v.cargo(s.dead) == 0.0)
+	_t(&"cargo", _near(_v.cargo(s.a), SimViewScene.CARGO, &"cargo") and _v.cargo(s.b) == 0.0 and _v.cargo(s.dead) == 0.0)
 	_t(&"cargo_kind", _v.cargo_kind(s.a) == SimViewScene.CARGO_KIND and _v.cargo_kind(s.b) == 0 and _v.cargo_kind(s.dead) == 0)
 	_t(&"link", _v.link(s.c) == s.pad and _v.link(s.a) == 0 and _v.link(s.dead) == 0)
 	_t(&"boost_state", _v.boost_state(s.a) == 2 and _v.boost_state(s.b) == 0 and _v.boost_state(s.dead) == 0)   # 2 cooling, 0 ready
-	_t(&"flip_cooldown01", _near(_v.flip_cooldown01(s.a), SimViewScene.FLIP_CD01) and _v.flip_cooldown01(s.b) == 0.0)
+	_t(&"flip_cooldown01", _near(_v.flip_cooldown01(s.a), SimViewScene.FLIP_CD01, &"flip_cooldown01") and _v.flip_cooldown01(s.b) == 0.0)
 	_t(&"landing_grade_last", _v.landing_grade_last(s.a) == -1)
-	_t(&"supply01", _near(_v.supply01(s.tower), SimViewScene.TOWER_SUPPLY01) and _v.supply01(s.core) == 0.0
+	_t(&"supply01", _near(_v.supply01(s.tower), SimViewScene.TOWER_SUPPLY01, &"supply01") and _v.supply01(s.core) == 0.0
 			and _v.supply01(s.a) == 0.0 and _v.supply01(s.dead) == 0.0)
-	_t(&"wreck_ore", _near(_v.wreck_ore(s.wreck), SimViewScene.WRECK_ORE) and _v.wreck_ore(s.a) == 0.0 and _v.wreck_ore(s.core) == 0.0
+	_t(&"wreck_ore", _near(_v.wreck_ore(s.wreck), SimViewScene.WRECK_ORE, &"wreck_ore") and _v.wreck_ore(s.a) == 0.0 and _v.wreck_ore(s.core) == 0.0
 			and _v.wreck_ore(s.dead) == 0.0 and _v.wreck_ore(0) == 0.0)
-	_t(&"shield01", _near(_v.shield01(s.core), SimViewScene.SHIELD01) and _v.shield01(s.tower) == 0.0
+	_t(&"shield01", _near(_v.shield01(s.core), SimViewScene.SHIELD01, &"shield01") and _v.shield01(s.tower) == 0.0
 			and _v.shield01(s.a) == 0.0 and _v.shield01(s.dead) == 0.0)
 
 
@@ -181,7 +185,7 @@ func _team_and_match() -> void:
 	_t(&"player_score", _v.player_score(0) == Vector2i.ZERO)
 	var ts: TeamStateView = _v.team_state(0)
 	_t(&"team_state", ts != null and ts.team == 0 and ts.ore == eco.start_ore * 2 and ts.ice == eco.start_ice * 2
-			and ts.ore_cap == cap.x and ts.ice_cap == cap.y and _near(ts.power_supply, power.x) and _near(ts.power_demand, power.y)
+			and ts.ore_cap == cap.x and ts.ice_cap == cap.y and _near(ts.power_supply, power.x, &"team_state") and _near(ts.power_demand, power.y, &"team_state")
 			and _sorted(ts.members) == [0, 2] and ts.flags == TeamStateView.CORE_SHIELD_UP and _v.team_state(1).flags == 0
 			and _v.team_state(9) == null)
 	var p0: PlayerStateView = _v.player_state(0)
@@ -191,7 +195,7 @@ func _team_and_match() -> void:
 			and _v.player_state(2).kind == PlayerTable.KIND_BOT and _v.player_state(9) == null)
 	_t(&"match_arc", _v.match_arc() == MatchArc.Arc.OPEN)
 	_t(&"match_phase", _v.match_phase() == MatchRules.Phase.PLAYING)
-	_t(&"match_clock_s", _near(_v.match_clock_s(), float(s.world.tick()) / SimViewScene.TICK_HZ))
+	_t(&"match_clock_s", _near(_v.match_clock_s(), float(s.world.tick()) / SimViewScene.TICK_HZ, &"match_clock_s"))
 
 
 ## R0 B.11 A-56: read_poses equals pos / basis element-wise; dead ids write ZERO + identity; returns the alive count.
@@ -210,5 +214,5 @@ func _poses() -> void:
 		var q: Quaternion = _v.basis(ids[i]).get_rotation_quaternion()
 		var alive: bool = _v.alive(ids[i])
 		ok = ok and p[i].is_equal_approx(_v.pos(ids[i]) if alive else Vector3.ZERO)
-		ok = ok and _near(r[i].x, q.x) and _near(r[i].y, q.y) and _near(r[i].z, q.z) and _near(r[i].w, q.w)
+		ok = ok and _near(r[i].x, q.x, &"read_poses") and _near(r[i].y, q.y, &"read_poses") and _near(r[i].z, q.z, &"read_poses") and _near(r[i].w, q.w, &"read_poses")
 	_t(&"read_poses", ok)
