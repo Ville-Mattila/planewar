@@ -33,6 +33,12 @@ func tow_slots_of(hauler: int) -> int                                        # r
 func try_attach(hauler: int, wreck: int) -> Hook                             # slots; sets link and F_TETHERED on both
 func drop(hauler: int) -> int                                                # releases every wreck of the ship, returns the count
 # Reads: `SimView.wreck_ore(id)` = `hp` of a live K_WRECK, 0 otherwise, -1 on a view without data (GD-41, A-108; test_wreck_ore_view)
+
+class_name WreckPaths extends RefCounted                                     # GD-39 W11: owned by Salvage (`Salvage.paths`)
+var pathing: Pathing;  var sets: int;  var scans: int;  var reads: int      # pathing set by SimWorld; hard counters
+func _init(store: EntityStore)
+func rest(w: int) -> void;  func lift(w: int) -> void                        # a wreck slot comes to rest / was just hooked
+func defer(w: int) -> void;  func settle() -> void                           # a resting wreck will be freed / the pass freed its wrecks
 ```
 
 Constants come from `economy.json` (`wreck_fraction`, `wreck_lifetime_s`, `salvage_pod_max_ore`), `match_rules.json`
