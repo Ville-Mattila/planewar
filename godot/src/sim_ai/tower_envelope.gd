@@ -1,7 +1,7 @@
 class_name TowerEnvelope extends RefCounted
 ## One tower def's targeting envelope and priority (05 s6.8, R0 C2-15): built from the `tower` block of `towers.json`, so
 ## no envelope number lives in sim_ai. `eligible` is the think's gate: range, height relative to the tower within
-## [`h_rel_min`, `h_rel_max`], AGL >= `target_agl_min` when set, `target_kinds`. `base_weight` is the rank weight of
+## [`h_rel_min`, `h_rel_max`], AGL >= `target_agl_min` when set (> 0), `target_kinds`. `base_weight` is the rank weight of
 ## `target_priority` (`TargetParams.rank_weights`), 0 for a class the tower never lists.
 
 const KIND_SHIP: int = 1
@@ -60,7 +60,13 @@ func base_weight(def_id: int, loaded: bool) -> float:
 
 ## Height of the target relative to the tower (m) and AGL (m) are the caller's `|p| - |p_tower|` and `|p| - R - terrain`.
 func in_envelope(h_rel: float, agl: float) -> bool:
-	return h_rel >= h_rel_min and h_rel <= h_rel_max and agl >= agl_min
+	return h_rel >= h_rel_min and h_rel <= h_rel_max and (agl_min <= 0.0 or agl >= agl_min)
+
+
+## Whether the AGL floor is set, i.e. whether the caller must read the terrain at all (AI-17: a tower without a floor
+## never costs a `terrain_height` read per candidate).
+func has_floor() -> bool:
+	return agl_min > 0.0
 
 
 func kind_ok(def_id: int) -> bool:

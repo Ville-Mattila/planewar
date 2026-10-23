@@ -89,20 +89,29 @@ static func choose_ship(view: SimView, team: int, cand: PackedInt32Array, n: int
 ## Tower choice point: eligible = visible enemy inside the envelope and range (`TowerEnvelope.eligible`); `aim` is the
 ## turret's current unit direction, `slew_s` = angle to the target / turret rate. Bounded like `choose_ship`: the best
 ## `p.max_candidates` by priority weight are scored. `guarded` (0 = no GUARD order) doubles attackers of that structure
-## (the caller marks them with `ctx.mark_attacker`). `current` is excluded from its own crowd count.
+## (the caller marks them in `ctx.guard_until`; `ctx.attacked_until` is the separate x1.5 "attacking" mark, AI-17).
+## `current` is excluded from its own crowd count.
 static func choose_tower(view: SimView, team: int, tower_pos: Vector3, aim: Vector3, env: TowerEnvelope,
 		range_m: float, cand: PackedInt32Array, n: int, current: int, tick: int, ctx: TargetContext, p: TargetParams,
 		guarded: int, out: PackedInt32Array) -> int:
 	assert(out.size() >= p.max_candidates and ctx.scores.size() >= p.max_candidates, "choice-point scratch too small")
 	var k: int = 0
+	var r2: float = range_m * range_m
+	var r_tower: float = tower_pos.length()
+	var floor_m: float = Sphere.PLANET_RADIUS
+	var has_floor: bool = env.has_floor()
 	for i: int in n:
 		var id: int = cand[i]
 		if not view.alive(id) or view.team(id) == team or not view.visible_to(team, id):
 			continue
 		var pos: Vector3 = view.pos(id)
 		var def_id: int = view.def_id(id)
-		var base: float = env.base_weight(def_id, view.cargo(id) > 0.0)
-		if base <= 0.0 or not env.eligible(tower_pos, pos, def_id, range_m, view.terrain_height(pos)):
+		var base: float = env.base_weight(def_id, view.cargo(id) > 0.0 if def_id == env.hauler_def else false)
+		if base <= 0.0 or tower_pos.distance_squared_to(pos) > r2:
+			continue
+		var r_t: float = pos.length()   # the TowerEnvelope.eligible test, inlined: this loop runs per candidate per think
+		var agl: float = r_t - floor_m - view.terrain_height(pos) if has_floor else 0.0
+		if not env.kind_ok(def_id) or not env.in_envelope(r_t - r_tower, agl):
 			continue
 		k = _keep_best(out, ctx.scores, k, p.max_candidates, id, base)
 	for j: int in k:
@@ -110,8 +119,8 @@ static func choose_tower(view: SimView, team: int, tower_pos: Vector3, aim: Vect
 		var pos: Vector3 = view.pos(id)
 		var slew: float = aim.angle_to((pos - tower_pos).normalized()) / env.turn_rad_s if env.turn_rad_s > 0.0 else 0.0
 		var attacking: bool = ctx.attacked_recently(id, tick)
-		ctx.scores[j] = score_tower(env.base_weight(view.def_id(id), view.cargo(id) > 0.0), attacking, view.hp01(id),
-			_others(ctx, id, current), guarded != 0 and attacking, slew, p)
+		ctx.scores[j] = score_tower(ctx.scores[j], attacking, view.hp01(id), _others(ctx, id, current),
+			guarded != 0 and ctx.guard_attacked(id, tick), slew, p)   # scores[j] still holds the first pass's base weight
 	return pick(out, ctx.scores, k, current, p.tower_switch_margin)
 
 

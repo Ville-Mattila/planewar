@@ -169,6 +169,9 @@ func on_event(ev: SimEvent) -> void:
 			var _r: bool = register(ev.a, c)
 	elif ev.kind == SimEvent.Kind.HIT:
 		var _w: bool = wake(ev.a, ev.tick)
+		var at: int = EntityId.slot(ev.b)   # AI-17: the attacker's last hit (tower scoring), registered attackers only
+		if at > 0 and at < state.capacity and state.cls[at] != AiState.NO_CLASS and state.eid[at] == ev.b:
+			state.hits.record(at, ev.tick, ev.a, ev.team, ev.pos)
 	elif ev.kind == SimEvent.Kind.POSSESSED:
 		var s: int = EntityId.slot(ev.a)
 		if s > 0 and s < state.capacity and state.cls[s] != AiState.NO_CLASS and state.eid[s] == ev.a:

@@ -6,6 +6,7 @@ class_name TargetContext extends RefCounted
 const MAX_TOWERS: int = 64
 
 var attacked_until: PackedInt32Array = PackedInt32Array()   ## tick until which the slot counts as "attacked a friendly"
+var guard_until: PackedInt32Array = PackedInt32Array()      ## AI-17: tick until which the slot counts as an attacker of the GUARDed structure
 var targeted_by: PackedByteArray = PackedByteArray()        ## friendly units currently targeting the slot (saturates 255)
 var tower_count: int = 0
 var tower_pos: PackedVector3Array = PackedVector3Array()
@@ -15,7 +16,7 @@ var scores: PackedFloat32Array = PackedFloat32Array()       ## scratch, aligned 
 
 
 func _init(slots: int = EntityStore.SLOT_COUNT) -> void:
-	var _r: Array[int] = [attacked_until.resize(slots), targeted_by.resize(slots), tower_pos.resize(MAX_TOWERS),
+	var _r: Array[int] = [attacked_until.resize(slots), guard_until.resize(slots), targeted_by.resize(slots), tower_pos.resize(MAX_TOWERS),
 		tower_range.resize(MAX_TOWERS), scores.resize(slots)]
 	var _e: int = tower_env.resize(MAX_TOWERS)
 
@@ -42,6 +43,10 @@ func mark_attacker(id: int, tick: int, window_ticks: int) -> void:
 
 func attacked_recently(id: int, tick: int) -> bool:
 	return attacked_until[EntityId.slot(id)] > tick
+
+
+func guard_attacked(id: int, tick: int) -> bool:
+	return guard_until[EntityId.slot(id)] > tick
 
 
 func add_targeter(id: int) -> void:

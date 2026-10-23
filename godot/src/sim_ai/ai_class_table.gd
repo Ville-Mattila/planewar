@@ -1,24 +1,39 @@
 class_name AiClassTable extends RefCounted
 ## def id -> AI class batch (05 s4.3, R0 B.12 A-71): what `AiDriver.on_event` uses to register a spawned unit. A class is
 ## the unit def itself: ships in `ships.json` order, then ground units in `ground_units.json` order (7 shipped, at most
-## `AiDriver.MAX_CLASSES`). Structures (towers fire inside the sim) and anything else are `NONE`. Built once from the
+## `AiDriver.MAX_CLASSES`), then ONE class for every tower def (AI-17: the tower brain drives the turret slew and the
+## trigger; the sim does the firing). Other structures and anything else are `NONE`. Built once from the
 ## `ContentSet`, read-only afterwards; one byte read per SPAWN.
 
 const NONE: int = 255
 
 
-## One byte per def id below `DefRanges.STRUCTURE_BASE` (ships, ground units); defs beyond `AiDriver.MAX_CLASSES`
+## One byte per def id up to the last tower def (ships, ground units, towers); defs beyond `AiDriver.MAX_CLASSES`
 ## stay `NONE`.
 static func from_content(c: ContentSet) -> PackedByteArray:
 	var t: PackedByteArray = PackedByteArray()
-	var _r: int = t.resize(DefRanges.STRUCTURE_BASE)
+	var _r: int = t.resize(DefRanges.STRUCTURE_BASE + c.structures.size())
 	t.fill(NONE)
 	var cls: int = 0
 	for sd: ShipDef in c.ships:
 		cls = _put(t, c, sd.id, cls)
 	for gd: GroundUnitDef in c.ground_units:
 		cls = _put(t, c, gd.id, cls)
+	if cls < AiDriver.MAX_CLASSES:
+		for st: StructureDef in c.structures:
+			var d: int = c.entity_index.get(st.id, -1)
+			if st.is_tower() and d >= 0 and d < t.size():
+				t[d] = cls   # one shared class: `cls` is not advanced
 	return t
+
+
+## AI-17: the class every tower def shares (`NONE` when the content has no tower or the classes are full).
+static func tower_class(c: ContentSet) -> int:
+	for st: StructureDef in c.structures:
+		if st.is_tower():
+			var d: int = c.entity_index.get(st.id, -1)
+			return class_of(from_content(c), d)
+	return NONE
 
 
 ## Class of `def_id` in `table` (`NONE` when out of range or not AI-driven).
