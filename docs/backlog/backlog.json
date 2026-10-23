@@ -7566,8 +7566,10 @@
       "03 s6.1",
       "03 s3.6"
     ],
-    "status": "todo",
-    "note": "Open Architect question from review: which task owns blocking path cells under structure footprints (sim/pathing MODULE.md lines 138/155 say TA-19, but nothing calls set_weight for structures); the wreck restore must check structure occupancy once it lands."
+    "status": "done",
+    "note": "Open Architect question from review: which task owns blocking path cells under structure footprints (sim/pathing MODULE.md lines 138/155 say TA-19, but nothing calls set_weight for structures); the wreck restore must check structure occupancy once it lands. WreckPaths; Pathing.baked_weight reads the in-memory _bake (not saved, FORMAT 12). Core-death tick 557 us gated at the 0.8 ms economy row. Soak slope on the final run +1.749 %/min (limit 2.0) - watch.",
+    "pr": 112,
+    "merged": "2026-10-23"
   },
   {
     "id": "GD-40",
