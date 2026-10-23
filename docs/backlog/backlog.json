@@ -895,7 +895,7 @@
     "acceptance_append": "; read_poses equals pos/basis element-wise on both views (R0 B.11 A-56)",
     "pr": 66,
     "merged": "2026-10-20",
-    "note": "Clauses for unlanded systems (GD-15 service/pad queue, economy field_remaining/supply01/auto_replenish_target, scoring, path_grid_version) pin defaults and must be tightened as each lands. Visibility asserted for team 0 only. Every new SimView method needs a clause + mutant (coverage test enforces)."
+    "note": "Clauses for unlanded systems (GD-15 service/pad queue, economy field_remaining/supply01/auto_replenish_target, scoring, path_grid_version) pin defaults and must be tightened as each lands. Visibility asserted for team 0 only. Every new SimView method needs a clause + mutant (coverage test enforces). TEST-5 (R0 B.22 A-113) corrects CONTROL 5 -> 2 and adds SimViewFactory.tolerance; clauses unchanged."
   },
   {
     "id": "TA-19",
@@ -1289,7 +1289,7 @@
     "status": "review",
     "merged": "2026-10-14",
     "pr": "public#32",
-    "note": "code done; perf gate open: pinned runner TA-42 blocked on HUM-04; dev-box row 12 ~14 ms vs 4.0 (A-62 measure-first); bandwidth 29.9 KB/s link at 940 entities; architect: 03 s4.2 note, INTEREST_HINT enum into Protocol?"
+    "note": "code done; perf gate open: pinned runner TA-42 blocked on HUM-04; dev-box row 12 ~14 ms vs 4.0 (A-62 measure-first); bandwidth 29.9 KB/s link at 940 entities; architect: 03 s4.2 note, INTEREST_HINT enum into Protocol? R0 B.22 A-115 L1: stagger tier C by roster index ((tick + k + index) % 15) is the named lever if the ClientSession.tick row is over 1.0 ms p95 on the pinned runner; server-side only, no wire change."
   },
   {
     "id": "NET-25",
@@ -2934,7 +2934,8 @@
       "TA-18",
       "TEST-02",
       "NET-48",
-      "NET-56"
+      "NET-56",
+      "TEST-5"
     ],
     "milestone": "M3",
     "acceptance": "Contract test green on NetSimView; extrapolation stops at 3 ticks; clock converges within 2 s under TARGET; ClientSession.tick <= 1.0 ms PC",
@@ -2945,7 +2946,8 @@
       " 04 NET-17"
     ],
     "status": "todo",
-    "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56); R0 B.19 A-103 / 04 s5.6: NetSimView presents a known-blip entry at BaselineFrame.shown_levels (stored bucket, no gravity even when DYING) and never extrapolates it; a contract test shares the fixture of test_dying_blip_rests_300_ticks_at_blip_pos; NetSimView carries GD-38: shield01 (inherit -1.0 until replicated, listed in the TEST-02 factory exempt()) and TeamStateView.CORE_SHIELD_UP via map flag 0x85, with a codec item; NetSimView carries GD-41 wreck_ore (inherit -1.0 until replicated, listed in the TEST-02 factory exempt() with a 04 s5.6 cite, plus a net/MODULE.md open item)"
+    "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56); R0 B.19 A-103 / 04 s5.6: NetSimView presents a known-blip entry at BaselineFrame.shown_levels (stored bucket, no gravity even when DYING) and never extrapolates it; a contract test shares the fixture of test_dying_blip_rests_300_ticks_at_blip_pos; NetSimView carries GD-38: shield01 (inherit -1.0 until replicated, listed in the TEST-02 factory exempt()) and TeamStateView.CORE_SHIELD_UP via map flag 0x85, with a codec item; NetSimView carries GD-41 wreck_ore (inherit -1.0 until replicated, listed in the TEST-02 factory exempt() with a 04 s5.6 cite, plus a net/MODULE.md open item); R0 B.22 A-111: the factory exempts team_state / player_state / order_head / pending_order with the reason NET-39 (not BLOCKED) and net/client/MODULE.md closes CQ-2; A-112: the seven CQ-1 exempts cite NET-58; A-113: after TEST-5 merges the factory drops control_state and flip_cooldown01 from exempt() and overrides tolerance() with the 04 s3.3 quantum (1.0 / 255) for u8 fields; A-114: radius of a split wreck returns the def radius with unknown set (no exemption reason beyond 04 s5.6); A-115: the perf note states p50 and p95 and the PerfGate stays report-only off the pinned runner",
+    "note": "Contract ruling R0-amendments-16 (A-111 deps.json named types, A-112 projectile roster block = NET-58, A-113 scene / tolerance = TEST-5, A-114 split-wreck radius default + unknown, A-115 rows are p95, no re-pricing). PR #118 rebases on TEST-5 and this ruling."
   },
   {
     "id": "UX-24",
@@ -4169,7 +4171,7 @@
       " 04 NET-18"
     ],
     "status": "todo",
-    "acceptance_append": "; local input reuse during a stall applies the A-44 button mask (BOOST/BRAKE held, FLIP/DOCK/RELEASE/FIRE cleared)"
+    "acceptance_append": "; local input reuse during a stall applies the A-44 button mask (BOOST/BRAKE held, FLIP/DOCK/RELEASE/FIRE cleared); R0 B.22 A-115: the perf note measures the full 03 s10.2 row (decode + NetSimView + prediction) on the canonical scene and states p50 / p95 on the dev box; report-only off the pinned runner (A-97); if the pinned runner later shows > 1.0 ms p95 the first lever is the A-115 L1 tier-C stagger in Interest, filed then"
   },
   {
     "id": "NET-19",
@@ -4516,7 +4518,7 @@
       " 04 NET-39"
     ],
     "status": "todo",
-    "acceptance_append": "; the replicated ai_tag u8 is an AiTag.Tag ordinal (R0 B.17 A-94); net stays opaque to it (no decode, no enum); the contract test round-trips the values 0 and 33"
+    "acceptance_append": "; the replicated ai_tag u8 is an AiTag.Tag ordinal (R0 B.17 A-94); net stays opaque to it (no decode, no enum); the contract test round-trips the values 0 and 33; R0 B.22 A-111: NetSimView overrides team_state (TEAM_STATE fields + members from TEAM_DETAIL players; other teams unknown with the default view), player_state (TEAM_DETAIL players + PLAYER_STATUS), order_head and pending_order (TEAM_DETAIL orders into a reused OrderSpec per slot, S3 no allocation on read) now that net may name TeamStateView, PlayerStateView and OrderSpec; the TEST-02 factory drops those four from exempt()"
   },
   {
     "id": "NET-40",
@@ -7705,5 +7707,43 @@
     "pr": 119,
     "merged": "2026-10-23",
     "note": "Workaround removed; SC-19/20/21 pass with the real 52.07 m Core radius. Leftover: godot/src/sim_ai/brains/MODULE.md:168 still mentions the BUG-1 workaround (fix in the next sim_ai PR)."
+  },
+  {
+    "id": "NET-58",
+    "title": "net: roster projectile block (index = 1,536 + slot - PROJECTILE_SLOT_MIN, Roster.CAPACITY 3,584) so rockets, bombs, siege shells and canisters are replicated entities with ENTITY_META, interest tiering and NetSimView resolution (R0 B.22 A-112)",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 1.0,
+    "depends_on": [
+      "NET-17"
+    ],
+    "milestone": "M3",
+    "acceptance": "Roster.CAPACITY 3,584 with Roster.index_of_slot / slot_of_index mapping EntityStore slots 0-1,535 to themselves and ProjectileStore slots 4,096-6,143 to 1,536-3,583; every array sized from CAPACITY (BaselineFrame, BaselineStore, byte cache, Interest, InterestClient with _KEY_SHIFT 12) follows; RosterCodec accepts projectile slots in ENTITY_META / KEYFRAME / ROSTER_REMOVE and rejects 1,536-4,095 and >= 6,144 as malformed; SnapshotCodec.prepare_tick quantises live ROCKET / BOMB / SIEGE_SHELL / CANISTER projectiles (never SLUG / FLAK / RAIL) with def_id = ProjectileDef id and owner / team of the shooter; Interest puts a projectile entity in V when its owner is on the client's team or its shooter or target is in V, tiers it by position, emits META before its first record and ROSTER_REMOVE on death with no ghost; bombs and siege shells dead-reckon with gravity, rockets linearly (existing gravity_def path); NetSimView.alive / pos / vel / basis / def_id / owner / team / radius / def_kind / read_poses / ids_in_cell / ids_near / projectiles_near resolve projectile ids through the block; test_net_sim_view.gd asserts the TEST-02 rocket clauses (alive, ids_in_cell, projectiles_near, read_poses) on the replicated view and the factory keeps only the wreck-visibility exemptions for them; canonical scene bytes: ENTITY_META + ROSTER_REMOVE for projectiles <= 0.3 KB/s, snapshot bytes for a projectile-free scene unchanged; perf note: prepare_tick and ClientSession.tick deltas on the canonical scene; net/MODULE.md Roster line and 04 s3.1 cite A-112",
+    "docs": [
+      "R0-amendments-16 A-112",
+      "04 s3.1",
+      "04 s3.6",
+      "04 s4.1",
+      "04 s3.7"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TEST-5",
+    "title": "test: SimView contract scene control_state 5 -> 2 (POSSESSED, R0 B.3) and SimViewFactory.tolerance(accessor) so a replicated view is compared within one wire quantum (R0 B.22 A-113)",
+    "lane": "test",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "TEST-02"
+    ],
+    "milestone": "M3",
+    "acceptance": "SimViewScene.CONTROL == 2 and every clause body unchanged; SimViewFactory.tolerance(accessor: StringName) -> float returns SimViewContract.EPS by default and SimViewContract._near uses the factory's value for the accessor under test; LocalSimViewFactory keeps 1e-4 for every accessor; a test asserts that with tolerances of 1.0 / 255 on hp01, flip_cooldown01, supply01, shield01 every SimViewMutant still fails its accessor (mutant delta 0.25 > quantum); test_simview_contract.gd green on LocalSimView; no src change",
+    "docs": [
+      "R0-amendments-16 A-113",
+      "04 s3.3",
+      "R0 B.3"
+    ],
+    "status": "todo"
   }
 ]
