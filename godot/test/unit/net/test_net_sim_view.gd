@@ -239,8 +239,31 @@ func test_replicable_part_of_exempt_clauses() -> void:
 	assert_int(v.team_flags(0) & TeamStateView.CORE_SHIELD_UP).is_equal(TeamStateView.CORE_SHIELD_UP)   # GD-38 via 0x85
 	assert_int(v.team_flags(0)).is_equal(s.world.view().team_state(0).flags)
 	assert_int(v.team_flags(1)).is_equal(0)
-	assert_bool(v.unknown(s.a)).is_false()                                    # own possessed unit: everything received
-	assert_bool(v.unknown(s.b)).is_true()
+	# unknown: per field (NetUnknown); unknown(id) = any field, true for every entity while some accessor has no wire
+	assert_bool(v.unknown(s.a)).is_true()
+	for f: StringName in [&"fuel01", &"ammo", &"boost_state", &"basis", &"vel", &"ai_tag", &"radius", &"hp01", &"possessor"]:
+		assert_bool(v.field_unknown(s.a, f)).override_failure_message("a %s" % f).is_false()   # own possessed unit
+	for f: StringName in [&"overlay", &"cargo", &"cargo_kind", &"link", &"order_issuer", &"supply01", &"shield01", &"wreck_ore"]:
+		assert_bool(v.field_unknown(s.a, f)).override_failure_message("a %s" % f).is_true()    # exempt as not received
+	for f: StringName in [&"fuel01", &"flip_cooldown01", &"incoming_rockets", &"ai_tag"]:
+		assert_bool(v.field_unknown(s.b, f)).override_failure_message("b %s" % f).is_true()    # other team, not possessed
+	assert_bool(v.field_unknown(s.b, &"pos")).is_false()
+	assert_bool(v.field_unknown(s.dead, &"pos")).is_true()
+	assert_int(v.def_kind(s.dead)).is_equal(-1)
+	assert_float(v.radius(s.dead)).is_equal(0.0)
+	# ids_in_cell: the local cell list minus what team 0 does not receive (the rocket, CQ-1)
+	s.world.spatial.rebuild()                                                 # the factory snapped positions after the scene's hash
+	var cell: int = Spatial.cell_of(v.pos(s.a))
+	var want: Array = []
+	for id: int in s.world.view().ids_in_cell(cell):
+		if v.alive(id):
+			want.append(id)
+	var got: Array = Array(v.ids_in_cell(cell))
+	want.sort()
+	got.sort()
+	assert_array(got).is_equal(want)
+	assert_bool(got.has(s.a) and not got.has(s.b) and not got.has(s.rocket)).is_true()
+	assert_bool(v.ids_in_cell(Spatial.cell_of(v.pos(s.b))).has(s.b)).is_true()
 	var ids: PackedInt32Array = PackedInt32Array([s.a, s.dead, s.rocket, s.b, s.wreck, 0, s.c])
 	var p: PackedVector3Array = PackedVector3Array()
 	var r: PackedVector4Array = PackedVector4Array()
@@ -251,3 +274,61 @@ func test_replicable_part_of_exempt_clauses() -> void:
 		var q: Quaternion = v.basis(ids[k]).get_rotation_quaternion()
 		assert_vector(p[k]).is_equal(v.pos(ids[k]))
 		assert_float(Vector4(q.x, q.y, q.z, q.w).distance_to(r[k])).is_less(1e-6)
+
+
+## The wreck path the TEST-02 scene cannot reach (its wreck is invisible to team 0): the same scene with the wreck made
+## visible to team 0, so the client receives it.
+func test_a_received_wreck() -> void:
+	var s: SimViewScene = SimViewScene.build()
+	var st: EntityStore = s.world.store()
+	var sw: int = EntityId.slot(s.wreck)
+	st.visible_mask[sw] |= 1
+	var v: NetSimView = NetSimViewFactory.new().make(s) as NetSimView
+	assert_bool(v.alive(s.wreck)).is_true()
+	assert_int(v.def_kind(s.wreck)).is_equal(EntityStore.K_WRECK)
+	assert_int(v.def_kind(s.wreck)).is_equal(s.world.view().def_kind(s.wreck))
+	assert_array(Array(v.wrecks())).is_equal([s.wreck])
+	assert_bool(Array(v.ships()).has(s.wreck)).is_false()
+	assert_int(v.def_id(s.wreck)).is_equal(st.def_id[sw])                     # the hull's def (a Dart), kind by slot
+	assert_int(v.flags(s.wreck)).is_equal(NetSimView.F_ALIVE)                 # a Dart def is possessable, its wreck is not
+	assert_int(st.flags[sw] & EntityStore.F_POSSESSABLE).is_equal(0)
+	assert_vector(v.pos(s.wreck)).is_equal(st.pos[sw])
+	assert_int(v.owner(s.wreck)).is_equal(-1)
+	assert_int(v.team(s.wreck)).is_equal(-1)
+	assert_bool(v.visible_to(0, s.wreck)).is_true()
+	# CQ-4: a split wreck's radius is hull / n (sim/salvage/salvage.gd); n is not on the wire: default + unknown
+	assert_float(v.radius(s.wreck)).is_equal(0.0)
+	assert_bool(v.field_unknown(s.wreck, &"radius")).is_true()
+	assert_float(st.radius[sw]).is_equal(5.0)
+	var ids: PackedInt32Array = PackedInt32Array([s.a, s.wreck, s.dead, s.b])
+	var p: PackedVector3Array = PackedVector3Array()
+	var r: PackedVector4Array = PackedVector4Array()
+	var _x: int = p.resize(ids.size())
+	var _y: int = r.resize(ids.size())
+	assert_int(v.read_poses(ids, p, r)).is_equal(3)
+	assert_vector(p[1]).is_equal(st.pos[sw])
+	var q: Quaternion = v.basis(s.wreck).get_rotation_quaternion()
+	assert_float(Vector4(q.x, q.y, q.z, q.w).distance_to(r[1])).is_less(1e-6)
+	assert_bool(v.basis(s.wreck).is_equal_approx(s.world.view().basis(s.wreck))).is_true()
+
+
+func test_net_defs_kind_of_wreck_slots() -> void:
+	var nd: NetDefs = NetDefs.new(WorldTestKit.content())
+	var dart: int = WorldTestKit.def_id(&"dart")
+	assert_int(nd.kind_of(dart, 5)).is_equal(NetSimView.K_SHIP)
+	assert_int(nd.kind_of(dart, EntityId.WRECK_SLOT_MIN)).is_equal(NetSimView.K_WRECK)
+	assert_int(nd.kind_of(dart, EntityId.WRECK_SLOT_END - 1)).is_equal(NetSimView.K_WRECK)
+	assert_int(nd.kind_of(dart, EntityId.WRECK_SLOT_MIN - 1)).is_equal(NetSimView.K_SHIP)
+	assert_int(nd.kind_of(-1, 3)).is_equal(-1)
+
+
+func test_snap_world_reaches_a_fixed_point() -> void:
+	var s: SimViewScene = SimViewScene.build()
+	var rig: NetViewRig = NetViewRig.new(s.world, s.content)
+	assert_bool(rig.snap_world()).is_true()
+	var st: EntityStore = s.world.store()
+	var pos: PackedVector3Array = st.pos.duplicate()
+	var fwd: PackedVector3Array = st.fwd.duplicate()
+	var up: PackedVector3Array = st.up.duplicate()
+	assert_bool(rig.snap_world()).is_true()
+	assert_bool(st.pos == pos and st.fwd == fwd and st.up == up).is_true()   # a second snap moves nothing

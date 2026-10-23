@@ -11,7 +11,8 @@ class_name NetSimViewFactory extends SimViewFactory
 const _EXEMPT: PackedStringArray = [
 	# The scene's wreck is not visible to team 0 (visible_to(0, wreck) is false in the clause itself), so a team-0
 	# client never receives it (04 s4.1 interest = team vision; net/interest I1); the rocket is a projectile entity
-	# with no roster index (roster = sim slots 0-1,535, 04 s3.1 / R0 B.11 A-54; contract question CQ-1).
+	# with no roster index (roster = sim slots 0-1,535, 04 s3.1 / R0 B.11 A-54; contract question CQ-1). A received
+	# wreck is covered by test_net_sim_view.gd::test_a_received_wreck (its radius is not on the wire either: CQ-4).
 	"alive", "radius", "def_kind", "wrecks", "ids_in_cell", "projectiles_near", "read_poses",
 	# The scene writes control_state 5, outside R0 B.3 (0-2) and the 2-bit wire field (04 s3.3 flags bits 0-1; CQ-3).
 	"control_state",
@@ -36,7 +37,8 @@ func label() -> String:
 
 func make(scene: SimViewScene) -> SimView:
 	var rig: NetViewRig = NetViewRig.new(scene.world, scene.content)
-	rig.snap_world()
+	if not rig.snap_world():
+		return null                                # no fixed point on the wire lattice: the contract reports no view
 	var cs: ClientSession = rig.add_client(0, 0)
 	rig.pump(4)
 	rig.send_tick(scene.world.tick())

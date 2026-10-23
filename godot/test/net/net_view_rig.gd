@@ -183,26 +183,55 @@ func team_state_bytes(t: int) -> PackedByteArray:
 	return TeamStateCodec.encode(w)
 
 
-## Moves every live store entity onto the wire lattice: pos = dequantize(quantize(pos)) to a fixed point, vel and
-## orientation through the decoder's own conversions (NetPose), so the decoded value equals the store exactly.
-func snap_world() -> void:
+## Moves every live store entity onto the wire lattice: pos = dequantize(quantize(pos)) and the orientation round trip
+## repeated to a fixed point (smallest-three re-rounding near a largest-component tie moves once more), vel through the
+## decoder's own conversion (NetPose), so the decoded value equals the store exactly. Returns false (and the factory's
+## contract then fails loudly) when some entity did not reach a fixed point in SNAP_ROUNDS round trips.
+const SNAP_ROUNDS: int = 8
+
+
+func snap_world() -> bool:
 	var st: EntityStore = world.store()
+	var ok: bool = true
 	for list: PackedInt32Array in [st.structures, st.ships, st.wrecks]:
 		for s: int in list:
-			var p: Vector3 = st.pos[s]
-			for _k: int in 4:
-				p = Codec.dequantize_pos(Codec.quantize_pos(p))
-			st.pos[s] = p
-			var cell: int = Codec.pos_cell(Codec.quantize_pos(p))
-			st.vel[s] = NetPose.fine_to_world(DeadReckon.fine_from_bits(Codec.quantize_vel(st.vel[s], cell)), cell)
-			var f: Vector3 = st.fwd[s]
-			var u: Vector3 = st.up[s]
-			var q: Quaternion = Basis(f.cross(u), u, -f).get_rotation_quaternion()
-			for _k: int in 4:                     # near a largest-component tie a round trip moves once more
-				q = NetPose.canonical(Codec.dequantize_quat(Codec.quantize_quat(q)))
-			var b: Basis = Basis(q)
-			st.fwd[s] = -b.z
-			st.up[s] = b.y
+			ok = _snap(st, s) and ok
+	world.spatial.rebuild()                    # the local view's hash follows the snapped positions
+	return ok
+
+
+func _snap(st: EntityStore, s: int) -> bool:
+	var p: Vector3 = st.pos[s]
+	var pq: int = Codec.quantize_pos(p)
+	var k: int = 0
+	while k < SNAP_ROUNDS:
+		p = Codec.dequantize_pos(pq)
+		var again: int = Codec.quantize_pos(p)
+		k += 1
+		if again == pq:
+			break
+		pq = again
+	st.pos[s] = p
+	var cell: int = Codec.pos_cell(pq)
+	st.vel[s] = NetPose.fine_to_world(DeadReckon.fine_from_bits(Codec.quantize_vel(st.vel[s], cell)), cell)
+	var f: Vector3 = st.fwd[s]
+	var u: Vector3 = st.up[s]
+	var bits: int = Codec.quantize_quat(Basis(f.cross(u), u, -f).get_rotation_quaternion())
+	var q: Quaternion = Quaternion.IDENTITY
+	var j: int = 0
+	while j < SNAP_ROUNDS:
+		q = NetPose.canonical(Codec.dequantize_quat(bits))
+		var again_q: int = Codec.quantize_quat(Basis(q).get_rotation_quaternion())
+		j += 1
+		if again_q == bits:
+			break
+		bits = again_q
+	var b: Basis = Basis(q)
+	st.fwd[s] = -b.z
+	st.up[s] = b.y
+	var nf: Vector3 = st.fwd[s]
+	var nu: Vector3 = st.up[s]
+	return Codec.quantize_pos(st.pos[s]) == pq and Codec.quantize_quat(Basis(nf.cross(nu), nu, -nf).get_rotation_quaternion()) == bits
 
 
 func _on_server_packet(conn: int, channel: int, bytes: PackedByteArray) -> void:
