@@ -151,6 +151,9 @@ func _weapon(s: int, wi: int, which: int, held: bool) -> void:
 	if _lock[k] > 0.0:
 		target = _seek(s, k, held)
 		trigger = held and target != 0
+	if not held and lock_target[s] != 0 and _lock[k] <= 0.0 and _tower[_did[s]] != 0:
+		lock_target[s] = 0                                  # CB13a: a released trigger drops the window's target
+		lock_time[s] = 0.0
 	var slow: float = _defs.unsupplied_rate_mult if _tower[_did[s]] != 0 and unsupplied[s] != 0 else 1.0
 	if _tower[_did[s]] != 0 and _tm[s] < tower_power.size():
 		slow *= tower_power[_tm[s]]                       # 02 s8.4: x power ratio, offline (0) below tower_offline_ratio
@@ -162,9 +165,9 @@ func _weapon(s: int, wi: int, which: int, held: bool) -> void:
 	var iv: float = _iv[k]
 	var c: float = _due_in(_cd1[s] if which == 0 else _cd2[s])
 	var fired: bool = false
-	if trigger and iv > 0.0 and c < _half and _rounds(s, wi, which) >= _cost[k] and _room():
-		if _wk[wi] == ProjectileStore.FLAK:                # aim pick only for a salvo that can leave
-			target = _pick(s, k, _mask[_did[s]], -1.0)
+	if trigger and iv > 0.0 and c < _half and _rounds(s, wi, which) >= _cost[k] and _room() and _gate(s, k, true):
+		if _wk[wi] == ProjectileStore.FLAK:                # the gate's target is the fuse target (CB13a, CB14)
+			target = lock_target[s]
 		for _n: int in _salvo[k]:
 			if not _shoot(s, wi, k, which, target):
 				break
@@ -186,7 +189,7 @@ func _burst(s: int, wi: int, k: int, trigger: bool, slow: float) -> void:
 	var fired: bool = false
 	var opens: bool = c2 < _half
 	if trigger and shot_iv > 0.0 and c1 < _half:
-		if opens or window - c2 < (float(_bn[k]) - 0.5) * shot_iv:
+		if (opens or window - c2 < (float(_bn[k]) - 0.5) * shot_iv) and _gate(s, k, opens):
 			fired = _shoot(s, wi, k, 0, 0)
 	if fired:
 		c1 += shot_iv
@@ -201,6 +204,22 @@ func _burst(s: int, wi: int, k: int, trigger: bool, slow: float) -> void:
 # Cooldown left after this tick's dt; a weapon at rest (0) is due now with no carry (no banked shots).
 func _due_in(cd: float) -> float:
 	return cd - _dt if cd > 0.0 else 0.0
+
+
+# CB13a (R0 B.25 A-129): a tower's gun / flak / rail round spawns only while `lock_target[s]` holds a live hostile of its
+# `target_kinds` inside range and the envelope. `fresh` (a window opens: burst reopened, salvo or reload due) picks the
+# target with the envelope-aware scan; a shot inside a window re-checks the held one in O(1) and re-picks once if that
+# fails. Never a per-shot scan. Non-towers and lock weapons (the seeker is their gate) always pass.
+func _gate(s: int, k: int, fresh: bool) -> bool:
+	var d: int = _did[s]
+	if _tower[d] == 0 or _lock[k] > 0.0:
+		return true
+	var t: int = lock_target[s]
+	if fresh or t == 0 or not _lockable(s, t, _mask[d], _r2[k], _cone[k]):
+		t = _pick(s, k, _mask[d], _cone[k])
+		lock_target[s] = t
+		lock_time[s] = 0.0
+	return t != 0
 
 
 # One projectile of weapon `wi` from slot `s`: ammo check and draw, spread, spawn. False when out of ammo or the pool
