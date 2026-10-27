@@ -8,7 +8,9 @@ class_name InterestClient extends RefCounted
 ## STICKY_TICKS (inside the cap). Roster: an entity joins (`added`, send ENTITY_META first) when first tiered or
 ## when its generation changes; one that leaves V stays as a ghost and re-enters without a new ENTITY_META until
 ## GHOST_TICKS (30 s, checked on the client's C ticks) have passed, then `removed` (ROSTER_REMOVE OUT_OF_VISION);
-## gone from the frame = DEATH; visible but never tiered for GHOST_TICKS = LEFT_INTEREST. Allocation-free per entity.
+## gone from the frame = DEATH; visible but never tiered for GHOST_TICKS = LEFT_INTEREST. Projectile entities (roster
+## indices >= Roster.PROJECTILE_INDEX_MIN, R0 B.22 A-112) are swept every tick before selection with no ghost, and a
+## recycled projectile index is held back (ProjectileMembers). Allocation-free per entity.
 
 enum CameraTier { CHASE, TACTICAL, COMMANDER }      # INTEREST_HINT.camera_tier (04 s2.3)
 enum Tier { NONE, A, B, C }
@@ -22,7 +24,7 @@ const C_PERIOD: int = 15
 const STICKY_TICKS: int = 15
 const GHOST_TICKS: int = 900                        # 30 s at 30 Hz
 const CAPACITY: int = Roster.CAPACITY
-const _KEY_SHIFT: int = 11                          # slot bits of a sort key (CAPACITY <= 2048)
+const _KEY_SHIFT: int = 12                          # index bits of a sort key (CAPACITY 3,584 <= 4,096, A-112)
 const _KEY_MASK: int = (1 << _KEY_SHIFT) - 1
 const _KEY_SCALE: float = 1099511627776.0           # 2^40: squared unit chord (<= 4) to integer key bits
 
@@ -59,6 +61,8 @@ var _a_mark: PackedInt32Array = PackedInt32Array()
 var _b_mark: PackedInt32Array = PackedInt32Array()
 var _cand: PackedInt32Array = PackedInt32Array()
 var _members: PackedInt32Array = PackedInt32Array()
+var _proj: ProjectileMembers = ProjectileMembers.new()
+var _hold: PackedInt32Array = PackedInt32Array()     # by index: first tick a projectile index may be listed again
 var _keys: PackedInt64Array = PackedInt64Array()
 var _buf: PackedInt32Array = PackedInt32Array()
 var _n_members: int = 0
@@ -75,18 +79,11 @@ var _anchor_cell: int = NONE
 func _init(schedule_key: int = 0, team_id: int = 0) -> void:
 	key = schedule_key
 	team = team_id
-	var _r: int = _since.resize(CAPACITY)       # typed members, resized one by one (R0 C1-19)
-	_r = _last_vis.resize(CAPACITY)
-	_r = _last_tier.resize(CAPACITY)
-	_r = _rgen.resize(CAPACITY)
-	_r = _a_mark.resize(CAPACITY)
-	_r = _b_mark.resize(CAPACITY)
-	_r = _cand.resize(CAPACITY)
-	_r = _members.resize(CAPACITY)
-	_r = _buf.resize(CAPACITY)
-	var _a: int = _tier.resize(CAPACITY)
-	var _b: int = _in.resize(CAPACITY)
-	var _c: int = _keys.resize(CAPACITY + 2)
+	var n: int = CAPACITY                       # typed members, resized one by one (R0 C1-19)
+	var e: int = _since.resize(n) | _last_vis.resize(n) | _last_tier.resize(n) | _rgen.resize(n) | _a_mark.resize(n)
+	e |= _b_mark.resize(n) | _cand.resize(n) | _members.resize(n)
+	e |= _buf.resize(n) | _tier.resize(n) | _in.resize(n) | _keys.resize(n + 2) | _hold.resize(n)
+	assert(e == OK)
 	var half: float = A_RADIUS_M / (2.0 * Sphere.PLANET_RADIUS)
 	_chord2_a = 4.0 * sin(half) * sin(half)
 	reset()
@@ -100,6 +97,8 @@ func reset() -> void:
 	_b_mark.fill(-1)
 	_cand.fill(0)
 	_n_members = 0
+	_proj.reset()
+	_hold.fill(0)
 	_b_last = -1
 	_a_prev = PackedInt32Array()
 	_b_prev = PackedInt32Array()
@@ -115,7 +114,7 @@ func tier_of(s: int) -> int:
 
 
 func roster_count() -> int:
-	return _n_members
+	return _n_members + _proj.count
 
 
 ## The per-client half of Interest.assign (call that); `it` has run begin_tick for this tick.
@@ -124,6 +123,7 @@ func assign(it: Interest) -> void:
 	added = PackedInt32Array()
 	removed = PackedInt32Array()
 	removed_reason = PackedInt32Array()
+	_sweep_projectiles(it, t)
 	_set_anchor(it)
 	_select_a(it, t)
 	b_tick = posmod(t + key, maxi(b_period, 1)) == 0
@@ -210,7 +210,7 @@ func _scan(it: Interest, cell: int, d0: Vector3, n: int, limit: float, t: int, s
 	var a_t: int = t if skip_a else -2
 	for idx: int in range(it.cell_start[cell], it.cell_start[cell + 1]):
 		var s: int = ids[idx]
-		if _cand[s] == _cand_id or _a_mark[s] == a_t or (vt >= 0 and ((vm[s] >> vt) & 1) == 0):
+		if _cand[s] == _cand_id or _a_mark[s] == a_t or (vt >= 0 and ((vm[s] >> vt) & 1) == 0) or _hold[s] > t:
 			continue
 		var d2: float = (dirs[s] - d0).length_squared()
 		if d2 > limit:
@@ -223,7 +223,7 @@ func _scan(it: Interest, cell: int, d0: Vector3, n: int, limit: float, t: int, s
 
 ## Possessed / target: always A when present and visible (key 0 + slot sorts ahead of every distance).
 func _force(it: Interest, s: int, n: int, vt: int) -> int:
-	if not it.visible(s, vt) or _cand[s] == _cand_id:
+	if not it.visible(s, vt) or _cand[s] == _cand_id or _hold[s] > it.tick:
 		return n
 	_cand[s] = _cand_id
 	_keys[n] = s
@@ -255,7 +255,7 @@ func _sticky(it: Interest, t: int, tier: int, n: int, cap: int, prev: PackedInt3
 			break
 		if _cand[s] == _cand_id or _tier[s] != tier or t - _since[s] >= STICKY_TICKS or not it.visible(s, vt):
 			continue
-		if tier == Tier.B and _a_mark[s] == t:
+		if (tier == Tier.B and _a_mark[s] == t) or _hold[s] > t:
 			continue
 		_cand[s] = _cand_id
 		_buf[n] = s
@@ -288,7 +288,9 @@ func _admit(it: Interest, s: int) -> void:
 	var g: int = it.gen[s]
 	if _in[s] != 0 and _rgen[s] == g:
 		return
-	if _in[s] == 0:
+	if _in[s] == 0 and s >= Roster.PROJECTILE_INDEX_MIN:
+		_proj.add(s)
+	elif _in[s] == 0:
 		_members[_n_members] = s
 		_n_members += 1
 	_in[s] = 1
@@ -304,7 +306,7 @@ func _select_c(it: Interest, t: int) -> void:
 	var b_last: int = _b_last
 	for s: int in it.team_list(_vteam()):
 		_last_vis[s] = t
-		if _a_mark[s] == t or (_b_mark[s] == b_last and _tier[s] == Tier.B):
+		if _a_mark[s] == t or (_b_mark[s] == b_last and _tier[s] == Tier.B) or _hold[s] > t:
 			continue
 		_buf[n] = s
 		n += 1
@@ -361,3 +363,11 @@ func _sweep(it: Interest, t: int) -> void:
 		var _p: bool = removed.push_back(s)
 		var _q: bool = removed_reason.push_back(reason)
 	_n_members = m
+
+
+## Projectile members, every tick before selection (ProjectileMembers.sweep): removals leave the roster and the tiers.
+func _sweep_projectiles(it: Interest, t: int) -> void:
+	_proj.sweep(it, t, _vteam(), _rgen, _last_tier, _hold, c_set, removed, removed_reason)
+	for s: int in removed:
+		_in[s] = 0
+		_tier[s] = Tier.NONE

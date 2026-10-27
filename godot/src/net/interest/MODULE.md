@@ -13,16 +13,16 @@ A change to "Public API" or "Invariants" is a contract change: contract tests fi
 | May depend on | `core` (`Sphere`), `net` (`Codec`, `Roster`, `SnapshotCodec`, `SnapshotFrame`, `Protocol`) |
 | Must never touch | Nodes, `await`, `Thread`, `WorkerThreadPool` (web is single-threaded); `sim` internals (V comes through `SnapshotFrame.visible_mask`, filled by the NET-15 `SimView` adapter from `SimView.visible_to`) |
 | Autoloads used | None |
-| Status | implemented (NET-08, 2026-10-14) |
+| Status | implemented (NET-08, 2026-10-14); projectile entities (NET-58, R0 B.22 A-112) |
 
 ## Public API
 
 ```gdscript
 class_name Interest extends RefCounted                 # shared per-tick half; one per match
-const CAPACITY: int; const CELLS: int; const TEAM_MAX: int; const RING1_STRIDE: int; const RING2_STRIDE: int; const NO_CELL: int   # 1536 384 8; 8 24; -1
+const CAPACITY: int; const CELLS: int; const TEAM_MAX: int; const RING1_STRIDE: int; const RING2_STRIDE: int; const NO_CELL: int   # 3584 384 8; 8 24; -1
 var tick: int; var ring1: PackedInt32Array; var ring2: PackedInt32Array; var cell_dir: PackedVector3Array   # ring tables -1 padded
-var cell_start: PackedInt32Array; var cell_ids: PackedInt32Array; var all_ids: PackedInt32Array           # per tick: slots by cell; all ascending
-var stamp: PackedInt32Array; var cell: PackedInt32Array; var dir: PackedVector3Array; var vmask: PackedInt32Array; var gen: PackedInt32Array   # by slot
+var cell_start: PackedInt32Array; var cell_ids: PackedInt32Array; var all_ids: PackedInt32Array           # per tick: roster indices by cell; all ascending
+var stamp: PackedInt32Array; var cell: PackedInt32Array; var dir: PackedVector3Array; var vmask: PackedInt32Array; var gen: PackedInt32Array   # by roster index (vmask = codec c_vmask)
 func begin_tick(frame: SnapshotFrame, codec: SnapshotCodec) -> void   # once per tick after codec.prepare_tick(frame); null codec: Sphere.cell_of
 func present(s: int) -> bool;  func visible(s: int, team: int) -> bool   # team < 0 = spectator (everything present)
 func team_list(team: int) -> PackedInt32Array          # V ascending, once per team per tick; team < 0 = all_ids
@@ -32,7 +32,7 @@ class_name InterestClient extends RefCounted           # one per connected clien
 enum CameraTier { CHASE, TACTICAL, COMMANDER }         # INTEREST_HINT.camera_tier (04 s2.3), append-only
 enum Tier { NONE, A, B, C }
 const NONE: int; const A_RADIUS_M: float; const A_CAP: int; const B_CAP: int; const C_CAP: int   # -1; 600; 40 200 1000
-const B_PERIOD: int; const C_PERIOD: int; const STICKY_TICKS: int; const GHOST_TICKS: int; const CAPACITY: int   # 2 15 15 900; 1536
+const B_PERIOD: int; const C_PERIOD: int; const STICKY_TICKS: int; const GHOST_TICKS: int; const CAPACITY: int   # 2 15 15 900; 3584
 var key: int; var team: int; var spectator: bool; var possessed: int; var target: int; var follow: int   # inputs (slots, NONE = none)
 var camera_tier: int; var focus_cell: int              # INTEREST_HINT (focus NONE: the anchor's cell)
 var a_cap: int; var b_cap: int; var c_cap: int; var b_period: int; var c_period: int   # rate governor knobs (04 s4.2)
@@ -44,6 +44,16 @@ func _init(schedule_key: int = 0, team_id: int = 0) -> void
 func reset() -> void                                   # keyframe / reconnect: forget roster and tiers
 func in_roster(s: int) -> bool;  func tier_of(s: int) -> int;  func roster_count() -> int
 func assign(it: Interest) -> void                      # called by Interest.assign
+
+class_name ProjectileMembers extends RefCounted        # interest/projectile_members.gd: an InterestClient's projectile entities (A-112)
+const HOLD_TICKS: int; const NONE: int;  var count: int   # 3 (100 ms, NET-58, not in 04); -1
+func reset() -> void;  func add(s: int) -> void
+func sweep(it: Interest, t: int, vt: int, rgen: PackedInt32Array, last_tier: PackedInt32Array, hold: PackedInt32Array, c_set: PackedInt32Array, out_s: PackedInt32Array, out_reason: PackedInt32Array) -> void
+
+class_name VisibleSets extends RefCounted              # interest/visible_sets.gd: SnapshotCodec's per-team V lists of one tick (04 s4.1)
+const TEAM_MAX: int; const CAPACITY: int               # 8; Roster.CAPACITY
+func clear() -> void;  func add(s: int, mask: int) -> void;  func sorted(team: int) -> PackedInt32Array
+static func entity_mask(id: int, tick: int, ticks: PackedInt32Array, gens: PackedInt32Array, vmask: PackedInt32Array) -> int   # a shooter / target's V bits, 0 if absent or stale
 ```
 
 ## Rules (04 s4.1 as built)
@@ -62,6 +72,13 @@ func assign(it: Interest) -> void                      # called by Interest.assi
   any list for 900 ticks -> LEFT_INTEREST; not visible for 900 ticks since last seen on a tier tick -> OUT_OF_VISION
   (30 s, +-0.5 s of C-tick granularity). A ghost that becomes visible again before that re-enters without ENTITY_META.
 - Spectator (`spectator = true`): V = everything present, tiers follow the camera like a player (04 s13.3).
+- Projectile entities (R0 B.22 A-112; roster indices 1,536-3,583, `SnapshotFrame.index_of_row`: rocket, bomb, siege
+  shell, canister rows only): V = own team, or the shooter or target in V (`SnapshotCodec.c_vmask`, gen-checked);
+  tiered by their own position like any entity; ENTITY_META before the first record. Swept every tick before selection
+  (`ProjectileMembers`), no 30 s ghost: DEATH (absent / new generation), OUT_OF_VISION or LEFT_INTEREST is sent
+  HOLD_TICKS after it first holds, and a dead member's index is neither listed nor admitted for 2 x HOLD_TICKS, so
+  the reliable ROSTER_REMOVE trails the last record and leads a recycled slot's (0-tick quarantine, A-20) next META
+  and record by more than the 04 s15.1 BAD jitter spread; a failing member also leaves `c_set` at once.
 
 ## Invariants
 
@@ -70,6 +87,9 @@ func assign(it: Interest) -> void                      # called by Interest.assi
 - I2: assign is a pure function of (frame, codec cache, client inputs, client state): same inputs, same lists.
 - I3: no per-entity allocation; per tick and client a handful of list slices.
 - I4: the 600 m disc of any point lies in its cell or ring 1 (cells are wider than 600 m; tested).
+- I5 (NET-58): no list or `c_set` names a projectile index during its hold, and no projectile index is both removed
+  and added in one tick; the client never parses a recycled projectile index with its previous entry (tested over
+  LocalTransport TARGET and BAD: zero malformed snapshots, zero ROSTER_GAP requests).
 
 ## Data owned
 
@@ -85,7 +105,9 @@ Performance budget and the PR; the pinned-runner gate is A-40 / A-62, TA-42).
 
 `godot/test/unit/net/test_interest.gd` (interest_test: A disc, forced, cap; B ring / ring 2 / cap; schedule; team
 visibility and spectator; hysteresis; ghost retention, re-entry, expiry; DEATH, slot reuse, LEFT_INTEREST; ring
-coverage; determinism), `godot/test/net/test_interest_codec.gd` (with SnapshotCodec, RosterCodec and per-client
+coverage; determinism), `godot/test/unit/net/test_projectile_roster.gd` (NET-58: visibility rule, no ghost, hold),
+`godot/test/net/test_projectile_interest.gd` (NET-58: projectile pipeline, META bytes, LocalTransport TARGET / BAD),
+`godot/test/net/test_interest_codec.gd` (with SnapshotCodec, RosterCodec and per-client
 decoders: never MISSING_ROSTER, mirrors equal, caps, visibility, < 30 KB/s). Helper: `godot/test/net/interest_rig.gd`.
 Benches: `test/perf/bench_snapshot.gd` (mode=interest), `test/perf/bench_events.gd` (mode=interest).
 

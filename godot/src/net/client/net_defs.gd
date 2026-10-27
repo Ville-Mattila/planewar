@@ -1,6 +1,6 @@
 class_name NetDefs extends RefCounted
 ## Per-def tables NetSimView needs, built once from a ContentSet (base defs; doctrine modifiers are not replicated).
-## Indexed by def_id (0 .. DefRanges.END). Mirrors the sim's spawn rules (WorldDefs.radius_of / possessable / hp_max,
+## Indexed by def_id (0 .. DefRanges.END); projectile defs carry gravity_def and radius (radius_m) only, kind -1. Mirrors the sim's spawn rules (WorldDefs.radius_of / possessable / hp_max,
 ## PadQueries.serves, TeamStats.tech_available's `requires`) without naming sim types; test_net_sim_view.gd pins every
 ## table to the sim's answer for the content set. `kind_of` uses the EntityStore kind ordinals (NetSimView.K_*).
 
@@ -45,6 +45,7 @@ func _init(content: ContentSet = null) -> void:
 		_structure(content, DefRanges.STRUCTURE_BASE + k, content.structures[k])
 	for k: int in content.projectiles.size():
 		gravity_def[DefRanges.PROJECTILE_BASE + k] = 1 if content.projectiles[k].gravity else 0
+		radius[DefRanges.PROJECTILE_BASE + k] = content.projectiles[k].radius_m     # projectile entities (A-112)
 
 
 func _unit(content: ContentSet, d: int, k: int, hp_max: float, r: float, poss: bool, req: PackedStringArray) -> void:

@@ -163,7 +163,7 @@ static func ref_of(id: int, aud: EventAudience) -> int:
 		return EventCodec.NONE_REF
 	var s: int = EntityId.slot(id)
 	if aud.unfiltered:
-		return s if s < Roster.CAPACITY else EventCodec.NONE_REF
+		return s if s < Roster.ENTITY_SLOTS else EventCodec.NONE_REF   # events name entities, not the projectile block
 	if aud.roster.has(s) and aud.roster.generation_of(s) == EntityId.gen(id):
 		return s
 	return EventCodec.NONE_REF

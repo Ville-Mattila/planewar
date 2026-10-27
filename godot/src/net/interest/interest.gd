@@ -1,8 +1,10 @@
 class_name Interest extends RefCounted
 ## Interest management, shared half (04 s4.1, R0 C1-02; NET-08). begin_tick() runs once per tick after
 ## SnapshotCodec.prepare_tick: it buckets every entity by interest cell (Sphere.GRID_INTEREST, 384 cells; the cell
-## the codec already quantised against) and keeps per-slot direction, visibility bits and generation. Team visible
-## sets V come from the codec's per-team lists. assign(client) does the per-client half (InterestClient): tiers A /
+## the codec already quantised against) and keeps per-index direction, visibility bits and generation. Arrays are
+## indexed by roster index (SnapshotFrame.index_of_row; projectile entities in the block 1,536-3,583, R0 B.22 A-112,
+## whose visibility bits are the codec's c_vmask: own team + shooter + target). Team visible sets V come from the
+## codec's per-team lists. assign(client) does the per-client half (InterestClient): tiers A /
 ## B / C, caps, hysteresis, ghost retention, roster adds and removes. Packed arrays only; no Nodes, no threads.
 
 const CAPACITY: int = Roster.CAPACITY
@@ -18,7 +20,7 @@ var ring2: PackedInt32Array = PackedInt32Array()          # CELLS x RING2_STRIDE
 var cell_dir: PackedVector3Array = PackedVector3Array()   # unit direction of each cell's datum centre
 var cell_start: PackedInt32Array = PackedInt32Array()     # CELLS + 1 offsets into cell_ids
 var cell_ids: PackedInt32Array = PackedInt32Array()       # present slots grouped by cell, ascending within a cell
-var all_ids: PackedInt32Array = PackedInt32Array()        # every present slot, ascending (spectator V)
+var all_ids: PackedInt32Array = PackedInt32Array()        # every present index, ascending (spectator V)
 var stamp: PackedInt32Array = PackedInt32Array()          # == tick: slot present this tick
 var cell: PackedInt32Array = PackedInt32Array()           # slot -> interest cell
 var dir: PackedVector3Array = PackedVector3Array()        # slot -> unit direction from the moon's centre
@@ -81,17 +83,14 @@ func begin_tick(frame: SnapshotFrame, codec: SnapshotCodec) -> void:
 	tick = frame.tick
 	_codec = codec if codec != null and codec.cache_tick == frame.tick else null
 	cell_start.fill(0)
-	_ingest(frame)
+	var _r: int = _sorted.resize(_ingest(frame))
 	for c: int in CELLS:
 		cell_start[c + 1] += cell_start[c]
 		_fill[c] = cell_start[c]
-	_sorted = frame.slot.slice(0, frame.count)
 	_sorted.sort()
 	var n: int = 0
-	var _r: int = all_ids.resize(cell_start[CELLS])
+	_r = all_ids.resize(cell_start[CELLS])
 	for s: int in _sorted:
-		if s < 0 or s >= CAPACITY:
-			continue
 		var c: int = cell[s]
 		cell_ids[_fill[c]] = s
 		_fill[c] += 1
@@ -100,29 +99,39 @@ func begin_tick(frame: SnapshotFrame, codec: SnapshotCodec) -> void:
 	_r = all_ids.resize(n)
 
 
-## Per-slot stamp, cell, direction, visibility bits and generation; counts per cell into cell_start[c + 1].
-func _ingest(frame: SnapshotFrame) -> void:
+## Per-index stamp, cell, direction, visibility bits and generation; counts per cell into cell_start[c + 1]; the
+## indices into _sorted (unsorted). Returns their count.
+func _ingest(frame: SnapshotFrame) -> int:
 	var cached: bool = _codec != null
 	var cpos: PackedInt64Array = _codec.c_pos if cached else PackedInt64Array()
-	var slots: PackedInt32Array = frame.slot                # locals: no property lookup per entity
+	var cvm: PackedInt32Array = _codec.c_vmask if cached else PackedInt32Array()
 	var poss: PackedVector3Array = frame.pos
+	var slots: PackedInt32Array = frame.slot                # locals: no property lookup per entity
 	var masks: PackedInt32Array = frame.visible_mask
 	var teams: PackedByteArray = frame.team
 	var gens: PackedInt32Array = frame.gen
 	var has_gen: bool = gens.size() >= frame.count
 	var t: int = tick
+	var n: int = 0
+	if _sorted.size() < frame.count:
+		var _r: int = _sorted.resize(frame.count)
 	for i: int in frame.count:
 		var s: int = slots[i]
-		if s < 0 or s >= CAPACITY:
-			continue
+		if s < 0 or s >= Roster.ENTITY_SLOTS:               # the projectile block (or no roster index)
+			s = frame.index_of_row(i)
+			if s < 0:
+				continue
 		var p: Vector3 = poss[i]
 		var c: int = (cpos[s] & 0xFFFF) if cached else Sphere.cell_of(p, Sphere.GRID_INTEREST)
 		stamp[s] = t
 		cell[s] = c
 		dir[s] = p.normalized()
-		vmask[s] = masks[i] | (1 << (teams[i] % TEAM_MAX))
+		vmask[s] = cvm[s] if cached else masks[i] | (1 << (teams[i] % TEAM_MAX))
 		gen[s] = gens[i] if has_gen else 0
 		cell_start[c + 1] += 1
+		_sorted[n] = s
+		n += 1
+	return n
 
 
 func present(s: int) -> bool:

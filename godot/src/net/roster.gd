@@ -1,9 +1,13 @@
 class_name Roster extends RefCounted
 ## Per-client roster (04 s3.1): up to CAPACITY entries binding a roster index to (generation, def_id, owner,
-## team, tag). The roster index IS the sim slot number (04 s3.1: indices reuse slots inside KEYFRAME and
-## ENTITY_META). Built by KEYFRAME / ENTITY_META, pruned by ROSTER_REMOVE. Packed arrays only; no Nodes.
+## team, tag). The roster index is a pure function of the sim slot (R0 B.22 A-112): index = slot for the EntityStore
+## slots 0-1,535 (units, structures, wrecks; A-54) and index = 1,536 + (slot - EntityId.PROJECTILE_SLOT_MIN) for the
+## ProjectileStore slots 4,096-6,143 (the projectile block). ENTITY_META / KEYFRAME / ROSTER_REMOVE carry the sim slot,
+## SNAPSHOT records the index. Every method below takes a roster index. Packed arrays only; no Nodes.
 
-const CAPACITY: int = 1536                  # 04 s3.1: one entry per EntityStore slot 0-1,535 (R0 B.11 A-54)
+const CAPACITY: int = 3584                  # 04 s3.1: 1,536 EntityStore slots + the 2,048-entry projectile block (A-112)
+const ENTITY_SLOTS: int = EntityId.WRECK_SLOT_END                 # 1,536: indices 0 .. 1,535 equal their slot (A-54)
+const PROJECTILE_INDEX_MIN: int = ENTITY_SLOTS                    # first index of the projectile block
 const REASON_COUNT: int = 3                 # Protocol.RosterRemoveReason
 const NEVER: int = -1
 
@@ -15,6 +19,24 @@ var _team: PackedInt32Array = PackedInt32Array()
 var _tag: PackedStringArray = PackedStringArray()
 var _last_reason: PackedInt32Array = PackedInt32Array()
 var _count: int = 0
+
+
+## Roster index of sim slot `slot`, or -1 for a slot no roster can hold (1,536-4,095, >= 6,144, negative).
+static func index_of_slot(slot: int) -> int:
+	if slot >= 0 and slot < ENTITY_SLOTS:
+		return slot
+	if slot >= EntityId.PROJECTILE_SLOT_MIN and slot < EntityId.PROJECTILE_SLOT_END:
+		return slot - EntityId.PROJECTILE_SLOT_MIN + PROJECTILE_INDEX_MIN
+	return -1
+
+
+## Sim slot of roster index `index`, or -1 outside 0 .. CAPACITY - 1. Inverse of index_of_slot.
+static func slot_of_index(index: int) -> int:
+	if index >= 0 and index < ENTITY_SLOTS:
+		return index
+	if index >= PROJECTILE_INDEX_MIN and index < CAPACITY:
+		return index - PROJECTILE_INDEX_MIN + EntityId.PROJECTILE_SLOT_MIN
+	return -1
 
 
 func _init() -> void:

@@ -19,7 +19,7 @@ A change to "Public API", "Wire layout" or "Invariants" is a contract change: co
 
 ```gdscript
 class_name KeyframeCodec extends RefCounted           # net/keyframe/keyframe_codec.gd; scratch arrays sized once (1,536 entries)
-const HEADER_BYTES: int; const COUNT_MAX: int; const OFF_SEQ: int; const OFF_TICK: int; const OFF_SCOPE: int; const OFF_COUNT: int   # 10 1536 1 3 7 8
+const HEADER_BYTES: int; const COUNT_MAX: int; const OFF_SEQ: int; const OFF_TICK: int; const OFF_SCOPE: int; const OFF_COUNT: int; const RECORDS_MAX: int   # 10 3584 1 3 7 8; 2848 records per encode (< 65,535 B, NET-58)
 enum Status { OK, MALFORMED, STALE, MISSING_ROSTER }
 var seq: int; var tick: int; var scope: int; var count: int; var malformed: int; var missing: PackedInt32Array
 func encode(codec: SnapshotCodec, store: BaselineStore, at_tick: int, keyframe_seq: int, key_scope: int, indices: PackedInt32Array) -> PackedByteArray   # empty when prepare_tick(at_tick) was not run, scope or seq invalid; resets `store`, mirror frame at_tick = the records
@@ -51,10 +51,12 @@ forgets every frame and packet receipt, begins the frame of `tick` against nothi
 ## Wire layout
 
 KEYFRAME (04 s2.3 0x86): id u8, keyframe_seq u16, tick u32, scope u8 (`Protocol.KeyframeScope`: ALL 0, ROSTER_REPAIR 1), count u16,
-then `count` records in ascending roster index; <= 65,535 B (Protocol.MAX_RELIABLE_BYTES); 1,536 records are <= 30,720 B.
+then `count` records in ascending roster index; <= 65,535 B (Protocol.MAX_RELIABLE_BYTES): an encode writes <= RECORDS_MAX (2,848) records.
 A record is the SNAPSHOT FULL record (04 s3.5): gap (u8 1-254 from the previous record, the first record's gap is its index, 0 only
 for index 0; else 0xFF + u16 index) then 0xFF, vec3q 8, quat_s3 4, vel 3, hp 1, flags 1, ai_tag 1 for an entry of the client's own
 team = 19 B (+1). Canonical gaps only (an escape where a u8 gap fits is MALFORMED). All FULLs: the keyframe has no baseline.
+The gap chain runs over sim slots, not roster indices (R0 B.22 A-112, NET-58): 0-1,535 and projectile slots 4,096-6,143 map to
+indices through `Roster.index_of_slot`; a slot in 1,536-4,095 or >= 6,144 is MALFORMED. Entity-only keyframes keep their bytes.
 ENTITY_META for every record's index is sent before the KEYFRAME on channel 3 (ordered); the doc's sequence diagram lists it after,
 so `decode` returns MISSING_ROSTER with `missing` filled when an index has no roster entry and the caller holds the message
 (RosterSync semantics). ROSTER_REPAIR has the same layout; the server sends it for `REQUEST_KEYFRAME(ROSTER_GAP)` with the repaired

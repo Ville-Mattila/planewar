@@ -1,7 +1,8 @@
 class_name KeyframeCodec extends RefCounted
 ## KEYFRAME (0x86, channel 3, reliable; 04 s2.3, s3.1, s4.3). The message is a list of SNAPSHOT FULL records (gap chain,
 ## 0xFF, vec3q, quat_s3, vel, hp, flags, +ai_tag for the client's own team) for the client's interest set, with no
-## baseline. `encode` (server) builds it from SnapshotCodec's per-tick cache and resets the client's BaselineStore mirror
+## baseline. The gap chain runs over sim slots (0-1,535, projectile slots 4,096-6,143; R0 B.22 A-112): the API and the
+## mirror use roster indices (Roster.index_of_slot), and a slot no roster holds (1,536-4,095, >= 6,144) is MALFORMED. `encode` (server) builds it from SnapshotCodec's per-tick cache and resets the client's BaselineStore mirror
 ## to exactly those records; `decode` (client) validates the whole message, then applies it through
 ## SnapshotDecoder.accept_keyframe + BaselineFrame.set_full, the calls the mirror used, so both frames are identical.
 ## Decoding is total: every malformed shape returns MALFORMED, a missing roster entry MISSING_ROSTER (hold and retry
@@ -10,6 +11,9 @@ class_name KeyframeCodec extends RefCounted
 
 const HEADER_BYTES: int = 10                # id, seq u16, tick u32, scope u8, count u16
 const COUNT_MAX: int = Roster.CAPACITY
+## Records one encode writes: (65,535 - 10) / 23 (FULL + own ai_tag + 3-byte escape) keeps any message under
+## Protocol.MAX_RELIABLE_BYTES; the interest caps (1,240) stay far below it. Records past it arrive as snapshot FULLs.
+const RECORDS_MAX: int = 2848
 const OFF_SEQ: int = 1
 const OFF_TICK: int = 3
 const OFF_SCOPE: int = 7
@@ -83,6 +87,8 @@ func encode(codec: SnapshotCodec, store: BaselineStore, at_tick: int, keyframe_s
 	for s: int in sorted:
 		if s == prev or s < 0 or s >= SnapshotCodec.CAPACITY or codec.c_tick[s] != at_tick:
 			continue
+		if n >= RECORDS_MAX:
+			break
 		prev = s
 		_idx[n] = s
 		_pos[n] = codec.c_pos[s]
@@ -153,23 +159,24 @@ func _parse(b: PackedByteArray, kcount: int, dec: SnapshotDecoder) -> int:
 		if at >= size:
 			return -1
 		var g: int = b[at]
-		var idx: int = prev
+		var w: int = prev                   # the wire chain runs over sim slots
 		if g == SnapshotCodec.GAP_ESCAPE:
 			if at + 3 > size:
 				return -1
-			idx = b.decode_u16(at + 1)
-			var step: int = idx - prev
-			if (k > 0 and idx <= prev) or (step >= 1 and step <= SnapshotCodec.GAP_MAX) or (k == 0 and idx == 0):
+			w = b.decode_u16(at + 1)
+			var step: int = w - prev
+			if (k > 0 and w <= prev) or (step >= 1 and step <= SnapshotCodec.GAP_MAX) or (k == 0 and w == 0):
 				return -1                   # not ascending, or an escape where the u8 gap form fits
 			at += 3
 		else:
 			if g == 0 and k != 0:
 				return -1
-			idx += g
+			w += g
 			at += 1
-		if idx >= COUNT_MAX:
+		var idx: int = Roster.index_of_slot(w)
+		if idx < 0:
 			return -1
-		prev = idx
+		prev = w
 		if roster == null or not roster.has(idx):
 			var _m: bool = missing.push_back(idx)
 			return -2
@@ -208,11 +215,11 @@ func _write() -> PackedByteArray:
 	var own: int = 0
 	var prev: int = 0
 	for k: int in count:
-		var d: int = _idx[k] - prev
+		var d: int = Roster.slot_of_index(_idx[k]) - prev
 		if not ((d >= 1 and d <= SnapshotCodec.GAP_MAX) or (k == 0 and d == 0)):
 			escapes += 1
 		own += 1 if _ai[k] >= 0 else 0
-		prev = _idx[k]
+		prev = Roster.slot_of_index(_idx[k])
 	var out: PackedByteArray = PackedByteArray()
 	var _r: int = out.resize(size_for(count, own, escapes))
 	out[0] = Protocol.KEYFRAME
@@ -223,15 +230,16 @@ func _write() -> PackedByteArray:
 	var at: int = HEADER_BYTES
 	prev = 0
 	for k: int in count:
-		var d: int = _idx[k] - prev
+		var w: int = Roster.slot_of_index(_idx[k])
+		var d: int = w - prev
 		if (d >= 1 and d <= SnapshotCodec.GAP_MAX) or (k == 0 and d == 0):
 			out[at] = d
 			at += 1
 		else:
 			out[at] = SnapshotCodec.GAP_ESCAPE
-			out.encode_u16(at + 1, _idx[k])
+			out.encode_u16(at + 1, w)
 			at += 3
-		prev = _idx[k]
+		prev = w
 		out[at] = SnapshotCodec.MASK_FULL
 		at = Codec.write_pos(out, at + 1, _pos[k])
 		at = Codec.write_u32(out, at, _ori[k])
