@@ -7839,7 +7839,9 @@
       "06 s3.3",
       "06 s5.3"
     ],
-    "status": "todo",
-    "note": "From the UX-44 #126 review 2026-10-27."
+    "status": "done",
+    "note": "RtsCameraMapper (InputRouter.rts_mapper, emit_rts_tick). Follow-up for app/ui: set rts_mapper.viewport_size (edge pan off and View reticle at (0,0) until then); Tab sends (0,0) until the mouse moves.",
+    "pr": 129,
+    "merged": "2026-10-27"
   }
 ]
