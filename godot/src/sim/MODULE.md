@@ -227,8 +227,8 @@ below (label, then `N NAME` pairs), so their format is part of the contract (R0 
 1 apply queued `Command`s (incl. POSSESS/RELEASE handoffs by `ControlMachine`); 2 store this tick's human `PilotInput`s into
 input slots; 3 AI hook `SimAiHook.on_tick(tick, view, sink)`: think slice + act for every AI-driven entity, writing input slots
 through `CommandSinkBase.drive` (refused for POSSESSED); 4 assist substitution: `Assist.auto_dock()` / `Assist.link_bridge()`
-overwrite input slots where active; 5 kinematics: `step_ship` ships, `GroundMotion.step` ground, turret slew towers; 6 projectiles
-(straight / ballistic / guided / rendezvous); 7 spatial rebuild (counting sort); 8 collision: projectile vs entity sweeps, 8b
+overwrite input slots where active; 5 kinematics: `step_ship` ships, `GroundMotion.step` ground, `TurretSlew.step` towers (R0 B.23 A-118, B.24 A-123); 6 projectiles
+(straight / ballistic / guided / rendezvous, in-flight lock loss); 7 spatial rebuild (counting sort); 8 collision: projectile vs entity sweeps, 8b
 projectile vs terrain, ship vs terrain (destroy / damage / land / scrape), ship vs ship, ship vs structure; 9 combat: fire, damage
 rolls, flak bursts, shields, deaths (deferred free), wrecks; 10 economy / production / build / docking service / salvage / Core
 shield and Exposure timers / caps / scoring (LandingGrade); 11 vision (10 Hz staggered, 5 Hz under cut rung 2); 12 events drained by the caller. GD-15: the PAD contacts of 8 land at the end of 9 (R0 B.24 A-124; crash deaths deferred with the others), service in 10 (sim/docking/MODULE.md D1).
