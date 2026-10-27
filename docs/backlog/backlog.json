@@ -7819,7 +7819,10 @@
       "02 s4.4",
       "05 s6.8"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 127,
+    "merged": "2026-10-27",
+    "note": "TurretAim A-118 az/el (norm clamp, pole guard ~0.18 deg, 180-deg tie-break turns left, atan2 elevation); Ai17Kit.SlewSink models the GD-09 law. Tracking act 7.0-7.7 us vs 8.1 ceiling (one noisy run 8.34) - tight margin."
   },
   {
     "id": "UX-45",
