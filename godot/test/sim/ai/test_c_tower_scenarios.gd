@@ -70,3 +70,48 @@ func test_c02_control_the_same_dart_above_the_floor_draws_fire() -> void:
 	_setup(&"flak_battery")
 	var shots: int = _hold_foe(1.5 * lo, 800.0, 10 * HZ)
 	assert_int(shots).is_greater(0)
+
+
+# A-129: the sim, not TowerBrain.eligible, is the gate. The brain's envelope is opened wide so it holds FIRE1 on every
+# target it sees; the trigger is held and nothing leaves the barrel.
+func _open_brain_envelope() -> void:
+	var env: TowerEnvelope = _d._brains[Ai17Kit.tower_cls()].prm.envelope(_w.view().def_id(_tw))
+	env.h_rel_min = -INF
+	env.h_rel_max = INF
+	env.agl_min = 0.0
+
+
+# Holds `id` at its spawn point for `ticks`; returns [trigger ticks, most shots alive at once].
+func _watch(id: int, ticks: int) -> Vector2i:
+	_w.store().hp[EntityId.slot(id)] = 10000000.0
+	var p: Vector3 = _w.view().pos(id)
+	var held: int = 0
+	var shots: int = 0
+	for _k: int in ticks:
+		IntelKit.teleport(_w, id, p)
+		var _e: Array[SimEvent] = Ai17Kit.step(_w)
+		held += 1 if (Ai17Kit.buttons(_w, _tw) & PilotInput.FIRE1) != 0 else 0
+		shots = maxi(shots, Ai17Kit.shots_of(_w, _tw))
+	return Vector2i(held, shots)
+
+
+func test_c01_with_the_brain_forced_eligible_the_sim_still_refuses_the_bomber() -> void:
+	var hi: float = float(_block(&"autocannon_turret").get("h_rel_max", 0.0))
+	_setup(&"autocannon_turret")
+	_open_brain_envelope()
+	var pool: int = _w.view().ammo(_tw)
+	var id: int = DartKit.spawn(_w, &"bomber", DartKit.FOE, Ai17Kit.rel(_w, _tw, 300.0, 0.0, 1.5 * hi), Vector3.ZERO, Vector3(0, 1, 0))
+	var r: Vector2i = _watch(id, 20 * HZ)
+	assert_int(r.x).override_failure_message("the brain must hold the trigger for this to test the sim").is_greater(0)
+	assert_int(r.y).is_equal(0)
+	assert_int(_w.view().ammo(_tw)).is_equal(pool)
+
+
+func test_c02_with_the_brain_forced_eligible_the_sim_still_refuses_the_dart() -> void:
+	var lo: float = float(_block(&"flak_battery").get("h_rel_min", 0.0))
+	_setup(&"flak_battery")
+	_open_brain_envelope()
+	var id: int = DartKit.spawn(_w, &"dart", DartKit.FOE, Ai17Kit.rel(_w, _tw, 800.0, 0.0, 0.66 * lo), Vector3.ZERO, Vector3(0, 1, 0))
+	var r: Vector2i = _watch(id, 20 * HZ)
+	assert_int(r.x).is_greater(0)
+	assert_int(r.y).is_equal(0)
