@@ -2,14 +2,14 @@ extends GdUnitTestSuite
 ## AI-17 tower brain on a real SimWorld (05 s6.8, R0 C2-15; sim_ai/brains/MODULE.md TB1-TB7): the idle states and their
 ## tags (IDLE, OFFLINE for power, HOLD, under construction), tracking and firing inside the `towers.json` envelope, the
 ## ATTACK and GUARD orders, the x1.5 attacker mark from `AiHitLog`, ground contacts through Perception for the
-## Autocannon only, the zero drive when a target is lost, no input while possessed. The sim does not slew a turret
-## yet (GD-09): the driver is Ai17Kit's SlewDriver, which applies the brain's pitch / yaw drive to the muzzle.
+## Autocannon only, the zero drive when a target is lost, no input while possessed. The sim slews the turret
+## itself (GD-09, A-118): the brain's pitch / yaw drive reaches the muzzle through `TurretSlew` at step 5.
 
 const HZ: int = 30
 const C0: Vector3 = Vector3(1, 0, 0)
 
 var _w: SimWorld
-var _d: Ai17Kit.SlewDriver
+var _d: AiDriver
 var _tw: int
 var _brain: TowerBrain
 

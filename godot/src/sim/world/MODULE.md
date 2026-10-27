@@ -62,7 +62,13 @@ static func debug_set(player: int, target: int, field: int, value: float) -> Com
 class_name ShipMotion extends RefCounted                                     # step 5 ships: step_ship with one ShipState scratch, DOCKED skipped (A-41)
 func step(t: int, dt: float) -> void                                         # terrain contacts -> Collision.report_terrain(slot, tick, hit_normal_speed)
 class_name ProjectileMotion extends RefCounted                               # step 6: straight inline, else step_projectile(out = one reused scratch)
-func step(tick: int, dt: float) -> void                                      # guided re-aim within turn_rate_dps; ttl expiry frees
+var terrain: Terrain                                                         # GD-09: SimWorld wires it; null = no AGL lock-loss rule
+func step(tick: int, dt: float) -> void                                      # guided lock loss (W8), re-aim within turn_rate_dps; ttl expiry frees
+class_name TurretSlew extends RefCounted                                     # step 5 towers (GD-09, R0 B.23 A-118, B.24 A-123): azimuth about n, elevation about right
+func _init(store: EntityStore, inputs: InputSlots, defs: WorldDefs)
+func step(dt: float) -> void                                                 # every finished tower with a commanded pitch / yaw; marks DIRTY_POSE
+static func slew(pos: Vector3, fwd: Vector3, up: Vector3, pitch: float, yaw: float, angle: float) -> Basis   # pure; columns right, up, -fwd; angle = turn_rad_s x dt
+static func reproject(n: Vector3, f: Vector3, prev_right: Vector3) -> Basis  # A-123: right = f x n (pole guard: previous right minus its n part), up = right x f
 class_name TickProfiler extends RefCounted                                   # 03 s4.4 rows, ms; row 0 is ServerSession's, 8b inside ROW_COLLISION
 const ROWS: int; const ROW_TRANSPORT: int; const ROW_COMMANDS: int; const ROW_AI: int; const ROW_PATHING: int; const ROW_KINEMATICS: int
 const ROW_PROJECTILES: int; const ROW_SPATIAL: int; const ROW_COLLISION: int; const ROW_TERRAIN_8B: int; const ROW_COMBAT: int
@@ -119,6 +125,8 @@ static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: 
 - W5: every class holding state has `write_state` / `read_state`; `SimWorld.serialize` writes them in a fixed order and `deserialize(serialize())` reproduces each byte for byte (S4).
 - W6: Control state, overlay and `ReleaseReason` are `ControlMachine`'s enums (AI-02, sim/control/MODULE.md CM1); nothing here redefines them.
 - W7: `EconomyHub` owns no state of its own (Docking's is saved after Production's in its section, format 13); `on_death` runs for every dying entity before the deferred free (structures: footprint, site, queue; GD-19: ships, ground units and finished structures: their wrecks, `Salvage.on_death`), so a freed slot never keeps a footprint or a queue.
+- W8 (lock loss, 02 s4.4, GD-09): a guided projectile whose live flying-ship target (not a ground unit, structure or landed ship) is under the projectile def's `lock_break_agl_m` AGL (`|p| - R - terrain`), or whose target ship started a flip this tick (`flip_time` within 1.5 ticks of `flip_duration_s`) while the projectile is within [`lock_break_flip_min_m`, `lock_break_flip_max_m`] of it, loses the target for good (`F_GUIDED` cleared, `target` 0) and flies straight to the end of its life. Numbers are `projectiles.json` rocket keys (absent or 0 = never); no dice (C-04).
+- W9 (turret slew, A-118 / A-123): `TurretSlew` turns a finished (not BUILDING) tower by `turret_turn_dps x dt` at most: the (pitch, yaw) pair clamped to unit norm, yaw about `n = pos.normalized()` (+ = muzzle left), pitch about `right` (+ = up), the commanded rate in full in its tick, elevation truncated at the pole, and every tick ends with `right = fwd x n` re-projected (pole guard: previous right minus `n x right.dot(n)`), `up = right x fwd`, so `right.dot(n)` stays <= 1e-6 over any number of ticks. Power does not stop a slew (an offline tower slews; WeaponFire refuses its shots). No saved state (the basis is `fwd` / `up`, S4).
 
 ## Data owned
 
@@ -135,7 +143,7 @@ static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: 
 ## Test entry points
 
 `godot/test/unit/sim/test_command_validator.gd` (S10, S12, W1, W2), `godot/test/unit/sim/build/test_construction.gd` (EconomyHub routing, W5 for the economy section), `godot/test/unit/sim/test_sim_world.gd` (W3, steps 5, 6, 9, 10),
-`godot/test/unit/sim/test_serialize.gd` (W5), `godot/test/unit/sim/test_enums.gd` (W6), `godot/test/unit/sim/test_command_payload.gd`, `godot/test/sim/test_tick_scenario.gd`, `godot/test/perf/perf_tick.gd`.
+`godot/test/unit/sim/test_serialize.gd` (W5), `godot/test/unit/sim/test_enums.gd` (W6), `godot/test/unit/sim/world/test_turret_slew.gd` (W9, A-118 / A-123), `godot/test/unit/sim/combat/test_tower_gates.gd` (W8, C-03, C-04), `godot/test/unit/sim/test_command_payload.gd`, `godot/test/sim/test_tick_scenario.gd`, `godot/test/perf/perf_tick.gd`.
 
 ## How to add X (recipes for the cheapest tier)
 
