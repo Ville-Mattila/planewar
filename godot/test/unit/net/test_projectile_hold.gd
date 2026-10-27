@@ -104,7 +104,7 @@ func _recycle_after_failure(left_interest: bool) -> void:
 	var cl: InterestClient = InterestClient.new(1, 0)
 	cl.possessed = 10
 	var h: int = ProjectileMembers.HOLD_TICKS
-	var fail_at: int = 2 + InterestClient.GHOST_TICKS if left_interest else 3   # first tick the old member fails
+	var fail_at: int = 1 + InterestClient.GHOST_TICKS if left_interest else 3   # last tiered at 1: LEFT_INTEREST at 1 + 900
 	var recycle_at: int = fail_at + 1                       # dies and is recycled inside the hold
 	var a: int = EntityId.make(10, 1)
 	var c: int = EntityId.make(12, 1)
