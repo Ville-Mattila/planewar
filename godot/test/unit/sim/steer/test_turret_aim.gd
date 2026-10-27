@@ -89,7 +89,7 @@ func test_aligned_commands_nothing_and_a_zero_rate_commands_no_slew() -> void:
 func test_target_straight_behind_turns_about_the_site_normal_at_the_cap() -> void:
 	var ang: float = TurretAim.slew(_basis(), N, Vector3(0.0, 0.0, 1.0), TURN, DT, _out)
 	assert_float(ang).is_equal_approx(PI, 0.0001)
-	assert_float(absf(_out.yaw)).is_equal(1.0)
+	assert_float(_out.yaw).is_equal(1.0)   # exactly 180 deg: the tie-break turns left (+yaw)
 	assert_float(_out.pitch).is_equal_approx(0.0, 0.0001)
 
 
@@ -137,8 +137,9 @@ func test_closed_loop_arrives_without_overshoot() -> void:
 			break
 		b = _apply(b, N, _out, step)
 		ticks += 1
-	var first: float = acos((-Basis.IDENTITY.z).dot(dir))
-	assert_int(ticks).is_less_equal(int(ceil(first / step)) + 3)
+	var d_az: float = atan2(-dir.x, -dir.z)   # azimuth and elevation distance: the A-118 law arrives in ceil(hypot / step) ticks
+	var d_el: float = asin(dir.y)
+	assert_int(ticks).is_less_equal(int(ceil(Vector2(d_az, d_el).length() / step)))
 	assert_float(prev).is_less(0.0001)
 
 
