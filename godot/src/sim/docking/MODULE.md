@@ -109,7 +109,10 @@ radius), `scoring.json` `landing` (+ `landing_grade.manual_window_m`), `ships.js
 - D10 A DOCKED ship whose `link` names a pad that is no longer alive is released in step 10 (DOCKED / LANDED cleared, `link` 0, no event;
   Kinematics moves it from the next step); one with `link` 0 is left alone. A ship on a `launch_pad` structure (Shipyard) is never served.
 - D11 S4: queue, service records, landing log and pilot track are saved (economy section, format 13); a world reloaded
-  mid-service continues byte-identically, events included (test_docking_s4). `dock_held` and the perf counters are
+  at any of 5 save points continues like the original run for 240 ticks: the same event bytes every tick, and every 10
+  ticks the same raw state and SimView Docking reads (`test_docking_s4::test_reload_continues_like_the_original`; the
+  scene has a service pause, a queue out of slot order, a landing grade and a manual landing after the save, so dropping
+  any of the four from the save fails it). `dock_held` and the perf counters are
   derived, not state. `read_state` refuses malformed sizes, zero or duplicate queue entries, slots outside the main range.
 - D12 Allocation: none per entity per tick (scratch arrays are members; the service pass writes the store arrays through
   local handles, one copy-on-write per pass); `pad_queue` and LANDING / SERVICED `extra` allocate (list getter, events).
@@ -134,7 +137,7 @@ the `perf_tick.gd --full` delta in the GD-15 PR perf note.
 ## Test entry points
 
 `godot/test/unit/sim/docking/test_touchdown.gd` (D1-D5), `test_pad_queue.gd` (D6), `test_service.gd` (D7-D10, the
-02 s2.3 table for every ship), `test_docking_s4.gd` (D11, format 13 refusal), `test_docking_perf.gd` (D12, row 10 / 9),
+02 s2.3 table for every ship), `test_docking_s4.gd` (D11 against the original run, format 13 refusal), `test_docking_perf.gd` (D12, row 10 / 9),
 helper `docking_test_kit.gd`; the SimView contract (`godot/test/unit/sim/contract/`) pins `service_progress`, `pad_queue`
 and `landing_grade_last`; `godot/test/unit/sim/test_collision.gd` (D2 impact speed).
 
@@ -153,3 +156,12 @@ and `landing_grade_last`; `godot/test/unit/sim/test_collision.gd` (D2 impact spe
   ship landed on a service pad stays DOCKED (no LAUNCHED from service pads; LaunchBay's Shipyard launch is unchanged).
 - CQ-2 The crash pad damage (02 s2.2 "the pad takes 100 damage") has no def field; not applied.
 - CQ-3 (needs net) LANDING flags bit2 = dead stick (04 s3.6 names bit0 manual, bit1 hot; the byte is unchanged in size).
+- CQ-4 Tick step of landings: R0 B.5 / 03 s6.4 place landing in step 8 and docking / grade in step 10; here they resolve
+  at the end of step 9 so a crash dies the same tick (sim/MODULE.md tick order). Needs ratifying.
+- CQ-5 Queue zone: `auto_dock_radius_m` is used as a 3-D distance (A-33 defines it horizontal in the pad frame), and
+  05 s5.5 L2b holds AI ships at a 400 m orbit, outside it. Which radius, 3-D or horizontal?
+- CQ-6 Rearm time scales with the most-missing slot (02 s2.3 states scaling for refuel and repair only). Confirm, or the
+  full `rearm_time_s` whenever anything is missing.
+- CQ-7 `PadQueue.PER_PAD` (8, 03 s3.2 bound) is a const with no R0 def field: structural cap, or a def field?
+- 03 s6.4 says `timer_a` / `timer_b` = 0 on landing; a docked ship's `timer_a` now holds its rearm line (03 needs the
+  amendment).
