@@ -2,9 +2,9 @@ class_name ProjectileMembers extends RefCounted
 ## The projectile entities in one InterestClient's roster (roster indices >= Roster.PROJECTILE_INDEX_MIN; R0 B.22 A-112),
 ## swept every tick before selection with no 30 s ghost. A member that died (absent from the frame, or its slot holds a
 ## new generation), left V, or went untiered for GHOST_TICKS is removed HOLD_TICKS after it first failed, so the
-## reliable ROSTER_REMOVE trails the member's last snapshot record; a dead member's index is held (not listed, not
-## admitted) for 2 x HOLD_TICKS from that tick, so the REMOVE also leads the next generation's ENTITY_META and first
-## record. Both margins exceed the arrival spread of the 04 s15.1 presets (BAD: +-40 ms jitter): a recycled slot (0-tick
+## reliable ROSTER_REMOVE trails the member's last snapshot record; once a member is dead (whatever failed first), its
+## index is held (not listed, not admitted) until HOLD_TICKS after that REMOVE, so the REMOVE also leads the next
+## generation's ENTITY_META and first record. Both margins exceed the arrival spread of the 04 s15.1 presets (BAD: +-40 ms jitter): a recycled slot (0-tick
 ## quarantine, A-20) never reaches the client while its old entry, possibly of another team, could still parse it.
 ## Allocation-free; packed members only.
 
@@ -50,12 +50,13 @@ func sweep(it: Interest, t: int, vt: int, rgen: PackedInt32Array, last_tier: Pac
 			reason = Protocol.RosterRemoveReason.LEFT_INTEREST
 		if reason != NONE and _gone[s] == NONE:
 			_gone[s] = t
-			hold[s] = t + 2 * HOLD_TICKS if reason == Protocol.RosterRemoveReason.DEATH else hold[s]
 			var at: int = c_set.bsearch(s)
 			if at < c_set.size() and c_set[at] == s:
 				c_set.remove_at(at)
+		if reason == Protocol.RosterRemoveReason.DEATH:  # whatever failed first: held until HOLD_TICKS after the REMOVE
+			hold[s] = maxi(hold[s], maxi(_gone[s] + HOLD_TICKS, t) + HOLD_TICKS)
 		if reason == NONE or t - _gone[s] < HOLD_TICKS:
-			_gone[s] = _gone[s] if reason != NONE else NONE
+			_gone[s] = _gone[s] if reason != NONE else NONE   # NONE implies the same generation (a change is DEATH)
 			_mem[m] = s
 			m += 1
 			continue

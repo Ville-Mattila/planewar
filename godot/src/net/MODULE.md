@@ -164,7 +164,7 @@ class_name SnapshotByteCache extends RefCounted       # net/snapshot_byte_cache.
 const CAPACITY: int;  var w0: PackedInt64Array;  var w1: PackedInt64Array;  var w2: PackedInt32Array;  var oc: PackedInt32Array;  func full(s: int, tick: int, pos_q: int, ori_bits: int, vel_bits: int, hp_flags_ai: int) -> void;  func blip_pos(s: int, tick: int, pos_q: int, blip: int) -> int
 class_name SnapshotDecoder extends RefCounted         # net/snapshot_decoder.gd: validate the whole packet, then apply
 enum Status { OK, MALFORMED, STALE, NO_BASELINE, MISSING_ROSTER }
-const MAX_RECORDS: int;  var store: BaselineStore;  var roster: Roster;  var gravity_def: PackedByteArray;  var gravity: float;  var dt: float
+const MAX_RECORDS: int;  var store: BaselineStore;  var roster: Roster;  var gravity_def: PackedByteArray;  var gravity: float;  var dt: float;  var born: PackedInt32Array;  var born_gen: PackedInt32Array   # born: first FULL tick of an index's roster generation (NET-58)
 var pilot: PilotBlock;  var pilot_tick: int;  var missing: PackedInt32Array;  var malformed: int;  var records_applied: int
 func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) -> void;  func current() -> BaselineFrame;  func decode(bytes: PackedByteArray) -> int;  func forget_tick(tick: int) -> void;  func reset() -> void; func accept_keyframe(tick: int) -> BaselineFrame   # NET-25 replay chunks / seek; NET-07 keyframe reset (net/keyframe/MODULE.md)
 

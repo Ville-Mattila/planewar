@@ -76,7 +76,8 @@ static func entity_mask(id: int, tick: int, ticks: PackedInt32Array, gens: Packe
   shell, canister rows only): V = own team, or the shooter or target in V (`SnapshotCodec.c_vmask`, gen-checked);
   tiered by their own position like any entity; ENTITY_META before the first record. Swept every tick before selection
   (`ProjectileMembers`), no 30 s ghost: DEATH (absent / new generation), OUT_OF_VISION or LEFT_INTEREST is sent
-  HOLD_TICKS after it first holds, and a dead member's index is neither listed nor admitted for 2 x HOLD_TICKS, so
+  HOLD_TICKS after it first holds, and once a member is dead (whatever failed first) its index is neither listed nor
+  admitted until HOLD_TICKS after that REMOVE, so
   the reliable ROSTER_REMOVE trails the last record and leads a recycled slot's (0-tick quarantine, A-20) next META
   and record by more than the 04 s15.1 BAD jitter spread; a failing member also leaves `c_set` at once.
 
@@ -89,7 +90,8 @@ static func entity_mask(id: int, tick: int, ticks: PackedInt32Array, gens: Packe
 - I4: the 600 m disc of any point lies in its cell or ring 1 (cells are wider than 600 m; tested).
 - I5 (NET-58): no list or `c_set` names a projectile index during its hold, and no projectile index is both removed
   and added in one tick; the client never parses a recycled projectile index with its previous entry (tested over
-  LocalTransport TARGET and BAD: zero malformed snapshots, zero ROSTER_GAP requests).
+  LocalTransport TARGET and BAD, with targets leaving V just before impact: zero malformed snapshots, zero ROSTER_GAP
+  requests; test_projectile_hold.gd: OUT_OF_VISION / LEFT_INTEREST, then death and a recycle inside the hold).
 
 ## Data owned
 

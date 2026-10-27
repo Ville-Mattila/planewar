@@ -76,9 +76,9 @@ static func near(v: NetSimView, p: Vector3, r: float, mask: int) -> PackedInt32A
 const PROJECTILE_KIND_BIT: int;  static func projectiles_near(v: NetSimView, p: Vector3, r: float, team_mask: int) -> PackedInt32Array;  static func read_poses(v: NetSimView, ids: PackedInt32Array, out_pos: PackedVector3Array, out_rot: PackedVector4Array) -> int   # 4 (MASK_PROJECTILE = 1 << 4); A-112
 
 class_name NetPose extends RefCounted                 # net/client/net_pose.gd: the sampled mirror (lazy per entry, cached per record)
-const EXTRAP_MAX_TICKS: int; const ALPHA_EPS: float  # 3 (100 ms); 1e-4 (a render tick this close to a frame shows that frame)
+const EXTRAP_MAX_TICKS: int; const ALPHA_EPS: float; const NOT_YET: int  # 3 (100 ms); 1e-4 (a render tick this close to a frame shows that frame); 0x7FFFFFFF
 var render_tick: float; var tick_a: int; var tick_b: int; var alpha: float; var newest: int; var eval_tick: float; var extrapolating: bool; var stale: bool
-var generation: int; var computed: int; var converted: int; var store: BaselineStore; var roster: Roster; var gravity_def: PackedByteArray; var gravity: float; var dt: float
+var generation: int; var computed: int; var converted: int; var store: BaselineStore; var roster: Roster; var decoder: SnapshotDecoder; var gravity_def: PackedByteArray; var gravity: float; var dt: float
 func _init(baseline: BaselineStore, roster_ref: Roster) -> void;  func sample(r: float) -> void;  func frame() -> BaselineFrame;  func present(i: int) -> bool
 func pose_into(i: int, out_pos: PackedVector3Array, out_rot: PackedVector4Array, k: int) -> void
 func pos_of(i: int) -> Vector3;  func vel_of(i: int) -> Vector3;  func rot_of(i: int) -> Vector4;  func has_ori(i: int) -> bool;  func is_blip(i: int) -> bool
@@ -145,6 +145,8 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
   `BaselineFrame.base_grav`) for at most 3 ticks, then frozen with `stale`; a known blip shows its stored bucket
   (`shown_levels`' rule: no gravity even when DYING) and is never interpolated or extrapolated (A-103); at integer ticks the
   float dr(t) equals `Codec.dequantize_pos(shown_levels)` within one quantum. No allocation per entity.
+  A projectile-block index shows no frame older than its roster generation's first FULL (`SnapshotDecoder.born`), and
+  nothing between its ENTITY_META and that FULL: a recycled slot's previous occupant is never shown (NET-58).
 - CS8: `field_unknown(id, accessor)` is true exactly for what the client does not receive (`NetUnknown`: never-carried
   accessors, pilot-block fields off the own possessed unit, C-tier basis / vel, other teams' ai_tag, a wreck's radius,
   which shows the def radius per A-114);

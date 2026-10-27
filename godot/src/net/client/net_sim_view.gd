@@ -45,6 +45,7 @@ func _init(roster_ref: Roster, decoder_ref: SnapshotDecoder) -> void:
 	roster = roster_ref
 	decoder = decoder_ref
 	pose = NetPose.new(decoder.store, roster)
+	pose.decoder = decoder
 	var _a: int = _possessor.resize(Roster.CAPACITY)
 	_possessor.fill(NONE)
 	var _b: int = _possessor_gen.resize(Roster.CAPACITY)

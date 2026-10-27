@@ -11,13 +11,16 @@ class_name KeyframeCodec extends RefCounted
 
 const HEADER_BYTES: int = 10                # id, seq u16, tick u32, scope u8, count u16
 const COUNT_MAX: int = Roster.CAPACITY
-## Records one encode writes: (65,535 - 10) / 23 (FULL + own ai_tag + 3-byte escape) keeps any message under
-## Protocol.MAX_RELIABLE_BYTES; the interest caps (1,240) stay far below it. Records past it arrive as snapshot FULLs.
-const RECORDS_MAX: int = 2848
+## Largest record: a 3-byte escape gap, the FULL mask and body, the own-team ai_tag byte.
+const RECORD_WORST_BYTES: int = 3 + _BODY_AFTER_MASK_WITH_MASK + Codec.AI_TAG_BYTES   # 22
+## Records one encode writes (2,978): any message stays under Protocol.MAX_RELIABLE_BYTES; the interest caps (1,240)
+## stay far below it. Records past it arrive as snapshot FULLs (absent from the reset mirror).
+const RECORDS_MAX: int = int(float(Protocol.MAX_RELIABLE_BYTES - HEADER_BYTES) / float(RECORD_WORST_BYTES))
 const OFF_SEQ: int = 1
 const OFF_TICK: int = 3
 const OFF_SCOPE: int = 7
 const OFF_COUNT: int = 8
+const _BODY_AFTER_MASK_WITH_MASK: int = 1 + _BODY_AFTER_MASK
 const _BODY_AFTER_MASK: int = Codec.POS_BYTES + Codec.QUAT_BYTES + Codec.VEL_BYTES + Codec.HP_BYTES + Codec.FLAGS_BYTES   # 17
 const _RECORD_MIN: int = 1 + 1 + _BODY_AFTER_MASK                  # gap + mask + body = 19
 const _HALF_SEQ: int = 0x8000

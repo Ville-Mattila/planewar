@@ -126,7 +126,7 @@ static func read_poses(v: NetSimView, ids: PackedInt32Array, out_pos: PackedVect
 		var i: int = id & EntityId.SLOT_MASK
 		if i >= Roster.ENTITY_SLOTS:
 			i = Roster.index_of_slot(i) if i >= EntityId.PROJECTILE_SLOT_MIN else -1
-		var ok: bool = id > 0 and f != null and i >= 0 and f.present[i] != 0
+		var ok: bool = id > 0 and f != null and i >= 0 and v.pose.present(i)
 		if not ok or roster.generation_of(i) != ((id >> EntityId.GEN_SHIFT) & EntityId.GEN_MASK):
 			out_pos[k] = Vector3.ZERO
 			out_rot[k] = Vector4(0.0, 0.0, 0.0, 1.0)
