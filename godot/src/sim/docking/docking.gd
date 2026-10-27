@@ -166,7 +166,7 @@ func _on_service_pad(s: int) -> bool:
 
 
 # The queue wishes (D6): each wishing ship waits for the nearest busy or queued live pad of its team within the queue
-# radius. Candidates are bucketed by team (stable, so ties keep the candidate order: busy pads in slot order, then the
+# radius. Candidates are bucketed by team (stable, so ties keep the candidate order: busy pads in docked-ship order, the
 # queued ones in arrival order; the last of equal distance wins); ships above the highest pad + radius skip the search.
 func _queue_pass() -> void:
 	var qp: PackedInt32Array = queue.q_pad

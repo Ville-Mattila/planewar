@@ -104,7 +104,8 @@ radius), `scoring.json` `landing` (+ `landing_grade.manual_window_m`), `ships.js
   repair_time_mult` (0.9).
 - D9 Pause: a timer whose tick cost the team pool cannot pay does not advance (no partial spend, `try_spend`); ALERT
   WAITING_FOR_ICE / WAITING_FOR_ORE (a kind, b ship, pos pad, team the ship's, extra[0] its owner) once per pause start.
-  SERVICED (a ship, b pad, extra[0] = given bits fuel 1 / ammo 2 / repair 4) once per stay when all three are full.
+  SERVICED (a ship, b pad, extra[0] = given bits fuel 1 / ammo 2 / repair 4) once per stay when all three are full;
+  hull lost on the pad after that is repaired again (same costs), without a second SERVICED.
 - D10 A DOCKED ship whose `link` names a pad that is no longer alive is released in step 10 (DOCKED / LANDED cleared, `link` 0, no event;
   Kinematics moves it from the next step); one with `link` 0 is left alone. A ship on a `launch_pad` structure (Shipyard) is never served.
 - D11 S4: queue, service records, landing log and pilot track are saved (economy section, format 13); a world reloaded

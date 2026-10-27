@@ -216,6 +216,24 @@ func test_serviced_fires_once_with_what_was_given() -> void:
 	assert_vector(_w.view().service_progress(id)).is_equal(Vector3.ONE)
 
 
+func test_a_serviced_ship_hit_on_the_pad_repairs_again_without_a_second_serviced() -> void:
+	var sd: ShipDef = DockingTestKit.ship_def(&"scout")
+	var id: int = DockingTestKit.ship_over(_w, &"scout", 0, 0, _pad, DockingTestKit.HIGH)
+	DockingTestKit.dock(_w, id, _pad)
+	_w.step()
+	assert_int(DockingTestKit.of_kind(_w.drain_events(), SimEvent.Kind.SERVICED).size()).is_equal(1)   # full: done at once
+	var s: int = _slot(id)
+	_w.store().hp[s] = float(sd.hp) * 0.5                                     # damage taken while DOCKED (D7: still served)
+	var ore0: int = DockingTestKit.pool(_w, 0).x
+	var serviced: int = 0
+	for _t: int in ceili(sd.repair_time_s * 0.5 * float(_hz)) + 2:
+		_w.step()
+		serviced += DockingTestKit.of_kind(_w.drain_events(), SimEvent.Kind.SERVICED).size()
+	assert_float(_w.store().hp[s]).is_equal(float(sd.hp))
+	assert_int(ore0 - DockingTestKit.pool(_w, 0).x).is_equal(ceili(float(sd.hp) * 0.5 * WorldTestKit.content().economy.repair_ore_per_hp))
+	assert_int(serviced).is_equal(0)                                          # SERVICED once per stay (D9)
+
+
 func test_a_ship_whose_pad_dies_is_released() -> void:
 	var id: int = DockingTestKit.ship_over(_w, &"dart", 0, 0, _pad, DockingTestKit.HIGH)
 	DockingTestKit.dock(_w, id, _pad)

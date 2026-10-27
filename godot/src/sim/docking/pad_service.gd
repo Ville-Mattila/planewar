@@ -13,7 +13,8 @@ class_name PadService extends RefCounted
 ## (02: "the corresponding service pauses"); the others go on. Each whole Ice / Ore is paid as the missing amount
 ## crosses it (E7's rule), so an empty pool stops a timer at its next whole unit. ALERT WAITING_FOR_ICE /
 ## WAITING_FOR_ORE fires once when a pause starts. SERVICED (a ship, b pad, extra[0] = bit0 fuel, bit1 ammo, bit2
-## repair given) fires once per stay when all three are full. A timer within half a tick of its end completes
+## repair given) fires once per stay when all three are full; hull lost on the pad after that is repaired again (docked
+## ships never fire or burn fuel), without a second SERVICED. A timer within half a tick of its end completes
 ## (float32 storage, exact totals). A pass (`open` .. `close`) writes the store arrays through local handles.
 
 const BIT_FUEL: int = 1
@@ -132,11 +133,11 @@ func serve(s: int, pad: int, dt: float) -> void:
 	if svc_gen[s] != _store.generation[s]:
 		begin(s)
 	var bits: int = svc_bits[s]
-	if (bits & BIT_DONE) != 0:
-		return
-	serviced += 1
 	var owner: int = _store.owner[s]
 	var sd: ShipDef = _ships[(owner if owner < WorldDefs.NEUTRAL else WorldDefs.NEUTRAL) * _ns + _store.def_id[s] - DefRanges.SHIP_BASE]
+	if (bits & BIT_DONE) != 0 and _hp[s] >= float(sd.hp):   # a done stay only resumes for hull lost on the pad
+		return
+	serviced += 1
 	var team: int = _store.team[s]
 	var ran: int = 0
 	if _fuel[s] < sd.fuel_s:
@@ -152,7 +153,7 @@ func serve(s: int, pad: int, dt: float) -> void:
 		_alert(AlertKind.Kind.WAITING_FOR_ICE, s, pad)
 	if (fresh & BIT_WAIT_ORE) != 0:
 		_alert(AlertKind.Kind.WAITING_FOR_ORE, s, pad)
-	if _fuel[s] >= sd.fuel_s and _line[s] >= 1.0 and _hp[s] >= float(sd.hp):
+	if (bits & BIT_DONE) == 0 and _fuel[s] >= sd.fuel_s and _line[s] >= 1.0 and _hp[s] >= float(sd.hp):
 		bits |= BIT_DONE
 		var e: SimEvent = _events.emit(SimEvent.Kind.SERVICED, _store.id_of(s), _store.id_of(pad), _store.pos[pad], 0.0, team)
 		e.extra = PackedByteArray([bits & (BIT_FUEL | BIT_AMMO | BIT_REPAIR)])
