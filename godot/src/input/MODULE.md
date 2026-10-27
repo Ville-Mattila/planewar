@@ -50,9 +50,11 @@ var gamepad_mapper: GamepadFlightMapper                # sampled while the activ
 var kbm_mapper: KbmFlightMapper                        # sampled while POINTER; fed MouseMotion.relative in flight modes
 var touch_mapper: TouchFlightMapper                    # sampled while TOUCH
 var gestures: GestureRecognizer                        # fed every ScreenTouch/ScreenDrag; HUD sets its zones
+var rts_mapper: RtsCameraMapper                        # RTS-mode mouse/keyboard/gamepad CAM_* intents (UX-45); HUD sets viewport_size
 var wing_radial_allowed: bool                          # app: true while no hostile within 800 m (06 s3.1)
 func poll_gestures(now_ms: int) -> void                # gesture timers; called every physics tick
 func route_event(event: InputEvent, now_ms: int) -> void
+func emit_rts_tick(dt: float) -> void                  # held-input CAM_ROTATE/TILT/ZOOM (Q/E, RS, RT/LT); RTS only
 func emit_tick() -> bool                               # emits pilot_input once in a flight mode; returns whether it did
 static func is_flight_mode(m: Mode) -> bool
 func input_class() -> int                              # 01 s9.4: active device class
@@ -117,6 +119,14 @@ func current_thrust() -> float
 func sample(dt: float) -> PilotInput
 func map(st: KbmState, dt: float) -> PilotInput
 
+class_name RtsCameraMapper extends RefCounted  # pure; 06 s3.3 KBM + Gamepad columns -> {&"kind", &"payload"} dicts
+const EDGE_DU: float; const WHEEL_LOG_STEP: float; const MMB_ROT_RAD_PER_DU: float; const KEY_ROT_RAD_PER_S: float   # 8 + client-only feel
+const PAD_ROT_RAD_PER_S: float; const PAD_TILT_DU_PER_S: float; const PAD_ZOOM_LOG_PER_S: float; const PAD_DEADZONE: float
+var viewport_size: Vector2                     # du; zero disables edge pan; View press toggles at its centre (reticle)
+func feed(event: InputEvent) -> Array[Dictionary]   # wheel, MMB drag, Tab, H, View, L3, CAM_PAN_VEL on change (zero on release)
+func tick(dt: float) -> Array[Dictionary]      # Q/E + RS X rotate, RS Y tilt, RT-LT zoom
+func reset() -> void                           # router calls it on a mode change
+
 class_name Gesture extends RefCounted         # one recognised gesture (06 s2.3)
 enum Kind { TAP, DOUBLE_TAP, LONG_PRESS, DRAG, FLING, PINCH, TWIST, TWO_FINGER_DRAG, FLICK_UP, FIRE_HOLD }
 enum Phase { BEGIN, UPDATE, END }
@@ -165,6 +175,10 @@ func map(st: TouchState, dt: float) -> PilotInput
 - I10: a two-finger gesture locks to exactly one of pinch, twist or two-finger drag (largest travel past 12 du), so a
   two-finger drag never emits PINCH; a second finger cancels every single-finger gesture; touch events with
   `DEVICE_ID_EMULATION` are ignored by the recognizer.
+- I11: RTS-mode camera intents come only from `RtsCameraMapper` while the router mode is RTS; in every other mode no
+  CAM_* is emitted from keys, mouse or pad, and the flight mappers never read `rts_mapper`. CAM_PAN_VEL from here is
+  held deflection |v| <= 1 and is sent again with a zero vector on release; fling vectors (touch) are always larger
+  (`GestureRecognizer.FLING_MIN_SPEED` = 300 du/s > 1), which `CameraIntentDriver` relies on to ignore them.
 - I9: `input` never reads `SimView` and never imports `ui`; world knowledge arrives through a caller-filled context.
 
 ## Data owned
@@ -195,6 +209,8 @@ except the key-bound InputMap scan on key presses (only on press). Not on a sim 
 - `godot/test/unit/input/test_gesture_recognizer.gd` (tap, double tap, long press, drag, fling, pinch, twist, two-finger drag, flick, FIRE hold, no false pinch)
 - `godot/test/unit/input/test_gesture_intents.gd` (gesture -> intent table)
 - `godot/test/unit/input/test_touch_flight_mapper.gd` (stick, handle, buttons, queued flip)
+- `godot/test/unit/input/test_rts_camera_mapper.gd` (binding table, dead zone, edge zone, pan change/zero, reset)
+- `godot/test/unit/app/test_camera_intent_driver.gd` (UX-45: real mouse/key/pad events through InputRouter move the OrbitController; RTS only)
 - `godot/test/unit/input/test_input_router_touch.gd` (TOUCH sampling, flick -> FLIP, FIRE hold -> WING_RADIAL, RTS intents)
 
 ## How to add X (recipes for the cheapest tier)
@@ -207,7 +223,8 @@ except the key-bound InputMap scan on key presses (only on press). Not on a sim 
 - UX-07 `AssistStack` runs between mapper and emit and adds
   ARCADE and MOUSE_AIM steering; remap (`BindingStore`) replaces the fixed keys in `KbmState.poll` / `PadState.poll`.
 - Mapper feel constants are consts in `FlightMath` (06 names no input def; they are client-only and not hashed).
-- `intent` emitters: touch gestures in RTS mode (`GestureIntents`: TAP -> SELECT, DOUBLE_TAP -> CAM_TIER_TOGGLE, long-press
+- `intent` emitters: RTS mouse, keyboard and gamepad camera intents (`RtsCameraMapper`, UX-45; feel constants client-only,
+  not hashed); touch gestures in RTS mode (`GestureIntents`: TAP -> SELECT, DOUBLE_TAP -> CAM_TIER_TOGGLE, long-press
   release -> SELECT add, long-press then drag -> SELECT_BOX, drag -> CAM_PAN_GRAB, fling -> CAM_PAN_VEL, pinch -> CAM_ZOOM,
   twist -> CAM_ROTATE, two-finger drag -> CAM_TILT) and FIRE hold -> WING_RADIAL in flight. Unit-vs-ground picking (SELECT_SAME,
   a double tap on a unit) is the picking layer's job (UX-20). Drag, box and wing intents carry `on`/`open` for begin/end.

@@ -177,3 +177,264 @@ func test_leaving_rts_stops_held_pan() -> void:
 	var at: Vector3 = _dir()
 	_run(0.5)
 	assert_float(_dir().angle_to(at)).is_less(0.0001)
+
+
+
+# --- UX-45: real mouse, keyboard and gamepad events through InputRouter -> driver -> OrbitController ---
+
+func _key(code: Key, pressed: bool) -> void:
+	var e: InputEventKey = InputEventKey.new()
+	e.physical_keycode = code
+	e.pressed = pressed
+	_router.route_event(e, _t)
+
+
+func _wheel(button: MouseButton, p: Vector2) -> void:
+	var e: InputEventMouseButton = InputEventMouseButton.new()
+	e.button_index = button
+	e.pressed = true
+	e.position = p
+	_router.route_event(e, _t)
+
+
+func _mmb_drag(p: Vector2, rel: Vector2) -> void:
+	var e: InputEventMouseMotion = InputEventMouseMotion.new()
+	e.position = p
+	e.relative = rel
+	e.button_mask = MOUSE_BUTTON_MASK_MIDDLE
+	_router.route_event(e, _t)
+
+
+func _axis(axis: JoyAxis, v: float) -> void:
+	var e: InputEventJoypadMotion = InputEventJoypadMotion.new()
+	e.axis = axis
+	e.axis_value = v
+	_router.route_event(e, _t)
+
+
+func _pad_button(b: JoyButton) -> void:
+	var e: InputEventJoypadButton = InputEventJoypadButton.new()
+	e.button_index = b
+	e.pressed = true
+	_router.route_event(e, _t)
+
+
+func _tick_run(secs: float) -> void:
+	for i in int(secs / DT):
+		_router.emit_rts_tick(DT)
+		_drv.step(DT)
+
+
+func test_fling_min_speed_is_above_stick_range() -> void:
+	assert_float(GestureRecognizer.FLING_MIN_SPEED).is_greater(1.0)
+
+
+func test_wheel_zooms_toward_cursor() -> void:
+	var a0: float = _drv.controller.altitude()
+	_wheel(MOUSE_BUTTON_WHEEL_UP, Vector2(1200, 400))
+	_run(1.0)
+	var a1: float = _drv.controller.altitude()
+	assert_float(a1).is_less(a0)
+	_wheel(MOUSE_BUTTON_WHEEL_DOWN, Vector2(1200, 400))
+	_wheel(MOUSE_BUTTON_WHEEL_DOWN, Vector2(1200, 400))
+	_run(1.0)
+	assert_float(_drv.controller.altitude()).is_greater(a1)
+
+
+func test_wasd_pans_until_release_and_sends_zero_vector() -> void:
+	var seen: Array[Vector2] = []
+	var _c: int = _router.intent.connect(func(k: StringName, p: Dictionary) -> void:
+		if k == Intents.CAM_PAN_VEL:
+			seen.append(p[Intents.K_VEL] as Vector2))
+	var before: Vector3 = _dir()
+	_key(KEY_W, true)
+	_key(KEY_D, true)
+	_run(1.0)
+	assert_float(_dir().angle_to(before)).is_greater(0.001)
+	assert_float(seen[-1].length()).is_less_equal(1.0)
+	_key(KEY_W, false)
+	_key(KEY_D, false)
+	assert_vector(seen[-1]).is_equal(Vector2.ZERO)
+	var after: Vector3 = _dir()
+	_run(0.5)
+	assert_float(_dir().angle_to(after)).is_less(0.0001)
+
+
+func test_arrow_key_pans() -> void:
+	var before: Vector3 = _dir()
+	_key(KEY_UP, true)
+	_run(0.5)
+	assert_float(_dir().angle_to(before)).is_greater(0.001)
+
+
+func test_screen_edge_pans_within_8_du() -> void:
+	_router.rts_mapper.viewport_size = SIZE
+	var before: Vector3 = _dir()
+	var e: InputEventMouseMotion = InputEventMouseMotion.new()
+	e.position = Vector2(4.0, 540.0)
+	_router.route_event(e, _t)
+	_run(0.5)
+	assert_float(_dir().angle_to(before)).is_greater(0.001)
+	e.position = Vector2(400.0, 540.0)
+	_router.route_event(e, _t)
+	var mid: Vector3 = _dir()
+	_run(0.5)
+	assert_float(_dir().angle_to(mid)).is_less(0.0001)
+
+
+func test_edge_pan_off_without_viewport() -> void:
+	var before: Vector3 = _dir()
+	var e: InputEventMouseMotion = InputEventMouseMotion.new()
+	e.position = Vector2(0.0, 0.0)
+	_router.route_event(e, _t)
+	_run(0.5)
+	assert_float(_dir().angle_to(before)).is_less(0.0001)
+
+
+func test_q_e_rotate_heading() -> void:
+	var h0: Vector3 = _drv.controller.h
+	_key(KEY_E, true)
+	_tick_run(0.5)
+	_key(KEY_E, false)
+	var h1: Vector3 = _drv.controller.h
+	assert_float(h1.angle_to(h0)).is_greater(0.1)
+	_key(KEY_Q, true)
+	_tick_run(0.5)
+	assert_float(_drv.controller.h.angle_to(h0)).is_less(h1.angle_to(h0))
+
+
+func test_mmb_drag_rotates_and_tilts() -> void:
+	var h0: Vector3 = _drv.controller.h
+	var t0: float = _drv.controller.delta_deg
+	_mmb_drag(Vector2(960, 540), Vector2(100, 0))
+	assert_float(_drv.controller.h.angle_to(h0)).is_equal_approx(100.0 * RtsCameraMapper.MMB_ROT_RAD_PER_DU, 0.001)
+	_mmb_drag(Vector2(960, 540), Vector2(0, -100))
+	assert_float(_drv.controller.delta_deg).is_equal_approx(t0 + 100.0 * CameraIntentDriver.TILT_DEG_PER_DU, 0.001)
+
+
+func test_motion_without_mmb_does_nothing() -> void:
+	var h0: Vector3 = _drv.controller.h
+	var e: InputEventMouseMotion = InputEventMouseMotion.new()
+	e.position = Vector2(960, 540)
+	e.relative = Vector2(100, 100)
+	_router.route_event(e, _t)
+	assert_float(_drv.controller.h.angle_to(h0)).is_less(0.0001)
+
+
+func test_tab_toggles_tier_and_h_goes_home() -> void:
+	_key(KEY_TAB, true)
+	_run(2.0)
+	assert_bool(_drv.controller.is_tactical()).is_false()
+	_key(KEY_H, true)
+	_run(2.0)
+	assert_float(_drv.controller.altitude()).is_equal_approx(OrbitController.HOME_ALTITUDE, OrbitController.HOME_ALTITUDE * 0.05)
+
+
+func test_key_echo_does_not_retrigger() -> void:
+	var count: Array[int] = [0]
+	var _c: int = _router.intent.connect(func(k: StringName, _p: Dictionary) -> void:
+		if k == Intents.CAM_HOME:
+			count[0] += 1)
+	_key(KEY_H, true)
+	var e: InputEventKey = InputEventKey.new()
+	e.physical_keycode = KEY_H
+	e.pressed = true
+	e.echo = true
+	_router.route_event(e, _t)
+	assert_int(count[0]).is_equal(1)
+
+
+func test_pad_left_stick_pans_and_zeroes_on_release() -> void:
+	var before: Vector3 = _dir()
+	_axis(JOY_AXIS_LEFT_Y, -1.0)
+	_run(1.0)
+	assert_float(_dir().angle_to(before)).is_greater(0.001)
+	_axis(JOY_AXIS_LEFT_Y, 0.0)
+	var after: Vector3 = _dir()
+	_run(0.5)
+	assert_float(_dir().angle_to(after)).is_less(0.0001)
+
+
+func test_pad_stick_inside_deadzone_is_ignored() -> void:
+	var before: Vector3 = _dir()
+	_axis(JOY_AXIS_LEFT_X, 0.1)
+	_run(0.5)
+	assert_float(_dir().angle_to(before)).is_less(0.0001)
+
+
+func test_pad_right_stick_rotates_and_tilts() -> void:
+	var h0: Vector3 = _drv.controller.h
+	var t0: float = _drv.controller.delta_deg
+	_axis(JOY_AXIS_RIGHT_X, 1.0)
+	_axis(JOY_AXIS_RIGHT_Y, -1.0)
+	_tick_run(0.5)
+	assert_float(_drv.controller.h.angle_to(h0)).is_greater(0.1)
+	assert_float(_drv.controller.delta_deg).is_greater(t0)
+
+
+func test_pad_triggers_zoom() -> void:
+	var a0: float = _drv.controller.altitude()
+	_axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)
+	_tick_run(1.0)
+	var a1: float = _drv.controller.altitude()
+	assert_float(a1).is_less(a0)
+	_axis(JOY_AXIS_TRIGGER_RIGHT, 0.0)
+	_axis(JOY_AXIS_TRIGGER_LEFT, 1.0)
+	_tick_run(1.0)
+	assert_float(_drv.controller.altitude()).is_greater(a1)
+
+
+func test_pad_view_toggles_tier_and_l3_homes() -> void:
+	_router.rts_mapper.viewport_size = SIZE
+	_pad_button(JOY_BUTTON_BACK)
+	_run(2.0)
+	assert_bool(_drv.controller.is_tactical()).is_false()
+	_pad_button(JOY_BUTTON_LEFT_STICK)
+	_run(2.0)
+	assert_float(_drv.controller.altitude()).is_equal_approx(OrbitController.HOME_ALTITUDE, OrbitController.HOME_ALTITUDE * 0.05)
+
+
+func test_nothing_emitted_outside_rts_mode() -> void:
+	var count: Array[int] = [0]
+	var _c: int = _router.intent.connect(func(_k: StringName, _p: Dictionary) -> void:
+		count[0] += 1)
+	for m: InputRouter.Mode in [InputRouter.Mode.MENU, InputRouter.Mode.FLIGHT, InputRouter.Mode.TURRET,
+			InputRouter.Mode.GROUND, InputRouter.Mode.PLACEMENT, InputRouter.Mode.TEXT, InputRouter.Mode.PEEK]:
+		_router.set_mode(m)
+		_key(KEY_W, true)
+		_key(KEY_E, true)
+		_key(KEY_H, true)
+		_key(KEY_TAB, true)
+		_wheel(MOUSE_BUTTON_WHEEL_UP, Vector2(10, 10))
+		_mmb_drag(Vector2(10, 10), Vector2(50, 50))
+		_axis(JOY_AXIS_LEFT_X, 1.0)
+		_axis(JOY_AXIS_RIGHT_X, 1.0)
+		_axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)
+		_pad_button(JOY_BUTTON_BACK)
+		_pad_button(JOY_BUTTON_LEFT_STICK)
+		_router.emit_rts_tick(DT)
+	assert_int(count[0]).is_equal(0)
+
+
+func test_held_state_is_cleared_on_mode_change() -> void:
+	_key(KEY_W, true)
+	_router.set_mode(InputRouter.Mode.MENU)
+	_run(0.05)
+	_router.set_mode(InputRouter.Mode.RTS)
+	var before: Vector3 = _dir()
+	_run(0.5)
+	assert_float(_dir().angle_to(before)).is_less(0.0001)
+
+
+func test_flight_mappers_unaffected_by_rts_mapper() -> void:
+	_router.set_mode(InputRouter.Mode.FLIGHT)
+	var got: Array[PilotInput] = []
+	var _c: int = _router.pilot_input.connect(func(p: PilotInput) -> void: got.append(p))
+	_key(KEY_W, true)
+	var e: InputEventMouseMotion = InputEventMouseMotion.new()
+	e.relative = Vector2(30, 0)
+	_router.route_event(e, _t)
+	assert_bool(_router.emit_tick()).is_true()
+	assert_int(got.size()).is_equal(1)
+	_router.set_mode(InputRouter.Mode.RTS)
+	assert_bool(_router.emit_tick()).is_false()
