@@ -15,6 +15,7 @@ var lock_target: PackedInt32Array = PackedInt32Array()   ## per main-range slot:
 var lock_time: PackedFloat32Array = PackedFloat32Array()   ## per slot: seconds the candidate has been held
 var unsupplied: PackedByteArray = PackedByteArray()        ## per slot: 1 = tower outside the supply network (GD-18 writes)
 var tower_power: PackedFloat32Array = PackedFloat32Array() ## per team tower rate multiplier, 0 = offline (GD-13; SimWorld sets it each tick, not state)
+var terrain: Terrain = null                                ## GD-09: the AGL floor of a tower's seeker (SimWorld wires it; null = no floor)
 
 var _store: EntityStore
 var _proj: ProjectileStore
@@ -285,11 +286,13 @@ func _lock_event(kind: SimEvent.Kind, s: int, t: int) -> void:
 
 
 func _pick(s: int, k: int, mask: int, cone: float) -> int:
-	return SeekerScan.pick(_store, _pos, _tm, s, _fwd[s], mask, _r2[k], cone)
+	var d: int = _did[s]
+	return SeekerScan.pick(_store, _pos, _tm, s, _fwd[s], mask, _r2[k], cone, _t.env_lo[d], _t.env_hi[d], _t.env_agl[d], terrain)
 
 
 func _score(s: int, t: int, r2: float, cone: float) -> float:
-	return SeekerScan.score(_pos, _tm, s, _fwd[s], t, r2, cone)
+	var d: int = _did[s]
+	return SeekerScan.score(_pos, _tm, s, _fwd[s], t, r2, cone, _t.env_lo[d], _t.env_hi[d], _t.env_agl[d], terrain)
 
 
 func _lockable(s: int, t: int, mask: int, r2: float, cone: float) -> bool:

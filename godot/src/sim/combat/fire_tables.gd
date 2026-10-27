@@ -10,6 +10,9 @@ var prim: PackedInt32Array = PackedInt32Array()     ## by def_id: primary weapon
 var sec: PackedInt32Array = PackedInt32Array()      ## by def_id: ship secondary weapon local index, -1 none
 var mask: PackedByteArray = PackedByteArray()       ## by def_id: Spatial.MASK_* bits a lock / flak aim may pick
 var tower: PackedByteArray = PackedByteArray()      ## by def_id: 1 = tower (supply applies)
+var env_lo: PackedFloat32Array = PackedFloat32Array()   ## by def_id: tower h_rel_min (-INF for a non-tower), GD-09
+var env_hi: PackedFloat32Array = PackedFloat32Array()   ## by def_id: tower h_rel_max (INF for a non-tower)
+var env_agl: PackedFloat32Array = PackedFloat32Array()  ## by def_id: tower target_agl_min (0 = none)
 var w_kind: PackedByteArray = PackedByteArray()     ## by weapon local index: ProjectileStore kind
 var w_proj: PackedInt32Array = PackedInt32Array()   ## by weapon local index: projectile local index, -1 none
 var weapon_count: int = 0
@@ -36,12 +39,16 @@ func _init(c: ContentSet) -> void:
 	var nw: int = c.weapons.size()
 	var e: int = w_kind.resize(nw) | w_proj.resize(nw)
 	e |= prim.resize(DefRanges.WEAPON_BASE) | sec.resize(DefRanges.WEAPON_BASE) | mask.resize(DefRanges.WEAPON_BASE)
-	e |= tower.resize(DefRanges.WEAPON_BASE)
+	e |= tower.resize(DefRanges.WEAPON_BASE) | env_lo.resize(DefRanges.WEAPON_BASE)
+	e |= env_hi.resize(DefRanges.WEAPON_BASE) | env_agl.resize(DefRanges.WEAPON_BASE)
 	assert(e == OK)
 	prim.fill(-1)
 	sec.fill(-1)
 	mask.fill(ALL_KINDS)
 	tower.fill(0)
+	env_lo.fill(-INF)
+	env_hi.fill(INF)
+	env_agl.fill(0.0)
 	for i: int in nw:
 		var w: WeaponDef = c.weapons[i]
 		w_kind[i] = _kind_of(w.kind)
@@ -71,6 +78,9 @@ func _init(c: ContentSet) -> void:
 			prim[d] = _wl(c, StringName(str(sd.tower.get("weapon", ""))))
 			tower[d] = 1
 			mask[d] = _kinds_mask(sd.tower.get("target_kinds", []))
+			env_lo[d] = Def.num(sd.tower.get("h_rel_min", -INF))
+			env_hi[d] = Def.num(sd.tower.get("h_rel_max", INF))
+			env_agl[d] = Def.num(sd.tower.get("target_agl_min", 0.0))
 
 
 ## Copies owner `o`'s resolved weapon numbers into the rows; false (nothing done) when `r` is already bound.

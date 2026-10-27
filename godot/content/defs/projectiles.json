@@ -68,6 +68,9 @@
         "mesh": "res://assets/models/projectiles/proj_rocket.glb"
       },
       "behaviour": "guided",
+      "lock_break_agl_m": 40,
+      "lock_break_flip_min_m": 100,
+      "lock_break_flip_max_m": 500,
       "speed_mps": 250,
       "lifetime_s": 6.0,
       "gravity": false,
