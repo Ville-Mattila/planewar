@@ -180,6 +180,24 @@
           "maximum": 5,
           "$comment": "02 s4.2 timed fuse: burst at the predicted intercept + fuse_delay_s (flak_shell 0.3); absent = 0 (R0 B.12 A-66; WeaponFire reads it, TA-56)"
         },
+        "lock_break_agl_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 500,
+          "$comment": "02 s4.4: a guided shot loses its target permanently below this AGL; absent or 0 = never (GD-09, ProjectileMotion)"
+        },
+        "lock_break_flip_min_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000,
+          "$comment": "02 s4.4 flip window near edge (100): a target that starts a flip while the shot is between the near and far edge loses the lock (GD-09)"
+        },
+        "lock_break_flip_max_m": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2000,
+          "$comment": "02 s4.4 flip window far edge (500); absent or 0 = a flip never breaks the lock (GD-09)"
+        },
         "arm_s": {
           "type": "number",
           "minimum": 0,

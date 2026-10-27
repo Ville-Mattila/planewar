@@ -21,6 +21,9 @@ var unsupplied_rate_mult: float = 1.0                              ## economy.un
 var vision_hz: int = DEFAULT_VISION_HZ                             ## rules.vision_hz (03 s3.7), A-66
 var straight: PackedByteArray = PackedByteArray()                  ## by projectile local index: 1 = no gravity, no transport
 var turn_rad_per_s: PackedFloat32Array = PackedFloat32Array()      ## by weapon local index: guided re-aim limit
+var lock_break_agl: PackedFloat32Array = PackedFloat32Array()      ## by projectile local index: a guided shot loses a target under this AGL (m), 0 = never (GD-09, 02 s4.4)
+var lock_break_flip_min: PackedFloat32Array = PackedFloat32Array() ## by projectile local index: flip lock-break window near edge (m)
+var lock_break_flip_max: PackedFloat32Array = PackedFloat32Array() ## by projectile local index: far edge (m); 0 = the flip never breaks a lock
 
 var _resolved: Array[ResolvedDefs] = []
 var ship_table: Array[ShipDef] = []            ## [(owner slot or NEUTRAL) * ship_count + local]: step 5's lookup
@@ -44,12 +47,16 @@ func _init(cs: ContentSet) -> void:
 	e |= pad_radius_by_def.resize(DefRanges.STRUCTURE_BASE + cs.structures.size())
 	e |= launch_pad_by_def.resize(DefRanges.STRUCTURE_BASE + cs.structures.size())
 	e |= bomb_mult_by_def.resize(DefRanges.STRUCTURE_BASE + cs.structures.size()) | fuse_delay_s.resize(np)
+	e |= lock_break_agl.resize(np) | lock_break_flip_min.resize(np) | lock_break_flip_max.resize(np)
 	assert(e == OK)
 	for i: int in np:
 		var pd: ProjectileDef = cs.projectiles[i]
 		projectile_radius[i] = pd.radius_m
 		straight[i] = 1 if not pd.gravity and not pd.transport else 0
 		fuse_delay_s[i] = Def.num(pd.raw.get("fuse_delay_s", 0.0))   # needs content: typed ProjectileDef field
+		lock_break_agl[i] = Def.num(pd.raw.get("lock_break_agl_m", 0.0))   # GD-09; needs content: typed field
+		lock_break_flip_min[i] = Def.num(pd.raw.get("lock_break_flip_min_m", 0.0))
+		lock_break_flip_max[i] = Def.num(pd.raw.get("lock_break_flip_max_m", 0.0))
 	for w: int in cs.weapons.size():
 		turn_rad_per_s[w] = deg_to_rad(cs.weapons[w].turn_rate_dps)
 	pad_radius_by_def.fill(0.0)
