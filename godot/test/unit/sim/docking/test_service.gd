@@ -94,7 +94,23 @@ func test_every_ship_reproduces_the_02_s2_3_service_time_and_cost() -> void:
 		assert_int(got.w).override_failure_message(line).is_equal(maxi(t_fuel, maxi(t_rearm, got.z)))   # parallel timers
 		assert_int(spent.y).override_failure_message(line).is_equal(want_ice)
 		assert_int(spent.x).override_failure_message(line).is_equal(want_ore)
+		_pin_02_s2_3(def, got, spent, line)
 	print("GD-15 service table:\n  " + "\n  ".join(report))
+
+
+# Two rows pinned to the 02 s2.3 / s4.1 literals at 30 Hz, so a defs drift away from the design doc fails here too:
+# Dart refuel 10 s, rearm 6 s, repair 15 s x 99/100 (1 HP left), Ice 20 + 2 bombs x 10, Ore ceil(99 x 0.1);
+# Lancer refuel 12 s, rearm 8 s, repair 18 s x 219/220, Ice 30 + 8 rockets x 4, Ore ceil(219 x 0.1).
+func _pin_02_s2_3(def: StringName, got: Vector4i, spent: Vector2i, line: String) -> void:
+	if def != &"dart" and def != &"lancer":
+		return
+	assert_int(_hz).is_equal(30)
+	var dart: bool = def == &"dart"
+	assert_int(got.x).override_failure_message(line).is_equal(300 if dart else 360)
+	assert_int(got.y).override_failure_message(line).is_equal(180 if dart else 240)
+	assert_int(got.z).override_failure_message(line).is_between(445 if dart else 537, 446 if dart else 538)
+	assert_int(spent.y).override_failure_message(line).is_equal(40 if dart else 62)
+	assert_int(spent.x).override_failure_message(line).is_equal(10 if dart else 22)
 
 
 func test_refuel_time_and_ice_scale_with_fuel_missing() -> void:
