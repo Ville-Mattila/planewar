@@ -235,7 +235,7 @@ Ground units: SAFETY = brake for 0.5 s, then resume. Towers and production struc
 | Case | Resolution |
 |---|---|
 | **Possess during docking (autopilot in final approach)** | Allowed. The pilot gets the ship mid-air in its nose-up hover attitude (tail-down landing, O-2); the HUD landing guide appears (06). If the pilot holds `DOCK` and the assist tier has auto-dock, `Assist` keeps running the same `LandingController`, so the descent continues seamlessly; otherwise the pilot flies it. The landing is graded `AUTO` if any assist tick occurred in the final 150 m (s5.5). The saved RETURN order stays saved. |
-| **Possess while DOCKED (being serviced)** | Allowed. Service continues while the ship sits nose-up on the pad. Thrust >= 0.5 held for 0.3 s launches along the pad normal (`LAUNCHED`, `launch_speed_mps`) and aborts service at the current fill (partial fuel/ammo/repair kept; Ice already spent is not refunded). |
+| **Possess while DOCKED (being serviced)** | Allowed. Service continues while the ship sits nose-up on the pad. Thrust >= `flight_common.launch_thrust_min` (0.5) held for `launch_hold_s` (0.3 s) launches along the pad normal (`LAUNCHED`, `launch_speed_mps`; the same sim rule a brain satisfies by driving thrust 1.0; R0 B.24 A-119) and aborts service at the current fill (partial fuel/ammo/repair kept; Ice already spent is not refunded). |
 | **Release or disconnect while DOCKED** | C9/C12 with a SAFETY overlay that is satisfied on the pad at once. The ship stays DOCKED; the brain's `DOCKED` mode waits for full service, then resumes the saved order or the class AUTO behaviour (Dart relaunches to patrol; Bomber stays docked). |
 | **Release mid-bomb-run** | SAFETY first. ATTACK is then revalidated: target alive and bombs > 0 -> the brain re-plans; if the target is within 2,500 m and within 30 degrees of the nose it continues the run-in from where it is, otherwise it routes to a new initial point (s6.3). Bombs = 0 -> order complete -> RETURN. |
 | **Release nose-down at deck altitude after the last bomb** | SAFETY pull-up (TTI < 2 s) outranks everything; the RETURN rule follows. |
@@ -501,7 +501,7 @@ risk01    = clamp(threat_air(cell of pad) / 50, 0, 0.9)
 fuel check: reject if fuel needed (eta at cruise burn + fuel_reserve_s) > remaining fuel; if all rejected pick the nearest
 ```
 
-**Pad reservation.** The brain sends nothing special; the sim's Pad service queue (01 s4.3 "service docked ships in arrival order") is read through `SimView`. A ship arriving at a busy pad holds (L2b) in a 400 m orbit at 150 m AGL until the pad is free, keeping 25 s of fuel reserve, else diverts.
+**Pad reservation.** The brain sends nothing special; the sim's Pad service queue (01 s4.3 "service docked ships in arrival order") is read through `SimView`. A ship arriving at a busy pad holds (L2b) in a 400 m orbit at 150 m AGL, inside the horizontal `economy.pad_queue_radius_m` zone (500 m) so it is queued in arrival order (R0 B.24 A-125), until the pad is free, keeping 25 s of fuel reserve, else diverts.
 
 **Phases** (sub-machine `Landing`, entered by RETURN):
 
@@ -571,7 +571,7 @@ Every brain writes its mode as a short tag with `CommandSinkBase.set_ai_tag(id, 
 | EVADE | flip if off cooldown, then a dive to deck altitude with a 60 degree heading change, 2.5 s | timer -> ENGAGE or PATROL |
 | BOMB (ATTACK on structure/ground unit) | `AttackRun` sub-machine (s6.3) with `dive_angle_deg` 30 | run done -> RETURN if bombs = 0 else PATROL |
 | RETURN | `Landing` sub-machine | DOCKED -> DOCKED |
-| DOCKED | wait for full service | serviced -> LAUNCH |
+| DOCKED | wait for `SERVICED`; while a service timer is paused for Ice / Ore, wait for `fuel01 >= landing.auto_launch_fuel01` (0.5) instead (02 s2.3; R0 B.24 A-119, AI-45); the Bomber waits for an order (s2.5) | serviced, or the paused-fuel gate -> LAUNCH (thrust 1.0 satisfies the sim's `launch_hold_s`) |
 | PULL_UP | emergency (s5.3) | TTI >= 4 s, `pull_up_min_hold_s` held and `climb_need_mps` <= 0 (R0 B.17 A-92) -> previous mode |
 
 **Target choice point** (think, among team-visible enemies within `intercept_radius_m` of the patrol centre, or within 1,200 m of the route for PATROL orders):
@@ -1204,3 +1204,4 @@ Revised 2026-10-10 against `reviews/R0-resolution-register.md` and 01 v1.1.
 | R0 B.14 A-84..A-86 (CONTRACT-0 amendments 07, 2026-10-20) | s5.4 separation = proximity ring plus the AI-11 look-ahead (closing pairs pushed sideways before the ring, overtakers shed closing speed; 11 `separation` keys, `lookahead_miss_m` anchor 80 from the measured fixture); s3.1 ESCORT trailer on the ORDER wire (TA-60 / NET-04); s4.4 `separation` (every ship `ap_*`) and `formation` (`ap_dart`, `ap_lancer`) blocks with the s5.6 numbers, `engage_radius_m` kept in `order_rules.json` only; AI-19 writes them | s3.1, s4.4, s5.4, s5.6 |
 | R0 B.20 A-107, A-108 (CONTRACT-0 amendments 14, 2026-10-21) | GD-19 (PR #106) review: C15's event cell lists `WRECK_SPAWNED` before `RELEASED` / `DEATH`; the Hauler brain (AI-15) completes a HAUL / TOW order on `SALVAGE_DELIVERED` and fails it on the target wreck's `DEATH(cause EXPIRED)` (A-61; `Salvage` emits no ORDER_DONE), reads wreck value through `SimView.wreck_ore` (GD-41) and hooks within `economy.json` `salvage_hook_m` | s2.4 C15, s6.5 |
 | R0 B.23 A-118 (CONTRACT-0 amendments 17, 2026-10-27) | AI-17 (PR #124) review: s6.8 points at the 02 s4.4 slew law; `TurretAim.slew` divides azimuth by cos(elevation) (AI-44); the tower candidate cap is AI-30's decision from a raid-over-a-base case | s6.8 |
+| R0 B.24 A-119, A-125 (CONTRACT-0 amendments 18, 2026-10-27) | GD-15 (PR #128) CQ-1 / CQ-5: the possess-while-DOCKED launch names its def fields and is the one sim rule for pilots and brains; DOCKED mode waits for `SERVICED` or `auto_launch_fuel01` while paused (AI-45); the L2b hold orbit lies inside the 500 m queue zone | s2.5, s5.5, s6.2 |

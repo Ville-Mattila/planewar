@@ -401,7 +401,7 @@ Total: 10 header + 1 + 12 + 9 + 1 + 5 + 15 = **53 bytes** for a tick with three 
 | 26 | CAPTURE_PROGRESS | site u16, team u8, progress01 u8 | 6 | roster |
 | 27 | CAPTURED | site u16, team u8 | 5 | all |
 | 28 | SALVAGE_DELIVERED | hauler u16, at u16, ore u16 | 8 | team |
-| 29 | LANDING | entity u16, pad u16, grade u8 (`LandingGrade.Grade`), q u8 (`q * 255`), flags u8 (bit0 manual, bit1 hot), v_vert u8 (0.1 m/s, clamp 255), v_horiz u8 (0.1 m/s, clamp 255) | 11 | team + roster |
+| 29 | LANDING | entity u16, pad u16, grade u8 (`LandingGrade.Grade`), q u8 (`q * 255`), flags u8 (bit0 manual, bit1 hot, bit2 dead stick; bits 3-7 reserved zero; R0 B.24 A-121), v_vert u8 (0.1 m/s, clamp 255), v_horiz u8 (0.1 m/s, clamp 255) | 11 | team + roster |
 | 30 | SHIELD_COLLAPSE | structure u16 | 4 | roster |
 | 31 | POSSESS_REQUESTED | entity u16, from u8 | 5 | possessor of entity |
 | 32 | CANISTER_DEPLOYED | canister u16, owner u8 | 5 | team (SL-5, v1 stretch) |
@@ -1539,3 +1539,4 @@ Applied 2026-10-10 from `docs/reviews/R0-resolution-register.md`, the owner deci
 | R0 B.20 A-107 (CONTRACT-0 amendments 14, 2026-10-21) | GD-19 (PR #106) review: the 5.4 death diagram listed `DEATH ; RELEASED`, contradicting 05 C15; the contract order for one dying entity is `WRECK_SPAWNED` (per wreck / pod), `RELEASED(reason=DEATH)`, `DEATH`, so the client's 1.5 s hold on the wreck has the wreck id before DEAD_HOLD; no byte change, `cause u8` (3.6 row 1) now carries `SimEvent.DeathCause` (R0 B.3) | 5.4 |
 | R0 B.22 A-112..A-114 (CONTRACT-0 amendments 16, 2026-10-23) | NET-17 (PR #118) contract questions: the roster gains a 2,048-entry projectile block (index 1,536 + slot - 4,096, capacity 3,584) so rockets, bombs, siege shells and canisters have the roster index 3.6 always assumed (3.1, 3.6, 4.1 visibility rule, 4.6 META note; code NET-58); the shared `SimView` contract compares replicated scalars within one 3.3 wire quantum (5.6; TEST-5); a split wreck's radius is the def value with `unknown` (5.6). |
 | R0 B.23 A-116, A-117 (CONTRACT-0 amendments 17, 2026-10-27) | NET-17 (PR #118) review: 3.7 gains a row for every accessor (`overlay`, `cargo`, `cargo_kind` not replicated in v1 with named upgrade paths; `link` ship / pad ends from `DOCKED` / `LAUNCHED` + own-team pads, tow end deferred to ART-17's `TETHERED` events; identity and `flags` rows); `unknown(id)` covers the carried accessors only and `field_unknown(id, accessor)` is the HUD's per-field query (3.7 preamble, 5.6; code NET-39). |
+| R0 B.24 A-121 (CONTRACT-0 amendments 18, 2026-10-27) | GD-15 (PR #128) CQ-3: `LANDING` flags bit2 = dead stick inside the existing byte (bits 3-7 reserved zero); payload, scope and `PROTOCOL_VERSION` unchanged | 3.6 |
