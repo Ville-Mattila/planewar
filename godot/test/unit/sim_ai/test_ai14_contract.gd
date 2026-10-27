@@ -6,8 +6,8 @@ extends GdUnitTestSuite
 ## new brains write (no new ordinal: A-94's reserved words).
 
 
-func test_ai_state_format6_round_trips_lock_tick_and_refuses_format5() -> void:
-	assert_int(AiState.FORMAT).is_equal(6)
+func test_ai_state_round_trips_lock_tick_and_refuses_format5() -> void:
+	assert_int(AiState.FORMAT).is_equal(7)   # AI-17: FORMAT 7 (the hit record); lock_tick is unchanged
 	var st: AiState = AiState.new(32)
 	st.cls[5] = 1
 	st.eid[5] = EntityId.make(5, 1)

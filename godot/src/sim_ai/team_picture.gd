@@ -11,6 +11,8 @@ class_name TeamPicture extends RefCounted
 
 var _tick: PackedInt32Array = PackedInt32Array()     ## by team: Vision epoch of the cached list (-1: none)
 var _ids: Array[PackedInt32Array] = []                ## by team: visible enemy ships of that epoch
+var _pos: Array[PackedVector3Array] = []              ## by team: where those ships were when the list was built (AI-17 `near_built`)
+var _pbuf: PackedVector3Array = PackedVector3Array()  ## scratch of the build's positions
 var _near: PackedInt32Array = PackedInt32Array()      ## scratch of `near` (grown on demand, reused)
 var _buf: PackedInt32Array = PackedInt32Array()      ## scratch of the Vision list (grown by the view, reused)
 var builds: int = 0                                   ## lists built (tests, perf)
@@ -22,6 +24,7 @@ func _init() -> void:
 	_tick.fill(-1)
 	for t: int in PlayerTable.TEAMS:
 		_ids.append(PackedInt32Array())
+		_pos.append(PackedVector3Array())
 
 
 ## The enemy ships team `team` sees at `tick` (the shared list: do not modify).
@@ -34,6 +37,11 @@ func enemies(view: SimView, team: int, tick: int) -> PackedInt32Array:
 		builds += 1
 		var n: int = view.visible_enemy_ships(team, _buf)   # Vision's list, ascending EntityId (V10), the old ships() order
 		_ids[team] = _buf.slice(0, n)
+		if _pbuf.size() < n:
+			var _p: int = _pbuf.resize(n)
+		for i: int in n:
+			_pbuf[i] = view.pos(_buf[i])
+		_pos[team] = _pbuf.slice(0, n)
 	return _ids[team]
 
 
@@ -48,6 +56,24 @@ func near(view: SimView, team: int, tick: int, origin: Vector3, radius: float) -
 	for id: int in list:
 		if view.alive(id) and origin.distance_squared_to(view.pos(id)) <= r2:
 			_near[n] = id
+			n += 1
+	return n
+
+
+## AI-17: `near` on the positions the list had when it was built, with no `SimView` read per ship (a tower scans the whole
+## list on each think: 200 towers x the visible roster). A ship may have moved since, by at most its top speed times the
+## epoch, so the caller passes `radius + slack` and re-checks the live position of what it keeps (the choice point does);
+## the dead are not filtered either. Same scratch and result contract as `near`.
+func near_built(view: SimView, team: int, tick: int, origin: Vector3, radius: float) -> int:
+	var list: PackedInt32Array = enemies(view, team, tick)
+	if _near.size() < list.size():
+		var _r: int = _near.resize(list.size())
+	var at: PackedVector3Array = _pos[team]
+	var r2: float = radius * radius
+	var n: int = 0
+	for i: int in list.size():
+		if origin.distance_squared_to(at[i]) <= r2:
+			_near[n] = list[i]
 			n += 1
 	return n
 
