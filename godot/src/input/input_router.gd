@@ -18,6 +18,8 @@ var kbm_mapper: KbmFlightMapper = KbmFlightMapper.new()
 var touch_mapper: TouchFlightMapper = TouchFlightMapper.new()
 ## Touch gestures (UX-04). The HUD sets `gestures.stick_zone` and `gestures.fire_zone`.
 var gestures: GestureRecognizer = GestureRecognizer.new()
+## RTS-mode mouse, keyboard and gamepad camera intents (UX-45). The HUD sets `rts_mapper.viewport_size`.
+var rts_mapper: RtsCameraMapper = RtsCameraMapper.new()
 ## FIRE long-press opens the wing radial only while no hostile is within 800 m (06 s3.1); `app` keeps this current.
 var wing_radial_allowed: bool = false
 
@@ -40,6 +42,8 @@ func _input(event: InputEvent) -> void:
 func route_event(event: InputEvent, now_ms: int) -> void:
 	if event is InputEventMouseMotion and is_flight_mode(_mode):
 		kbm_mapper.add_mouse_motion((event as InputEventMouseMotion).relative)
+	if _mode == Mode.RTS:
+		_emit_all(rts_mapper.feed(event))
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
 		_handle_gestures(gestures.feed(event, now_ms))
 	var before_class: int = _monitor.active_class
@@ -83,8 +87,22 @@ func _flight_gesture(g: Gesture) -> void:
 		intent.emit(Intents.WING_RADIAL, {Intents.K_OPEN: _wing_open, Intents.K_POS: g.pos})
 
 
-func _physics_process(_delta: float) -> void:
+## Emits the held-input camera intents (Q/E, RS, triggers) for one tick; RTS only. Public for tests and replays.
+func emit_rts_tick(dt: float) -> void:
+	if _mode == Mode.RTS:
+		_emit_all(rts_mapper.tick(dt))
+
+
+func _emit_all(list: Array[Dictionary]) -> void:
+	for r: Dictionary in list:
+		var kind: StringName = r.get(&"kind", &"")
+		var payload: Dictionary = r.get(&"payload", {})
+		intent.emit(kind, payload)
+
+
+func _physics_process(delta: float) -> void:
 	poll_gestures(Time.get_ticks_msec())
+	emit_rts_tick(delta)
 	var _emitted: bool = emit_tick()
 
 
@@ -139,6 +157,8 @@ func set_match_input_class(kind: int) -> void:
 
 
 func set_mode(new_mode: Mode) -> void:
+	if new_mode != _mode:
+		rts_mapper.reset()
 	_mode = new_mode
 
 
