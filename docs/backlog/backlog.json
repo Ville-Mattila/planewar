@@ -2505,9 +2505,11 @@
       " R0 C2-15",
       " 05 AI-17"
     ],
-    "status": "todo",
+    "status": "done",
     "acceptance_append": "; tower tags are AiTag.Tag TRACK 31, OFFLINE 32, IDLE 33 (R0 B.17 A-94)",
-    "note": "R0 B.23 A-118 fixes the slew contract (azimuth / elevation about the site normal, norm clamp, no rate lag, muzzle = fwd, sim-side fire gates). TurretAim's cos(elevation) compensation and the SlewDriver update are AI-44 (may be folded into round 2); GD-09 removes the stand-in."
+    "note": "R0 B.23 A-118 fixes the slew contract (azimuth / elevation about the site normal, norm clamp, no rate lag, muzzle = fwd, sim-side fire gates). TurretAim's cos(elevation) compensation and the SlewDriver update are AI-44 (may be folded into round 2); GD-09 removes the stand-in. TowerBrain/TowerParams, TurretAim (body-axes form; A-118 az/el -> AI-44), AiState FORMAT 7 (AiHitLog, derived tower_target_count). Perf (dev): tracking act 6.8-7.4 us < 8.1 ceiling, engaged think 46-48 us < 50, act fleet 1.9-2.0 us. SC-30/31 use Ai17Kit.SlewDriver until GD-09.",
+    "pr": 124,
+    "merged": "2026-10-27"
   },
   {
     "id": "AI-18",
