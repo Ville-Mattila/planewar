@@ -7903,6 +7903,8 @@
       "R0-amendments-18 A-122",
       "R0 B.1 scoring.json"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 131,
+    "merged": "2026-10-27"
   }
 ]
