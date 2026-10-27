@@ -82,6 +82,8 @@ func set_brain(cls: int, brain: AiBrain, bot: bool = false) -> void:
 	if brain != null:
 		brain.bind_rng(_rng)
 		brain.bind_intel(_intel)
+		if brain.counts_targets():
+			state.counted_class = cls
 	if bot:
 		_bot_brain = brain
 

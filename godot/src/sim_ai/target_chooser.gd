@@ -90,10 +90,11 @@ static func choose_ship(view: SimView, team: int, cand: PackedInt32Array, n: int
 ## turret's current unit direction, `slew_s` = angle to the target / turret rate. Bounded like `choose_ship`: the best
 ## `p.max_candidates` by priority weight are scored. `guarded` (0 = no GUARD order) doubles attackers of that structure
 ## (the caller marks them in `ctx.guard_until`; `ctx.attacked_until` is the separate x1.5 "attacking" mark, AI-17).
-## `current` is excluded from its own crowd count.
+## `current` is excluded from its own crowd count. `enemies_only` (AI-17): the caller guarantees every candidate is an
+## enemy (TeamPicture ships, Perception contacts), so the alive / team reads are skipped (`visible_to` is false for the dead).
 static func choose_tower(view: SimView, team: int, tower_pos: Vector3, aim: Vector3, env: TowerEnvelope,
 		range_m: float, cand: PackedInt32Array, n: int, current: int, tick: int, ctx: TargetContext, p: TargetParams,
-		guarded: int, out: PackedInt32Array) -> int:
+		guarded: int, out: PackedInt32Array, enemies_only: bool = false) -> int:
 	assert(out.size() >= p.max_candidates and ctx.scores.size() >= p.max_candidates, "choice-point scratch too small")
 	var k: int = 0
 	var r2: float = range_m * range_m
@@ -102,7 +103,9 @@ static func choose_tower(view: SimView, team: int, tower_pos: Vector3, aim: Vect
 	var has_floor: bool = env.has_floor()
 	for i: int in n:
 		var id: int = cand[i]
-		if not view.alive(id) or view.team(id) == team or not view.visible_to(team, id):
+		if not enemies_only and (not view.alive(id) or view.team(id) == team):
+			continue
+		if not view.visible_to(team, id):   # false for a dead id
 			continue
 		var pos: Vector3 = view.pos(id)
 		var def_id: int = view.def_id(id)
@@ -111,16 +114,17 @@ static func choose_tower(view: SimView, team: int, tower_pos: Vector3, aim: Vect
 			continue
 		var r_t: float = pos.length()   # the TowerEnvelope.eligible test, inlined: this loop runs per candidate per think
 		var agl: float = r_t - floor_m - view.terrain_height(pos) if has_floor else 0.0
-		if not env.kind_ok(def_id) or not env.in_envelope(r_t - r_tower, agl):
+		var h_rel: float = r_t - r_tower   # TowerEnvelope.in_envelope inlined
+		if h_rel < env.h_rel_min or h_rel > env.h_rel_max or (has_floor and agl < env.agl_min) or not env.kind_ok(def_id):
 			continue
 		k = _keep_best(out, ctx.scores, k, p.max_candidates, id, base)
 	for j: int in k:
 		var id: int = out[j]
 		var pos: Vector3 = view.pos(id)
 		var slew: float = aim.angle_to((pos - tower_pos).normalized()) / env.turn_rad_s if env.turn_rad_s > 0.0 else 0.0
-		var attacking: bool = ctx.attacked_recently(id, tick)
-		ctx.scores[j] = score_tower(ctx.scores[j], attacking, view.hp01(id), _others(ctx, id, current),
-			guarded != 0 and ctx.guard_attacked(id, tick), slew, p)   # scores[j] still holds the first pass's base weight
+		var cs: int = EntityId.slot(id)   # attacked_recently / guard_attacked / _others inlined
+		ctx.scores[j] = score_tower(ctx.scores[j], ctx.attacked_until[cs] > tick, view.hp01(id),
+			ctx.targeted_by[cs] - (1 if id == current else 0), guarded != 0 and ctx.guard_until[cs] > tick, slew, p)   # scores[j] still holds the first pass's base weight
 	return pick(out, ctx.scores, k, current, p.tower_switch_margin)
 
 

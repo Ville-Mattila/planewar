@@ -54,6 +54,10 @@ static func create(c: ContentSet, ap: Dictionary) -> TowerBrain:
 	return b
 
 
+func counts_targets() -> bool:
+	return true   # the crowd term counts towers only (AiState.tower_target_count)
+
+
 func bind_rng(_rng: Rng) -> void:
 	picture.reset()   # bound on set_brain and after deserialize: no list survives a restore
 	_g_stamp.fill(-2)
@@ -91,13 +95,20 @@ func _think(id: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -
 	if env == null:
 		return
 	stats_thinks += 1
+	var team: int = view.team(id)
+	var p: Vector3 = view.pos(id)
+	st.home[s] = p                                   # a tower's position, def and team are static: cached for the act
+	st.aux_id[s] = view.def_id(id) - DefRanges.STRUCTURE_BASE
+	st.sub[s] = team
 	var head: OrderSpec = view.order_head(id)
-	var m: int = _idle_mode(id, head, view, tick)
+	var m: int = _idle_mode(id, head, view, tick, team)
 	var pick: int = 0
 	if m == AiTag.Tag.NONE:
-		pick = _choose(id, s, env, head, view, st, tick)
+		pick = _choose(id, s, env, head, view, st, tick, team, p)
 		m = AiTag.Tag.TRACK if pick != 0 else AiTag.Tag.IDLE
 	st.set_target(s, pick)
+	st.tti[s] = view.radius(pick) if pick != 0 else 0.0                # static per target: the act's fire cone reads it here
+	st.fire_mask[s] = 1 if pick != 0 and view.ammo(id) > 0 else 0       # pool not empty (bit0), refreshed per think
 	if pick == 0:
 		st.lock_tick[s] = 0
 	if st.mode[s] != m:
@@ -106,10 +117,10 @@ func _think(id: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -
 
 
 # The tag a tower holds without a choice point, or NONE when it works: under construction, offline for power, HOLD.
-func _idle_mode(id: int, head: OrderSpec, view: SimView, tick: int) -> int:
+func _idle_mode(id: int, head: OrderSpec, view: SimView, tick: int, team: int) -> int:
 	if (view.flags(id) & EntityStore.F_BUILDING) != 0:
 		return AiTag.Tag.IDLE
-	if _power(view.team(id), view, tick) < prm.off_ratio:
+	if _power(team, view, tick) < prm.off_ratio:
 		return AiTag.Tag.OFFLINE
 	if head != null and head.kind == OrderSpec.Kind.HOLD:
 		return AiTag.Tag.HOLD
@@ -126,19 +137,17 @@ func _power(team: int, view: SimView, tick: int) -> float:
 	return _pw[team]
 
 
-func _choose(id: int, s: int, env: TowerEnvelope, head: OrderSpec, view: SimView, st: AiState, tick: int) -> int:
-	var team: int = view.team(id)
+func _choose(id: int, s: int, env: TowerEnvelope, head: OrderSpec, view: SimView, st: AiState, tick: int, team: int, p: Vector3) -> int:
 	if team < 0 or team >= _ctx.size():
 		return 0
 	stats_choices += 1
-	var p: Vector3 = view.pos(id)
-	var rng_m: float = prm.range_m[view.def_id(id) - DefRanges.STRUCTURE_BASE]
+	var rng_m: float = prm.range_m[st.aux_id[s]]
 	var guarded: int = head.target if head != null and head.kind == OrderSpec.Kind.GUARD else 0
 	var n: int = _gather(view, team, tick, p, rng_m, env)
 	var ctx: TargetContext = _ctx[team]
-	_mark(ctx, st, team, tick, p, n, guarded)
+	_mark(ctx, st, view, team, tick, p, n, guarded)
 	var pick: int = TargetChooser.choose_tower(view, team, p, -view.basis(id).z, env, rng_m, _cand, n, st.target[s], tick,
-		ctx, prm.targets, guarded, _pick)
+		ctx, prm.targets, guarded, _pick, true)
 	if head != null and head.kind == OrderSpec.Kind.ATTACK and head.target != 0 \
 			and _ordered(head.target, team, p, rng_m, env, view):
 		return head.target   # 05 s6.8: the ordered target if eligible, else the normal choice
@@ -146,7 +155,7 @@ func _choose(id: int, s: int, env: TowerEnvelope, head: OrderSpec, view: SimView
 
 
 func _ordered(t: int, team: int, p: Vector3, rng_m: float, env: TowerEnvelope, view: SimView) -> bool:
-	if not view.alive(t) or view.team(t) == team or not view.visible_to(team, t):
+	if not view.visible_to(team, t) or view.team(t) == team:   # visibility first (false for a dead id): no read of what the team cannot see
 		return false
 	var tp: Vector3 = view.pos(t)
 	return env.eligible(p, tp, view.def_id(t), rng_m, view.terrain_height(tp) if env.has_floor() else 0.0)
@@ -193,14 +202,17 @@ func _refresh_ground(team: int, perc: Perception) -> void:
 	_g_pos[team] = _g_pbuf.slice(0, g)
 
 
-# Per candidate: its crowd count, the x1.5 "attacked a friendly asset within the radius" mark and the GUARD mark.
-func _mark(ctx: TargetContext, st: AiState, team: int, tick: int, p: Vector3, n: int, guarded: int) -> void:
+# Per candidate: the number of friendly TOWERS already on it (05 s6.8 crowd term), the x1.5 mark (it hit a friendly
+# STRUCTURE within the radius of the tower: the victim's def is read once, only for a candidate with a fresh hit on the
+# team) and the GUARD mark.
+func _mark(ctx: TargetContext, st: AiState, view: SimView, team: int, tick: int, p: Vector3, n: int, guarded: int) -> void:
 	var hits: AiHitLog = st.hits
 	for i: int in n:
 		var cs: int = EntityId.slot(_cand[i])
-		ctx.targeted_by[cs] = st.target_count[cs]
+		ctx.targeted_by[cs] = st.tower_target_count[cs]
 		var hit: bool = hits.team[cs] == team   # a candidate that never hit this team's assets skips the window tests
-		ctx.attacked_until[cs] = tick + 1 if hit and hits.attacking(cs, team, tick, prm.window_ticks, p, prm.attack_r2) else 0
+		var atk: bool = hit and hits.attacking(cs, team, tick, prm.window_ticks, p, prm.attack_r2) 				and DefRanges.kind_of(view.def_id(hits.victim[cs])) == DefRanges.K_STRUCTURE
+		ctx.attacked_until[cs] = tick + 1 if atk else 0
 		if guarded != 0:
 			ctx.guard_until[cs] = tick + 1 if hit and hits.guarding(cs, guarded, tick, prm.window_ticks) else 0
 
@@ -216,7 +228,7 @@ func _track(id: int, s: int, view: SimView, st: AiState, sink: CommandSink, tick
 	var t: int = st.target[s]
 	stats_acts += 1
 	stats_visible += 1
-	if view.visible_to(view.team(id), t):   # false for a dead id: the one read both gates the act and keeps it fair
+	if view.visible_to(st.sub[s], t):   # false for a dead id: the one read both gates the act and keeps it fair
 		_aim(id, s, t, view, st, tick, out)
 	else:
 		st.lock_tick[s] = 0
@@ -225,21 +237,22 @@ func _track(id: int, s: int, view: SimView, st: AiState, sink: CommandSink, tick
 
 
 func _aim(id: int, s: int, t: int, view: SimView, st: AiState, tick: int, out: PilotInput) -> void:
-	var di: int = view.def_id(id) - DefRanges.STRUCTURE_BASE
+	var di: int = st.aux_id[s]   # cached at think with the position and team
 	var env: TowerEnvelope = prm.env[di]
-	var p: Vector3 = view.pos(id)
+	var p: Vector3 = st.home[s]
 	var tp: Vector3 = view.pos(t)
 	var rel: Vector3 = tp - p
 	var dist: float = rel.length()
 	var sp: float = prm.speed[di]
+	var b: Basis = view.basis(id)
 	var dir: Vector3 = AimSolver.aim_dir(p, Vector3.ZERO, tp, view.vel(t), sp) if sp > 0.0 else Vector3.ZERO
 	var solved: bool = dir != Vector3.ZERO or sp <= 0.0
 	if dir == Vector3.ZERO:
-		dir = rel / dist if dist > 0.0 else -view.basis(id).z   # no solution (or a guided rocket): at the target
-	var ang: float = TurretAim.slew(view.basis(id), dir, env.turn_rad_s, prm.dt, out)
+		dir = rel / dist if dist > 0.0 else -b.z   # no solution (or a guided rocket): at the target
+	var ang: float = TurretAim.slew(b, dir, env.turn_rad_s, prm.dt, out)
 	var agl: float = tp.length() - Sphere.PLANET_RADIUS - view.terrain_height(tp) if env.has_floor() else 0.0   # AGL only where a floor is set
-	var fire: bool = solved and dist <= prm.range_m[di] and ang < atan(prm.cone_k * view.radius(t) / maxf(dist, 1.0)) \
-			and env.in_envelope(tp.length() - p.length(), agl) and view.ammo(id) > 0
+	var fire: bool = solved and dist <= prm.range_m[di] and ang < atan(prm.cone_k * st.tti[s] / maxf(dist, 1.0)) \
+			and env.in_envelope(tp.length() - p.length(), agl) and st.fire_mask[s] != 0
 	if fire:
 		out.buttons = PilotInput.FIRE1
 		if prm.lock_ticks[di] > 0 and st.lock_tick[s] == 0:

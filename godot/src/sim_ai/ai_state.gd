@@ -1,10 +1,8 @@
 class_name AiState extends RefCounted
 ## AI state proper, structure of arrays indexed by entity slot (05 s4.3; the entity store holds only `ai_tag`, R0 C2-07).
-## Beyond the 05 s4.3 fields it carries the driver's per-slot scheduling data (`cls`, `eid`, `stagger`, `last_wake`,
-## `wake_pending`), the landing fields of AI-09, the overlay state of AI-08 (`overlay`, `ov_flags`; the overlays use
-## `integ`), the escort fields of AI-11 and the brain fields of AI-13 (FORMAT 5: `sub`, `passes`, `prev_mode`, `wp`,
-## `bflags`, `seen_tick`, `mark_tick`, `burst_tick`, `order_tick`, `hp_mark`, `clear_m`, `home`, `goal`, `aim_err`) and
-## the Lancer's rocket lock of AI-14 (FORMAT 6: `lock_tick`) and the last HIT each entity landed (AI-17, FORMAT 7: `hits`).
+## Beyond the 05 s4.3 fields: the driver's scheduling data (`cls`, `eid`, `stagger`, ...), the landing (AI-09), overlay
+## (AI-08), escort (AI-11) and brain fields (AI-13 FORMAT 5), `lock_tick` (AI-14, FORMAT 6) and the last HIT each entity
+## landed (AI-17, FORMAT 7: `hits`); the derived `tower_target_count` is not in the bytes.
 ## `serialize` writes only registered slots (`cls != NO_CLASS`), ascending, so bytes are a function of state.
 
 const NO_CLASS: int = 255
@@ -76,8 +74,9 @@ var ground_h: PackedFloat32Array = PackedFloat32Array()   ## terrain height unde
 var lift: PackedFloat32Array = PackedFloat32Array()       ## TerrainProbe lift of the last think (m/s)
 var pad_claim: PackedInt32Array = PackedInt32Array()      ## by pad slot: EntityId of the ship landing on it, or 0
 var hits: AiHitLog = AiHitLog.new()                       ## AI-17: the last HIT each entity landed (tower scoring), by attacker slot
+var tower_target_count: PackedByteArray = PackedByteArray()  ## AI-17: like `target_count`, for registered entities of `counted_class` only (the 05 s6.8 crowd term counts towers)
+var counted_class: int = NO_CLASS                         ## AI-17: session config, set by `AiDriver.set_brain` for a brain with `counts_targets`; NO_CLASS: none
 var capacity: int = 0
-
 
 func _init(slots: int = EntityStore.SLOT_COUNT) -> void:
 	ensure_capacity(slots)
@@ -100,7 +99,7 @@ func ensure_capacity(slots: int) -> void:
 		sub.resize(slots), passes.resize(slots), prev_mode.resize(slots), wp.resize(slots), bflags.resize(slots),
 		seen_tick.resize(slots), mark_tick.resize(slots), burst_tick.resize(slots), order_tick.resize(slots),
 		hp_mark.resize(slots), clear_m.resize(slots), home.resize(slots), goal.resize(slots), aim_err.resize(slots),
-		target_count.resize(slots), rtb_floor.resize(slots), lock_tick.resize(slots)]
+		target_count.resize(slots), tower_target_count.resize(slots), rtb_floor.resize(slots), lock_tick.resize(slots)]
 	hits.resize(slots)
 	capacity = slots
 	for s: int in range(old, slots):
@@ -176,12 +175,15 @@ func set_target(s: int, t: int) -> void:
 	var old: int = target[s]
 	if old == t:
 		return
+	var tw: bool = counted_class != NO_CLASS and cls[s] == counted_class
 	var o: int = EntityId.slot(old)
 	if old != 0 and o < capacity:
 		target_count[o] = maxi(target_count[o] - 1, 0)
+		tower_target_count[o] = maxi(tower_target_count[o] - 1, 0) if tw else tower_target_count[o]
 	var n: int = EntityId.slot(t)
 	if t != 0 and n < capacity:
 		target_count[n] = mini(target_count[n] + 1, 255)
+		tower_target_count[n] = mini(tower_target_count[n] + 1, 255) if tw else tower_target_count[n]
 	target[s] = t
 
 
@@ -294,11 +296,13 @@ func deserialize(bytes: PackedByteArray) -> bool:
 
 func _rebuild_targets() -> void:
 	target_count.fill(0)
+	tower_target_count.fill(0)
 	for s: int in capacity:
 		if cls[s] != NO_CLASS and target[s] != 0:
 			var n: int = EntityId.slot(target[s])
 			if n < capacity:
 				target_count[n] = mini(target_count[n] + 1, 255)
+				tower_target_count[n] = mini(tower_target_count[n] + 1, 255) if cls[s] == counted_class else tower_target_count[n]
 
 
 # The escort rosters are derived from the records: every registered escort with a slot goes back to its escortee's row.
@@ -315,6 +319,7 @@ func _fail() -> bool:
 	for s: int in capacity:
 		clear_slot(s)
 	target_count.fill(0)
+	tower_target_count.fill(0)
 	return false
 
 

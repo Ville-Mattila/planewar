@@ -177,7 +177,7 @@ func test_the_act_gate_releases_the_trigger_when_the_sensor_mast_dies() -> void:
 	_setup(&"autocannon_turret")
 	var mast_p: Vector3 = Ai17Kit.rel(_w, _tw, -150.0, 0.0, 0.0)
 	var mast: int = DartKit.spawn(_w, &"sensor_mast", 0, mast_p, Vector3.ZERO, DartKit.heading(mast_p, Vector3(0, 1, 0)))
-	var dart_p: Vector3 = Ai17Kit.rel(_w, _tw, 400.0, 0.0, 0.5 * TargetParams.num(_tower_block(&"autocannon_turret"), "h_rel_max", 0.0) / 10.0)
+	var dart_p: Vector3 = Ai17Kit.rel(_w, _tw, 600.0, 0.0, 0.01 * TargetParams.num(_tower_block(&"autocannon_turret"), "h_rel_max", 0.0))   # on the deck, in range, under the datum horizon of the tower
 	var dart: int = DartKit.spawn(_w, &"dart", DartKit.FOE, dart_p, Vector3.ZERO, Vector3(0, 1, 0))
 	_w.store().hp[EntityId.slot(dart)] = 10000000.0
 	var fired: bool = false

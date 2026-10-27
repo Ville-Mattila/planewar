@@ -28,3 +28,9 @@ func bind_rng(_rng: Rng) -> void:
 ## bound on `set_brain` and `set_intel` (null: none). A brain reads `threat_map(team)` / `perception(team)` only.
 func bind_intel(_intel: TeamIntel) -> void:
 	pass
+
+
+## AI-17: true when `AiState.tower_target_count` should count this class's targets (the tower brain: the 05 s6.8 crowd
+## term). `AiDriver.set_brain` declares the class on `AiState.counted_class`.
+func counts_targets() -> bool:
+	return false
