@@ -174,3 +174,40 @@ func test_keyframe_caps_the_records_of_one_encode() -> void:
 	var dec: SnapshotDecoder = SnapshotDecoder.new(G, HZ, 0, roster)
 	assert_int(KeyframeCodec.new().decode(b, dec)).is_equal(KeyframeCodec.Status.OK)
 	assert_bool(dec.current().same_state(server.frame_at(4))).is_true()
+
+
+## A recycled projectile index on the client (round 2): between the new generation's ENTITY_META and its first (FULL)
+## record the id is not alive, and afterwards no frame of the previous occupant is shown or interpolated from.
+func test_view_never_shows_a_recycled_index_with_its_previous_occupant() -> void:
+	var roster: Roster = Roster.new()
+	var _r: bool = roster.add(PI0 + 5, 1, 1283, 0, 1)
+	var dec: SnapshotDecoder = SnapshotDecoder.new(G, HZ, 0, roster)
+	var v: NetSimView = NetSimView.new(roster, dec)
+	var defs: NetDefs = NetDefs.new()
+	defs.gravity = G
+	v.bind(defs, null)
+	var codec: SnapshotCodec = SnapshotCodec.new(G, HZ)
+	var server: BaselineStore = BaselineStore.new(0)
+	var pa: Vector3 = _here(0.0)
+	var pb: Vector3 = _here(2000.0)
+	var new_id: int = EntityId.make(P0 + 5, 2)
+	for t: int in range(1, 6):
+		var g: int = 1 if t < 4 else 2
+		var f: SnapshotFrame = SnapshotFrame.new()
+		f.resize(1)
+		f.tick = t
+		f.set_projectile(0, P0 + 5, SnapshotFrame.ROCKET, pa if g == 1 else pb, Vector3.ZERO, g, false, 0, 0, g)
+		codec.prepare_tick(f)
+		var out: Array[PackedByteArray] = []
+		var _n: int = codec.encode(server, t, PackedInt32Array([PI0 + 5]), PackedInt32Array(), PackedInt32Array(), null, out)
+		if t == 4:                                          # ENTITY_META of the new generation, before its record
+			var _a: bool = roster.add(PI0 + 5, 2, 1283, 0, 2)
+			v.sample(3.0)
+			assert_bool(v.alive(new_id)).is_false()
+		for p: PackedByteArray in out:
+			assert_int(dec.decode(p)).is_equal(SnapshotDecoder.Status.OK)
+		server.ack(t)
+	for r: float in [3.0, 3.5, 4.0, 4.5]:
+		v.sample(r)
+		assert_bool(v.alive(new_id)).is_true()
+		assert_float(v.pos(new_id).distance_to(pb)).override_failure_message("render %.1f" % r).is_less(1.0)
