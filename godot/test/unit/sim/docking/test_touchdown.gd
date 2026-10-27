@@ -242,10 +242,9 @@ func test_a_crash_on_a_pad_deals_crash_pad_damage_to_it_named_after_the_ship() -
 	assert_float(_w.store().hp[p]).is_equal(hp1)                              # a landing that is not a crash costs the pad nothing
 
 
-# CQ-8 (raised in the GD-15 PR): A-120 expects the Core's integrated shield to absorb a crash on the Core first, but
-# GD-10 / 02 s4.3 rule 6 shields absorb only enemy projectiles in flight and DamageSink has no shield path. Pinned
-# here as built until the Architect rules: the Core takes crash_pad_damage, its shield charge is untouched.
-func test_a_crash_on_the_shielded_core_reaches_the_core_pending_cq_8() -> void:
+# R0 B.25 A-135 (amends A-120, closes CQ-8): a crash is ship contact, not a projectile, so no shield absorbs it
+# (02 s4.3 rule 6 covers shield_absorbed projectiles only): the Core takes the full crash_pad_damage, charge untouched.
+func test_a_crash_on_the_shielded_core_reaches_the_core_unshielded() -> void:
 	var c: FlightCommonDef = DockingTestKit.common()
 	var core: int = DockingTestKit.pad(_w, &"core", 0, 0, 1500.0)
 	_w.step()

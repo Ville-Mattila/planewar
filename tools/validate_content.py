@@ -135,21 +135,7 @@ def check_cross(rep: Report, defs: dict[str, Any]) -> None:
     check_amendments_02(rep, defs)
     check_landing_grade(rep, defs)
     check_quality_tiers(rep, defs)
-    check_pad_queue_radius(rep, defs)
 
-
-def check_pad_queue_radius(rep: Report, defs: dict[str, Any]) -> None:
-    """R0 B.24 A-125: economy.pad_queue_radius_m must reach at least the largest pad_radius_m of any structure or
-    tower (the queue zone surrounds the landing volume). A cross-file bound the schema minimum cannot express."""
-    eco = defs.get("economy")
-    r = eco.get("pad_queue_radius_m") if isinstance(eco, dict) else None
-    if not isinstance(r, (int, float)) or isinstance(r, bool):
-        return
-    pads = [s.get("pad_radius_m") for stem in ("structures", "towers") for s in collection(defs.get(stem), stem)]
-    pads = [p for p in pads if isinstance(p, (int, float)) and not isinstance(p, bool)]
-    if pads and r < max(pads):
-        rep.add("godot/content/defs/economy.json:/pad_queue_radius_m",
-                f"pad_queue_radius_m {r} must be >= the largest pad_radius_m {max(pads)} (R0 B.24 A-125)")
 
 
 QUALITY_TIERS = ("LOW", "MEDIUM", "HIGH")

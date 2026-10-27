@@ -156,6 +156,6 @@ and `landing_grade_last`; `godot/test/unit/sim/test_collision.gd` (D2 impact spe
   ship stays DOCKED); `crash_pad_damage` (A-120), LANDING flags bit2 = dead stick (A-121), landings at the end of step 9
   (A-124), `pad_queue_radius_m` horizontal (A-125), rearm time by the most-missing slot (A-126) and `PER_PAD` as a const
   (A-127) are as built. 03 s6.4 now names `timer_a` the rearm line.
-- CQ-8 A-120 says the Core's integrated shield absorbs a crash on the Core first, but shields (GD-10, 02 s4.3 rule 6)
-  absorb enemy projectiles in flight only and `DamageSink` has no shield path: the Core takes the damage
-  (`test_a_crash_on_the_shielded_core_reaches_the_core_pending_cq_8`) until the Architect rules.
+- CQ-8 closed by R0 B.25 A-135 (amends A-120): a pad crash, the Core included, is never shielded; the Core takes the
+  full `crash_pad_damage` (`test_a_crash_on_the_shielded_core_reaches_the_core_unshielded`). The raw reads of
+  `crash_pad_damage` and `pad_queue_radius_m` stay until GD-44 (CONTENT-3 types them).

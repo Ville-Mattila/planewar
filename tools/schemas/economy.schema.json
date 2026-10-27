@@ -113,9 +113,9 @@
     },
     "pad_queue_radius_m": {
       "type": "number",
-      "minimum": 0,
+      "minimum": 50,
       "maximum": 3000,
-      "$comment": "R0 B.24 A-125: queue zone around a busy pad, horizontal in the pad frame with no altitude term (05 s5.5 L2b 400 m hold + 100 m margin); canonical 500. Must be >= the largest structures/towers pad_radius_m: a cross-file bound, enforced by validate_content.py check_pad_queue_radius (the schema minimum stays 0)"
+      "$comment": "R0 B.24 A-125: queue zone around a busy pad, horizontal in the pad frame with no altitude term (05 s5.5 L2b 400 m hold + 100 m margin); canonical 500. minimum = the largest pad_radius_m (A-125; amendments 19 consequence 2): 50, the pad_radius_m schema maximum, so it holds for any valid structure or tower def"
     },
     "construction_slots_base": {
       "type": "integer",
