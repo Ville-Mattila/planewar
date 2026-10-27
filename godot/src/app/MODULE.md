@@ -12,7 +12,7 @@ must pass; <= 300 lines.
 | May depend on | everything below it (`tools/deps.json`) |
 | Must never touch | sim internals; only `offline_host.gd` may use `Thread` (non-web branch) |
 | Autoloads used | `App` (stub) |
-| Status | UX-24 ScreenFlow implemented; everything else planned |
+| Status | UX-24 ScreenFlow and UX-44 CameraIntentDriver implemented; everything else planned |
 
 ## Public API
 
@@ -50,6 +50,16 @@ func start(id: StringName, args: Dictionary = {}) -> bool
 func go(id: StringName, args: Dictionary = {}) -> bool
 func back() -> bool
 func on_intent(kind: StringName, _payload: Dictionary) -> void
+
+class_name CameraIntentDriver extends Node   # UX-44: router CAM_* intents -> OrbitController, RTS mode only
+const TILT_DEG_PER_DU: float; const COMMANDER_SNAP_ALTITUDE: float; const MIN_GRAB_DT: float   # 0.15, 5000, 0.001
+var controller: OrbitController; var router: InputRouter; var camera: Camera3D
+var ray_source: Callable                     # Callable(Vector2) -> PackedVector3Array [origin, dir]; else camera rays
+var core_dir: Vector3                        # own Core direction for Home and the compass in the polar cap
+func bind(r: InputRouter) -> void
+func step(dt: float) -> void                 # held pan, controller.update, camera transform; _process calls it
+func on_intent(kind: StringName, payload: Dictionary) -> void
+func compass_tap() -> void;  func toggle_north_up() -> void;  func follow(dir: Vector3, on: bool = true) -> void
 ```
 
 ## Invariants
@@ -59,11 +69,13 @@ func on_intent(kind: StringName, _payload: Dictionary) -> void
 - `back()` pops only when the reverse edge exists in `ScreenId.targets`; `go`/`back` change the stack only after the new screen showed.
 - `back()` asks `handle_back()` first, then pops; at an empty stack on `MAIN_MENU` it emits `quit_requested` (native only).
 - B on gamepad arrives only as `Intents.BACK`; keyboard Esc (`ui_cancel`, key events only, joypad events ignored so one press pops once) and `NOTIFICATION_WM_GO_BACK_REQUEST` all call `back()`; `quit_on_go_back` is false.
+- `CameraIntentDriver` reacts to `Intents.CAM_*` and `BUILD_ARM` only while the router is in `RTS`; in any other mode intents are ignored, held pan stops and an open grab ends, so flight modes never move the orbit camera. `CAM_PAN_VEL` is a held stick deflection (|vel| <= 1); a larger vector is a touch fling already carried by `grab_end` and is ignored.
 - Every shown screen ends with a focus owner inside it (`initial_focus()` or the first focusable descendant).
 
 ## Test entry points
 
 - `godot/test/unit/app/test_screen_flow.gd`
+- `godot/test/unit/app/test_camera_intent_driver.gd` (touch through InputRouter, mouse/gamepad intents, flight modes inert)
 
 ## Open items
 
