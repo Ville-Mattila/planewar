@@ -895,7 +895,7 @@
     "acceptance_append": "; read_poses equals pos/basis element-wise on both views (R0 B.11 A-56)",
     "pr": 66,
     "merged": "2026-10-20",
-    "note": "Clauses for unlanded systems (GD-15 service/pad queue, economy field_remaining/supply01/auto_replenish_target, scoring, path_grid_version) pin defaults and must be tightened as each lands. Visibility asserted for team 0 only. Every new SimView method needs a clause + mutant (coverage test enforces). TEST-5 (R0 B.22 A-113) corrects CONTROL 5 -> 2 and adds SimViewFactory.tolerance; clauses unchanged."
+    "note": "Clauses for unlanded systems (GD-15 service/pad queue, economy field_remaining/supply01/auto_replenish_target, scoring, path_grid_version) pin defaults and must be tightened as each lands. Visibility asserted for team 0 only. Every new SimView method needs a clause + mutant (coverage test enforces). TEST-5 (R0 B.22 A-113) corrects CONTROL 5 -> 2 and adds SimViewFactory.tolerance; clauses unchanged. R0 B.25 A-133: GD-45 adds the projectile def_id / owner / team / radius / def_kind clause to simview_contract.gd for both views."
   },
   {
     "id": "TA-19",
@@ -2119,14 +2119,15 @@
       "AI-44"
     ],
     "milestone": "M3",
-    "acceptance": "C-01, C-02, C-03, C-04, C-06 pass (Opus review)",
+    "acceptance": "C-01, C-02, C-03, C-04 pass (Opus review); C-06 is GD-26's (R0 B.25 A-128)",
     "docs": [
       "02 s4.4",
       " 02 AR-2",
       " 02 GD-09"
     ],
     "status": "todo",
-    "acceptance_append": "; R0 B.23 A-118 turret slew (sim step 5, towers only): (a) PilotInput.pitch / yaw are elevation / azimuth rates as fractions of tower.turret_turn_dps and the (pitch, yaw) pair is clamped to unit norm before scaling (a diagonal command moves at the cap, never sqrt(2) x it); (b) azimuth rotates fwd and up about the site normal n = pos.normalized() (positive yaw = muzzle left), elevation about right = fwd.cross(up) (positive pitch = muzzle up); right stays tangent so the turret never rolls; an elevation step that would reach or pass 90 deg is truncated at the pole (no def key); (c) no rate dynamics: the commanded rate applies in full in the tick it is commanded, before step 9 fire; no rate_accel for towers; (d) the muzzle is store.fwd and up is re-orthonormalised against fwd after each slew tick with right kept tangent; (e) the sim alone enforces at fire time, for AI and possessed towers alike, target_kinds, the [h_rel_min, h_rel_max] band, target_agl_min and the horizon test for lock, lock_time_s, the 100-500 m flip lock-break, power < 50 % no fire (slew allowed) and the fire cone; tests: a tower at 60 deg elevation commanded yaw 1 turns turret_turn_dps x dt about n, a (1, 1) command moves at the cap, 1,000 random slew ticks keep the basis orthonormal and right.dot(n) == 0 within 1e-5, a command past the zenith stops at the pole, a possessed offline tower slews and cannot fire; S4: no new saved state (the basis is fwd / up); re-run the AI-17 SC-30 / SC-31 scenarios (test_sc_tower.gd, test_tower_brain.gd) against the real slew with Ai17Kit.SlewDriver and SlewSink removed; sim/MODULE.md step-5 line and 02 s4.4 cite A-118; R0 B.24 A-123: every slew tick ends with right re-projected onto the site tangent plane (right = fwd.cross(n); below the pole guard keep the previous right minus n x right.dot(n); normalise; up = right.cross(fwd) normalised), so right.dot(n) is zero to float precision on every tick (test: 100,000 random slew ticks keep |right.dot(n)| <= 1e-6 and the basis orthonormal within 1e-5); an azimuth error of exactly -PI maps to +PI (turn left); elevation is atan2(fwd.dot(n), horizontal.length())"
+    "acceptance_append": "; R0 B.23 A-118 turret slew (sim step 5, towers only): (a) PilotInput.pitch / yaw are elevation / azimuth rates as fractions of tower.turret_turn_dps and the (pitch, yaw) pair is clamped to unit norm before scaling (a diagonal command moves at the cap, never sqrt(2) x it); (b) azimuth rotates fwd and up about the site normal n = pos.normalized() (positive yaw = muzzle left), elevation about right = fwd.cross(up) (positive pitch = muzzle up); right stays tangent so the turret never rolls; an elevation step that would reach or pass 90 deg is truncated at the pole (no def key); (c) no rate dynamics: the commanded rate applies in full in the tick it is commanded, before step 9 fire; no rate_accel for towers; (d) the muzzle is store.fwd and up is re-orthonormalised against fwd after each slew tick with right kept tangent; (e) the sim alone enforces at fire time, for AI and possessed towers alike, target_kinds, the [h_rel_min, h_rel_max] band, target_agl_min and the horizon test for lock, lock_time_s, the 100-500 m flip lock-break, power < 50 % no fire (slew allowed) and the fire cone; tests: a tower at 60 deg elevation commanded yaw 1 turns turret_turn_dps x dt about n, a (1, 1) command moves at the cap, 1,000 random slew ticks keep the basis orthonormal and right.dot(n) == 0 within 1e-5, a command past the zenith stops at the pole, a possessed offline tower slews and cannot fire; S4: no new saved state (the basis is fwd / up); re-run the AI-17 SC-30 / SC-31 scenarios (test_sc_tower.gd, test_tower_brain.gd) against the real slew with Ai17Kit.SlewDriver and SlewSink removed; sim/MODULE.md step-5 line and 02 s4.4 cite A-118; R0 B.24 A-123: every slew tick ends with right re-projected onto the site tangent plane (right = fwd.cross(n); below the pole guard keep the previous right minus n x right.dot(n); normalise; up = right.cross(fwd) normalised), so right.dot(n) is zero to float precision on every tick (test: 100,000 random slew ticks keep |right.dot(n)| <= 1e-6 and the basis orthonormal within 1e-5); an azimuth error of exactly -PI maps to +PI (turn left); elevation is atan2(fwd.dot(n), horizontal.length()); R0 B.25 A-129 (CB13a, the strict A-118 (e)): a tower's gun / flak / rail round spawns only if lock_target[s] holds a live hostile of its target_kinds inside range_m and the envelope (one O(1) re-check per shot; the round flies along the muzzle); the held target is picked by the existing envelope-aware scan when the fire window opens (burst reopen, reload complete, first round after a hold) and after a failed re-check, never per shot; the flak fuse target and the gate target are one pick; no new saved state (lock_target is serialised); tests: a possessed Autocannon with FIRE1 held on a Bomber at 600 m rel spends 0 rounds in 20 s and fires on the first burst at 300 m rel, a possessed Flak with FIRE1 held on a Dart at 100 m rel spends 0 shells, a possessed Rail Lance with no hostile in range spends 0 rounds, C-01 / C-02 pass with TowerBrain.eligible forced true, a target leaving the envelope mid-burst stops the burst and the tower re-picks once, S4 restore mid-window byte-exact; perf: the firing-tower delta cited in the PR; A-130: the three optional rocket keys stay read from raw until GD-44, the rocket _doc cites 02 s4.4 and R0 B.25 A-130; A-131: AGL lock loss for ships in flight only, ratified as built (W8)",
+    "note": "R0-amendments-19: C-06 -> GD-26 (A-128); strict A-118 (e) as CB13a with a per-window pick (A-129); rocket keys ratified, typed fields CONTENT-3 then GD-44 (A-130); flying-ship AGL lock loss ratified (A-131)."
   },
   {
     "id": "GD-10",
@@ -2206,8 +2207,8 @@
       " 02 GD-15"
     ],
     "status": "todo",
-    "acceptance_append": "; R0 B.24 A-120: ships.json flight_common gains required crash_pad_damage 100 (schema, _doc 02 s2.2 / 03 s6.4 / R0 B.5) and a CRASH outcome calls DamageSink.damage(pad, crash_pad_damage, attacker = ship) before the ship's destroy, so the HIT names the ship and shields apply (test: a crash on a Pad lowers its hp by 100; on the shielded Core the shield absorbs first); A-121: LANDING flags bit2 = dead stick is ratified (04 s3.6 row 29; no protocol bump); A-124: landings detected in step 8 resolve at the end of step 9 as built (sim/MODULE.md tick paragraph cites A-124); A-125: economy.json gains required pad_queue_radius_m 500 (schema, _doc 05 s5.5 L2b + 01 s4.3) and PadQueue D6 uses it as a horizontal pad-frame distance with no altitude term (a conservative 3-D prefilter allowed), auto_dock_radius_m keeps its A-33 meaning only (test: a ship holding at 400 m / 150 m AGL with a RETURN head order is queued, one at 520 m is not, one 450 m straight above is); A-126: rearm time = rearm_time_s x the most-missing slot share as built, with one test row pinned to the 02 s2.3 literals (Dart 300 / 180 / 450 ticks, 20 + 2 x 10 Ice); A-127: PadQueue.PER_PAD stays a const citing 03 s3.2; sim/docking/MODULE.md closes CQ-2..CQ-6 and points CQ-1 at GD-43 (a ship landed on a service pad stays DOCKED until GD-43)",
-    "note": "R0-amendments-18: CQ-1 -> GD-43 (sim) + AI-45 (brains); CQ-2 crash_pad_damage 100 in this PR; CQ-3 bit2 ratified, no net change; typed landing_grade -> CONTENT-2 then GD-27."
+    "acceptance_append": "; R0 B.24 A-120: ships.json flight_common gains required crash_pad_damage 100 (schema, _doc 02 s2.2 / 03 s6.4 / R0 B.5) and a CRASH outcome calls DamageSink.damage(pad, crash_pad_damage, attacker = ship) before the ship's destroy, so the HIT names the ship and shields apply (test: a crash on a Pad lowers its hp by 100; on the shielded Core the shield absorbs first); A-121: LANDING flags bit2 = dead stick is ratified (04 s3.6 row 29; no protocol bump); A-124: landings detected in step 8 resolve at the end of step 9 as built (sim/MODULE.md tick paragraph cites A-124); A-125: economy.json gains required pad_queue_radius_m 500 (schema, _doc 05 s5.5 L2b + 01 s4.3) and PadQueue D6 uses it as a horizontal pad-frame distance with no altitude term (a conservative 3-D prefilter allowed), auto_dock_radius_m keeps its A-33 meaning only (test: a ship holding at 400 m / 150 m AGL with a RETURN head order is queued, one at 520 m is not, one 450 m straight above is); A-126: rearm time = rearm_time_s x the most-missing slot share as built, with one test row pinned to the 02 s2.3 literals (Dart 300 / 180 / 450 ticks, 20 + 2 x 10 Ice); A-127: PadQueue.PER_PAD stays a const citing 03 s3.2; sim/docking/MODULE.md closes CQ-2..CQ-6 and points CQ-1 at GD-43 (a ship landed on a service pad stays DOCKED until GD-43); R0 B.25 A-135: a crash on any pad, the Core included, deals crash_pad_damage to the pad through DamageSink with no shield absorption (02 s4.3 rule 6 scope: projectiles only); the pinned test is renamed test_a_crash_on_the_shielded_core_reaches_the_core_unshielded and sim/docking/MODULE.md closes CQ-8 citing A-135; crash_pad_damage and pad_queue_radius_m stay raw reads until GD-44 (CONTENT-3 types them)",
+    "note": "R0-amendments-18: CQ-1 -> GD-43 (sim) + AI-45 (brains); CQ-2 crash_pad_damage 100 in this PR; CQ-3 bit2 ratified, no net change; typed landing_grade -> CONTENT-2 then GD-27. R0-amendments-19 A-135: CQ-8 closed, no shield on a pad crash (A-120 amended); typed crash_pad_damage / pad_queue_radius_m -> CONTENT-3 then GD-44."
   },
   {
     "id": "GD-18",
@@ -2365,7 +2366,9 @@
       "02 s18.3",
       " 02 GD-26"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; R0 B.25 A-128 (C-06, Sonnet): real BomberBrain ATTACK against a Refinery guarded by one, then two, finished, powered and supplied flak_battery at 600 m rel, 50 fixed seeds each, in test/sim/balance/; preconditions asserted first (the Flak sees the Bomber by its own sensor_radius at >= 1,500 m, the Bomber enters range_m with bombs; a precondition failure is a BUG task for the owning lane, not a C-06 result); if the 02 s18.3 band (>= 60 % survive with one, >= 80 % die before release with two) is met C-06 is green; otherwise the band is read from test/sim/scenarios/c06_bomber_vs_flak.json (one_flak_survive_min, two_flak_die_min) set to the measured rates minus 10 points, the measured rates are recorded in the PR body and the 02 s18.3 C-06 row ('measured a / b %, band open: GD-34'), and GD-26 is done",
+    "note": "R0 B.25 A-128: C-06 is the Sonnet item; preconditions first; a missed band becomes a measured JSON floor and a GD-34 item, not a GD-26 failure."
   },
   {
     "id": "GD-27",
@@ -3966,7 +3969,9 @@
       "02 s18",
       " 02 GD-34"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; R0 B.25 A-128: if GD-26 left the C-06 band open, make 02 s18.3 C-06 (>= 60 % / >= 80 %) pass by data inside the +-15 % anchor latitude (flak_gun.spread_deg, flak_shell.blast_radius_m, fuse_delay_s, flak_gun damage, Bomber hp / v_cruise) and restore the JSON band to 60 / 80; if the straight-line intercept cannot miss a constant-velocity Bomber inside that latitude, file the design change (range-scaled flak dispersion or a 05 Bomber evade policy) as a contract question with the sweep numbers instead of inventing one",
+    "note": "R0 B.25 A-128: owns the C-06 band if GD-26 leaves it open."
   },
   {
     "id": "QA-02",
@@ -7017,7 +7022,7 @@
     "status": "done",
     "merged": "2026-10-20",
     "pr": "public#58",
-    "note": "typed Def classes lack the four fields; read via Def.raw in WorldDefs (content follow-up)"
+    "note": "typed Def classes lack the four fields; read via Def.raw in WorldDefs (content follow-up) R0 B.25 A-130: the fuse_delay_s raw read it left ('needs content') is closed by CONTENT-3 + GD-44."
   },
   {
     "id": "TA-57",
@@ -7745,7 +7750,9 @@
       "04 s4.1",
       "04 s3.7"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; R0 B.25 A-132: a projectile's ROSTER_REMOVE follows its death or exit from V by 3 ticks and its index is not listed or re-admitted for 6 ticks (ProjectileMembers constants citing 04 s4.1 / A-132; the LocalTransport TARGET / BAD run with 0 malformed and 0 ROSTER_GAP is the contract test; NetSimView.alive false for the dead projectile from the first tick without a record); A-133: NetSimView.def_id / owner / team / radius keep the META values and def_kind returns -1 for a projectile index (one test row); net/client/MODULE.md CQ-6 points at GD-45; A-134: KeyframeCodec.RECORDS_MAX 2,848 ratified (decoder MALFORMED above it, encoder asserts), PROTOCOL_VERSION 1",
+    "note": "R0-amendments-19: the 3 / 6 tick roster hold is a 04 s4.1 rule (A-132, no def field); view alignment on projectile ids is GD-45 (A-133); RECORDS_MAX 2,848 ratified (A-134)."
   },
   {
     "id": "TEST-5",
@@ -7867,7 +7874,8 @@
       "02 s2.3",
       "03 s6.4"
     ],
-    "status": "todo"
+    "status": "todo",
+    "note": "R0 B.25 A-135: launch_thrust_min / launch_hold_s may be read raw with a 'needs content' comment; CONTENT-3 / GD-44 type and switch them."
   },
   {
     "id": "AI-45",
@@ -7906,5 +7914,61 @@
     "status": "done",
     "pr": 131,
     "merged": "2026-10-27"
+  },
+  {
+    "id": "CONTENT-3",
+    "title": "content: typed fields for the def keys the sim reads from raw (R0 B.25 A-130 / A-135): ProjectileDef fuse_delay_s, lock_break_agl_m, lock_break_flip_min_m, lock_break_flip_max_m; FlightCommonDef crash_pad_damage, launch_thrust_min, launch_hold_s; EconomyDef pad_queue_radius_m",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 0.2,
+    "depends_on": [
+      "GD-15"
+    ],
+    "milestone": "M3",
+    "acceptance": "ProjectileDef gains var fuse_delay_s, lock_break_agl_m, lock_break_flip_min_m, lock_break_flip_max_m: float = 0.0 in its f spec list (not req); FlightCommonDef gains crash_pad_damage (required, A-120) and, if ships.json carries them by then, launch_thrust_min / launch_hold_s (required, A-119); EconomyDef gains pad_queue_radius_m (required, A-125); the def unit tests assert the shipped files load rocket 40 / 100 / 500, flak_shell fuse_delay_s 0.3, crash_pad_damage 100, pad_queue_radius_m 500 and that an absent optional key reads 0.0 while an absent required one is refused; no value change; validate_content.py green",
+    "docs": [
+      "R0-amendments-19 A-130",
+      "R0-amendments-19 A-135",
+      "R0 B.1"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-44",
+    "title": "sim: every 'needs content' raw.get in src/sim reads its typed field (R0 B.25 A-130 / A-135): WorldDefs lock_break_* and fuse_delay_s, Touchdown crash_pad_damage, PadQueue pad_queue_radius_m, GD-43's launch fields if merged; validate_content.py lock_break_flip_min_m <= lock_break_flip_max_m",
+    "lane": "sim+tools",
+    "tier": "Haiku",
+    "size_days": 0.2,
+    "depends_on": [
+      "CONTENT-3",
+      "GD-09",
+      "GD-15"
+    ],
+    "milestone": "M3",
+    "acceptance": "grep of src/sim/** finds no raw.get and no 'needs content' comment for fuse_delay_s, lock_break_agl_m, lock_break_flip_min_m, lock_break_flip_max_m, crash_pad_damage, pad_queue_radius_m (and launch_thrust_min / launch_hold_s when GD-43 is merged); C-04, test_tower_gates.gd, the GD-15 crash and queue tests unchanged and green (no behaviour change); validate_content.py refuses a projectile whose lock_break_flip_min_m exceeds lock_break_flip_max_m when both are present (one test); sim/world/MODULE.md W8 and sim/docking/MODULE.md cite the typed fields",
+    "docs": [
+      "R0-amendments-19 A-130",
+      "R0-amendments-19 A-135"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "GD-45",
+    "title": "sim: LocalSimView resolves projectile ids for def_id / owner / team / radius (def_kind -1) as NetSimView does (R0 B.25 A-133); TEST-02 contract clause",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "TEST-02",
+      "NET-58"
+    ],
+    "milestone": "M3",
+    "acceptance": "LocalSimView.def_id / owner / team / radius / def_kind branch on EntityId.is_projectile: a live replicated projectile returns its ProjectileDef id (projectile_index range), the shooter's owner and team at spawn (ProjectileStore columns), the def radius_m and -1 for def_kind; dead or unknown ids keep -1 / -1 / -1 / 0.0 / -1; simview_contract.gd gains the clause over the TEST-02 rocket for both views and the NetSimView factory exemption list is not widened; sim/MODULE.md SimView lines cite A-133; Opus review (contract file)",
+    "docs": [
+      "R0-amendments-19 A-133",
+      "R0 B.22 A-112",
+      "04 s5.6"
+    ],
+    "status": "todo"
   }
 ]
