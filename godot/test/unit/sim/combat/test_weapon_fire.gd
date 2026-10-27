@@ -11,6 +11,13 @@ func _at(alt: float, east: float = 0.0, north: float = 0.0) -> Vector3:
 	return FireTestKit.at(alt, east, north)
 
 
+# CB13a (A-129): a tower fires only with an envelope target; a hostile Dart that cannot die, `alt` m above the datum, `east` m out.
+func _foe(w: SimWorld, alt: float, east: float) -> int:
+	var id: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(alt, east))
+	w.store().hp[EntityId.slot(id)] = 1000000.0
+	return id
+
+
 # --- guns: rate of fire and ammo -------------------------------------------------------------------------------
 
 func test_dart_fires_10_rps_spending_one_round_per_shot() -> void:
@@ -158,6 +165,7 @@ func _bursts(shots: PackedInt32Array, split: int) -> Array[PackedInt32Array]:
 func test_tower_fires_5_round_bursts_every_1_2_s() -> void:
 	var w: SimWorld = CombatTestKit.world()
 	CombatTestKit.power(w, 1, 1)
+	var _foe_id: int = _foe(w, 300.0, 300.0)
 	var gun: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0))
 	var _root: int = CombatTestKit.feed(w, 1, 1, _at(0.0))
 	FireTestKit.hook(w).hold(gun, FIRE1)
@@ -178,6 +186,9 @@ func test_tower_fires_5_round_bursts_every_1_2_s() -> void:
 func test_unsupplied_tower_fires_at_half_rate() -> void:
 	var w: SimWorld = CombatTestKit.world()
 	CombatTestKit.power(w, 1, 1)
+	var _foe_id: int = _foe(w, 300.0, 300.0)
+	var _foe_cut: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(300.0, 300.0, 900.0))   # the cut tower's own target
+	w.store().hp[EntityId.slot(_foe_cut)] = 1000000.0
 	var fed: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0))
 	var cut: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0, 0.0, 900.0))   # outside the Outpost's 400 m
 	var _root: int = CombatTestKit.feed(w, 1, 1, _at(0.0))                                      # GD-18: the supply root
@@ -205,6 +216,7 @@ func test_unsupplied_tower_fires_at_half_rate() -> void:
 func test_flak_battery_fires_a_two_shell_salvo_per_reload() -> void:
 	var w: SimWorld = CombatTestKit.world()
 	CombatTestKit.power(w, 1, 1)
+	var _foe_id: int = _foe(w, 300.0, 400.0)
 	var flak: int = CombatTestKit.spawn(w, &"flak_battery", 1, 1, _at(0.0))
 	var _root: int = CombatTestKit.feed(w, 1, 1, _at(0.0))
 	FireTestKit.hook(w).hold(flak, FIRE1)

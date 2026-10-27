@@ -183,3 +183,113 @@ func test_the_agl_rule_spares_a_rocket_chasing_a_ground_unit() -> void:
 	var i: int = w.projectiles().index_of(id)
 	assert_int(w.projectiles().flags[i] & ProjectileStore.F_GUIDED).is_equal(ProjectileStore.F_GUIDED)
 	assert_int(w.projectiles().target[i]).is_equal(gnd)
+
+
+# --- CB13a: the strict gate (R0 B.25 A-129) -------------------------------------------------------------------------
+
+# A powered, supplied tower of team 1 at the datum under (R, 0, 0) and a hostile that cannot die (team 0).
+func _gated(def: StringName, foe_def: StringName) -> Array:
+	var w: SimWorld = CombatTestKit.world()
+	CombatTestKit.power(w, 1, 1)
+	var tw: int = CombatTestKit.spawn(w, def, 1, 1, Vector3(R, 0.0, 0.0))
+	var _root: int = CombatTestKit.feed(w, 1, 1, Vector3(R, 0.0, 0.0))
+	var foe: int = CombatTestKit.spawn(w, foe_def, 0, 0, _at(100.0, 900.0))
+	w.store().hp[EntityId.slot(foe)] = 1000000.0
+	return [w, tw, foe]
+
+
+# Pins `foe` at `p` for `ticks` steps; returns the rounds the tower spent (ammo drop).
+func _spent(w: SimWorld, tw: int, foe: int, p: Vector3, ticks: int) -> int:
+	var before: int = w.store().ammo[EntityId.slot(tw)]
+	for _k: int in ticks:
+		CombatTestKit.move(w, foe, p)
+		w.step()
+		var _e: Array[SimEvent] = w.drain_events()
+	return before - w.store().ammo[EntityId.slot(tw)]
+
+
+func test_cb13a_a_possessed_autocannon_refuses_a_bomber_above_its_ceiling_and_fires_at_300_m_rel() -> void:
+	var hi: float = _num(_tower(&"autocannon_turret"), "h_rel_max")
+	var a: Array = _gated(&"autocannon_turret", &"bomber")
+	var w: SimWorld = a[0]
+	var tw: int = a[1]
+	var foe: int = a[2]
+	assert_int(w.apply_command(Command.possess(1, tw)).code).is_equal(CommandResult.Code.ACCEPTED)
+	w.step()
+	assert_int(w.view().possessor(tw)).is_equal(1)
+	var inp: PilotInput = PilotInput.new()
+	inp.buttons = PilotInput.FIRE1
+	var spent: int = 0
+	for _k: int in 20 * HZ:
+		assert_int(w.apply_command(Command.pilot(1, w.tick() + 1, inp)).code).is_equal(CommandResult.Code.ACCEPTED)
+		spent += _spent(w, tw, foe, _at(1.5 * hi, 300.0), 1)                  # 600 m rel
+	assert_int(spent).is_equal(0)
+	assert_int(FireTestKit.fired_by(w, tw).size()).is_equal(0)
+	for _k: int in HZ:
+		assert_int(w.apply_command(Command.pilot(1, w.tick() + 1, inp)).code).is_equal(CommandResult.Code.ACCEPTED)
+		spent += _spent(w, tw, foe, _at(0.75 * hi, 300.0), 1)                 # 300 m rel
+	assert_int(spent).is_greater_equal(5)                                    # the first burst left
+
+
+func test_cb13a_flak_refuses_a_dart_under_its_floor() -> void:
+	var lo: float = _num(_tower(&"flak_battery"), "h_rel_min")
+	var a: Array = _gated(&"flak_battery", &"dart")
+	FireTestKit.hook(a[0]).hold(a[1], PilotInput.FIRE1)
+	assert_int(_spent(a[0], a[1], a[2], _at(0.66 * lo, 400.0), 20 * HZ)).is_equal(0)       # 100 m rel
+	assert_int(FireTestKit.fired_by(a[0], a[1]).size()).is_equal(0)
+	assert_int(_spent(a[0], a[1], a[2], _at(2.0 * lo, 400.0), 5 * HZ)).is_greater(0)       # the same Dart above the floor
+
+
+func test_cb13a_a_rail_lance_with_no_hostile_spends_nothing_and_fires_with_one() -> void:
+	var w: SimWorld = CombatTestKit.world()
+	CombatTestKit.power(w, 1, 1)
+	var rl: int = CombatTestKit.spawn(w, &"rail_lance", 1, 1, Vector3(R, 0.0, 0.0))
+	var _root: int = CombatTestKit.feed(w, 1, 1, Vector3(R, 0.0, 0.0))
+	FireTestKit.hook(w).hold(rl, PilotInput.FIRE1)
+	var s: int = EntityId.slot(rl)
+	var before: int = w.store().ammo[s]
+	for _k: int in 20 * HZ:
+		w.step()
+		var _e: Array[SimEvent] = w.drain_events()
+	assert_int(w.store().ammo[s]).is_equal(before)
+	assert_int(FireTestKit.fired_by(w, rl).size()).is_equal(0)
+	var foe: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(200.0, 1200.0))
+	w.store().hp[EntityId.slot(foe)] = 1000000.0
+	var _n: int = _spent(w, rl, foe, _at(200.0, 1200.0), 3 * HZ)
+	assert_int(w.store().ammo[s]).is_less(before)                              # (the spawn step may already have fired it)
+
+
+func test_cb13a_a_target_leaving_the_envelope_mid_burst_stops_the_burst() -> void:
+	var hi: float = _num(_tower(&"autocannon_turret"), "h_rel_max")
+	var a: Array = _gated(&"autocannon_turret", &"dart")
+	var w: SimWorld = a[0]
+	FireTestKit.hook(w).hold(a[1], PilotInput.FIRE1)
+	var inside: Vector3 = _at(0.5 * hi, 300.0)
+	assert_int(_spent(w, a[1], a[2], inside, 8)).is_between(1, 4)             # into the first burst (5 rounds over ~10 ticks)
+	assert_int(_spent(w, a[1], a[2], _at(1.5 * hi, 300.0), 3 * HZ)).is_equal(0)   # it climbs out: the rest of the burst is not fired
+	assert_int(_spent(w, a[1], a[2], inside, 2 * HZ)).is_greater(0)           # back in: it fires again
+
+
+func test_cb13a_save_and_restore_mid_window_is_byte_exact() -> void:
+	var hi: float = _num(_tower(&"autocannon_turret"), "h_rel_max")
+	var a: Array = _gated(&"autocannon_turret", &"dart")
+	var w: SimWorld = a[0]
+	FireTestKit.hook(w).hold(a[1], PilotInput.FIRE1)
+	var p: Vector3 = _at(0.5 * hi, 300.0)
+	var _n: int = _spent(w, a[1], a[2], p, 8)                                  # mid-burst, the window's target held in lock_target
+	assert_int(w._combat.fire.lock_target[EntityId.slot(a[1])]).is_not_equal(0)
+	var saved: PackedByteArray = w.serialize()
+	var w2: SimWorld = SimWorld.deserialize(saved, WorldTestKit.content(), FireTestKit.TriggerHook.new())
+	assert_object(w2).is_not_null()
+	assert_bool(w2.serialize() == saved).is_true()
+	w2.economy().supply.refill = false                                        # a test switch (CombatTestKit.feed), not saved state
+	for k: int in 3 * HZ:
+		CombatTestKit.move(w, a[2], p)
+		CombatTestKit.move(w2, a[2], p)
+		w.step()
+		w2.step()
+		var _x: Array[SimEvent] = w.drain_events()
+		var _y: Array[SimEvent] = w2.drain_events()
+		if w.serialize() != w2.serialize():
+			fail("diverged at +%d" % k)
+			return
