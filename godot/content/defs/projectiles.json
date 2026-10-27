@@ -63,7 +63,7 @@
       "id": "rocket",
       "status": "core",
       "tags": ["projectile"],
-      "_doc": "02 s4.2 rocket row (guided at 250 m/s, proximity fuse radius 4, blast 4 / 4); R0 B.1 canonical: guided, transported, shield absorbed, arm 0.2 s, hp 0",
+      "_doc": "02 s4.2 rocket row (guided at 250 m/s, proximity fuse radius 4, blast 4 / 4); R0 B.1 canonical: guided, transported, shield absorbed, arm 0.2 s, hp 0; GD-09 in-flight lock loss keys lock_break_agl_m 40 / lock_break_flip_min_m 100 / lock_break_flip_max_m 500: 02 s4.4 numbers, ratified as a B.1 append by R0 B.25 A-130 (flying ships only, A-131)",
       "presentation": {
         "mesh": "res://assets/models/projectiles/proj_rocket.glb"
       },
