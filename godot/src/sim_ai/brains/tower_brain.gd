@@ -249,7 +249,7 @@ func _aim(id: int, s: int, t: int, view: SimView, st: AiState, tick: int, out: P
 	var solved: bool = dir != Vector3.ZERO or sp <= 0.0
 	if dir == Vector3.ZERO:
 		dir = rel / dist if dist > 0.0 else -b.z   # no solution (or a guided rocket): at the target
-	var ang: float = TurretAim.slew(b, dir, env.turn_rad_s, prm.dt, out)
+	var ang: float = TurretAim.slew(b, p.normalized(), dir, env.turn_rad_s, prm.dt, out)
 	var agl: float = tp.length() - Sphere.PLANET_RADIUS - view.terrain_height(tp) if env.has_floor() else 0.0   # AGL only where a floor is set
 	var fire: bool = solved and dist <= prm.range_m[di] and ang < atan(prm.cone_k * st.tti[s] / maxf(dist, 1.0)) \
 			and env.in_envelope(tp.length() - p.length(), agl) and st.fire_mask[s] != 0

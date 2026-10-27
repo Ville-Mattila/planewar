@@ -3,8 +3,9 @@ class_name Ai17Kit extends RefCounted
 ## content AI-19), a SimWorld on them (players 0 and 2 on team 0, 1 on team 1) and an AiDriver whose tower class runs
 ## `TowerBrain` with the per-team intel (teams 0 and 1 tracked). The sim does not slew a turret yet (GD-09), so the
 ## driver is a `SlewDriver`: it hands the brain a sink that also applies each tower's `pitch` / `yaw` drive to the
-## entity's `fwd` / `up` (the GD-09 law stand-in: rate = stick x `turret_turn_dps` for one tick), inside step 3, so the
-## sim fires along the slewed muzzle at step 9.
+## entity's `fwd` / `up` (the R0 B.23 A-118 law GD-09 implements: azimuth about the site
+## normal, elevation about the tangent right, unit-norm clamp, full rate in the commanded tick, pole truncation),
+## inside step 3, so the sim fires along the slewed muzzle at step 9.
 
 const AUTOPILOTS: String = "res://test/sim/ai/ai17_autopilots.json"
 
@@ -145,14 +146,30 @@ class SlewSink extends CommandSinkBase:
 		var ok: bool = inner.drive(id, input)
 		var env: TowerEnvelope = prm.envelope(store.def_id[EntityId.slot(id)]) if ok and store != null else null
 		if env != null and (input.pitch != 0.0 or input.yaw != 0.0):
-			var s: int = EntityId.slot(id)
-			var f: Vector3 = store.fwd[s]
-			var u: Vector3 = store.up[s]
-			var step: float = env.turn_rad_s * dt
-			var q: Quaternion = Quaternion(f.cross(u), input.pitch * step) * Quaternion(u, input.yaw * step)
-			store.fwd[s] = (q * f).normalized()
-			store.up[s] = (q * u).normalized()
+			_slew_a118(EntityId.slot(id), input, env.turn_rad_s * dt)
 		return ok
+
+	# The A-118 slew the sim (GD-09) implements: azimuth about the site normal, then elevation about the tangent right
+	# truncated at the pole, the (pitch, yaw) pair clamped on the unit norm, the commanded rate in full this tick, up
+	# re-orthonormalised against fwd with right kept tangent. No rate lag, no roll.
+	func _slew_a118(s: int, input: PilotInput, step: float) -> void:
+		var n: Vector3 = store.pos[s].normalized()
+		var f: Vector3 = store.fwd[s]
+		var r: Vector3 = f.cross(store.up[s]).normalized()
+		var p: float = input.pitch
+		var y: float = input.yaw
+		var m: float = sqrt(p * p + y * y)
+		if m > 1.0:
+			p /= m
+			y /= m
+		var qa: Quaternion = Quaternion(n, y * step)
+		f = qa * f
+		r = qa * r
+		var el: float = asin(clampf(f.dot(n), -1.0, 1.0))
+		var de: float = clampf(p * step, -PI * 0.5 - el, PI * 0.5 - el)
+		f = (Quaternion(r, de) * f).normalized()
+		store.fwd[s] = f
+		store.up[s] = r.cross(f).normalized()
 
 	func set_ai_tag(id: int, tag: int) -> void:
 		inner.set_ai_tag(id, tag)
