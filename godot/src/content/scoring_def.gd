@@ -1,6 +1,6 @@
 class_name ScoringDef extends Def
 ## scoring.json (R0 B.1, 02 s17.1 with the 08 SL-1 landing block). Singleton file. Nested tables stay
-## Dictionaries: kill_points (unit id -> points), assist, landing, relay.
+## Dictionaries: kill_points (unit id -> points), assist, landing, landing_grade (A-122: 08 SL-1 q weights, thresholds, manual_window_m), relay.
 
 var kill_points: Dictionary = {}
 var kill_hauler_loaded_bonus: int = 0
@@ -9,6 +9,7 @@ var core_destroyed: int = 0
 var structure_damage_points_per_hp: float = 0.0
 var assist: Dictionary = {}
 var landing: Dictionary = {}
+var landing_grade: Dictionary = {}
 var salvage_points_per_ore: float = 0.0
 var ice_possessed_points_per_ice: float = 0.0
 var relay: Dictionary = {}
@@ -17,10 +18,10 @@ var commander_auto_kill_share: float = 0.0
 var match_win: int = 0
 
 const SPEC: Dictionary = {
-	"d": "kill_points assist landing relay",
+	"d": "kill_points assist landing landing_grade relay",
 	"i": "kill_hauler_loaded_bonus core_destroyed match_win",
 	"f": "structure_destroyed_ratio structure_damage_points_per_hp salvage_points_per_ore ice_possessed_points_per_ice commander_points_per_ore_spent commander_auto_kill_share",
-	"req": "kill_points kill_hauler_loaded_bonus structure_destroyed_ratio core_destroyed assist landing match_win",
+	"req": "kill_points kill_hauler_loaded_bonus structure_destroyed_ratio core_destroyed assist landing landing_grade match_win",
 }
 
 
