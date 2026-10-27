@@ -116,7 +116,7 @@ radius), `scoring.json` `landing` (+ `landing_grade.manual_window_m`), `ships.js
 ## Data owned
 
 `PadQueue` (pairs), `PadService` per-slot stay records, `PilotTrack` per player slot; `LandingLog` (sim/scoring) is
-created here. Step scratch (docked list, wishes, candidate pads with per-slot marks) is not state.
+created here. A docked ship's `EntityStore.timer_a` holds its rearm line (0..1; structures use it for build progress). Step scratch (docked list, wishes, candidate pads with per-slot marks) is not state.
 
 ## Events emitted / consumed
 
@@ -126,8 +126,9 @@ HIT (landing damage). Consumes Collision's PAD contacts (step 8), Kinematics' te
 ## Performance budget
 
 03 s4.2 row 10 (0.8 ms p95; SL-1 grade < 0.05 ms reserved) and row 9 for the landings. `test_docking_perf.gd` (PerfGate,
-hard counters): one pass over the ships (~0.05 us per ship), ~4 us per ship in service, the queue O(wishes x busy pads)
-after the altitude filter; a landing costs one O(ships) hot scan. Numbers and the S-SIM-1 load in the GD-15 PR perf note.
+hard counters): one pass over the ships (~0.06 us per ship), ~2.5 us per ship in service, the queue O(wishes x same-team
+busy or queued pads) after the altitude filter; a landing costs one O(ships) hot scan (~30 us at 688 ships). Numbers and
+the `perf_tick.gd --full` delta in the GD-15 PR perf note.
 
 ## Test entry points
 

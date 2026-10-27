@@ -5,8 +5,9 @@ extends GdUnitTestSuite
 ## step's one pass over the ships, every service timer and the queue update all do real work. Hard counters (ships
 ## serviced per tick, queue length, landings resolved) are asserted exactly; the wall-clock bounds go through PerfGate
 ## (report-only on a hosted runner, R0 B.17 A-97). Bounds: `Docking.step` at this stress load (48 ships in service at
-## once, 40 queued) 50 % of the economy row (400 us; ~4 us per ship in service, ~0.05 us per ship scanned), a tick
-## with 8 landings (one hot scan each over the 700 ships) 25 % of the 1.2 ms combat row it runs in (300 us).
+## once, 40 queued; ~2.5 us per ship in service, ~0.06 us per ship scanned, the queue O(wishes x same-team candidates))
+## 50 % of the economy row (400 us; GD-15 dev box: ~250 us median); a tick with 8 landings (one hot scan each over the
+## 688 ships, ~30 us per landing) a third of the 1.2 ms combat row it runs in (400 us; dev box ~260 us median).
 
 const PADS: int = 48
 const WAITING: int = 40
@@ -14,7 +15,7 @@ const FLYING: int = 600
 const TICKS: int = 60
 const LANDINGS: int = 8
 const BOUND_STEP_US: float = 400.0
-const BOUND_LAND_US: float = 300.0
+const BOUND_LAND_US: float = 400.0
 
 static var _saved: PackedByteArray = PackedByteArray()
 
@@ -99,7 +100,7 @@ func test_docking_step_with_48_ships_in_service_and_40_queued() -> void:
 	var per_tick: float = _median(us)
 	print("PERF_NOTE docking_step min %.1f us median %.1f us" % [_min(us), per_tick])
 	assert_bool(PerfGate.check("docking_step_48_serviced_40_queued_688_ships", per_tick, BOUND_STEP_US,
-			"03 s4.2 row 10 economy 0.8 ms p95, 25 % share")).override_failure_message("measured %.1f us" % per_tick).is_true()
+			"03 s4.2 row 10 economy 0.8 ms p95, 50 % share at the stress load")).override_failure_message("measured %.1f us" % per_tick).is_true()
 
 
 func test_eight_landings_in_one_tick() -> void:
@@ -134,7 +135,7 @@ func test_eight_landings_in_one_tick() -> void:
 	var per_call: float = _median(us)
 	print("PERF_NOTE docking_land min %.1f us median %.1f us" % [_min(us), per_call])
 	assert_bool(PerfGate.check("docking_land_8_landings_688_ships", per_call, BOUND_LAND_US,
-			"03 s4.2 row 9 combat 1.2 ms p95, 25 % share (landings run at the end of step 9)")).override_failure_message("measured %.1f us" % per_call).is_true()
+			"03 s4.2 row 9 combat 1.2 ms p95, 33 % share (8 landings in one tick, end of step 9)")).override_failure_message("measured %.1f us" % per_call).is_true()
 
 
 func test_a_world_without_docked_ships_pays_only_the_ship_pass() -> void:

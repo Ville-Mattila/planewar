@@ -100,6 +100,20 @@ func test_a_possessed_pilot_holding_dock_queues() -> void:
 	assert_array(Array(_w.view().pad_queue(_pad))).is_equal([id])
 
 
+func test_same_tick_waiters_join_in_ascending_slot_whatever_their_wish() -> void:
+	var _a: int = _occupy()
+	var pilot: int = DockingTestKit.ship_over(_w, &"dart", 0, 0, _pad, DockingTestKit.HIGH)
+	DockingTestKit.pose(_w, pilot, _pad, 80.0, 400.0, Vector3.ZERO)
+	assert_bool(DockingTestKit.possess(_w, pilot)).is_true()
+	var ret: int = _waiting(-400.0)                                         # RETURN, still outside the radius
+	assert_int(_slot(pilot)).is_less(_slot(ret))
+	assert_bool(_w.view().pad_queue(_pad).is_empty()).is_true()
+	DockingTestKit.pose(_w, pilot, _pad, 80.0, 40.0, Vector3.ZERO)
+	DockingTestKit.pose(_w, ret, _pad, 80.0, -40.0, Vector3.ZERO)
+	DockingTestKit.step_piloted(_w, 0, PilotInput.DOCK)
+	assert_array(Array(_w.view().pad_queue(_pad))).is_equal([pilot, ret])   # D6: ascending ship slot, DOCK or RETURN
+
+
 func test_at_most_eight_wait_per_pad_and_other_teams_never_queue() -> void:
 	var _a: int = _occupy()
 	var ids: Array[int] = []

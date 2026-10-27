@@ -76,13 +76,14 @@ func update(wish_ship: PackedInt32Array, wish_pad: PackedInt32Array, n: int) -> 
 		var ws: int = wish_ship[i] & EntityId.SLOT_MASK
 		_want[ws] = wish_pad[i]
 		_want_mark[ws] = _pass
-	for k: int in q_ship.size():
+	for k: int in q_ship.size():                         # still waiting for the same pad: keeps its place
 		var qs: int = q_ship[k] & EntityId.SLOT_MASK
 		if _want_mark[qs] == _pass and _want[qs] == q_pad[k]:
 			_keep(qs, q_ship[k], q_pad[k])
-	for i: int in n:
+	for i: int in n:                                     # new waiters, while their pad has room
 		var p: int = wish_pad[i]
-		if p != 0 and _kept_mark[wish_ship[i] & EntityId.SLOT_MASK] != _pass and _count_new(p & EntityId.SLOT_MASK) < PER_PAD:
+		var ps: int = p & EntityId.SLOT_MASK
+		if p != 0 and _kept_mark[wish_ship[i] & EntityId.SLOT_MASK] != _pass and (_cnt_mark[ps] != _pass or _cnt[ps] < PER_PAD):
 			_keep(wish_ship[i] & EntityId.SLOT_MASK, wish_ship[i], p)
 	var tp: PackedInt32Array = q_pad                     # swap the buffers: no copy, no allocation once both have grown
 	var ts: PackedInt32Array = q_ship
@@ -95,14 +96,10 @@ func update(wish_ship: PackedInt32Array, wish_pad: PackedInt32Array, n: int) -> 
 func _keep(ship_slot: int, ship: int, pad: int) -> void:
 	_kept_mark[ship_slot] = _pass
 	var ps: int = pad & EntityId.SLOT_MASK
-	_cnt[ps] = _count_new(ps) + 1
+	_cnt[ps] = _cnt[ps] + 1 if _cnt_mark[ps] == _pass else 1
 	_cnt_mark[ps] = _pass
 	var _c: bool = _keep_pad.push_back(pad)
 	var _d: bool = _keep_ship.push_back(ship)
-
-
-func _count_new(pad_slot: int) -> int:
-	return _cnt[pad_slot] if _cnt_mark[pad_slot] == _pass else 0
 
 
 ## Drops `ship` (it docked or died).
