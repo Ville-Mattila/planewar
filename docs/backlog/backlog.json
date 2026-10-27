@@ -2114,7 +2114,9 @@
     "size_days": 2,
     "depends_on": [
       "GD-08",
-      "GD-36"
+      "GD-36",
+      "AI-17",
+      "AI-44"
     ],
     "milestone": "M3",
     "acceptance": "C-01, C-02, C-03, C-04, C-06 pass (Opus review)",
@@ -2123,7 +2125,8 @@
       " 02 AR-2",
       " 02 GD-09"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; R0 B.23 A-118 turret slew (sim step 5, towers only): (a) PilotInput.pitch / yaw are elevation / azimuth rates as fractions of tower.turret_turn_dps and the (pitch, yaw) pair is clamped to unit norm before scaling (a diagonal command moves at the cap, never sqrt(2) x it); (b) azimuth rotates fwd and up about the site normal n = pos.normalized() (positive yaw = muzzle left), elevation about right = fwd.cross(up) (positive pitch = muzzle up); right stays tangent so the turret never rolls; an elevation step that would reach or pass 90 deg is truncated at the pole (no def key); (c) no rate dynamics: the commanded rate applies in full in the tick it is commanded, before step 9 fire; no rate_accel for towers; (d) the muzzle is store.fwd and up is re-orthonormalised against fwd after each slew tick with right kept tangent; (e) the sim alone enforces at fire time, for AI and possessed towers alike, target_kinds, the [h_rel_min, h_rel_max] band, target_agl_min and the horizon test for lock, lock_time_s, the 100-500 m flip lock-break, power < 50 % no fire (slew allowed) and the fire cone; tests: a tower at 60 deg elevation commanded yaw 1 turns turret_turn_dps x dt about n, a (1, 1) command moves at the cap, 1,000 random slew ticks keep the basis orthonormal and right.dot(n) == 0 within 1e-5, a command past the zenith stops at the pole, a possessed offline tower slews and cannot fire; S4: no new saved state (the basis is fwd / up); re-run the AI-17 SC-30 / SC-31 scenarios (test_sc_tower.gd, test_tower_brain.gd) against the real slew with Ai17Kit.SlewDriver and SlewSink removed; sim/MODULE.md step-5 line and 02 s4.4 cite A-118"
   },
   {
     "id": "GD-10",
@@ -2503,7 +2506,8 @@
       " 05 AI-17"
     ],
     "status": "todo",
-    "acceptance_append": "; tower tags are AiTag.Tag TRACK 31, OFFLINE 32, IDLE 33 (R0 B.17 A-94)"
+    "acceptance_append": "; tower tags are AiTag.Tag TRACK 31, OFFLINE 32, IDLE 33 (R0 B.17 A-94)",
+    "note": "R0 B.23 A-118 fixes the slew contract (azimuth / elevation about the site normal, norm clamp, no rate lag, muzzle = fwd, sim-side fire gates). TurretAim's cos(elevation) compensation and the SlewDriver update are AI-44 (may be folded into round 2); GD-09 removes the stand-in."
   },
   {
     "id": "AI-18",
@@ -2753,7 +2757,8 @@
       "05 s10",
       " 05 AI-30"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": "; R0 B.23 A-118 (AI-17 review Q4): ai_tick gains a raid-over-a-base case (about 20 towers, 30 enemy ships inside range) and the TEST-04 A/B a tower scenario; from the numbers AI-30 decides whether the tower brain's first candidate pass needs a cap (for example nearest K by the near_built distance), filing a sim_ai follow-up if yes or recording the measurement and 'no cap' if no; no cap is required before AI-30"
   },
   {
     "id": "AI-32",
@@ -2947,7 +2952,7 @@
     ],
     "status": "done",
     "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56); R0 B.19 A-103 / 04 s5.6: NetSimView presents a known-blip entry at BaselineFrame.shown_levels (stored bucket, no gravity even when DYING) and never extrapolates it; a contract test shares the fixture of test_dying_blip_rests_300_ticks_at_blip_pos; NetSimView carries GD-38: shield01 (inherit -1.0 until replicated, listed in the TEST-02 factory exempt()) and TeamStateView.CORE_SHIELD_UP via map flag 0x85, with a codec item; NetSimView carries GD-41 wreck_ore (inherit -1.0 until replicated, listed in the TEST-02 factory exempt() with a 04 s5.6 cite, plus a net/MODULE.md open item); R0 B.22 A-111: the factory exempts team_state / player_state / order_head / pending_order with the reason NET-39 (not BLOCKED) and net/client/MODULE.md closes CQ-2; A-112: the seven CQ-1 exempts cite NET-58; A-113: after TEST-5 merges the factory drops control_state and flip_cooldown01 from exempt() and overrides tolerance() with the 04 s3.3 quantum (1.0 / 255) for u8 fields; A-114: radius of a split wreck returns the def radius with unknown set (no exemption reason beyond 04 s5.6); A-115: the perf note states p50 and p95 and the PerfGate stays report-only off the pinned runner",
-    "note": "Contract ruling R0-amendments-16 (A-111 deps.json named types, A-112 projectile roster block = NET-58, A-113 scene / tolerance = TEST-5, A-114 split-wreck radius default + unknown, A-115 rows are p95, no re-pricing). PR #118 rebases on TEST-5 and this ruling. net/client: ClientSession, ClientClock, NetSimView (23 TEST-02 exempts, each cited; tolerance 1/255 on u8 fields). Open: CQ-5 (overlay/cargo/cargo_kind/link wire source) and unknown(id) semantics -> Architect (R0 amendments 17); production_progress01 mutant -> NET-39; read_poses 6.0 ms CI vs 2.4 ms row -> TA-52; tick p95 1.94 ms CI (report-only, NET-18 re-measures).",
+    "note": "Contract ruling R0-amendments-16 (A-111 deps.json named types, A-112 projectile roster block = NET-58, A-113 scene / tolerance = TEST-5, A-114 split-wreck radius default + unknown, A-115 rows are p95, no re-pricing). PR #118 rebases on TEST-5 and this ruling. net/client: ClientSession, ClientClock, NetSimView (23 TEST-02 exempts, each cited; tolerance 1/255 on u8 fields). Open: CQ-5 (overlay/cargo/cargo_kind/link wire source) and unknown(id) semantics -> Architect (R0 amendments 17); production_progress01 mutant -> NET-39; read_poses 6.0 ms CI vs 2.4 ms row -> TA-52; tick p95 1.94 ms CI (report-only, NET-18 re-measures). R0-amendments-17 (A-116 CQ-5 rows: overlay / cargo / cargo_kind not replicated, link ship-pad ends via NET-39; A-117 unknown(id) = carried accessors only, code in NET-39). PR #118 only rewrites the NetUnknown / factory reasons to cite A-116 and CS8 to name A-117 as the pending semantics; no code change.",
     "pr": 118,
     "merged": "2026-10-27"
   },
@@ -3714,7 +3719,8 @@
       " R0 C3-17",
       " 07 ART-17"
     ],
-    "status": "todo"
+    "status": "todo",
+    "note": "vfx_tether needs the wreck -> Hauler pair on the client; R0 B.23 A-116 names the path (appended SimEvent.Kind TETHERED / UNTETHERED, wreck u16 + ship u16, roster scope, PROTOCOL_VERSION bump; sim task in GD-19's lane plus the EventRouter row and NetSimView.link). File it as a net + sim task when ART-17 starts; until then NetSimView.link(wreck) is 0 with field_unknown true."
   },
   {
     "id": "ART-18",
@@ -4523,7 +4529,8 @@
       " 04 NET-39"
     ],
     "status": "todo",
-    "acceptance_append": "; the replicated ai_tag u8 is an AiTag.Tag ordinal (R0 B.17 A-94); net stays opaque to it (no decode, no enum); the contract test round-trips the values 0 and 33; R0 B.22 A-111: NetSimView overrides team_state (TEAM_STATE fields + members from TEAM_DETAIL players; other teams unknown with the default view), player_state (TEAM_DETAIL players + PLAYER_STATUS), order_head and pending_order (TEAM_DETAIL orders into a reused OrderSpec per slot, S3 no allocation on read) now that net may name TeamStateView, PlayerStateView and OrderSpec; the TEST-02 factory drops those four from exempt()"
+    "acceptance_append": "; the replicated ai_tag u8 is an AiTag.Tag ordinal (R0 B.17 A-94); net stays opaque to it (no decode, no enum); the contract test round-trips the values 0 and 33; R0 B.22 A-111: NetSimView overrides team_state (TEAM_STATE fields + members from TEAM_DETAIL players; other teams unknown with the default view), player_state (TEAM_DETAIL players + PLAYER_STATUS), order_head and pending_order (TEAM_DETAIL orders into a reused OrderSpec per slot, S3 no allocation on read) now that net may name TeamStateView, PlayerStateView and OrderSpec; the TEST-02 factory drops those four from exempt(); R0 B.23 A-116: NetSimView.link resolves the ship and pad ends from DOCKED / LAUNCHED events (both ids, per roster index, cleared by ROSTER_REMOVE) and own-team TEAM_DETAIL pads (occupant, the inverse of pad_occupant); link(docked own ship) == pad and link(pad) == ship exact, link(enemy ship docked before it entered the roster) == 0 with field_unknown true, link(towed wreck) == 0 with field_unknown true (tow end not replicated; TETHERED / UNTETHERED events are the named path, not built); the TEST-02 factory drops link from exempt() for the docked clauses; A-117: NetUnknown.NEVER is split into NEVER (not replicated: overlay, cargo, cargo_kind, path_grid_version, the tow / Extractor ends of link) and PENDING (rows whose decoder has not landed: shield01 GD-38, wreck_ore GD-41, landing_grade_last, the uncarried flags bits; this PR empties the TEAM_DETAIL entries), unknown(id) is the OR over received-or-not for the carried accessors only (drops the NEVER.is_empty() term), field_unknown(id, accessor) is unchanged as the per-field query; test_net_sim_view.gd asserts unknown(own possessed unit) == false, unknown(own-team tier-A ship) == false, unknown(C blip) == true, unknown(other-team entity) == true after TEAM_DETAIL; net/client/MODULE.md CS8 rewritten to A-117; the mutant-under-quantum check gains production_progress01 (PR #118 review nit)",
+    "note": "A-116 adds link ship / pad ends and A-117 the NEVER / PENDING split (+0.25 d, re-sized at PM-01)."
   },
   {
     "id": "NET-40",
@@ -7791,5 +7798,23 @@
     ],
     "status": "todo",
     "note": "Follow-up from the UX-13 #121 review 2026-10-23."
+  },
+  {
+    "id": "AI-44",
+    "title": "sim/steer: TurretAim azimuth / elevation form (R0 B.23 A-118): site-normal azimuth with 1 / cos(elevation) compensation, elevation about the turret's right, (pitch, yaw) norm clamp; Ai17Kit.SlewDriver adopts the same law until GD-09",
+    "lane": "sim/steer+sim_ai",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "AI-17"
+    ],
+    "milestone": "M3",
+    "acceptance": "TurretAim.slew(b, n, dir, turn_rad_s, dt, out) (site normal n appended; sim/steer/MODULE.md TA1 updated) commands out.pitch from the error's right component and out.yaw from its n component divided by cos(elevation) (pole-guarded), then clamps (pitch, yaw) to unit norm; test_turret_aim.gd: dead-beat arrival in one tick at elevations 0, 45 and 75 deg when the command is applied through the A-118 law, a far target slews at the cap on the norm (a diagonal command is not sqrt(2) x cap), right.dot(n) stays 0 within 1e-5 over 1,000 random ticks, no roll; Ai17Kit.SlewDriver / SlewSink apply the A-118 law (azimuth about n, elevation about right, norm clamp, full rate in the commanded tick, pole truncation) so SC-30 / SC-31 pass against the contract; no envelope literal in sim_ai (grep check unchanged); may be folded into AI-17 round 2 by the orchestrator, closing as done there",
+    "docs": [
+      "R0-amendments-17 A-118",
+      "02 s4.4",
+      "05 s6.8"
+    ],
+    "status": "todo"
   }
 ]
