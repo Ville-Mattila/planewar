@@ -160,6 +160,23 @@ func test_attacker_of_a_friendly_asset_near_the_tower_gets_the_attacking_mark() 
 	assert_int(_target()).is_equal(b)
 
 
+func test_the_attacking_mark_counts_hits_on_structures_only() -> void:
+	_setup(&"autocannon_turret")
+	var a: int = _foe(&"dart", 350.0, 0.0, 100.0, true)
+	var b: int = _foe(&"dart", 350.0, 40.0, 100.0, true)
+	var friend: int = DartKit.spawn(_w, &"dart", 0, Ai17Kit.rel(_w, _tw, -200.0, 0.0, 100.0), Vector3.ZERO, Vector3(0, 1, 0))
+	_run(2 * HZ)
+	assert_int(_target()).is_equal(a)
+	_hit(b, friend, _w.view().pos(_tw), 0)                       # b shot a friendly SHIP at the tower: no x1.5 (05 s6.8)
+	_d.state.set_target(_s(), 0)
+	_run(HZ)
+	assert_int(_target()).is_equal(a)
+	_hit(b, _tw, _w.view().pos(_tw), 0)                          # b hit a friendly STRUCTURE: x1.5
+	_d.state.set_target(_s(), 0)
+	_run(HZ)
+	assert_int(_target()).is_equal(b)
+
+
 func _mast_and_harvester() -> int:
 	var mast_p: Vector3 = Ai17Kit.rel(_w, _tw, -150.0, 0.0, 0.0)   # a Sensor Mast reveals ground units through the datum
 	var _m: int = DartKit.spawn(_w, &"sensor_mast", 0, mast_p, Vector3.ZERO, DartKit.heading(mast_p, Vector3(0, 1, 0)))

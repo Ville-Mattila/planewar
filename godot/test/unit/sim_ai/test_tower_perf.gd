@@ -6,7 +6,8 @@ extends GdUnitTestSuite
 ## `act_batch` timings are taken on the driver's own state:
 ##   think   idle (the TeamPicture scan finds nothing in range: no choice point) and engaged (one choice point);
 ##   act     idle (no drive: the zero-drive latch) and tracking (slew + lead + one visible_to);
-##   fleet   (1 - f) idle + f engaged with f = 0.25 against the row (think and act), the engaged act against 3 x row (A-96).
+##   bounds  think idle and engaged each against row x CI_FACTOR (50 us, as test_dart_perf.gd); act: (1 - f) idle + f tracking with
+##           f = 0.25 against row x CI_FACTOR, the tracking act under the interim ceiling 3 x row (A-96, never raised here).
 ## Timing bounds are report-only on hosted runners (R0 B.17 A-97, PerfGate); the deterministic counters are hard
 ## everywhere: an idle tower never calls `drive`, one `visible_to` per tracking act, one TeamPicture build per team per
 ## Vision epoch, the ground list built once per Perception refresh (not per think), one choice point per engaged think.
@@ -19,7 +20,8 @@ const BATCHES: int = 5
 const THINK_ROW_US: float = 25.0
 const ACT_ROW_US: float = 2.7
 const CI_FACTOR: float = 2.0
-const ENGAGED_SHARE: float = 0.25   ## A-96 f
+const ENGAGED_SHARE: float = 0.25   ## A-96 f (the act row only)
+const ACT_TRACK_CEILING_US: float = 3.0 * ACT_ROW_US   ## R0 B.17 A-96 interim ceiling of an engaged act (never raised here)
 const DEFS: Array[StringName] = [&"autocannon_turret", &"flak_battery", &"missile_tower"]
 
 
@@ -145,9 +147,8 @@ func test_perf_tower_think_and_act() -> void:
 	var tracked: int = brain.stats_acts - acts0
 	var visible: int = brain.stats_visible - vis0
 	var fleet: float = (1.0 - ENGAGED_SHARE) * ia + ENGAGED_SHARE * ea
-	var think_fleet: float = (1.0 - ENGAGED_SHARE) * it.x + ENGAGED_SHARE * et.x
-	print("AI-17 perf (%d far foes; best of %d batches of %d per-call thinks, hard counters below): think idle mean %.1f / median %.1f / p95 %.1f us, engaged %.1f / %.1f / %.1f us; think fleet (f=%.2f) %.1f us (row %.1f); act idle %.2f us, tracking %.2f us, fleet %.2f us (row %.1f); tracking towers %d / %d; choices idle %d of %d, engaged %d of %d; picture builds %d for %d epochs; ground builds %d" % [
-		FAR_FOES, BATCHES, CALLS, it.x, it.y, it.z, et.x, et.y, et.z, ENGAGED_SHARE, think_fleet, THINK_ROW_US, ia, ea, fleet, ACT_ROW_US, tracking, engaged.size(),
+	print("AI-17 perf (%d far foes; best of %d batches of %d per-call thinks, hard counters below): think idle mean %.1f / median %.1f / p95 %.1f us, engaged %.1f / %.1f / %.1f us; act idle %.2f us, tracking %.2f us, fleet (f=%.2f) %.2f us (row %.1f); tracking towers %d / %d; choices idle %d of %d, engaged %d of %d; picture builds %d for %d epochs; ground builds %d" % [
+		FAR_FOES, BATCHES, CALLS, it.x, it.y, it.z, et.x, et.y, et.z, ia, ea, ENGAGED_SHARE, fleet, ACT_ROW_US, tracking, engaged.size(),
 		idle_choices, idle_thinks, eng_choices, eng_thinks, builds, epochs.size(), ground_builds])
 	# deterministic counters (hard on every runner)
 	assert_int(tracking).is_equal(engaged.size())
@@ -161,7 +162,7 @@ func test_perf_tower_think_and_act() -> void:
 	assert_int(ground_builds).is_less_equal(2)                     # the Perception list: once per refresh, never per think
 	# timings: report-only on hosted runners (R0 B.17 A-97)
 	var cite: String = "05 s10 / R0 A-96"
-	assert_bool(PerfGate.check("test_tower_perf.think_fleet", think_fleet, THINK_ROW_US * CI_FACTOR, cite)).is_true()
-	assert_bool(PerfGate.check("test_tower_perf.think_engaged", et.x, 3.0 * THINK_ROW_US * CI_FACTOR, cite)).is_true()
+	assert_bool(PerfGate.check("test_tower_perf.think_idle", it.x, THINK_ROW_US * CI_FACTOR, cite)).is_true()
+	assert_bool(PerfGate.check("test_tower_perf.think_engaged", et.x, THINK_ROW_US * CI_FACTOR, cite)).is_true()
 	assert_bool(PerfGate.check("test_tower_perf.act_fleet", fleet, ACT_ROW_US * CI_FACTOR, cite)).is_true()
-	assert_bool(PerfGate.check("test_tower_perf.act_tracking", ea, 3.0 * ACT_ROW_US * CI_FACTOR, cite)).is_true()
+	assert_bool(PerfGate.check("test_tower_perf.act_tracking", ea, ACT_TRACK_CEILING_US, cite)).is_true()

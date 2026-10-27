@@ -170,6 +170,38 @@ func test_the_trigger_is_never_held_on_a_target_the_team_cannot_see() -> void:
 	assert_int(first_target).is_greater_equal(first_seen)        # no target before the team saw the Bomber
 
 
+# Kill the Sensor Mast: a Dart on the deck is seen only through the Mast's reveal. When the Mast is gone the team no
+# longer sees it, and the very next act must release the trigger although the think that clears the target has not
+# run yet. Deleting the act's `visible_to` gate fails this test (stale ticks with FIRE1 held).
+func test_the_act_gate_releases_the_trigger_when_the_sensor_mast_dies() -> void:
+	_setup(&"autocannon_turret")
+	var mast_p: Vector3 = Ai17Kit.rel(_w, _tw, -150.0, 0.0, 0.0)
+	var mast: int = DartKit.spawn(_w, &"sensor_mast", 0, mast_p, Vector3.ZERO, DartKit.heading(mast_p, Vector3(0, 1, 0)))
+	var dart_p: Vector3 = Ai17Kit.rel(_w, _tw, 400.0, 0.0, 0.5 * TargetParams.num(_tower_block(&"autocannon_turret"), "h_rel_max", 0.0) / 10.0)
+	var dart: int = DartKit.spawn(_w, &"dart", DartKit.FOE, dart_p, Vector3.ZERO, Vector3(0, 1, 0))
+	_w.store().hp[EntityId.slot(dart)] = 10000000.0
+	var fired: bool = false
+	for _k: int in 3 * HZ:
+		IntelKit.teleport(_w, dart, dart_p)
+		var _e: Array[SimEvent] = Ai17Kit.step(_w)
+		fired = fired or (Ai17Kit.buttons(_w, _tw) & PilotInput.FIRE1) != 0
+	assert_bool(_w.view().visible_to(0, dart)).is_true()
+	assert_bool(fired).override_failure_message("the tower never fired through the Mast's reveal").is_true()
+	IntelKit.teleport(_w, mast, Ai17Kit.rel(_w, _tw, -9000.0, 0.0, 0.0))   # the Mast is gone (its reveal leaves with it)
+	var stale: int = 0
+	for _k: int in 3 * HZ:
+		IntelKit.teleport(_w, dart, dart_p)
+		var before: bool = _w.view().visible_to(0, dart)
+		var _e: Array[SimEvent] = Ai17Kit.step(_w)
+		var held: bool = (Ai17Kit.buttons(_w, _tw) & PilotInput.FIRE1) != 0
+		var still_target: bool = _target() == dart and _d.state.mode[EntityId.slot(_tw)] == AiTag.Tag.TRACK
+		if not before and still_target:
+			stale += 1
+			assert_bool(held).override_failure_message("FIRE1 held on an unseen target at tick %d" % _w.tick()).is_false()
+	assert_bool(_w.view().visible_to(0, dart)).is_false()
+	assert_int(stale).override_failure_message("no tick had an unseen target before the next think: the gate is untested").is_greater(0)
+
+
 # GD-18: a tower outside the supply network fires at unsupplied_rate_mult; the brain is the same (it tracks and holds the
 # trigger identically), so the HIT rate on an identical tanked target is about half.
 func test_unsupplied_tower_fires_at_the_sim_rate_with_the_same_brain() -> void:
