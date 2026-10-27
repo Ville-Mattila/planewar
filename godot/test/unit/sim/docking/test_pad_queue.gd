@@ -78,7 +78,7 @@ func test_leaving_the_radius_losing_the_order_or_dying_drops_out() -> void:
 	var d: int = _waiting(20.0, 2)
 	_w.step()
 	assert_array(Array(_w.view().pad_queue(_pad))).is_equal([b, c, d])
-	DockingTestKit.pose(_w, b, _pad, 20.0, r + 1.0, Vector3.ZERO)               # just out of the zone (horizontal)
+	DockingTestKit.pose(_w, b, _pad, 20.0, r + 1.0, Vector3.ZERO)               # r + 1 m out at 20 m AGL: out under any radius rule
 	var stop: OrderSpec = OrderSpec.make(OrderSpec.Kind.MOVE, 0, WorldTestKit.at(300.0, 900.0))
 	assert_int(_w.apply_command(Command.order(0, PackedInt32Array([c]), stop)).code).is_equal(CommandResult.Code.ACCEPTED)
 	_w.step()
@@ -118,23 +118,32 @@ func test_same_tick_waiters_join_in_ascending_slot_whatever_their_wish() -> void
 
 
 # R0 B.24 A-125 (05 s5.5 L2b holds at a 400 m orbit, 150 m AGL): the zone is pad_queue_radius_m (500) horizontally
-# in the pad frame with no altitude term.
+# in the pad frame with no altitude term. `edge` (480 m out, 150 m AGL: 3-D 503 m) and `high` (600 m straight above:
+# 3-D 600 m) are inside only under the horizontal rule; a 3-D distance would drop both. `wide` (520 m) is out either way.
 func test_the_queue_zone_is_horizontal_500_m_with_no_altitude_term() -> void:
 	var _a: int = _occupy()
-	assert_float(DockingTestKit.queue_radius()).is_equal(500.0)                 # the A-125 value
+	var r: float = DockingTestKit.queue_radius()
+	assert_float(r).is_equal(500.0)                                          # the A-125 value
 	var hold: int = _waiting(-400.0)                                         # the L2b hold: 400 m out, 150 m AGL
 	var wide: int = _waiting(520.0)
 	var above: int = _waiting(60.0)
+	var edge: int = _waiting(-60.0)
+	var high: int = _waiting(30.0)
 	for _t: int in 2:
 		DockingTestKit.pose(_w, hold, _pad, 150.0, -400.0, Vector3.ZERO)
 		DockingTestKit.pose(_w, wide, _pad, 150.0, 520.0, Vector3.ZERO)
-		DockingTestKit.pose(_w, above, _pad, 450.0, 0.0, Vector3.ZERO)     # straight above: no altitude term
+		DockingTestKit.pose(_w, above, _pad, 450.0, 0.0, Vector3.ZERO)     # straight above
+		DockingTestKit.pose(_w, edge, _pad, 150.0, 480.0, Vector3.ZERO)    # horizontal 480 <= 500 < 3-D 503
+		DockingTestKit.pose(_w, high, _pad, 600.0, 0.0, Vector3.ZERO)      # horizontal 0, 3-D 600 > 500
 		_w.step()
+	assert_float(Vector2(480.0, 150.0).length()).is_greater(r)               # the two cases a 3-D rule would fail
 	var q: PackedInt32Array = _w.view().pad_queue(_pad)
 	assert_bool(q.has(hold)).is_true()
 	assert_bool(q.has(above)).is_true()
+	assert_bool(q.has(edge)).is_true()
+	assert_bool(q.has(high)).is_true()
 	assert_bool(q.has(wide)).is_false()
-	assert_int(q.size()).is_equal(2)
+	assert_int(q.size()).is_equal(4)
 
 
 func test_at_most_eight_wait_per_pad_and_other_teams_never_queue() -> void:

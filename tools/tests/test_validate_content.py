@@ -327,6 +327,26 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class PadQueueRadius(Tree):
+    """R0 B.24 A-125: pad_queue_radius_m >= the largest pad_radius_m (cross-file, enforced in validate_content)."""
+
+    def test_canonical_value_passes(self) -> None:
+        code, out = run(self.root)
+        self.assertEqual(code, 0, out)
+
+    def test_below_the_largest_pad_radius_fails_once(self) -> None:
+        self.patch("godot/content/defs/economy.json", "set", ["pad_queue_radius_m"], 11)
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("pad_queue_radius_m 11 must be >= the largest pad_radius_m 12", out)
+        self.assertIn("1 violations", out)
+
+    def test_equal_to_the_largest_pad_radius_passes(self) -> None:
+        self.patch("godot/content/defs/economy.json", "set", ["pad_queue_radius_m"], 12)
+        code, out = run(self.root)
+        self.assertEqual(code, 0, out)
+
+
 class Feat01Defs(Tree):
     """FEAT-01 (08 SL-1, SL-2, SL-3, SL-5): the real defs pass; each negative trips exactly one rule."""
 
