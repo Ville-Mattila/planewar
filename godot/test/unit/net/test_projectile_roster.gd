@@ -4,7 +4,7 @@ extends GdUnitTestSuite
 ## ENTITY_META / ROSTER_REMOVE / KEYFRAME carry the sim slot and reject 1,536-4,095 and >= 6,144; prepare_tick caches
 ## ROCKET / BOMB / SIEGE_SHELL / CANISTER rows only; a projectile entity is visible to a team through its own team, its
 ## shooter or its target; bombs dead-reckon with gravity, rockets linearly; a new generation in an index is a FULL;
-## Interest removes a projectile the tick it dies or leaves V. Decoders are total: seeded mutation sweeps in which every
+## (interest hold and the KEYFRAME cap: test_projectile_hold.gd). Decoders are total: seeded mutation sweeps in which every
 ## accepted message re-encodes to the identical bytes (the NET-04 standard). ProjectileStore ordinals are pinned.
 
 const G: float = 6.0
@@ -39,6 +39,8 @@ func test_index_mapping_and_capacities() -> void:
 			InterestClient.CAPACITY, KeyframeCodec.COUNT_MAX, VisibleSets.CAPACITY]:
 		assert_int(cap).is_equal(Roster.CAPACITY)
 	assert_int(InterestClient._KEY_SHIFT).is_equal(12)
+	assert_int(1 << NetRosterQueries.PROJECTILE_KIND_BIT).is_equal(NetSimView.MASK_PROJECTILE)
+	assert_int(NetSimView.MASK_PROJECTILE).is_equal(Spatial.MASK_PROJECTILE)
 	assert_bool((1 << InterestClient._KEY_SHIFT) >= Roster.CAPACITY).is_true()
 	var r: Roster = Roster.new()
 	assert_bool(r.add(3583, 2, 1283, 1, 1)).is_true()
@@ -259,78 +261,6 @@ func test_a_new_generation_in_a_projectile_index_is_sent_full() -> void:
 		store.ack(t)
 		var want_full: int = 1 if t == 1 or t == 4 else 0     # the spawn, then the recycled slot's new generation
 		assert_int(codec.n_full - full0).override_failure_message("tick %d" % t).is_equal(want_full)
-
-
-## InterestClient: a projectile joins when tiered and leaves HOLD_TICKS (100 ms) after it leaves V (OUT_OF_VISION) or dies
-## (DEATH), on any tick, with no 30 s ghost; an entity in the same situation is kept as a ghost.
-func test_interest_removes_projectiles_the_tick_they_go() -> void:
-	var codec: SnapshotCodec = SnapshotCodec.new(G, HZ)
-	var it: Interest = Interest.new()
-	var cl: InterestClient = InterestClient.new(1, 0)
-	cl.possessed = 10
-	var a: int = EntityId.make(10, 1)
-	var c: int = EntityId.make(12, 1)
-	for t: int in range(1, 13):
-		var f: SnapshotFrame = SnapshotFrame.new()
-		f.resize(4 if t < 6 else 3)
-		f.tick = t
-		f.set_entity(0, 10, _here(0.0), Vector3.ZERO, Quaternion.IDENTITY, 1.0, 0, 0, 0, false, 0)
-		f.set_entity(1, 12, _here(80.0), Vector3.ZERO, Quaternion.IDENTITY, 1.0, 0, 1, 0, false, 1 if t < 4 else 0)
-		f.gen[0] = 1
-		f.gen[1] = 1
-		f.set_projectile(2, P0 + 1, SnapshotFrame.ROCKET, _here(20.0), Vector3.ZERO, 1, false, c, c, 1)       # V via c
-		if t < 6:
-			f.set_projectile(3, P0 + 2, SnapshotFrame.BOMB, _here(30.0), Vector3.ZERO, 1, true, c, a, 1)      # V via a
-		codec.prepare_tick(f)
-		it.begin_tick(f, codec)
-		it.assign(cl)
-		if t == 1:
-			assert_bool(cl.added.has(PI0 + 1) and cl.added.has(PI0 + 2)).is_true()
-			assert_bool(cl.a.has(PI0 + 1)).is_true()
-		if t == 4 + ProjectileMembers.HOLD_TICKS:            # c left V at 4: the rocket goes HOLD_TICKS later, c stays a ghost
-			assert_array(Array(cl.removed)).is_equal([PI0 + 1])
-			assert_array(Array(cl.removed_reason)).is_equal([Protocol.RosterRemoveReason.OUT_OF_VISION])
-			assert_bool(cl.in_roster(12)).is_true()
-		if t == 6 + ProjectileMembers.HOLD_TICKS:            # the bomb died at 6: DEATH HOLD_TICKS later, on any tick
-			assert_array(Array(cl.removed)).is_equal([PI0 + 2])
-			assert_array(Array(cl.removed_reason)).is_equal([Protocol.RosterRemoveReason.DEATH])
-	assert_int(cl.roster_count()).is_equal(2)
-
-
-## A projectile slot recycled across teams (0-tick quarantine, A-20): the old generation stays listed nowhere, is removed
-## (DEATH) HOLD_TICKS later, and the index is held 2 x HOLD_TICKS before the new one joins (ProjectileMembers).
-func test_a_recycled_projectile_index_is_held_before_it_rejoins() -> void:
-	var codec: SnapshotCodec = SnapshotCodec.new(G, HZ)
-	var it: Interest = Interest.new()
-	var cl: InterestClient = InterestClient.new(1, 0)
-	cl.possessed = 10
-	var joined: int = -1
-	for t: int in range(1, 12):
-		var f: SnapshotFrame = SnapshotFrame.new()
-		f.resize(2)
-		f.tick = t
-		f.set_entity(0, 10, _here(0.0), Vector3.ZERO, Quaternion.IDENTITY, 1.0, 0, 0, 0, false, 0)
-		f.gen[0] = 1
-		var g: int = 1 if t < 3 else 2                      # tick 3: the slot holds a team-1 rocket aimed at our unit
-		f.set_projectile(1, P0 + 5, SnapshotFrame.ROCKET, _here(20.0), Vector3.ZERO, 0 if g == 1 else 1, false,
-				EntityId.make(10, 1), EntityId.make(10, 1), g)
-		codec.prepare_tick(f)
-		it.begin_tick(f, codec)
-		it.assign(cl)
-		var listed: bool = cl.a.has(PI0 + 5) or cl.b.has(PI0 + 5) or cl.c.has(PI0 + 5) or cl.c_set.has(PI0 + 5)
-		var h: int = ProjectileMembers.HOLD_TICKS
-		if t == 3 + h:
-			assert_array(Array(cl.removed)).is_equal([PI0 + 5])
-			assert_array(Array(cl.removed_reason)).is_equal([Protocol.RosterRemoveReason.DEATH])
-		else:
-			assert_bool(cl.removed.is_empty()).is_true()
-		if t >= 3 and t < 3 + 2 * h:
-			assert_bool(listed or cl.added.has(PI0 + 5)).override_failure_message("tick %d" % t).is_false()
-			assert_bool(cl.in_roster(PI0 + 5)).is_equal(t < 3 + h)
-		if cl.added.has(PI0 + 5) and t >= 3:
-			joined = t
-			assert_bool(cl.a.has(PI0 + 5)).is_true()
-	assert_int(joined).is_equal(3 + 2 * ProjectileMembers.HOLD_TICKS)
 
 
 func _keyframe_scene() -> Array:

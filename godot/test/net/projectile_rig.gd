@@ -14,6 +14,10 @@ const SLOT_COUNT: int = EntityId.PROJECTILE_SLOT_END - EntityId.PROJECTILE_SLOT_
 var rate_per_s: float = 12.0
 var slugs_per_tick: int = 1
 var spawning: bool = true
+## Share of replicated projectiles whose shooter and target are dropped for their last BLIND_TICKS: other teams' clients
+## lose them from V just before they die, so a recycled slot follows a non-DEATH failure (review round 2 path).
+var blind_share: float = 0.0
+const BLIND_TICKS: int = 2
 var n_entities: int = 0
 var p_kind: PackedInt32Array = PackedInt32Array()           # by local index; -1 = free
 var p_pos: PackedVector3Array = PackedVector3Array()
@@ -22,6 +26,7 @@ var p_ttl: PackedInt32Array = PackedInt32Array()
 var p_gen: PackedInt32Array = PackedInt32Array()
 var p_shooter: PackedInt32Array = PackedInt32Array()
 var p_target: PackedInt32Array = PackedInt32Array()
+var p_blind: PackedByteArray = PackedByteArray()
 var live: PackedInt32Array = PackedInt32Array()             # live local indices (any kind)
 var died: PackedInt32Array = PackedInt32Array()             # roster indices of replicated projectiles freed this tick
 var spawned: int = 0
@@ -34,7 +39,7 @@ func build(n_clients: int, sizes: Vector3i, movers: Vector3i, bombs: int, seed_v
 	n_entities = snap.frame.count
 	_rng.seed = seed_value * 7919 + 1
 	var e: int = p_kind.resize(SLOT_COUNT) | p_pos.resize(SLOT_COUNT) | p_vel.resize(SLOT_COUNT) | p_ttl.resize(SLOT_COUNT)
-	e |= p_gen.resize(SLOT_COUNT) | p_shooter.resize(SLOT_COUNT) | p_target.resize(SLOT_COUNT)
+	e |= p_gen.resize(SLOT_COUNT) | p_shooter.resize(SLOT_COUNT) | p_target.resize(SLOT_COUNT) | p_blind.resize(SLOT_COUNT)
 	assert(e == OK)
 	p_kind.fill(-1)
 	p_gen.fill(1)
@@ -104,6 +109,7 @@ func _spawn(kind: int, ttl: int) -> void:
 	p_shooter[i] = EntityId.make(shooter, 1)
 	p_target[i] = EntityId.make(target, 1)
 	var _a: bool = live.push_back(i)
+	p_blind[i] = 1 if blind_share > 0.0 and _rng.randf() < blind_share else 0
 	if SnapshotFrame.replicated_kind(kind):
 		spawned += 1
 		var def: int = DEFS[KINDS.find(kind)]
@@ -118,8 +124,9 @@ func _write_rows() -> void:
 		var kind: int = p_kind[i]
 		var grav: bool = kind == SnapshotFrame.BOMB or kind == SnapshotFrame.SIEGE_SHELL
 		var team: int = snap.roster.team_of(EntityId.slot(p_shooter[i]))
+		var blind: bool = p_blind[i] != 0 and p_ttl[i] <= BLIND_TICKS
 		snap.frame.set_projectile(n_entities + k, EntityId.PROJECTILE_SLOT_MIN + i, kind, p_pos[i], p_vel[i], team, grav,
-				p_shooter[i], p_target[i], p_gen[i])
+				0 if blind else p_shooter[i], 0 if blind else p_target[i], p_gen[i])
 
 
 ## Live replicated projectiles (roster indices), ascending.

@@ -127,6 +127,9 @@ func test_determinism() -> void:
 func test_over_local_transport_with_loss_and_reorder(preset: int, test_parameters: Array = [
 		[FaultModel.Preset.TARGET], [FaultModel.Preset.BAD]]) -> void:
 	_build(true)
+	_rig.blind_share = 0.5                                  # half leave other teams' V just before they die ...
+	_rig.slugs_per_tick = 0                                 # ... and the LIFO stack hands their slot to the next projectile
+	_rig.rate_per_s = 30.0
 	var clock: LocalClock = LocalClock.new()
 	var server: LocalTransport = LocalTransport.new_server(clock)
 	server.set_fault_model(FaultModel.preset(preset, 58))
