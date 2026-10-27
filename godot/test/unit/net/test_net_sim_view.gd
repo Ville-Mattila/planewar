@@ -220,8 +220,9 @@ func test_replicable_part_of_exempt_clauses() -> void:
 		assert_bool(v.alive(id)).is_true()
 		assert_int(v.def_kind(id)).is_equal(st.kind[EntityId.slot(id)])
 		assert_float(v.radius(id)).is_equal_approx(st.radius[EntityId.slot(id)], 1e-5)
-	for id: int in [s.dead, 0, s.wreck, s.rocket]:
+	for id: int in [s.dead, 0, s.wreck]:
 		assert_bool(v.alive(id)).is_false()
+	assert_bool(v.alive(s.rocket)).is_true()                                  # NET-58: the projectile block (A-112)
 	assert_bool(s.world.view().visible_to(0, s.wreck)).is_false()            # why the wreck is not received
 	assert_int(v.control_state(s.a)).is_equal(SimViewScene.CONTROL & Codec.FLAG_CONTROL_MASK)
 	assert_float(v.flip_cooldown01(s.a)).is_equal_approx(SimViewScene.FLIP_CD01, 0.5 / 255.0)
@@ -251,7 +252,7 @@ func test_replicable_part_of_exempt_clauses() -> void:
 	assert_bool(v.field_unknown(s.dead, &"pos")).is_true()
 	assert_int(v.def_kind(s.dead)).is_equal(-1)
 	assert_float(v.radius(s.dead)).is_equal(0.0)
-	# ids_in_cell: the local cell list minus what team 0 does not receive (the rocket, CQ-1)
+	# ids_in_cell: the local cell list minus what team 0 does not receive (nothing here: the rocket is replicated, A-112)
 	s.world.spatial.rebuild()                                                 # the factory snapped positions after the scene's hash
 	var cell: int = Spatial.cell_of(v.pos(s.a))
 	var want: Array = []
@@ -262,14 +263,14 @@ func test_replicable_part_of_exempt_clauses() -> void:
 	want.sort()
 	got.sort()
 	assert_array(got).is_equal(want)
-	assert_bool(got.has(s.a) and not got.has(s.b) and not got.has(s.rocket)).is_true()
+	assert_bool(got.has(s.a) and not got.has(s.b) and got.has(s.rocket)).is_true()
 	assert_bool(v.ids_in_cell(Spatial.cell_of(v.pos(s.b))).has(s.b)).is_true()
 	var ids: PackedInt32Array = PackedInt32Array([s.a, s.dead, s.rocket, s.b, s.wreck, 0, s.c])
 	var p: PackedVector3Array = PackedVector3Array()
 	var r: PackedVector4Array = PackedVector4Array()
 	var _x: int = p.resize(ids.size())
 	var _y: int = r.resize(ids.size())
-	assert_int(v.read_poses(ids, p, r)).is_equal(3)                           # a, b, c: what team 0 receives
+	assert_int(v.read_poses(ids, p, r)).is_equal(4)                           # a, rocket, b, c: what team 0 receives
 	for k: int in ids.size():
 		var q: Quaternion = v.basis(ids[k]).get_rotation_quaternion()
 		assert_vector(p[k]).is_equal(v.pos(ids[k]))
