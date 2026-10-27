@@ -2945,9 +2945,11 @@
       " R0 C2-12",
       " 04 NET-17"
     ],
-    "status": "todo",
+    "status": "done",
     "acceptance_append": "; NetSimView implements SimView.read_poses over the sampled mirror (R0 B.11 A-56); R0 B.19 A-103 / 04 s5.6: NetSimView presents a known-blip entry at BaselineFrame.shown_levels (stored bucket, no gravity even when DYING) and never extrapolates it; a contract test shares the fixture of test_dying_blip_rests_300_ticks_at_blip_pos; NetSimView carries GD-38: shield01 (inherit -1.0 until replicated, listed in the TEST-02 factory exempt()) and TeamStateView.CORE_SHIELD_UP via map flag 0x85, with a codec item; NetSimView carries GD-41 wreck_ore (inherit -1.0 until replicated, listed in the TEST-02 factory exempt() with a 04 s5.6 cite, plus a net/MODULE.md open item); R0 B.22 A-111: the factory exempts team_state / player_state / order_head / pending_order with the reason NET-39 (not BLOCKED) and net/client/MODULE.md closes CQ-2; A-112: the seven CQ-1 exempts cite NET-58; A-113: after TEST-5 merges the factory drops control_state and flip_cooldown01 from exempt() and overrides tolerance() with the 04 s3.3 quantum (1.0 / 255) for u8 fields; A-114: radius of a split wreck returns the def radius with unknown set (no exemption reason beyond 04 s5.6); A-115: the perf note states p50 and p95 and the PerfGate stays report-only off the pinned runner",
-    "note": "Contract ruling R0-amendments-16 (A-111 deps.json named types, A-112 projectile roster block = NET-58, A-113 scene / tolerance = TEST-5, A-114 split-wreck radius default + unknown, A-115 rows are p95, no re-pricing). PR #118 rebases on TEST-5 and this ruling."
+    "note": "Contract ruling R0-amendments-16 (A-111 deps.json named types, A-112 projectile roster block = NET-58, A-113 scene / tolerance = TEST-5, A-114 split-wreck radius default + unknown, A-115 rows are p95, no re-pricing). PR #118 rebases on TEST-5 and this ruling. net/client: ClientSession, ClientClock, NetSimView (23 TEST-02 exempts, each cited; tolerance 1/255 on u8 fields). Open: CQ-5 (overlay/cargo/cargo_kind/link wire source) and unknown(id) semantics -> Architect (R0 amendments 17); production_progress01 mutant -> NET-39; read_poses 6.0 ms CI vs 2.4 ms row -> TA-52; tick p95 1.94 ms CI (report-only, NET-18 re-measures).",
+    "pr": 118,
+    "merged": "2026-10-27"
   },
   {
     "id": "UX-24",
