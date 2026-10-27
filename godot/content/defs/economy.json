@@ -1,5 +1,5 @@
 {
-  "_doc": "02 s6.2 placement rules and s6.3 site HP and self-repair rate max(self_repair_min_hp_s 2, self_repair_frac_per_s 0.005 x hp) HP/s (A-80) (build_max_slope_deg 15, outpost_presence_radius_m 300, outpost_spacing_friendly_m 800 and outpost_spacing_enemy_m 1500, site_hp_fraction 0.1); 02 s8.1 start kit geometry (start_refinery_dist_m 500 m from the Core toward Home Field A, start_adjacent_dist_m 100 m for the Shipyard and the Vehicle Bay); 02 s8.1 starting kit and globals table (economy.json); 02 s6.4 (auto_replenish_period_s: seconds between auto-replenish scans, A-83); R0 B.1 economy.json field list and values; 02 s13 hook / delivery reach (salvage_hook_m 33, salvage_deliver_m 33; R0 B.20 A-105: the tether geometry 25 + 8 m, 05 s6.5 hovers at 30 m AGL); R0 B.6 start kit and early share lock; 02 s9.1 unused-slot yield. Singleton file: the schema carries one file-level _doc, so the per-value citations are the section ids named here.",
+  "_doc": "02 s6.2 placement rules and s6.3 site HP and self-repair rate max(self_repair_min_hp_s 2, self_repair_frac_per_s 0.005 x hp) HP/s (A-80) (build_max_slope_deg 15, outpost_presence_radius_m 300, outpost_spacing_friendly_m 800 and outpost_spacing_enemy_m 1500, site_hp_fraction 0.1); 02 s8.1 start kit geometry (start_refinery_dist_m 500 m from the Core toward Home Field A, start_adjacent_dist_m 100 m for the Shipyard and the Vehicle Bay); 02 s8.1 starting kit and globals table (economy.json); 02 s6.4 (auto_replenish_period_s: seconds between auto-replenish scans, A-83); R0 B.1 economy.json field list and values; 02 s13 hook / delivery reach (salvage_hook_m 33, salvage_deliver_m 33; R0 B.20 A-105: the tether geometry 25 + 8 m, 05 s6.5 hovers at 30 m AGL); R0 B.6 start kit and early share lock; 02 s9.1 unused-slot yield; pad_queue_radius_m 500: the horizontal pad-frame queue zone (05 s5.5 L2b 400 m hold + 100 m tracking margin; 01 s4.3 arrival order; R0 B.24 A-125). Singleton file: the schema carries one file-level _doc, so the per-value citations are the section ids named here.",
   "start_ore": 800,
   "start_ice": 300,
   "start_kit": ["core", "refinery", "shipyard", "vehicle_bay", "harvester"],
@@ -19,6 +19,7 @@
   "hauler_transfer_per_s": 40,
   "queue_max": 5,
   "auto_replenish_period_s": 1,
+  "pad_queue_radius_m": 500,
   "construction_slots_base": 2,
   "construction_slots_max": 4,
   "cancel_refund_queued": 1.0,

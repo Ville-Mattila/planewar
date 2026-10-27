@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## GD-15 landings in a SimWorld (03 s6.4, R0 B.5, 02 s17.1): `Docking.land` at the end of step 9 on the PAD contacts of
 ## step 8. Covers the docked pose and events (LANDING then DOCKED), manual vs AUTO (an assist tick inside / outside the
 ## final 150 m; an unpossessed autopilot landing), hot by an enemy ship or a recent hit, dead stick, BENT hull damage,
-## CRASH, the pad-free rule (occupied, queue head, site, launch pad) and the pad_radius_m boundary through Collision.
+## CRASH (the pad takes crash_pad_damage, R0 B.24 A-120), the pad-free rule (occupied, queue head, site, launch pad) and the pad_radius_m boundary through Collision.
 
 var _w: SimWorld
 var _pad: int
@@ -204,6 +204,62 @@ func test_a_hull_emptied_at_the_damage_limit_or_beyond_any_limit_crashes() -> vo
 		assert_float(_w.store().hp[_slot(id)]).is_equal(0.0)
 		_w.step()                                                              # the deferred death of the crash
 		assert_bool(_w.view().alive(id)).is_false()
+
+
+# R0 B.24 A-120: on a CRASH outcome (DESTROY band, or a DAMAGE band that empties the hull) the pad takes
+# flight_common.crash_pad_damage through DamageSink, the HIT naming the ship (02 s2.2: "the pad takes 100 damage").
+func test_a_crash_on_a_pad_deals_crash_pad_damage_to_it_named_after_the_ship() -> void:
+	var c: FlightCommonDef = DockingTestKit.common()
+	var dmg: float = DockingTestKit.crash_pad_damage()
+	assert_float(dmg).is_equal(100.0)                                        # 02 s2.2 literal
+	var p: int = _slot(_pad)
+	for hull_empty: bool in [false, true]:
+		var hp0: float = _w.store().hp[p]
+		var id: int = DockingTestKit.ship_over(_w, &"dart", 0, 0, _pad, DockingTestKit.HIGH)
+		DockingTestKit.pose(_w, id, _pad, 6.0, 0.0, Vector3.ZERO)
+		var vv: float = c.landing_damage_v_vert + 1.0                         # DESTROY band
+		if hull_empty:
+			_w.store().hp[_slot(id)] = 1.0
+			vv = (c.landing_safe_v_vert + c.landing_damage_v_vert) * 0.5      # DAMAGE band, the hull runs out
+		var _d: Array[SimEvent] = _w.drain_events()
+		var _b: int = DockingTestKit.contact(_w, id, _pad, vv, 0.0, 0.0, 0.0)
+		var ev: Array[SimEvent] = _w.drain_events()
+		assert_int(_landing(ev).extra[0]).is_equal(LandingGrade.Grade.CRASH)
+		assert_float(_w.store().hp[p]).is_equal_approx(hp0 - dmg, 1e-3)
+		var pad_hits: Array[SimEvent] = []
+		for e: SimEvent in DockingTestKit.of_kind(ev, SimEvent.Kind.HIT):
+			if e.a == _pad:
+				pad_hits.append(e)
+		assert_int(pad_hits.size()).is_equal(1)
+		assert_int(pad_hits[0].b).is_equal(id)                               # attacker = the crashing ship
+		assert_float(pad_hits[0].value).is_equal(dmg)
+		_w.step()
+		assert_bool(_w.view().alive(id)).is_false()
+	var hp1: float = _w.store().hp[p]
+	var safe: int = DockingTestKit.ship_over(_w, &"dart", 0, 0, _pad, DockingTestKit.HIGH, 60.0)
+	DockingTestKit.pose(_w, safe, _pad, 6.0, 0.0, Vector3.ZERO)
+	var _x: int = DockingTestKit.contact(_w, safe, _pad, c.landing_safe_v_vert, 0.0, 0.0, 0.0)
+	assert_float(_w.store().hp[p]).is_equal(hp1)                              # a landing that is not a crash costs the pad nothing
+
+
+# CQ-8 (raised in the GD-15 PR): A-120 expects the Core's integrated shield to absorb a crash on the Core first, but
+# GD-10 / 02 s4.3 rule 6 shields absorb only enemy projectiles in flight and DamageSink has no shield path. Pinned
+# here as built until the Architect rules: the Core takes crash_pad_damage, its shield charge is untouched.
+func test_a_crash_on_the_shielded_core_reaches_the_core_pending_cq_8() -> void:
+	var c: FlightCommonDef = DockingTestKit.common()
+	var core: int = DockingTestKit.pad(_w, &"core", 0, 0, 1500.0)
+	_w.step()
+	var k: int = _slot(core)
+	assert_bool(_w.shields().core_up(0)).is_true()
+	var charge0: float = _w.shields().charge_of(k)
+	var hp0: float = _w.store().hp[k]
+	var id: int = DockingTestKit.ship_over(_w, &"dart", 0, 0, core, DockingTestKit.HIGH)
+	DockingTestKit.pose(_w, id, core, 6.0, 0.0, Vector3.ZERO)
+	var _d: Array[SimEvent] = _w.drain_events()
+	var _b: int = DockingTestKit.contact(_w, id, core, c.landing_damage_v_vert + 1.0, 0.0, 0.0, 0.0)
+	assert_int(_landing(_w.drain_events()).extra[0]).is_equal(LandingGrade.Grade.CRASH)
+	assert_float(_w.store().hp[k]).is_equal_approx(hp0 - DockingTestKit.crash_pad_damage(), 1e-3)
+	assert_float(_w.shields().charge_of(k)).is_equal(charge0)
 
 
 func test_a_crash_through_the_tick_dies_the_same_tick() -> void:

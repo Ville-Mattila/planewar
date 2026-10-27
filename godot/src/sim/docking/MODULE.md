@@ -6,7 +6,7 @@ contract change: contract tests first, same PR (ADR-11); `tools/gen_module_api.p
 
 | Field | Value |
 |---|---|
-| Responsibility | Turning step 8's PAD contacts into landings (pad-free rule, hull damage of the damage band, crash, docked pose, grade inputs: manual / hot / dead stick, LANDING then DOCKED), the per-pad queue of waiting ships, the three parallel service timers with their Ice / Ore costs and pauses, SERVICED, releasing a ship whose pad is gone. Not here: the landing volume and band (`Collision`), the grade formula and per-ship log (`sim/scoring/`), points (GD-27), the Shipyard launch (`LaunchBay`), the docked launch of a service pad (contract question CQ-1), auto-dock steering (`Assist.auto_dock`, AI-10 / NET-18 wire it and call `PilotTrack.note_assist`). |
+| Responsibility | Turning step 8's PAD contacts into landings (pad-free rule, hull damage of the damage band, crash, docked pose, grade inputs: manual / hot / dead stick, LANDING then DOCKED), the per-pad queue of waiting ships, the three parallel service timers with their Ice / Ore costs and pauses, SERVICED, releasing a ship whose pad is gone. Not here: the landing volume and band (`Collision`), the grade formula and per-ship log (`sim/scoring/`), points (GD-27), the Shipyard launch (`LaunchBay`), the docked launch of a service pad (GD-43, R0 B.24 A-119), auto-dock steering (`Assist.auto_dock`, AI-10 / NET-18 wire it and call `PilotTrack.note_assist`). |
 | Lane owner tier | Opus (sim lane); Sonnet against this file with an Opus review |
 | May depend on | `core`, `content`, `sim` (incl. `sim/world/` `WorldDefs`, `SimEvents`, `PlayerTable`, `InputSlots`, `PadQueries`, `StateIO`, `CommandApplier`; `sim/combat/` `DamageSink`; `sim/economy/` `Economy`; `sim/scoring/`; `sim/control/` `ControlMachine` enums; `sim/orders/` `OrderSpec`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads, RNG |
@@ -61,8 +61,8 @@ func manual(id: int, pad_pos: Vector3, pad_up: Vector3, window_m: float) -> bool
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 ```
 
-Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collision`, `auto_dock_radius_m` as the queue
-radius), `scoring.json` `landing` (+ `landing_grade.manual_window_m`), `ships.json` (`fuel_s`, `refuel_ice`,
+Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collision`, `crash_pad_damage`),
+`economy.json` `pad_queue_radius_m` (the queue zone, A-125), `scoring.json` `landing` (+ `landing_grade.manual_window_m`), `ships.json` (`fuel_s`, `refuel_ice`,
 `refuel_time_s`, `rearm_time_s`, `repair_time_s`, `primary` / `secondary`, `hp`), `weapons.json` `rearm_ice`,
 `economy.json` `repair_ore_per_hp`, `structures.json` `pad_radius_m` / `pads`. Slots in the API are entity slots.
 
@@ -83,7 +83,8 @@ radius), `scoring.json` `landing` (+ `landing_grade.manual_window_m`), `ships.js
   while DOCKED has no autopilot approach. An unpossessed (autopilot) landing is never manual (grade AUTO).
 - D4 Outcome, in this order: DAMAGE band -> `DamageSink.damage(hp_max * max(ratio_vert, ratio_hor, ratio_tilt))`, each
   ratio = clamp((x - safe) / (damage - safe)) (HIT); a hull emptied -> CRASH. DESTROY band -> `DamageSink.destroy`
-  (deferred death at the end of this step 9, DEATH the same tick). `LandingLog.record`, then LANDING (a ship, b pad,
+  (deferred death at the end of this step 9, DEATH the same tick). Every CRASH first deals `crash_pad_damage` to the pad
+  through `DamageSink.damage` (HIT, attacker = the ship; R0 B.24 A-120). `LandingLog.record`, then LANDING (a ship, b pad,
   value q, pos the ship, team the ship's; extra = [grade, round(q x 255), flags bit0 manual / bit1 hot / bit2 dead stick,
   v_vert and v_horiz in 0.1 m/s clamped 0..255]); then, unless CRASH: DOCKED | LANDED, `vel` and `rates` 0, `pos` =
   pad.pos + pad.up x radius (A-82 socket), fwd = pad.up (nose up), body up = its old up in the pad plane, `link` = pad,
@@ -91,8 +92,9 @@ radius), `scoring.json` `landing` (+ `landing_grade.manual_window_m`), `ships.js
 - D5 No grade without content: a ContentSet without a usable `scoring` block lands nothing (`grade.n_vert` = 0).
 - D6 Queue (03 s3.2, s6.4). A ship wants a pad when its head order is RETURN (`order_kind`) or its pilot holds DOCK
   (`PilotTrack.dock_held`). It waits for the nearest live pad of its team that is busy (a ship served on it this tick) or
-  already queued, whose centre is within `auto_dock_radius_m` of the ship (3-D; ships farther from the moon's centre than
-  the highest such pad + the radius are skipped). Entries keep their arrival order while they still wait for the same
+  already queued, whose horizontal offset in the pad frame is <= `economy.pad_queue_radius_m` (no altitude term; ships in
+  the far hemisphere of the pad are skipped as a prefilter; R0 B.24 A-125). `PER_PAD` is the 03 s3.2 structural bound
+  (A-127). Entries keep their arrival order while they still wait for the same
   pad; new waiters are appended in ascending ship slot, at most `PER_PAD` per pad; a ship that docks, dies, loses the wish
   or leaves the radius drops out. Updated once per step 10; read by `Touchdown` (head) and `SimView.pad_queue`.
 - D7 Service (02 s2.3) runs in step 10 for every DOCKED ship whose `link` is a live finished service pad; three
@@ -148,20 +150,12 @@ and `landing_grade_last`; `godot/test/unit/sim/test_collision.gd` (D2 impact spe
 - **An assist that counts against manual (auto-dock wiring, AI-10 / NET-18):** call `Docking.pilots.note_assist(slot)` on
   every tick the assist substitutes the possessed ship's input.
 
-## Open items (contract questions raised by GD-15)
+## Open items
 
-- CQ-1 Docked launch from a service pad: 05 s2.5 "thrust >= 0.5 held for 0.3 s launches" and 02 s2.3 "an AUTO ship
-  waits until fuel >= 50 %" have no def fields in R0 Part B (`launch_thrust_min`, `launch_hold_s`, `auto_launch_fuel01`),
-  and the LAUNCHED of a ship still inside its pad volume would land it again next tick (needs a rule). Until ratified, a
-  ship landed on a service pad stays DOCKED (no LAUNCHED from service pads; LaunchBay's Shipyard launch is unchanged).
-- CQ-2 The crash pad damage (02 s2.2 "the pad takes 100 damage") has no def field; not applied.
-- CQ-3 (needs net) LANDING flags bit2 = dead stick (04 s3.6 names bit0 manual, bit1 hot; the byte is unchanged in size).
-- CQ-4 Tick step of landings: R0 B.5 / 03 s6.4 place landing in step 8 and docking / grade in step 10; here they resolve
-  at the end of step 9 so a crash dies the same tick (sim/MODULE.md tick order). Needs ratifying.
-- CQ-5 Queue zone: `auto_dock_radius_m` is used as a 3-D distance (A-33 defines it horizontal in the pad frame), and
-  05 s5.5 L2b holds AI ships at a 400 m orbit, outside it. Which radius, 3-D or horizontal?
-- CQ-6 Rearm time scales with the most-missing slot (02 s2.3 states scaling for refuel and repair only). Confirm, or the
-  full `rearm_time_s` whenever anything is missing.
-- CQ-7 `PadQueue.PER_PAD` (8, 03 s3.2 bound) is a const with no R0 def field: structural cap, or a def field?
-- 03 s6.4 says `timer_a` / `timer_b` = 0 on landing; a docked ship's `timer_a` now holds its rearm line (03 needs the
-  amendment).
+- R0 B.24 (amendments 18) ruled on GD-15's CQ-1..CQ-7: launch from a service pad is GD-43 (A-119; until then a landed
+  ship stays DOCKED); `crash_pad_damage` (A-120), LANDING flags bit2 = dead stick (A-121), landings at the end of step 9
+  (A-124), `pad_queue_radius_m` horizontal (A-125), rearm time by the most-missing slot (A-126) and `PER_PAD` as a const
+  (A-127) are as built. 03 s6.4 now names `timer_a` the rearm line.
+- CQ-8 A-120 says the Core's integrated shield absorbs a crash on the Core first, but shields (GD-10, 02 s4.3 rule 6)
+  absorb enemy projectiles in flight only and `DamageSink` has no shield path: the Core takes the damage
+  (`test_a_crash_on_the_shielded_core_reaches_the_core_pending_cq_8`) until the Architect rules.

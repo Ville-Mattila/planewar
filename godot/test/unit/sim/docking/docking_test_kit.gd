@@ -15,6 +15,16 @@ static func common() -> FlightCommonDef:
 	return content().flight_common
 
 
+## economy.pad_queue_radius_m (R0 B.24 A-125): the horizontal queue zone around a busy pad.
+static func queue_radius() -> float:
+	return Def.num(content().economy.raw.get("pad_queue_radius_m", 0.0))
+
+
+## flight_common.crash_pad_damage (R0 B.24 A-120): what a pad takes when a ship crashes on it.
+static func crash_pad_damage() -> float:
+	return Def.num(common().raw.get("crash_pad_damage", 0.0))
+
+
 static func ship_def(id: StringName) -> ShipDef:
 	return content().ships[WorldTestKit.def_id(id) - DefRanges.SHIP_BASE]
 

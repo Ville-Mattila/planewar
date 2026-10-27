@@ -231,7 +231,7 @@ overwrite input slots where active; 5 kinematics: `step_ship` ships, `GroundMoti
 (straight / ballistic / guided / rendezvous); 7 spatial rebuild (counting sort); 8 collision: projectile vs entity sweeps, 8b
 projectile vs terrain, ship vs terrain (destroy / damage / land / scrape), ship vs ship, ship vs structure; 9 combat: fire, damage
 rolls, flak bursts, shields, deaths (deferred free), wrecks; 10 economy / production / build / docking service / salvage / Core
-shield and Exposure timers / caps / scoring (LandingGrade); 11 vision (10 Hz staggered, 5 Hz under cut rung 2); 12 events drained by the caller. GD-15: the PAD contacts of 8 land at the end of 9 (crash deaths deferred with the others), service in 10 (sim/docking/MODULE.md D1).
+shield and Exposure timers / caps / scoring (LandingGrade); 11 vision (10 Hz staggered, 5 Hz under cut rung 2); 12 events drained by the caller. GD-15: the PAD contacts of 8 land at the end of 9 (R0 B.24 A-124; crash deaths deferred with the others), service in 10 (sim/docking/MODULE.md D1).
 
 Motion rules (R0 B.5): slugs, flak shells and rail slugs fly straight in the world frame (`p += v * dt`, no transport,
 no gravity, no damping) and are never entities; bombs and siege shells are CF-transported under `-g n`; rockets fly at

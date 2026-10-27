@@ -111,6 +111,12 @@
       "maximum": 10,
       "$comment": "02 s6.4 auto-replenish scan period; 1 Hz anchor (A-83), GD-34 may retune"
     },
+    "pad_queue_radius_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 3000,
+      "$comment": "R0 B.24 A-125: queue zone around a busy pad, horizontal in the pad frame with no altitude term (05 s5.5 L2b 400 m hold + 100 m margin); canonical 500"
+    },
     "construction_slots_base": {
       "type": "integer",
       "minimum": 1,
@@ -217,6 +223,7 @@
     }
   },
   "required": [
+    "pad_queue_radius_m",
     "build_max_slope_deg",
     "outpost_presence_radius_m",
     "outpost_spacing_friendly_m",
