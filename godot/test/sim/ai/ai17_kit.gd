@@ -3,8 +3,9 @@ class_name Ai17Kit extends RefCounted
 ## content AI-19), a SimWorld on them (players 0 and 2 on team 0, 1 on team 1) and an AiDriver whose tower class runs
 ## `TowerBrain` with the per-team intel (teams 0 and 1 tracked). The sim does not slew a turret yet (GD-09), so the
 ## driver is a `SlewDriver`: it hands the brain a sink that also applies each tower's `pitch` / `yaw` drive to the
-## entity's `fwd` / `up` (the R0 B.23 A-118 law GD-09 implements: azimuth about the site normal, elevation about the tangent right, unit-norm clamp, full rate in the commanded tick, pole truncation), inside step 3, so the
-## sim fires along the slewed muzzle at step 9.
+## entity's `fwd` / `up` (the R0 B.23 A-118 law GD-09 implements: azimuth about the site
+## normal, elevation about the tangent right, unit-norm clamp, full rate in the commanded tick, pole truncation),
+## inside step 3, so the sim fires along the slewed muzzle at step 9.
 
 const AUTOPILOTS: String = "res://test/sim/ai/ai17_autopilots.json"
 
