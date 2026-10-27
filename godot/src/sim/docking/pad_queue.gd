@@ -2,12 +2,12 @@ class_name PadQueue extends RefCounted
 ## 03 s3.2 `pad_queues` (GD-15): the ships waiting for a service pad, in arrival order, at most `PER_PAD` per pad. A
 ## ship waits for pad P on a tick when it is a live, not-docked ship of P's team that wants a pad (its head order is
 ## RETURN, or it is possessed with DOCK held), P is busy (occupied) or already has a queue, and P is the nearest such
-## pad whose centre is within `auto_dock_radius_m` of the ship. Entries are kept while that holds, new ones are appended
-## in ascending ship slot; a ship that docks, dies, loses the wish or leaves the radius drops out. While P has a queue
+## pad within `economy.pad_queue_radius_m` of the ship, horizontally in the pad frame (A-125). Entries are kept while
+## that holds, new ones are appended in ascending ship slot; a ship that docks, dies, loses the wish or leaves the radius drops out. While P has a queue
 ## only its head may land on P (03 s6.4 "pad free"). One flat list (pairs in arrival order) so no packed array lives in a
 ## container (03 s12.2 rule 11); saved with the economy section (S4).
 
-const PER_PAD: int = 8                         ## 03 s3.2 bound: waiting ships per pad
+const PER_PAD: int = 8                         ## 03 s3.2 structural bound "<= 8 waiting per pad" (R0 B.24 A-127)
 
 var q_pad: PackedInt32Array = PackedInt32Array()    ## pad EntityId per entry, arrival order
 var q_ship: PackedInt32Array = PackedInt32Array()   ## ship EntityId per entry

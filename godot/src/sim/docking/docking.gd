@@ -15,14 +15,15 @@ var touchdown: Touchdown
 
 var _store: EntityStore
 var _defs: WorldDefs
-var _radius: float = 0.0                ## flight_common.auto_dock_radius_m: the queue zone around a busy pad
+var _radius: float = 0.0                ## economy.pad_queue_radius_m: horizontal queue zone around a busy pad (A-125)
 var _wish_ship: PackedInt32Array = PackedInt32Array()   ## step scratch: ships that want a pad this tick (ascending slot)
 var _wish_pad: PackedInt32Array = PackedInt32Array()    ## ... the pad each waits for (0 none)
 var _cand: PackedInt32Array = PackedInt32Array()        ## step scratch: pad slots that are busy or queued this tick
 var _cand_mark: PackedInt32Array = PackedInt32Array()   ## per entity slot: `_pass` when already in `_cand`
 var _dock_mark: PackedInt32Array = PackedInt32Array()   ## per entity slot: `_pass` when its pilot holds DOCK this tick
 var _cand_team: PackedInt32Array = PackedInt32Array()     ## per `_cand` entry: team, TEAMS when the pad is dead
-var _cand_pos: PackedVector3Array = PackedVector3Array()  ## live candidates bucketed by team: pad position, EntityId
+var _cand_pos: PackedVector3Array = PackedVector3Array()  ## live candidates bucketed by team: pad position, normal, EntityId
+var _cand_up: PackedVector3Array = PackedVector3Array()
 var _cand_id: PackedInt32Array = PackedInt32Array()
 var _team_at: PackedInt32Array = PackedInt32Array()       ## TEAMS + 1 bucket starts
 var _team_fill: PackedInt32Array = PackedInt32Array()     ## TEAMS fill cursors
@@ -37,7 +38,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, economy: E
 		applier: CommandApplier, hz: int) -> void:
 	_store = store
 	_defs = defs
-	_radius = defs.common.auto_dock_radius_m if defs.common != null else 0.0
+	_radius = Def.num(defs.economy.raw.get("pad_queue_radius_m", 0.0)) if defs.economy != null else 0.0   # needs content: typed field
 	grade = LandingGrade.from_def(defs.content.scoring)
 	if grade == null:
 		grade = LandingGrade.new()
@@ -49,7 +50,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, economy: E
 		pilots, hz)
 	var e: int = _wish_ship.resize(InputSlots.ENTITY_SLOTS) | _wish_pad.resize(InputSlots.ENTITY_SLOTS)
 	e |= _cand.resize(InputSlots.ENTITY_SLOTS) | _cand_mark.resize(InputSlots.ENTITY_SLOTS) | _docked_s.resize(InputSlots.ENTITY_SLOTS)
-	e |= _cand_pos.resize(InputSlots.ENTITY_SLOTS) | _cand_team.resize(InputSlots.ENTITY_SLOTS) | _cand_id.resize(InputSlots.ENTITY_SLOTS)
+	e |= _cand_up.resize(InputSlots.ENTITY_SLOTS) | _cand_pos.resize(InputSlots.ENTITY_SLOTS) | _cand_team.resize(InputSlots.ENTITY_SLOTS) | _cand_id.resize(InputSlots.ENTITY_SLOTS)
 	e |= _dock_mark.resize(InputSlots.ENTITY_SLOTS) | _team_at.resize(PlayerTable.TEAMS + 1) | _team_fill.resize(PlayerTable.TEAMS)
 	assert(e == OK)
 	_cand_mark.fill(0)
@@ -165,9 +166,10 @@ func _on_service_pad(s: int) -> bool:
 	return _store.alive(link) and PadQueries.serves(_store, _defs, EntityId.slot(link))
 
 
-# The queue wishes (D6): each wishing ship waits for the nearest busy or queued live pad of its team within the queue
-# radius. Candidates are bucketed by team (stable, so ties keep the candidate order: busy pads in docked-ship order, the
-# queued ones in arrival order; the last of equal distance wins); ships above the highest pad + radius skip the search.
+# The queue wishes (D6, R0 B.24 A-125): each wishing ship waits for the busy or queued live pad of its team with the
+# smallest horizontal offset in the pad frame, if that is <= pad_queue_radius_m (no altitude term; a ship in the pad's far
+# hemisphere is skipped). Candidates are bucketed by team (stable, so ties keep the candidate order: busy pads in
+# docked-ship order, the queued ones in arrival order; the last of equal offset wins).
 func _queue_pass() -> void:
 	var qp: PackedInt32Array = queue.q_pad
 	for k: int in qp.size():
@@ -176,7 +178,7 @@ func _queue_pass() -> void:
 			_cand_mark[p] = _pass
 			_cand[_n_cand] = p
 			_n_cand += 1
-	var top: float = _bucket()
+	_bucket()
 	var r2: float = _radius * _radius
 	var pos: PackedVector3Array = _store.pos
 	var teams: PackedByteArray = _store.team
@@ -185,13 +187,16 @@ func _queue_pass() -> void:
 		var at: Vector3 = pos[s]
 		var tm: int = teams[s]
 		var best: int = 0
-		if tm < PlayerTable.TEAMS and at.length_squared() <= top:
+		if tm < PlayerTable.TEAMS:
 			var best_d2: float = r2
 			var k: int = _team_at[tm]
 			var end: int = _team_at[tm + 1]
 			while k < end:
-				var d2: float = at.distance_squared_to(_cand_pos[k])
-				if d2 <= best_d2:
+				var n: Vector3 = _cand_up[k]
+				var rel: Vector3 = at - _cand_pos[k]
+				var v: float = rel.dot(n)
+				var d2: float = rel.length_squared() - v * v
+				if d2 <= best_d2 and at.dot(n) > 0.0:
 					best_d2 = d2
 					best = _cand_id[k]
 				k += 1
@@ -199,10 +204,11 @@ func _queue_pass() -> void:
 	queue.update(_wish_ship, _wish_pad, _n_wish)
 
 
-# Counting sort of the live candidates by team into `_cand_pos` / `_cand_id`, `_team_at[t] .. _team_at[t + 1]` per team;
-# returns the squared altitude filter (highest live pad centre + the queue radius).
-func _bucket() -> float:
+# Counting sort of the live candidates by team into `_cand_pos` / `_cand_up` / `_cand_id`, `_team_at[t] .. _team_at[t + 1]`
+# per team.
+func _bucket() -> void:
 	var pos: PackedVector3Array = _store.pos
+	var ups: PackedVector3Array = _store.up
 	var teams: PackedByteArray = _store.team
 	var flags: PackedByteArray = _store.flags
 	var gen: PackedInt32Array = _store.generation
@@ -216,7 +222,6 @@ func _bucket() -> float:
 	for t: int in PlayerTable.TEAMS:
 		_team_at[t + 1] += _team_at[t]
 		_team_fill[t] = _team_at[t]
-	var top: float = 0.0
 	for k: int in _n_cand:
 		var tm: int = _cand_team[k]
 		if tm < PlayerTable.TEAMS:
@@ -224,6 +229,5 @@ func _bucket() -> float:
 			var j: int = _team_fill[tm]
 			_team_fill[tm] = j + 1
 			_cand_pos[j] = pos[p]
+			_cand_up[j] = ups[p]
 			_cand_id[j] = EntityId.make(p, gen[p])
-			top = maxf(top, pos[p].length())
-	return (top + _radius) * (top + _radius)

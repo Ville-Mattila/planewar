@@ -11,8 +11,9 @@ class_name Touchdown extends RefCounted
 ## LANDING event (a ship, b pad, value q, extra = grade, round(q * 255), flags bit0 manual, bit1 hot, bit2 dead stick,
 ## v_vert and v_horiz in 0.1 m/s clamped to 0..255); a ship that survives docks: DOCKED | LANDED, `vel` and `rates` 0,
 ## `pos` on the socket `pad.pos + pad.up * radius` (A-82), nose along the pad normal, body up = its old up in the pad
-## plane, `link` = pad, a new service stay, the DOCKED event. The pad-hit damage of a crash (02 s2.2, 100) has no def
-## field yet: not applied (GD-15 contract question).
+## plane, `link` = pad, a new service stay, the DOCKED event. A CRASH (DESTROY band, or a hull emptied by the damage
+## band) first deals `flight_common.crash_pad_damage` to the pad through `DamageSink` (HIT, attacker = the ship; 02 s2.2,
+## R0 B.24 A-120).
 
 const _PER_MPS: int = 10    ## 04 s3.6 LANDING speed unit 0.1 m/s (a unit, not a tunable)
 const _Q_MAX: int = 255     ## 04 s3.6 LANDING q byte = round(q * 255)
@@ -29,6 +30,7 @@ var _log: LandingLog
 var _grade: LandingGrade
 var _pilots: PilotTrack
 var _hz: int = 30
+var _pad_dmg: float = 0.0                ## flight_common.crash_pad_damage (A-120)
 var _occ: PackedInt32Array = PackedInt32Array()   ## per entity slot (scratch per call): ship docked on that pad, 0 none
 
 
@@ -44,6 +46,7 @@ func _init(store: EntityStore, defs: WorldDefs, events: SimEvents, sink: DamageS
 	_grade = grade
 	_pilots = pilots
 	_hz = hz
+	_pad_dmg = Def.num(defs.common.raw.get("crash_pad_damage", 0.0)) if defs.common != null else 0.0   # needs content: typed field
 	var e: int = _occ.resize(InputSlots.ENTITY_SLOTS)
 	assert(e == OK)
 	_occ.fill(0)
@@ -99,7 +102,9 @@ func _contact(c: Collision, k: int, t: int) -> void:
 	if band == Collision.L_DAMAGE:
 		var _d: bool = _sink.damage(s, _hull_damage(s, v), 0, t)
 		g = LandingGrade.Grade.CRASH if not _sink.standing(s) else g
-	elif band == Collision.L_DESTROY:
+	if g == LandingGrade.Grade.CRASH:
+		var _p: bool = _sink.damage(p, _pad_dmg, id, t)             # the pad takes the crash, named after the ship
+	if band == Collision.L_DESTROY:
 		var _x: bool = _sink.destroy(s, 0, t)
 	_log.record(id, g, q)
 	var e: SimEvent = _events.emit(SimEvent.Kind.LANDING, id, pad, _store.pos[s], q, _store.team[s])
