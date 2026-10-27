@@ -7798,8 +7798,10 @@
       "06 s5.3",
       "godot/src/camera/MODULE.md K9-K11"
     ],
-    "status": "todo",
-    "note": "Follow-up from the UX-13 #121 review 2026-10-23."
+    "status": "done",
+    "note": "CameraIntentDriver (app). Touch end to end; mouse/gamepad need the mappers to emit CAM_* (UX-45). HUD compass/north-up/follow must call the driver methods. TILT 0.15 deg/du (client const, revisit in playtest).",
+    "pr": 126,
+    "merged": "2026-10-27"
   },
   {
     "id": "AI-44",
@@ -7818,5 +7820,23 @@
       "05 s6.8"
     ],
     "status": "todo"
+  },
+  {
+    "id": "UX-45",
+    "title": "input: emit Intents.CAM_* from the mouse and gamepad mappers (RTS mode only) per 06 s3.3",
+    "lane": "input",
+    "tier": "Sonnet",
+    "size_days": 0.75,
+    "depends_on": [
+      "UX-44"
+    ],
+    "milestone": "M3",
+    "acceptance": "Mouse: wheel -> CAM_ZOOM {log_delta, anchor=cursor}; WASD/arrows/edge 8 du -> CAM_PAN_VEL {vel |vel|<=1, zero vector on release}; Q/E and MMB-drag X -> CAM_ROTATE {rad}; MMB-drag Y -> CAM_TILT {vec in du}; Tab -> CAM_TIER_TOGGLE {pos}; H -> CAM_HOME. Gamepad: LS -> CAM_PAN_VEL; RS X -> CAM_ROTATE; RS Y -> CAM_TILT; RT/LT -> CAM_ZOOM; View -> CAM_TIER_TOGGLE; L3 -> CAM_HOME. Test: synthetic InputEventMouse*/InputEventJoypadMotion through InputRouter into a real CameraIntentDriver changes the OrbitController pose (extend test_camera_intent_driver.gd); pin FLING_MIN_SPEED > 1; nothing emitted outside RTS mode",
+    "docs": [
+      "06 s3.3",
+      "06 s5.3"
+    ],
+    "status": "todo",
+    "note": "From the UX-44 #126 review 2026-10-27."
   }
 ]
