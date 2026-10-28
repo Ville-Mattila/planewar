@@ -4,6 +4,7 @@ class_name ScoringTestKit extends RefCounted
 ## death follow the tick), crafted LANDING events, and the score read back through `SimView.player_score`. Every number
 ## comes from the shipped `scoring.json`; the tests only scale it.
 
+const PARK_ALT: float = 1000.0   ## below the 1,950 m uplink limit
 const MANUAL: int = 1        ## LANDING flags bit0 (04 s3.6 row 29)
 const HOT: int = 2           ## bit1
 const DEAD_STICK: int = 4    ## bit2 (R0 B.24 A-121)
@@ -27,9 +28,19 @@ static func hz() -> int:
 	return WorldTestKit.content().rules.tick_hz
 
 
-## A unit or structure of `def_id`, parked at its own point 1,000 m up (60 m apart per call).
+static var _park_n: int = 0
+
+
+## A point `PARK_ALT` above the far side of the moon, 60 m apart per call (on the sphere, unlike DockingTestKit.far).
+static func park() -> Vector3:
+	_park_n = (_park_n + 1) % 200
+	var a: float = float(_park_n - 100) * 60.0 / WorldTestKit.R
+	return Vector3(-cos(a), sin(a), 0.0) * (WorldTestKit.R + PARK_ALT)
+
+
+## A unit or structure of `def_id`, parked high above the datum at its own point (no neighbour within 60 m).
 static func spawn(w: SimWorld, def_id: StringName, owner: int, team: int) -> int:
-	var id: int = WorldTestKit.spawn(w, def_id, owner, team, DockingTestKit.far(w))
+	var id: int = WorldTestKit.spawn(w, def_id, owner, team, park())
 	var _e: Array[SimEvent] = w.drain_events()
 	return id
 

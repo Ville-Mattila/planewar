@@ -15,7 +15,7 @@ func before_test() -> void:
 
 func _kill_by_pilot(victim_def: StringName) -> Vector2i:
 	var killer: int = ScoringTestKit.spawn(_w, &"dart", 0, 0)
-	assert_bool(WorldTestKit.possess(_w, killer, 0)).is_true()
+	assert_bool(DockingTestKit.possess(_w, killer, 0)).is_true()
 	var victim: int = ScoringTestKit.spawn(_w, victim_def, 1, 1)
 	ScoringTestKit.kill(_w, victim, killer)
 	return ScoringTestKit.score(_w, 0)
@@ -55,7 +55,7 @@ func test_kill_siege_crawler() -> void:
 
 func test_kill_hauler_loaded_bonus_for_cargo_and_for_a_tow() -> void:
 	var killer: int = ScoringTestKit.spawn(_w, &"dart", 0, 0)
-	assert_bool(WorldTestKit.possess(_w, killer, 0)).is_true()
+	assert_bool(DockingTestKit.possess(_w, killer, 0)).is_true()
 	var cargo: int = ScoringTestKit.spawn(_w, &"hauler", 1, 1)
 	_w.store().cargo[EntityId.slot(cargo)] = 10.0
 	ScoringTestKit.kill(_w, cargo, killer)
@@ -69,25 +69,27 @@ func test_kill_hauler_loaded_bonus_for_cargo_and_for_a_tow() -> void:
 
 func test_structure_destroyed_is_a_fifth_of_the_cost() -> void:
 	var killer: int = ScoringTestKit.spawn(_w, &"dart", 0, 0)
-	assert_bool(WorldTestKit.possess(_w, killer, 0)).is_true()
+	assert_bool(DockingTestKit.possess(_w, killer, 0)).is_true()
 	var sd: StructureDef = WorldTestKit.content().structures[WorldTestKit.def_id(&"reactor") - DefRanges.STRUCTURE_BASE]
 	var reactor: int = ScoringTestKit.spawn(_w, &"reactor", 1, 1)
+	var dealt: float = ScoringTestKit.hp(_w, reactor) + 1.0                   # the killing hit is paid as structure_damage too
 	ScoringTestKit.kill(_w, reactor, killer)
-	var want: int = floori(float(sd.cost_ore + sd.cost_ice) * _d.structure_destroyed_ratio)
+	var want: int = floori(float(sd.cost_ore + sd.cost_ice) * _d.structure_destroyed_ratio + dealt * _d.structure_damage_points_per_hp)
 	assert_object(ScoringTestKit.score(_w, 0)).is_equal(Vector2i(want, 0))
 
 
 func test_core_destroyed_is_flat() -> void:
 	var killer: int = ScoringTestKit.spawn(_w, &"dart", 0, 0)
-	assert_bool(WorldTestKit.possess(_w, killer, 0)).is_true()
+	assert_bool(DockingTestKit.possess(_w, killer, 0)).is_true()
 	var core: int = ScoringTestKit.spawn(_w, &"core", 1, 1)
+	var dealt: float = ScoringTestKit.hp(_w, core) + 1.0
 	ScoringTestKit.kill(_w, core, killer)
-	assert_object(ScoringTestKit.score(_w, 0)).is_equal(Vector2i(_d.core_destroyed, 0))
+	assert_object(ScoringTestKit.score(_w, 0)).is_equal(Vector2i(floori(float(_d.core_destroyed) + dealt * _d.structure_damage_points_per_hp), 0))
 
 
 func test_structure_damage_is_one_point_per_ten_hp_and_the_fraction_carries() -> void:
 	var killer: int = ScoringTestKit.spawn(_w, &"dart", 0, 0)
-	assert_bool(WorldTestKit.possess(_w, killer, 0)).is_true()
+	assert_bool(DockingTestKit.possess(_w, killer, 0)).is_true()
 	var pad: int = ScoringTestKit.spawn(_w, &"pad", 1, 1)
 	var each: float = 0.3 / _d.structure_damage_points_per_hp                  # 3 hp: 0.3 points, none whole
 	for _i: int in 7:
@@ -106,7 +108,7 @@ func test_commander_auto_kill_scores_half_to_the_commander_side() -> void:
 
 func test_friendly_and_unattributed_deaths_score_nothing() -> void:
 	var killer: int = ScoringTestKit.spawn(_w, &"dart", 0, 0)
-	assert_bool(WorldTestKit.possess(_w, killer, 0)).is_true()
+	assert_bool(DockingTestKit.possess(_w, killer, 0)).is_true()
 	var mate: int = ScoringTestKit.spawn(_w, &"dart", 2, 0)
 	ScoringTestKit.kill(_w, mate, killer)                                  # team kill
 	var lone: int = ScoringTestKit.spawn(_w, &"dart", 1, 1)
@@ -119,7 +121,7 @@ func test_assist_pays_half_the_kill_value_at_a_quarter_of_the_damage_within_the_
 	var helper: int = ScoringTestKit.spawn(_w, &"dart", 2, 0)
 	var victim: int = ScoringTestKit.spawn(_w, &"lancer", 1, 1)
 	var total: float = ScoringTestKit.hp(_w, victim)
-	assert_bool(WorldTestKit.possess(_w, helper, 2)).is_true()
+	assert_bool(DockingTestKit.possess(_w, helper, 2)).is_true()
 	ScoringTestKit.hit(_w, victim, helper, total * (Def.num(_d.assist["min_share"]) + 0.01))
 	ScoringTestKit.kill(_w, victim, killer)
 	var want: int = floori(float(_points("lancer")) * Def.num(_d.assist["kill_share"]))

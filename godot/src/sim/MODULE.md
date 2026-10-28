@@ -36,7 +36,7 @@ static func deserialize(bytes: PackedByteArray, content: ContentSet, hook: SimAi
 func profile() -> PackedFloat32Array                                         # 14 rows of 03 s4.4 for the last tick
 func set_budget_profile(level: int) -> void;  func path_expansions_per_tick() -> int   # cut rungs 1..level (<= 8) of 03 s4.3; rung 3 caps live projectiles, 8 lowers the path budget (TA-49; TA-50 hands the value to Pathing)
 func terrain() -> Terrain                                                    # read-only sampler shared with presentation
-func store() -> EntityStore;  func economy() -> EconomyHub;  func projectiles() -> ProjectileStore;  func shields() -> ShieldDomes;  var rng: Rng;  var spatial: Spatial;  var collision: Collision
+func store() -> EntityStore;  func match_result() -> MatchResult;  func economy() -> EconomyHub;  func projectiles() -> ProjectileStore;  func shields() -> ShieldDomes;  var rng: Rng;  var spatial: Spatial;  var collision: Collision
 var vision: Vision;  func interest_start() -> PackedInt32Array;  func interest_count() -> PackedInt32Array;  func interest_ids() -> PackedInt32Array
     # store / projectiles (03): net encoder and tests only, presentation uses view(); rng = S7's one RNG; spatial / collision (TA-18), vision (TA-37): read-only; interest_* = the per-team interest-cell lists of 03 s3.6, layout in sim/vision/MODULE.md (S3: shared, valid until the next step)
 
@@ -140,7 +140,7 @@ func stockpile_cap(team: int) -> Vector2i;  func power_balance(team: int) -> Vec
 func supply01(id: int) -> float;  func shield01(id: int) -> float            # tower ammo / ammo_pool, 0 otherwise (GD-18); dome charge / cap, 0 none / down, -1 no data (GD-38, sim/combat SH11)
 func production_queue(factory: int) -> PackedInt32Array;  func production_progress01(factory: int) -> float;  func wreck_ore(id: int) -> float   # wreck_ore: a live wreck's remaining Ore (hp), 0 otherwise, -1 no data (GD-41, A-108)
 func tech_available(team: int, def_id: int) -> bool;  func auto_replenish_target(player: int, def_id: int) -> int
-func player_score(slot: int) -> Vector2i                                     # pilot, commander (banked == total; no banking)
+func player_score(slot: int) -> Vector2i                                     # pilot, commander (banked == total; no banking); GD-27 `ScoreKeeper` (sim/scoring/MODULE.md); match_result(): the 02 s17.1 result fields
 func landing_grade_last(id: int) -> int                                      # LandingGrade.Grade
 func team_state(team: int) -> TeamStateView;  func player_state(slot: int) -> PlayerStateView                   # (03) reused per-slot views, refilled on call (S3)
 func terrain_height(dir: Vector3) -> float                                   # (03) convenience over Terrain
