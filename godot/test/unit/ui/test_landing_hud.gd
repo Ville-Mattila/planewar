@@ -197,6 +197,18 @@ func test_stamp_points_hot_and_dead_stick() -> void:
 	assert_int(crash.total_points()).is_equal(0)
 
 
+func test_dead_stick_bonus_only_on_manual_grades() -> void:
+	for g: int in [LandingGrade.Grade.AUTO, LandingGrade.Grade.BENT, LandingGrade.Grade.CRASH]:
+		var s: LandingStamp = LandingStamp.from_event(_landing(g, 4))
+		assert_bool(s.dead_stick).is_true()
+		assert_int(s.bonus_points).is_equal(0)
+		assert_int(s.total_points()).is_equal(0)
+	for g: int in [LandingGrade.Grade.HARD, LandingGrade.Grade.CLEAN, LandingGrade.Grade.ACE]:
+		var s: LandingStamp = LandingStamp.from_event(_landing(g, 1 | 4))
+		assert_int(s.bonus_points).is_equal(20)
+		assert_int(s.total_points()).is_equal(s.base_points + 20)
+
+
 func test_stamp_decodes_speeds() -> void:
 	var s: LandingStamp = LandingStamp.from_event(_landing(LandingGrade.Grade.CLEAN, 1))
 	assert_float(s.v_vert).is_equal_approx(5.2, EPS)

@@ -47,7 +47,7 @@ static func from_event(e: SimEvent) -> LandingStamp:
 	var key: String = POINT_KEYS[s.grade]
 	s.base_points = int(Def.num(pts.get(key, 0))) if key != "" else 0
 	s.hot_mult = Def.num(cfg.get("hot_multiplier", 1.0)) if s.hot else 1.0
-	if s.dead_stick and s.grade != LandingGrade.Grade.CRASH:
+	if s.dead_stick and POINT_KEYS[s.grade] != "":   # manual landings only (02 s17.1): HARD, FAIR, CLEAN, ACE
 		s.bonus_points = int(Def.num(cfg.get("dead_stick_points", 0)))
 	return s
 
