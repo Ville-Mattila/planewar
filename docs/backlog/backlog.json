@@ -8028,5 +8028,39 @@
       "docs/07-art-audio-content.md"
     ],
     "status": "todo"
+  },
+  {
+    "id": "NET-59",
+    "title": "net/client: BaselineFrame.copy_from / clear stop at a high-water index (NET-58 perf follow-up)",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "NET-58"
+    ],
+    "milestone": "M3",
+    "acceptance": "BaselineFrame copy and clear touch only indices <= the highest used roster index; the projectile share of prepare_tick and ClientSession.tick are re-measured on the pinned runner (PerfGate report-only on hosted) and cited against NET-58 hosted numbers (881/705 us p95); no wire or byte change (NON_WRECK_SHA unchanged)",
+    "docs": [
+      "docs/04-networking-and-backend.md",
+      "godot/src/net/client/MODULE.md"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "PM-05",
+    "title": "Architect: A-132 / A-134 text fixes from the NET-58 review",
+    "lane": "architect",
+    "tier": "Fable",
+    "size_days": 0.1,
+    "depends_on": [
+      "NET-58"
+    ],
+    "milestone": "M3",
+    "acceptance": "04 s4.1 and R0 B.25 A-132 say a projectile is alive false from its ROSTER_REMOVE (<= 3 ticks + latency), dead-reckoned <= 3 ticks then held stale until then (the client cannot detect death earlier); A-134 says the KEYFRAME encoder returns empty above RECORDS_MAX (not asserts); no code change",
+    "docs": [
+      "docs/04-networking-and-backend.md",
+      "docs/reviews/R0-resolution-register.md"
+    ],
+    "status": "todo"
   }
 ]
