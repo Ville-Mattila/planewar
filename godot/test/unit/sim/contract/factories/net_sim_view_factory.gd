@@ -12,10 +12,11 @@ const U8_QUANTUM: float = 1.0 / 255.0
 const U8_FIELDS: PackedStringArray = ["hp01", "flip_cooldown01", "supply01", "production_progress01"]
 const _EXEMPT: PackedStringArray = [
 	# The scene's wreck is not visible to team 0 (visible_to(0, wreck) is false in the clause itself), so a team-0
-	# client never receives it (04 s4.1 interest = team vision; net/interest I1); the rocket is a projectile entity
-	# with no roster index until NET-58's projectile block (R0 B.22 A-112). A received wreck is covered by
+	# client never receives it (04 s4.1 interest = team vision; net/interest I1). The rocket is replicated through the
+	# roster's projectile block (NET-58, R0 B.22 A-112): its part of alive / read_poses is asserted in
+	# test_net_sim_view_projectiles.gd; ids_in_cell and projectiles_near pass. A received wreck is covered by
 	# test_net_sim_view.gd::test_a_received_wreck (radius = the hull's def radius with unknown set, A-114).
-	"alive", "radius", "def_kind", "wrecks", "ids_in_cell", "projectiles_near", "read_poses",
+	"alive", "radius", "def_kind", "wrecks", "read_poses",
 	# No wire source in the 04 s3.7 replication map: SimView default + unknown (04 s5.6).
 	"overlay", "cargo", "cargo_kind", "link",
 	# TEAM_DETAIL sources (04 s3.7 rows supply01, pads, orders, factories): NET-39.

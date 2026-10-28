@@ -65,7 +65,7 @@ func remove_hit(attacker_ref: int, seed_value: int) -> bool;  func expire(now_ti
 
 EVENTS: 04 s3.6 table (per-kind payload, scope). `kind u8, size u8` frame every event, `size` must equal the table's
 payload size; kind 17 (MATCH_END, message 0x8E) and kinds >= 34 are invalid here. `roster` fields are roster indices
-(`Roster` slot = `EntityId.slot`), `0xFFFF` = not in the client's roster. HIT damage is u16 (clamped). Packets are
+(`Roster` slot = `EntityId.slot`, units / structures / wrecks only: a projectile id is `0xFFFF`, NET-58), `0xFFFF` = not in the client's roster. HIT damage is u16 (clamped). Packets are
 split at 1,200 B or 255 events and keep sim order; channel 3 is reliable and ordered, so the client sees one stream.
 PROJECTILE_BATCH: 04 s2.3 row; direction is yaw / pitch i8 in 0.5 degree steps around the weapon boresight
 (x right, y up, z forward), +-63.5 degrees; `weapon_slot` bit7 = HAS_FUSE, fuse u8 in ticks (flak burst = spawn tick + fuse).

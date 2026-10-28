@@ -1,6 +1,7 @@
 class_name SnapshotFrame extends RefCounted
 ## One tick of authoritative entity state handed to SnapshotCodec.prepare_tick (04 s3.4, R0 C1-02), as plain
-## parallel arrays indexed 0..count-1. `slot` is the sim slot == roster index (04 s3.1, < Roster.CAPACITY).
+## parallel arrays indexed 0..count-1. `slot` is the sim slot: 0-1,535 for units / structures / wrecks, 4,096-6,143 for
+## projectiles (set_projectile); prepare_tick and Interest read the roster index through `index_of_row` (R0 B.22 A-112).
 ## `flags` is the wire flags byte (Codec.make_flags); `gravity` is 1 for gravity-bearing defs (bomb, siege
 ## shell; 04 s3.4 dead reckoning); `visible_mask` bit t = visible to team t (own team is always implied);
 ## `under_fire` feeds the C-BLIP state. The SimView adapter that fills it lands with ServerSession (NET-15):
@@ -22,6 +23,20 @@ var visible_mask: PackedInt32Array = PackedInt32Array()
 ## Entity generation per row (EntityId.gen; 0 = unknown). Interest (NET-08) re-sends ENTITY_META when a slot's
 ## generation changes; the codec ignores it.
 var gen: PackedInt32Array = PackedInt32Array()
+## Projectile rows (R0 B.22 A-112): ProjectileStore.kind (mirrored below, pinned by test_projectile_roster.gd), the shooter
+## and target EntityIds (0 none). Only BOMB / ROCKET / SIEGE_SHELL / CANISTER rows are replicated entities (04 s3.6).
+var kind: PackedByteArray = PackedByteArray()
+var shooter: PackedInt32Array = PackedInt32Array()
+var target: PackedInt32Array = PackedInt32Array()
+
+const SLUG: int = 0                         ## ProjectileStore.kind ordinals (sim/MODULE.md)
+const BOMB: int = 1
+const ROCKET: int = 2
+const FLAK: int = 3
+const RAIL: int = 4
+const SIEGE_SHELL: int = 5
+const CANISTER: int = 6
+const REPLICATED_KINDS: int = (1 << BOMB) | (1 << ROCKET) | (1 << SIEGE_SHELL) | (1 << CANISTER)
 
 
 ## Sets count and sizes every array; new rows are zero.
@@ -39,6 +54,8 @@ func resize(n: int) -> void:
 	var _j: int = under_fire.resize(count)
 	var _k: int = visible_mask.resize(count)
 	var _l: int = gen.resize(count)
+	var e: int = kind.resize(count) | shooter.resize(count) | target.resize(count)
+	assert(e == OK)
 
 
 ## Fills row i. `visible` is the team bitmask (0 = own team only).
@@ -55,3 +72,33 @@ func set_entity(i: int, slot_id: int, p: Vector3, v: Vector3, q: Quaternion, hp:
 	gravity[i] = 1 if has_gravity else 0
 	under_fire[i] = 0
 	visible_mask[i] = visible
+	kind[i] = 0
+	shooter[i] = 0
+	target[i] = 0
+
+
+## Fills row i with a projectile entity: `slot_id` 4,096-6,143, `projectile_kind` = ProjectileStore.kind, `team_id` =
+## the shooter's team, `has_gravity` = the ProjectileDef's gravity (bomb, siege shell: 04 s3.4 gravity branch), identity
+## orientation, hp 0, flags 0, no own visibility bits (V follows team, shooter and target, 04 s4.1).
+func set_projectile(i: int, slot_id: int, projectile_kind: int, p: Vector3, v: Vector3, team_id: int, has_gravity: bool,
+		shooter_id: int, target_id: int, generation: int) -> void:
+	set_entity(i, slot_id, p, v, Quaternion.IDENTITY, 0.0, 0, team_id, 0, has_gravity, 0)
+	kind[i] = projectile_kind & 0xFF
+	shooter[i] = shooter_id
+	target[i] = target_id
+	gen[i] = generation
+
+
+## True for the ProjectileStore kinds that are replicated entities (bomb, rocket, siege shell, canister; never slug,
+## flak or rail, 04 s3.6 bullet 1).
+static func replicated_kind(projectile_kind: int) -> bool:
+	return projectile_kind >= 0 and projectile_kind < 8 and ((REPLICATED_KINDS >> projectile_kind) & 1) != 0
+
+
+## Roster index of row i (Roster.index_of_slot), or -1 when its slot is outside every roster or it is a projectile of a
+## kind that is never replicated.
+func index_of_row(i: int) -> int:
+	var s: int = Roster.index_of_slot(slot[i])
+	if s >= Roster.PROJECTILE_INDEX_MIN and ((REPLICATED_KINDS >> (kind[i] & 7)) & 1) == 0:
+		return -1
+	return s

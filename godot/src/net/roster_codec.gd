@@ -1,9 +1,11 @@
 class_name RosterCodec
 ## ENTITY_META (0x88) and ROSTER_REMOVE (0x90) wire codecs plus the 2-byte REQUEST_KEYFRAME (04 s2.3, s3.1, s3.6).
 ## ENTITY_META: id u8, count u8, entries[] x (slot u16, generation u16, def_id u16, owner u8, team u8,
-## tag str8 = tlen u8 + <= 16 UTF-8 bytes). ROSTER_REMOVE: id u8, count u8, entries[] x (index u16, reason u8).
-## Little-endian. Decoders validate the whole packet before touching the roster: a malformed packet is
-## rejected with -1 and changes nothing; they never throw.
+## tag str8 = tlen u8 + <= 16 UTF-8 bytes). ROSTER_REMOVE: id u8, count u8, entries[] x (slot u16, reason u8).
+## Little-endian. The wire carries the sim slot (0-1,535 or a projectile slot 4,096-6,143); the API takes and returns
+## roster indices (Roster.index_of_slot / slot_of_index, R0 B.22 A-112). Decoders validate the whole packet before
+## touching the roster: a malformed packet (incl. a slot in 1,536-4,095 or >= 6,144) is rejected with -1 and changes
+## nothing; they never throw.
 
 const META_HEADER_BYTES: int = 2
 const META_FIXED_BYTES: int = 9             # 04 s5.6 "9 B" per entry with no tag: 8 fixed + the str8 length byte
@@ -14,8 +16,8 @@ const COUNT_MAX: int = 255                  # count is u8
 const KEYFRAME_REQUEST_BYTES: int = 2
 
 
-## Encodes the roster entries of `slots` into one or more ENTITY_META packets (split at 1,200 B and 255 entries),
-## appended to `out`. Slots absent from the roster are skipped. Returns the number of packets appended.
+## Encodes the roster entries of `slots` (roster indices) into one or more ENTITY_META packets (split at 1,200 B and
+## 255 entries), appended to `out`. Indices absent from the roster are skipped. Returns the number of packets appended.
 static func encode_meta(roster: Roster, slots: PackedInt32Array, out: Array[PackedByteArray]) -> int:
 	var made: int = 0
 	var buf: PackedByteArray = PackedByteArray()
@@ -44,7 +46,7 @@ static func encode_meta(roster: Roster, slots: PackedInt32Array, out: Array[Pack
 static func _append_meta(buf: PackedByteArray, roster: Roster, slot: int, tag: PackedByteArray) -> void:
 	var at: int = buf.size()
 	var _r: int = buf.resize(at + META_FIXED_BYTES + tag.size())
-	buf.encode_u16(at, slot)
+	buf.encode_u16(at, Roster.slot_of_index(slot))
 	buf.encode_u16(at + 2, roster.generation_of(slot))
 	buf.encode_u16(at + 4, roster.def_of(slot))
 	buf[at + 6] = roster.owner_of(slot)
@@ -54,15 +56,15 @@ static func _append_meta(buf: PackedByteArray, roster: Roster, slot: int, tag: P
 		buf[at + 9 + i] = tag[i]
 
 
-## Validates `bytes` then adds every entry to `roster`, appending the slots to `out_slots`. Returns the entry
-## count, or -1 (nothing applied) for a wrong id, truncation, trailing bytes, a slot >= Roster.CAPACITY or a tag > 16 B.
+## Validates `bytes` then adds every entry to `roster`, appending the roster indices to `out_slots`. Returns the entry
+## count, or -1 (nothing applied) for a wrong id, truncation, trailing bytes, a slot no roster holds or a tag > 16 B.
 static func decode_meta(bytes: PackedByteArray, roster: Roster, out_slots: PackedInt32Array) -> int:
 	if bytes.size() < META_HEADER_BYTES or bytes[0] != Protocol.ENTITY_META or bytes.size() > Protocol.MAX_UNRELIABLE_BYTES:
 		return -1
 	var count: int = bytes[1]
 	var at: int = META_HEADER_BYTES
 	for _i: int in count:
-		if at + META_FIXED_BYTES > bytes.size() or bytes.decode_u16(at) >= Roster.CAPACITY:
+		if at + META_FIXED_BYTES > bytes.size() or Roster.index_of_slot(bytes.decode_u16(at)) < 0:
 			return -1
 		var tlen: int = bytes[at + 8]
 		if tlen > TAG_MAX_BYTES or at + META_FIXED_BYTES + tlen > bytes.size():
@@ -72,7 +74,7 @@ static func decode_meta(bytes: PackedByteArray, roster: Roster, out_slots: Packe
 		return -1
 	at = META_HEADER_BYTES
 	for _i: int in count:
-		var slot: int = bytes.decode_u16(at)
+		var slot: int = Roster.index_of_slot(bytes.decode_u16(at))
 		var tlen: int = bytes[at + 8]
 		var tag: String = ""
 		if tlen > 0:
@@ -83,7 +85,7 @@ static func decode_meta(bytes: PackedByteArray, roster: Roster, out_slots: Packe
 	return count
 
 
-## Encodes parallel `slots` / `reasons` (Protocol.RosterRemoveReason) into ROSTER_REMOVE packets appended to `out`.
+## Encodes parallel `slots` (roster indices) / `reasons` (Protocol.RosterRemoveReason) into ROSTER_REMOVE packets.
 ## Entries with an invalid reason or index are skipped: every encoded removal carries a valid reason.
 static func encode_remove(slots: PackedInt32Array, reasons: PackedInt32Array, out: Array[PackedByteArray]) -> int:
 	var made: int = 0
@@ -100,7 +102,7 @@ static func encode_remove(slots: PackedInt32Array, reasons: PackedInt32Array, ou
 			n = 0
 		var at: int = buf.size()
 		var _r: int = buf.resize(at + REMOVE_ENTRY_BYTES)
-		buf.encode_u16(at, slots[i])
+		buf.encode_u16(at, Roster.slot_of_index(slots[i]))
 		buf[at + 2] = reasons[i]
 		n += 1
 	if n > 0:
@@ -110,8 +112,8 @@ static func encode_remove(slots: PackedInt32Array, reasons: PackedInt32Array, ou
 	return made
 
 
-## Validates then removes every listed slot from `roster` with its wire reason. Slots not in the roster are ignored
-## (a duplicate packet is harmless). Returns the entry count, or -1 (nothing applied) when malformed.
+## Validates then removes every listed slot's index from `roster` with its wire reason. Indices not in the roster are
+## ignored (a duplicate packet is harmless). Returns the entry count, or -1 (nothing applied) when malformed.
 static func decode_remove(bytes: PackedByteArray, roster: Roster, out_slots: PackedInt32Array) -> int:
 	if bytes.size() < REMOVE_HEADER_BYTES or bytes[0] != Protocol.ROSTER_REMOVE or bytes.size() > Protocol.max_bytes(Protocol.ROSTER_REMOVE):
 		return -1
@@ -120,11 +122,11 @@ static func decode_remove(bytes: PackedByteArray, roster: Roster, out_slots: Pac
 		return -1
 	for i: int in count:
 		var at: int = REMOVE_HEADER_BYTES + i * REMOVE_ENTRY_BYTES
-		if bytes.decode_u16(at) >= Roster.CAPACITY or bytes[at + 2] >= Roster.REASON_COUNT:
+		if Roster.index_of_slot(bytes.decode_u16(at)) < 0 or bytes[at + 2] >= Roster.REASON_COUNT:
 			return -1
 	for i: int in count:
 		var at: int = REMOVE_HEADER_BYTES + i * REMOVE_ENTRY_BYTES
-		var slot: int = bytes.decode_u16(at)
+		var slot: int = Roster.index_of_slot(bytes.decode_u16(at))
 		if roster.remove(slot, bytes[at + 2]):
 			var _a: bool = out_slots.append(slot)
 	return count

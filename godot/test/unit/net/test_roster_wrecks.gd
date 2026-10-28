@@ -8,6 +8,7 @@ const LAST_WRECK: int = 1535
 ## SHA-256 of `_scene_bytes()` measured with Roster.CAPACITY = 1280 (origin/main before NET-50) was a9f7e6be..a58a93585.
 ## Re-pinned by NET-54: a C-BLIP is skipped while the dead-reckoned mirror entry shows the true blip, so section C
 ## bytes change (same run on the NET-54 encoder; NET-50's capacity independence is unaffected, no slot >= 1280 is used).
+## NET-58 (R0 B.22 A-112, Roster.CAPACITY 1,536 -> 3,584 with the projectile block) leaves this pin untouched.
 const NON_WRECK_SHA: String = "664956b6609c3e1dfc39bbf9468d861aeed364194903f870da5ea737de752b5c"
 
 var _a: PackedInt32Array = PackedInt32Array()
@@ -16,8 +17,8 @@ var _c: PackedInt32Array = PackedInt32Array()
 
 
 func test_capacity_covers_every_entity_store_slot() -> void:
-	assert_int(Roster.CAPACITY).is_equal(1536)
-	assert_int(Roster.CAPACITY).is_equal(EntityId.WRECK_SLOT_END)
+	assert_int(Roster.ENTITY_SLOTS).is_equal(1536)                            # NET-58 (A-112): the entity part of 3,584
+	assert_int(Roster.ENTITY_SLOTS).is_equal(EntityId.WRECK_SLOT_END)
 	assert_int(BaselineFrame.CAPACITY).is_equal(Roster.CAPACITY)
 	assert_int(SnapshotCodec.CAPACITY).is_equal(Roster.CAPACITY)
 	assert_int(SnapshotByteCache.CAPACITY).is_equal(Roster.CAPACITY)

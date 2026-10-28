@@ -14,6 +14,7 @@ class_name NetPose extends RefCounted
 ## converted once however many frames and samples show it. No allocation per entity.
 
 const EXTRAP_MAX_TICKS: int = 3
+const NOT_YET: int = 0x7FFFFFFF          ## _from: the current generation has no record yet
 const ALPHA_EPS: float = 1e-4                ## a render tick this close to a frame tick shows that frame
 const _SLOTS: int = 2                       # record cache slots per entry (keyed by etick parity)
 
@@ -30,6 +31,7 @@ var computed: int = 0                       ## entries computed since the last s
 var converted: int = 0                      ## record conversions since the last sample (cache misses)
 var store: BaselineStore
 var roster: Roster
+var decoder: SnapshotDecoder = null          # born / born_gen (NET-58); null: every frame entry shows (replay, tests)
 var gravity_def: PackedByteArray = PackedByteArray()
 var gravity: float = 0.0
 var dt: float = 1.0 / 30.0
@@ -129,9 +131,23 @@ func frame() -> BaselineFrame:
 	return _fn
 
 
-## True when roster index `i` (0 .. CAPACITY - 1) has state in the newest frame of the last sample.
+## True when roster index `i` (0 .. CAPACITY - 1) has state of its current generation in the newest frame of the last
+## sample (`decoder.born`: a recycled index's previous occupant is not shown, A-112).
 func present(i: int) -> bool:
-	return _fn != null and _fn.present[i] != 0
+	return _has(_fn, i, _from(i))
+
+
+## First etick of index `i`'s current roster generation (SnapshotDecoder.born); -1 = every entry shows (no decoder, a
+## unit / structure / wreck index, no FULL since a reset). In the projectile block a FULL of another generation means
+## the current one has no record yet (the server sends a recycled projectile index FULL first, A-112): nothing shows.
+func _from(i: int) -> int:
+	if decoder == null or i < Roster.PROJECTILE_INDEX_MIN or decoder.born_gen[i] < 0:
+		return -1
+	return decoder.born[i] if decoder.born_gen[i] == roster.generation_of(i) else NOT_YET
+
+
+func _has(f: BaselineFrame, i: int, from_tick: int) -> bool:
+	return f != null and f.present[i] != 0 and f.etick[i] >= from_tick
 
 
 ## pos_of and rot_of into out_pos[k] / out_rot[k] with one cache check (read_poses).
@@ -190,14 +206,15 @@ func _ensure(i: int) -> void:
 
 
 func _compute(i: int) -> void:
-	if _fn == null or _fn.present[i] == 0:
+	var b0: int = _from(i)
+	if not _has(_fn, i, b0):
 		_write(i, Vector3.ZERO, Vector3.ZERO, Vector4(0.0, 0.0, 0.0, 1.0), false, false)
 		return
-	if _fb == null or _fb.present[i] == 0:
+	if not _has(_fb, i, b0):
 		_state(_fn, i, float(_fn.etick[i]))        # entered after tick_b: shown at its first record, no backward dr
 		_write(i, _sp, _sv, _sq, _shq, _sblip)
 		return
-	if tick_a == tick_b or _fa == null or _fa.present[i] == 0 or _same_record(i):
+	if tick_a == tick_b or not _has(_fa, i, b0) or _same_record(i):
 		if _fb.blip[i] != DeadReckon.BLIP_UNKNOWN:  # known blip (most of tier C): the bucket, fast path of _state
 			var c: int = _record(_fb, i)
 			_p[i] = _c_p[c]

@@ -1,10 +1,10 @@
 class_name SnapshotCodec extends RefCounted
-## Server half of the SNAPSHOT codec (04 s3.4-s3.5, R0 C1-02, C1-18). prepare_tick(frame) quantises every entity once
-## per tick into the shared cache (indexed by roster index == sim slot) and the per-team visible lists; encode() does
-## per-client work only: gap ids, FULL / A-DELTA / B-DELTA / C-BLIP records against that client's acked baseline (gravity-
-## aware dead reckoning), the 15-byte pilot block, splitting at 1,200 B into <= 4 indexed packets (A-36). Records reach the
-## client's mirror through the BaselineFrame calls SnapshotDecoder makes, so both stay identical. FULL / C-BLIP bytes come
-## from SnapshotByteCache (A-40); no allocation per entity. `append_frame` (replay, NET-25) continues the tick's frame.
+## Server half of the SNAPSHOT codec (04 s3.4-s3.5, R0 C1-02, C1-18). prepare_tick(frame) quantises every entity once per
+## tick into the shared cache (indexed by roster index, Roster.index_of_slot; projectile entities in the block, R0 B.22
+## A-112) and the per-team visible lists; encode() does per-client work only: gap ids, FULL / A-DELTA / B-DELTA / C-BLIP
+## records against that client's acked baseline (gravity-aware dead reckoning), the 15-byte pilot block, splitting at
+## 1,200 B into <= 4 indexed packets (A-36). Records reach the client's mirror through the BaselineFrame calls the decoder
+## makes, so both stay identical. FULL / C-BLIP bytes come from SnapshotByteCache (A-40); no allocation per entity.
 
 const HEADER_BYTES: int = 10
 const MAX_PACKET_BYTES: int = Protocol.MAX_UNRELIABLE_BYTES
@@ -40,7 +40,7 @@ var cache_tick: int = -1
 var max_packets: int = MAX_PACKETS_PER_TICK
 var deferred: int = 0                       # records deferred by the packet cap in the last encode()
 var cache_bytes: bool = true                # false: the pre-NET-49 FULL / C-BLIP path (same bytes, more cost)
-var append_frame: bool = false              # true: encode() continues the frame already begun for `tick` (replay chunks)
+var append_frame: bool = false              # true: encode() continues the frame begun for `tick` (replay chunks, NET-25)
 var n_full: int = 0                         # cumulative record counters (tests, perf notes, NET-09 governor)
 var n_delta: int = 0
 var n_blip: int = 0
@@ -58,6 +58,10 @@ var c_ai: PackedByteArray = PackedByteArray()
 var c_team: PackedByteArray = PackedByteArray()
 var c_grav: PackedByteArray = PackedByteArray()
 var c_blip: PackedInt32Array = PackedInt32Array()        # lazy
+var c_vmask: PackedInt32Array = PackedInt32Array()       # team bits incl. own; projectile: + shooter's, target's (A-112)
+var c_gen: PackedInt32Array = PackedInt32Array()         # generation last seen per index (SnapshotFrame.gen; 0 unknown)
+var _born: PackedInt32Array = PackedInt32Array()         # projectile block: first tick of the current generation
+var _prow: PackedInt32Array = PackedInt32Array()         # projectile rows of this frame (second prepare pass)
 var _coarse_tick: PackedInt32Array = PackedInt32Array()
 var _blip_tick: PackedInt32Array = PackedInt32Array()
 var _row: PackedInt32Array = PackedInt32Array()          # entity row in _frame
@@ -66,8 +70,7 @@ var _enc_id: int = 0
 var _force: PackedInt32Array = PackedInt32Array()        # == _enc_id: rolling-refresh FULL in this encode
 var _c_list: PackedInt32Array = PackedInt32Array()
 var _frame: SnapshotFrame = null
-var _vis: PackedInt32Array = PackedInt32Array()          # TEAM_MAX x CAPACITY
-var _vis_n: PackedInt32Array = PackedInt32Array()
+var _vis: VisibleSets = VisibleSets.new()
 var _w: SnapshotWriter = SnapshotWriter.new()
 var _k_kind: int = Kind.NONE
 var _k_mask: int = 0
@@ -82,46 +85,51 @@ var _capped: bool = false
 func _init(gravity_mps2: float, tick_hz: int) -> void:
 	gravity = gravity_mps2
 	dt = 1.0 / float(maxi(tick_hz, 1))
-	var _t: int = c_tick.resize(CAPACITY)
-	var _o: int = c_coarse.resize(CAPACITY)
-	var _v: int = c_vel.resize(CAPACITY)
-	var _l: int = c_blip.resize(CAPACITY)
-	var _fv: int = c_fine.resize(CAPACITY)
-	var _ct: int = _coarse_tick.resize(CAPACITY)
-	var _bt: int = _blip_tick.resize(CAPACITY)
-	var _rw: int = _row.resize(CAPACITY)
-	var _fr: int = _force.resize(CAPACITY)
+	var n: int = CAPACITY
+	var e: int = c_tick.resize(n) | c_coarse.resize(n) | c_vel.resize(n) | c_blip.resize(n) | c_fine.resize(n)
+	e |= _coarse_tick.resize(n) | _blip_tick.resize(n) | _row.resize(n) | _force.resize(n) | c_pos.resize(n) | c_ori.resize(n)
+	e |= c_hp.resize(n) | c_flags.resize(n) | c_ai.resize(n) | c_team.resize(n) | c_grav.resize(n) | c_vmask.resize(n)
+	e |= c_gen.resize(n) | _born.resize(n) | _prow.resize(n)
+	assert(e == OK)
 	_force.fill(0)
 	_coarse_tick.fill(-1)
 	_blip_tick.fill(-1)
-	var _a: int = c_pos.resize(CAPACITY)
-	var _b: int = c_ori.resize(CAPACITY)
-	var _c: int = c_hp.resize(CAPACITY)
-	var _d: int = c_flags.resize(CAPACITY)
-	var _e: int = c_ai.resize(CAPACITY)
-	var _f: int = c_team.resize(CAPACITY)
-	var _g: int = c_grav.resize(CAPACITY)
-	var _h: int = _vis.resize(TEAM_MAX * CAPACITY)
-	var _i: int = _vis_n.resize(TEAM_MAX)
 	c_tick.fill(-1)
+	c_gen.fill(-1)
 
 
-## Quantises every entity of `frame` once (R0 C1-02). Call once per tick before any encode().
+## Quantises every entity of `frame` once (R0 C1-02): rows whose slot no roster holds, and projectiles of kinds that never
+## enter a roster (slug, flak, rail), are skipped (SnapshotFrame.index_of_row). Call once per tick before any encode().
 func prepare_tick(frame: SnapshotFrame) -> void:
 	prepare_count += 1
 	cache_tick = frame.tick
 	_frame = frame
-	_vis_n.fill(0)
+	_vis.clear()
+	var has_gen: bool = frame.gen.size() >= frame.count
+	var np: int = 0
 	for i: int in frame.count:
 		var s: int = frame.slot[i]
-		if s < 0 or s >= CAPACITY:
-			continue
+		if s < 0 or s >= Roster.ENTITY_SLOTS:               # the projectile block (or no roster index)
+			s = frame.index_of_row(i)
+			if s < 0:
+				continue
 		_cache_entity(frame, i, s)
-		var m: int = frame.visible_mask[i] | (1 << (frame.team[i] % TEAM_MAX))
-		for t: int in TEAM_MAX:
-			if m & (1 << t):
-				_vis[t * CAPACITY + _vis_n[t]] = s
-				_vis_n[t] += 1
+		var g: int = frame.gen[i] if has_gen else 0
+		if s >= Roster.PROJECTILE_INDEX_MIN:
+			if g != c_gen[s]:
+				_born[s] = cache_tick
+			_prow[np] = i
+			np += 1
+		c_gen[s] = g
+		c_vmask[s] = frame.visible_mask[i] | (1 << (frame.team[i] % TEAM_MAX))
+		if s < Roster.PROJECTILE_INDEX_MIN:
+			_vis.add(s, c_vmask[s])
+	for k: int in np:                       # projectiles after every entity: shooter / target bits are final (A-112)
+		var i: int = _prow[k]
+		var s: int = frame.index_of_row(i)
+		var m: int = VisibleSets.entity_mask(frame.shooter[i], cache_tick, c_tick, c_gen, c_vmask)
+		c_vmask[s] |= m | VisibleSets.entity_mask(frame.target[i], cache_tick, c_tick, c_gen, c_vmask)
+		_vis.add(s, c_vmask[s])
 
 
 func _cache_entity(frame: SnapshotFrame, i: int, s: int) -> void:
@@ -170,11 +178,7 @@ func blip_of(s: int) -> int:
 
 ## Roster indices visible to `team` this tick, ascending (the tier-C candidate set, 04 s4.1).
 func team_visible(team: int) -> PackedInt32Array:
-	if team < 0 or team >= TEAM_MAX:
-		return PackedInt32Array()
-	var r: PackedInt32Array = _vis.slice(team * CAPACITY, team * CAPACITY + _vis_n[team])
-	r.sort()
-	return r
+	return _vis.sorted(team)
 
 
 ## Encodes tick `tick` for one client: tier lists `a`, `b`, `c` (roster indices; sorted here), `pilot` (null = none),
@@ -234,7 +238,7 @@ func _with_refresh(c: PackedInt32Array, refresh: PackedInt32Array) -> PackedInt3
 
 func _plan(s: int, tier: int, base: BaselineFrame, own: bool) -> bool:
 	if base == null or base.present[s] == 0 or Codec.pos_cell(base.pos[s]) != Codec.pos_cell(c_pos[s]) \
-			or _force[s] == _enc_id:
+			or _force[s] == _enc_id or (s >= Roster.PROJECTILE_INDEX_MIN and base.etick[s] < _born[s]):
 		return _plan_full(s, own)
 	if tier == Tier.C:
 		if blip_of(s) == base.shown_blip(s, _tick, c_grav[s] != 0, gravity, dt):    # NET-54: DR'd when unknown
@@ -317,11 +321,9 @@ func _plan_ori_flags(s: int, tier: int, base: BaselineFrame, own: bool) -> int:
 
 
 func _count() -> void:
-	if _k_kind == Kind.FULL:
-		n_full += 1
-	elif _k_kind == Kind.BLIP:
-		n_blip += 1
-	else:
+	n_full += 1 if _k_kind == Kind.FULL else 0
+	n_blip += 1 if _k_kind == Kind.BLIP else 0
+	if _k_kind == Kind.DELTA:
 		n_delta += 1
 		n_pos_small += _k_mask & MASK_POS_SMALL
 		n_pos_large += (_k_mask & MASK_POS_LARGE) >> 1

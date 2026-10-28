@@ -2,7 +2,7 @@ class_name NetSimView extends SimView
 ## SimView over replicated state (04 s5.6, s3.7): the client's roster, its SnapshotDecoder frames sampled at a
 ## fractional render tick (NetPose), the pilot block of its own possessed unit, POSSESSED / RELEASED events and its
 ## team's TEAM_STATE. `sample(render_tick)` (R0 C2-12) must be called before reads; reads stay valid until the next
-## sample. Ids are EntityIds (roster index == sim slot, generation from ENTITY_META). A field the client does not
+## sample. Ids are EntityIds (roster index = Roster.index_of_slot(slot), generation from ENTITY_META). A field the client does not
 ## receive returns the SimView default and is reported by `field_unknown` (NetUnknown: 04 s3.7 table): C-tier basis /
 ## vel, the pilot-block fields of every entity but the own possessed unit, the ai_tag of other teams, a wreck's radius,
 ## and accessors no wire carries yet (overlay, cargo, cargo_kind, link, TEAM_DETAIL rows of NET-39, shield01 / wreck_ore
@@ -45,6 +45,7 @@ func _init(roster_ref: Roster, decoder_ref: SnapshotDecoder) -> void:
 	roster = roster_ref
 	decoder = decoder_ref
 	pose = NetPose.new(decoder.store, roster)
+	pose.decoder = decoder
 	var _a: int = _possessor.resize(Roster.CAPACITY)
 	_possessor.fill(NONE)
 	var _b: int = _possessor_gen.resize(Roster.CAPACITY)
@@ -105,12 +106,24 @@ func field_unknown(id: int, accessor: StringName) -> bool:
 	return i < 0 or NetUnknown.field(self, i, accessor)
 
 
-## Roster index of a live replicated EntityId, else -1.
+## Roster index of a live replicated unit / structure / wreck EntityId, else -1 (projectile ids: entry_of).
 func index_of(id: int) -> int:
 	if id <= 0 or EntityId.is_projectile(id):
 		return -1
 	var i: int = EntityId.slot(id)
-	if i >= Roster.CAPACITY or not roster.has(i) or roster.generation_of(i) != EntityId.gen(id) or not pose.present(i):
+	if i >= Roster.ENTITY_SLOTS or not roster.has(i) or roster.generation_of(i) != EntityId.gen(id) or not pose.present(i):
+		return -1
+	return i
+
+
+## Roster index of any live replicated EntityId, projectile entities included (the block, R0 B.22 A-112), else -1.
+## alive / pos / vel / basis / def_id / owner / team / radius / def_kind / read_poses / the cell and proximity lists
+## resolve through it; every other accessor answers a projectile id as LocalSimView does (its default).
+func entry_of(id: int) -> int:
+	if id <= 0 or not EntityId.is_projectile(id):
+		return index_of(id)
+	var i: int = Roster.index_of_slot(EntityId.slot(id))
+	if i < 0 or not roster.has(i) or roster.generation_of(i) != EntityId.gen(id) or not pose.present(i):
 		return -1
 	return i
 
@@ -123,7 +136,7 @@ func live(i: int) -> bool:
 
 ## EntityId of roster index `i`.
 func id_at(i: int) -> int:
-	return EntityId.make(i, roster.generation_of(i))
+	return EntityId.make(Roster.slot_of_index(i), roster.generation_of(i))
 
 
 ## The own possessed unit's roster index while a pilot block has arrived, else -1.
@@ -141,21 +154,21 @@ func _flags_byte(i: int) -> int:
 
 
 func alive(id: int) -> bool:
-	return index_of(id) >= 0
+	return entry_of(id) >= 0
 
 
 func pos(id: int) -> Vector3:
-	var i: int = index_of(id)
+	var i: int = entry_of(id)
 	return pose.pos_of(i) if i >= 0 else Vector3.ZERO
 
 
 func vel(id: int) -> Vector3:
-	var i: int = index_of(id)
+	var i: int = entry_of(id)
 	return pose.vel_of(i) if i >= 0 else Vector3.ZERO
 
 
 func basis(id: int) -> Basis:
-	var i: int = index_of(id)
+	var i: int = entry_of(id)
 	if i < 0 or not pose.has_ori(i):
 		return Basis.IDENTITY
 	var q: Vector4 = pose.rot_of(i)
@@ -163,17 +176,17 @@ func basis(id: int) -> Basis:
 
 
 func def_id(id: int) -> int:
-	var i: int = index_of(id)
+	var i: int = entry_of(id)
 	return roster.def_of(i) if i >= 0 else -1
 
 
 func owner(id: int) -> int:
-	var i: int = index_of(id)
+	var i: int = entry_of(id)
 	return _u8(roster.owner_of(i)) if i >= 0 else -1
 
 
 func team(id: int) -> int:
-	var i: int = index_of(id)
+	var i: int = entry_of(id)
 	return _u8(roster.team_of(i)) if i >= 0 else -1
 
 
@@ -243,14 +256,14 @@ func flags(id: int) -> int:
 
 
 func radius(id: int) -> float:
-	var i: int = index_of(id)
+	var i: int = entry_of(id)
 	if i < 0 or not defs.valid(roster.def_of(i)):
 		return 0.0
 	return defs.radius[roster.def_of(i)]            # a split wreck: the hull's def radius, field_unknown (R0 B.22 A-114)
 
 
 func def_kind(id: int) -> int:
-	var i: int = index_of(id)
+	var i: int = entry_of(id)
 	return defs.kind_of(roster.def_of(i), i) if i >= 0 else -1
 
 
@@ -336,6 +349,11 @@ func ids_near(p: Vector3, r: float, mask: int) -> PackedInt32Array:
 	return NetRosterQueries.near(self, p, r, mask)
 
 
+## Replicated projectile entities within `r` whose team bit is in `team_mask` (A-112; client-spawned slugs have no id).
+func projectiles_near(p: Vector3, r: float, team_mask: int) -> PackedInt32Array:
+	return NetRosterQueries.projectiles_near(self, p, r, team_mask)
+
+
 func nearest_friendly_pad(id: int) -> int:
 	var i: int = index_of(id)
 	return NetRosterQueries.nearest_pad(self, i) if i >= 0 else 0
@@ -372,21 +390,10 @@ func team_flags_known(t: int) -> bool:
 	return t == team_id and team_wire.tick > 0
 
 
-## R0 B.11 A-56 over the sampled mirror: pos / basis element-wise, ZERO + identity for dead or unknown ids. The
-## index_of test is inlined (per-entity hot path of EntityViewPool.sync, 03 s12.2 rule 9).
+## R0 B.11 A-56 over the sampled mirror: pos / basis element-wise, ZERO + identity for dead or unknown ids (projectile
+## entities through the block, A-112). The walk is NetRosterQueries.read_poses (the EntityViewPool.sync hot path).
 func read_poses(ids: PackedInt32Array, out_pos: PackedVector3Array, out_rot: PackedVector4Array) -> int:
-	var n: int = 0
-	var f: BaselineFrame = pose.frame()
-	for k: int in ids.size():
-		var id: int = ids[k]
-		var i: int = id & EntityId.SLOT_MASK
-		if id <= 0 or f == null or i >= Roster.CAPACITY or f.present[i] == 0 				or roster.generation_of(i) != ((id >> EntityId.GEN_SHIFT) & EntityId.GEN_MASK):
-			out_pos[k] = Vector3.ZERO
-			out_rot[k] = Vector4(0.0, 0.0, 0.0, 1.0)
-			continue
-		n += 1
-		pose.pose_into(i, out_pos, out_rot, k)
-	return n
+	return NetRosterQueries.read_poses(self, ids, out_pos, out_rot)
 
 
 static func _u8(v: int) -> int:

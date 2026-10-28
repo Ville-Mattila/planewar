@@ -52,17 +52,17 @@ func sample(at_render_tick: float) -> void            # R0 C2-12 signature
 func set_possessor(index: int, player: int) -> void;  func set_team_state(w: TeamStateWire) -> void
 func team_flags(t: int) -> int;  func team_flags_known(t: int) -> bool;  func own_index() -> int
 func unknown(id: int) -> bool;  func field_unknown(id: int, accessor: StringName) -> bool   # 04 s3.7 unknown bit: any field / one accessor (NetUnknown)
-func index_of(id: int) -> int;  func live(i: int) -> bool;  func id_at(i: int) -> int   # roster index of a live EntityId (-1); replicated entry; EntityId of an index
+func index_of(id: int) -> int;  func entry_of(id: int) -> int;  func live(i: int) -> bool;  func id_at(i: int) -> int   # roster index of a live unit / structure / wreck id (-1); of any live id incl. projectile entities (A-112); replicated entry; EntityId of an index
 func alive(id: int) -> bool;  func pos(id: int) -> Vector3;  func vel(id: int) -> Vector3;  func basis(id: int) -> Basis;  func def_id(id: int) -> int;  func owner(id: int) -> int;  func team(id: int) -> int
 func hp01(id: int) -> float;  func fuel01(id: int) -> float;  func ammo(id: int) -> int;  func bombs(id: int) -> int;  func rockets(id: int) -> int;  func control_state(id: int) -> int;  func possessor(id: int) -> int
 func ai_tag(id: int) -> int;  func flags(id: int) -> int;  func radius(id: int) -> float;  func def_kind(id: int) -> int;  func boost_state(id: int) -> int;  func flip_cooldown01(id: int) -> float;  func dock_state(id: int) -> int
 func service_progress(id: int) -> Vector3;  func service_state(id: int) -> int;  func incoming_rockets(id: int) -> int;  func tick() -> int;  func match_clock_s() -> float;  func terrain_height(dir: Vector3) -> float
 func ships() -> PackedInt32Array;  func structures() -> PackedInt32Array;  func wrecks() -> PackedInt32Array;  func visible_ids(t: int) -> PackedInt32Array;  func visible_to(t: int, id: int) -> bool
-func visible_enemy_ships(t: int, out: PackedInt32Array) -> int;  func ids_in_cell(cell: int) -> PackedInt32Array;  func ids_near(p: Vector3, r: float, mask: int) -> PackedInt32Array
+func visible_enemy_ships(t: int, out: PackedInt32Array) -> int;  func ids_in_cell(cell: int) -> PackedInt32Array;  func ids_near(p: Vector3, r: float, mask: int) -> PackedInt32Array;  func projectiles_near(p: Vector3, r: float, team_mask: int) -> PackedInt32Array
 func nearest_friendly_pad(id: int) -> int;  func tech_available(t: int, d: int) -> bool;  func stockpile(t: int) -> Vector3;  func stockpile_cap(t: int) -> Vector2i;  func power_balance(t: int) -> Vector2;  func unit_count(player: int) -> int
 func read_poses(ids: PackedInt32Array, out_pos: PackedVector3Array, out_rot: PackedVector4Array) -> int   # R0 B.11 A-56 over the sampled mirror
 # inherited SimView defaults (not received, 04 s5.6 / s3.7): overlay, cargo, cargo_kind, link, pad_queue, pad_occupant, order_head, order_issuer,
-#   pending_order, projectiles_near, field_remaining, path_grid_version, supply01, shield01 (-1.0, GD-38), wreck_ore (-1.0, GD-41), production_queue,
+#   pending_order, field_remaining, path_grid_version, supply01, shield01 (-1.0, GD-38), wreck_ore (-1.0, GD-41), production_queue,
 #   production_progress01, auto_replenish_target, player_score, landing_grade_last, team_state, player_state, match_arc, match_phase
 
 class_name NetUnknown                                 # net/client/net_unknown.gd; static: which accessor of which entity is not received
@@ -73,11 +73,12 @@ class_name NetRosterQueries                           # net/client/net_roster_qu
 static func of_kinds(v: NetSimView, mask: int) -> PackedInt32Array;  static func visible_ids(v: NetSimView, t: int) -> PackedInt32Array
 static func enemy_ships(v: NetSimView, t: int, out: PackedInt32Array) -> int;  static func in_cell(v: NetSimView, cell: int) -> PackedInt32Array
 static func near(v: NetSimView, p: Vector3, r: float, mask: int) -> PackedInt32Array;  static func nearest_pad(v: NetSimView, i0: int) -> int;  static func tech_available(v: NetSimView, t: int, d: int) -> bool
+const PROJECTILE_KIND_BIT: int;  static func projectiles_near(v: NetSimView, p: Vector3, r: float, team_mask: int) -> PackedInt32Array;  static func read_poses(v: NetSimView, ids: PackedInt32Array, out_pos: PackedVector3Array, out_rot: PackedVector4Array) -> int   # 4 (MASK_PROJECTILE = 1 << 4); A-112
 
 class_name NetPose extends RefCounted                 # net/client/net_pose.gd: the sampled mirror (lazy per entry, cached per record)
-const EXTRAP_MAX_TICKS: int; const ALPHA_EPS: float  # 3 (100 ms); 1e-4 (a render tick this close to a frame shows that frame)
+const EXTRAP_MAX_TICKS: int; const ALPHA_EPS: float; const NOT_YET: int  # 3 (100 ms); 1e-4 (a render tick this close to a frame shows that frame); 0x7FFFFFFF
 var render_tick: float; var tick_a: int; var tick_b: int; var alpha: float; var newest: int; var eval_tick: float; var extrapolating: bool; var stale: bool
-var generation: int; var computed: int; var converted: int; var store: BaselineStore; var roster: Roster; var gravity_def: PackedByteArray; var gravity: float; var dt: float
+var generation: int; var computed: int; var converted: int; var store: BaselineStore; var roster: Roster; var decoder: SnapshotDecoder; var gravity_def: PackedByteArray; var gravity: float; var dt: float
 func _init(baseline: BaselineStore, roster_ref: Roster) -> void;  func sample(r: float) -> void;  func frame() -> BaselineFrame;  func present(i: int) -> bool
 func pose_into(i: int, out_pos: PackedVector3Array, out_rot: PackedVector4Array, k: int) -> void
 func pos_of(i: int) -> Vector3;  func vel_of(i: int) -> Vector3;  func rot_of(i: int) -> Vector4;  func has_ori(i: int) -> bool;  func is_blip(i: int) -> bool
@@ -144,6 +145,8 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
   `BaselineFrame.base_grav`) for at most 3 ticks, then frozen with `stale`; a known blip shows its stored bucket
   (`shown_levels`' rule: no gravity even when DYING) and is never interpolated or extrapolated (A-103); at integer ticks the
   float dr(t) equals `Codec.dequantize_pos(shown_levels)` within one quantum. No allocation per entity.
+  A projectile-block index shows no frame older than its roster generation's first FULL (`SnapshotDecoder.born`), and
+  nothing between its ENTITY_META and that FULL: a recycled slot's previous occupant is never shown (NET-58).
 - CS8: `field_unknown(id, accessor)` is true exactly for what the client does not receive (`NetUnknown`: never-carried
   accessors, pilot-block fields off the own possessed unit, C-tier basis / vel, other teams' ai_tag, a wreck's radius,
   which shows the def radius per A-114);
@@ -169,9 +172,15 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
 
 ## Open items
 
-- CQ-1 closed by R0 B.22 A-112: projectile entities get a roster block (index 1,536 + slot - 4,096, capacity 3,584) in
-  NET-58; until then TEST-02's rocket clauses (`alive`, `ids_in_cell`, `projectiles_near`, `read_poses`, with the wreck
-  clauses `radius`, `def_kind`, `wrecks`) stay exempt citing NET-58.
+- CQ-1 closed by R0 B.22 A-112, landed in NET-58: projectile entities have a roster block (index 1,536 + slot - 4,096,
+  capacity 3,584). `alive` / `pos` / `vel` / `basis` / `def_id` / `owner` / `team` / `radius` / `def_kind` / `read_poses` /
+  `ids_in_cell` / `ids_near` / `projectiles_near` resolve them (`entry_of`); every other accessor answers a projectile id
+  with its default, as `LocalSimView` does. TEST-02: `ids_in_cell` and `projectiles_near` pass; `alive`, `read_poses`,
+  `radius`, `def_kind`, `wrecks` stay exempt for the wreck only (not in team 0's V, 04 s4.1); the rocket part of them is
+  asserted in `test_net_sim_view_projectiles.gd`. `NetViewRig.lattice` keeps snapped entities in their GRID_HASH cell.
+- CQ-6 closed by R0 B.25 A-133: on a live projectile id both views answer `def_id` (ProjectileDef id), `owner` / `team`
+  (the shooter's), `radius` (def `radius_m`) and `def_kind` -1. `NetSimView` does (ENTITY_META, `test_net_sim_view_projectiles.gd`);
+  **GD-45** aligns `LocalSimView` and adds the TEST-02 clause for both views.
 - CQ-2 closed by A-111: net may name `TeamStateView`, `PlayerStateView`, `OrderSpec`; `team_state` / `player_state` /
   `order_head` / `pending_order` are NET-39's (exempt "NET-39, A-111"). CORE_SHIELD_UP travels meanwhile in TEAM_STATE
   (`team_flags`).
@@ -183,9 +192,8 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
 - A-115: every 03 budget row is p95; `test_client_session_perf.gd` gates p95 through PerfGate (report-only off the pinned
   runner). Dev box: ClientSession.tick p50 0.49-0.60 ms, p95 1.09-1.30 ms (hosted CI 0.92 / 1.97 ms; tier-C ticks);
   no row re-priced. NET-18 adds prediction to the same row.
-- `projectiles_near` is not overridden (SimView default, empty): its 04 s3.7 source is client-spawned PROJECTILE_BATCH
-  projectiles (owner: net, the client half of `ShotTracker` / NET-18's cosmetic-slug path, to be filed) plus replicated
-  projectile entities (NET-58).
+- `projectiles_near` returns the replicated projectile entities (NET-58); client-spawned PROJECTILE_BATCH slugs have no
+  `EntityId` and are not listed (04 s3.7 "approximate by design", A-112).
 - `read_poses` over the canonical 940 entities costs 3.4 ms dev box / 5.1 ms CI, over the 03 s10.2 "entity sync 2.4 ms"
   row it is charged to; owner TA-52 (EntityViewPool.sync switch and re-measure, R0 B.11 A-56) with net support.
 - GD-41 `wreck_ore` and GD-38 `shield01` inherit -1.0 (no codec carries wreck ore or dome charge yet; 04 s5.6 default);

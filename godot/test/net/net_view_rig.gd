@@ -1,7 +1,8 @@
 class_name NetViewRig extends RefCounted
 ## Test helper (NET-17): a minimal in-process server for ClientSession over LocalTransport. It plays the
 ## ServerSession role NET-15 will own: HELLO -> WELCOME, LOADED -> ENTITY_META + the first FULL SNAPSHOT; then per
-## `send_tick` it fills a SnapshotFrame from the SimWorld's LocalSimView (the NET-15 SimView adapter, test-side),
+## `send_tick` it fills a SnapshotFrame from the SimWorld's LocalSimView and its ProjectileStore (the NET-15 adapter,
+## test-side; projectile entities of the four replicated kinds, R0 B.22 A-112),
 ## runs prepare_tick once, and sends each client ENTITY_META for new entries, POSSESSED events, TEAM_STATE (own team)
 ## and its SNAPSHOT (every visible entity in tier A, against the client's acked baseline, pilot block for the
 ## client's possessed unit). `snap_world` moves every live entity onto the wire lattice (Codec round trip) so a
@@ -84,15 +85,12 @@ func send_tick(at_tick: int) -> void:
 
 func _send_client(k: int) -> void:
 	var t: int = teams[k]
-	var vis: PackedInt32Array = PackedInt32Array()
+	var vis: PackedInt32Array = codec.team_visible(t)          # V incl. projectiles via shooter / target (A-112)
 	var fresh: PackedInt32Array = PackedInt32Array()
-	for r: int in frame.count:
-		var s: int = frame.slot[r]
-		if t == frame.team[r] or ((frame.visible_mask[r] >> t) & 1) != 0:
-			var _a: bool = vis.push_back(s)
-			if known[k][s] == 0:
-				known[k][s] = 1
-				var _b: bool = fresh.push_back(s)
+	for s: int in vis:
+		if known[k][s] == 0:
+			known[k][s] = 1
+			var _b: bool = fresh.push_back(s)
 	if not fresh.is_empty():
 		var metas: Array[PackedByteArray] = []
 		var _m: int = RosterCodec.encode_meta(roster, fresh, metas)
@@ -115,7 +113,7 @@ func _send_possessed(k: int, fresh: PackedInt32Array) -> void:
 	var at: int = EventCodec.write_header(buf, tick)
 	var n: int = 0
 	for s: int in fresh:
-		var id: int = EntityId.make(s, roster.generation_of(s))
+		var id: int = EntityId.make(Roster.slot_of_index(s), roster.generation_of(s))
 		if local.possessor(id) >= 0:
 			at = EventCodec.write_event(buf, at, Protocol.EventKind.POSSESSED, PackedInt32Array([s, local.possessor(id)]), 0)
 			n += 1
@@ -124,12 +122,17 @@ func _send_possessed(k: int, fresh: PackedInt32Array) -> void:
 		server.send(conns[k], Protocol.CH_EVENTS, buf.slice(0, at), true)
 
 
-## Every live store entity (projectiles are not on the roster) into `frame`, roster kept in step.
+## Every live store entity and every live projectile of a replicated kind into `frame`, roster kept in step.
 func fill_frame() -> void:
 	var ids: PackedInt32Array = PackedInt32Array()
 	for list: PackedInt32Array in [local.structures(), local.ships(), local.wrecks()]:
 		ids.append_array(list)
-	frame.resize(ids.size())
+	var ps: ProjectileStore = world.projectiles()
+	var proj: PackedInt32Array = PackedInt32Array()
+	for i: int in ps.live:
+		if SnapshotFrame.replicated_kind(ps.kind[i]):
+			var _p: bool = proj.push_back(i)
+	frame.resize(ids.size() + proj.size())
 	frame.tick = tick
 	for r: int in ids.size():
 		var id: int = ids[r]
@@ -143,6 +146,19 @@ func fill_frame() -> void:
 		frame.set_entity(r, s, local.pos(id), local.vel(id), local.basis(id).get_rotation_quaternion(), local.hp01(id),
 				Codec.make_flags(local.control_state(id), bits), local.team(id) & 0xFF, local.ai_tag(id), false, vis)
 		frame.gen[r] = EntityId.gen(id)
+	for k: int in proj.size():
+		_fill_projectile(ps, proj[k], ids.size() + k)
+
+
+func _fill_projectile(ps: ProjectileStore, i: int, r: int) -> void:
+	var id: int = ps.id_of(i)
+	var s: int = EntityId.slot(id)
+	var idx: int = Roster.index_of_slot(s)
+	var def: int = DefRanges.PROJECTILE_BASE + ps.projectile_def[i]
+	if not roster.has(idx) or roster.generation_of(idx) != EntityId.gen(id):
+		var _a: bool = roster.add(idx, EntityId.gen(id), def, ps.owner[i], ps.team[i])
+	frame.set_projectile(r, s, ps.kind[i], ps.pos[i], ps.vel[i], ps.team[i], content.projectiles[ps.projectile_def[i]].gravity,
+			ps.shooter[i], ps.target[i], EntityId.gen(id))
 
 
 ## The pilot block of player `slot`'s possessed unit, or null.
@@ -190,28 +206,63 @@ func team_state_bytes(t: int) -> PackedByteArray:
 const SNAP_ROUNDS: int = 8
 
 
+## The wire-lattice point for `p`: the quantise / dequantise round trip to a fixed point, kept in p's GRID_HASH cell
+## (Spatial's) by a one-level nudge when the round trip crosses a cell edge (the TEST-02 scene sits entities on z = 0,
+## a GRID_HASH edge; ids_in_cell compares cells, NET-58), so snapping never changes which hash cell holds an entity.
+static func lattice(p: Vector3) -> int:
+	var pq: int = _fixed(Codec.quantize_pos(p))
+	var want: int = Sphere.cell_of(p, Sphere.GRID_HASH)
+	if Sphere.cell_of(Codec.dequantize_pos(pq), Sphere.GRID_HASH) == want:
+		return pq
+	var lv: Vector3i = Vector3i((pq >> 16) & 0xFFFF, (pq >> 32) & 0xFFFF, (pq >> 48) & 0xFFFF)
+	var best: int = pq
+	var best_d: float = INF
+	for k: int in 125:                                   # +-2 levels per axis, each taken to its fixed point
+		var d: Vector3i = Vector3i(k % 5 - 2, MathX.floori_div(k, 5) % 5 - 2, MathX.floori_div(k, 25) - 2)
+		var q2: int = _fixed(Codec.pack_pos(pq & 0xFFFF, lv.x + d.x, lv.y + d.y, lv.z + d.z))
+		var p2: Vector3 = Codec.dequantize_pos(q2)
+		if Sphere.cell_of(p2, Sphere.GRID_HASH) == want and p2.distance_to(p) < best_d:
+			best = q2
+			best_d = p2.distance_to(p)
+	return best
+
+
+static func _fixed(q: int) -> int:
+	var pq: int = q
+	for _k: int in SNAP_ROUNDS:
+		var again: int = Codec.quantize_pos(Codec.dequantize_pos(pq))
+		if again == pq:
+			break
+		pq = again
+	return pq
+
+
 func snap_world() -> bool:
 	var st: EntityStore = world.store()
 	var ok: bool = true
 	for list: PackedInt32Array in [st.structures, st.ships, st.wrecks]:
 		for s: int in list:
 			ok = _snap(st, s) and ok
+	var ps: ProjectileStore = world.projectiles()
+	for i: int in ps.live:
+		var pv: PackedVector3Array = _snap_pv(ps.pos[i], ps.vel[i])
+		ps.pos[i] = pv[0]
+		ps.vel[i] = pv[1]
+		ok = Codec.quantize_pos(pv[0]) == Codec.quantize_pos(Codec.dequantize_pos(Codec.quantize_pos(pv[0]))) and ok
 	world.spatial.rebuild()                    # the local view's hash follows the snapped positions
 	return ok
 
 
+## [pos, vel] moved onto the wire lattice (`lattice`, vel through NetPose's conversion).
+func _snap_pv(p0: Vector3, v0: Vector3) -> PackedVector3Array:
+	var pq: int = lattice(p0)
+	var cell: int = Codec.pos_cell(pq)
+	return PackedVector3Array([Codec.dequantize_pos(pq), NetPose.fine_to_world(DeadReckon.fine_from_bits(Codec.quantize_vel(v0, cell)), cell)])
+
+
 func _snap(st: EntityStore, s: int) -> bool:
-	var p: Vector3 = st.pos[s]
-	var pq: int = Codec.quantize_pos(p)
-	var k: int = 0
-	while k < SNAP_ROUNDS:
-		p = Codec.dequantize_pos(pq)
-		var again: int = Codec.quantize_pos(p)
-		k += 1
-		if again == pq:
-			break
-		pq = again
-	st.pos[s] = p
+	var pq: int = lattice(st.pos[s])
+	st.pos[s] = Codec.dequantize_pos(pq)
 	var cell: int = Codec.pos_cell(pq)
 	st.vel[s] = NetPose.fine_to_world(DeadReckon.fine_from_bits(Codec.quantize_vel(st.vel[s], cell)), cell)
 	var f: Vector3 = st.fwd[s]

@@ -12,7 +12,7 @@ once a wire has shipped (R0 B.9 A-23, B.10 A-36); `gen_module_api.py --check` mu
 | May depend on | `core`, `content`; named `sim` types only: `SimWorld`, `Command`, `PilotInput`, `Kinematics`, `SimView`, `Assist`, `Terrain`, `SimEvent`, `CommandResult` (`tools/deps.json`, R0 B.9 A-27) |
 | Must never touch | Nodes in codec/protocol code, `server/` (feature lane), `platform/`, `presentation`, `ui`; no `Thread` and no `WorkerThreadPool` (web is single-threaded, 03 s11); WebSocket only on web in v1.0 (WebRTC is v1.1, S-NET-2) |
 | Autoloads used | `Log` (never in per-entity loops) |
-| Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `SnapshotCodec` and its baselines (NET-06, NET-48 packet index, NET-49 byte cache), `Transport`/`LocalTransport`/`FaultModel` (NET-11), `Interest` (NET-08), `ClientSession` / `NetSimView` (NET-17, `client/MODULE.md`) landed. Everything else is planned per 04 s19. |
+| Status | v0.4: `Protocol` (NET-01), `Codec` field quantisers (NET-02), `Roster`/`RosterCodec`/`RosterSync` (NET-05), `SnapshotCodec` and its baselines (NET-06, NET-48 packet index, NET-49 byte cache), `Transport`/`LocalTransport`/`FaultModel` (NET-11), `Interest` (NET-08), `ClientSession` / `NetSimView` (NET-17, `client/MODULE.md`), the roster's projectile block (NET-58, R0 B.22 A-112) landed. Everything else is planned per 04 s19. |
 
 ## Public API
 
@@ -73,11 +73,12 @@ static func write_u32(buf: PackedByteArray, at: int, v: int) -> int;  static fun
 static func write_u24(buf: PackedByteArray, at: int, v: int) -> int;  static func read_u24(buf: PackedByteArray, at: int) -> int
     # writers return the next offset or -1 (nothing written); readers return -1 / POS_INVALID when short
 
-class_name Roster extends RefCounted                  # net/roster.gd (04 s3.1); roster index == sim slot, 1,536 entries (A-54)
-const CAPACITY: int; const REASON_COUNT: int; const NEVER: int   # 1536 (slots 0-1,535 incl. wrecks, A-54); 3; -1
+class_name Roster extends RefCounted                  # net/roster.gd (04 s3.1); 3,584 entries: index = slot 0-1,535 (A-54), 1,536 + slot - 4,096 for projectile slots (A-112)
+const CAPACITY: int; const REASON_COUNT: int; const NEVER: int; const ENTITY_SLOTS: int; const PROJECTILE_INDEX_MIN: int   # 3584 (1,536 + the 2,048 block); 3; -1; 1536; 1536
 func add(slot: int, generation: int, def_id: int, owner: int, team: int, tag: String = "") -> bool   # replaces; false out of range
 func remove(slot: int, reason: int) -> bool           # reason = Protocol.RosterRemoveReason; false when absent/invalid
-func has(slot: int) -> bool;  func count() -> int;  func clear() -> void;  func state_hash() -> int
+func has(slot: int) -> bool;  func count() -> int;  func clear() -> void;  func state_hash() -> int   # methods take roster indices
+static func index_of_slot(slot: int) -> int;  static func slot_of_index(index: int) -> int   # sim slot <-> roster index (A-112); -1 for a slot / index no roster holds
 func generation_of(slot: int) -> int;  func def_of(slot: int) -> int;  func owner_of(slot: int) -> int;  func team_of(slot: int) -> int
 func tag_of(slot: int) -> String;  func removal_reason_of(slot: int) -> int   # NEVER while present / never removed
 
@@ -135,7 +136,9 @@ class_name SnapshotFrame extends RefCounted           # net/snapshot_frame.gd: p
 var tick: int;  var count: int;  var slot: PackedInt32Array;  var pos: PackedVector3Array;  var vel: PackedVector3Array;  var rot: PackedVector4Array
 var hp01: PackedFloat32Array;  var flags: PackedByteArray;  var ai_tag: PackedByteArray;  var team: PackedByteArray;  var gravity: PackedByteArray
 var under_fire: PackedByteArray;  var visible_mask: PackedInt32Array;  var gen: PackedInt32Array;  func resize(n: int) -> void   # gen: EntityId generation (NET-08 Interest)
+var kind: PackedByteArray;  var shooter: PackedInt32Array;  var target: PackedInt32Array;  const SLUG: int .. const CANISTER: int;  const REPLICATED_KINDS: int   # projectile rows (A-112): ProjectileStore.kind ordinals 0-6; BOMB | ROCKET | SIEGE_SHELL | CANISTER
 func set_entity(i: int, slot_id: int, p: Vector3, v: Vector3, q: Quaternion, hp: float, flag_byte: int, team_id: int, tag: int = 0, has_gravity: bool = false, visible: int = 0) -> void
+func set_projectile(i: int, slot_id: int, projectile_kind: int, p: Vector3, v: Vector3, team_id: int, has_gravity: bool, shooter_id: int, target_id: int, generation: int) -> void;  static func replicated_kind(projectile_kind: int) -> bool;  func index_of_row(i: int) -> int   # -1: no roster index / slug, flak, rail
 
 class_name SnapshotCodec extends RefCounted           # net/snapshot_codec.gd: shared cache (indexed by roster index) + per-client encode
 const HEADER_BYTES: int; const MAX_PACKET_BYTES: int; const MAX_PACKETS_PER_TICK: int; const SECTION_MAX: int; const TEAM_MAX: int; const CAPACITY: int
@@ -146,25 +149,22 @@ enum Kind { NONE, FULL, DELTA, BLIP }
 var gravity: float;  var dt: float;  var prepare_count: int;  var cache_tick: int;  var max_packets: int;  var deferred: int;  var cache_bytes: bool   # false = pre-NET-49 FULL/C-BLIP path, same bytes; var append_frame: bool
 var n_full: int;  var n_delta: int;  var n_blip: int;  var n_pos_small: int;  var n_pos_large: int   # cumulative record counters
 var c_tick: PackedInt32Array;  var c_pos: PackedInt64Array;  var c_ori: PackedInt64Array;  var c_coarse: PackedInt32Array;  var c_vel: PackedInt32Array;  var c_fine: PackedInt64Array
-var c_hp: PackedByteArray;  var c_flags: PackedByteArray;  var c_ai: PackedByteArray;  var c_team: PackedByteArray;  var c_grav: PackedByteArray;  var c_blip: PackedInt32Array
+var c_hp: PackedByteArray;  var c_flags: PackedByteArray;  var c_ai: PackedByteArray;  var c_team: PackedByteArray;  var c_grav: PackedByteArray;  var c_blip: PackedInt32Array;  var c_vmask: PackedInt32Array;  var c_gen: PackedInt32Array   # c_vmask: V bits, projectile = own team | shooter's | target's (A-112); a projectile index's new generation is sent FULL
 func _init(gravity_mps2: float, tick_hz: int) -> void;  func prepare_tick(frame: SnapshotFrame) -> void   # once per tick, before any encode
 func coarse_of(s: int) -> int;  func blip_of(s: int) -> int;  func team_visible(team: int) -> PackedInt32Array   # lazy per tick; C candidates
 func encode(store: BaselineStore, tick: int, a: PackedInt32Array, b: PackedInt32Array, c: PackedInt32Array, pilot: PilotBlock, out: Array[PackedByteArray], refresh: PackedInt32Array = PackedInt32Array()) -> int   # refresh: FULLs in C (04 s4.3)
 static func pos_mask(res: Vector3i) -> int;  static func wire_residual(mask: int, res: Vector3i) -> Vector3i;  static func applied_residual(mask: int, res: Vector3i) -> Vector3i
 static func delta_body_bytes(mask: int, tier_b: bool, own: bool) -> int
-
 class_name SnapshotWriter extends RefCounted          # net/snapshot_writer.gd: packet assembly for encode()
 var packets: int;  func start(tick: int, base_tick: int, pilot: PilotBlock, out: Array[PackedByteArray], limit: int) -> void
 func place(s: int, tier: int, body: int) -> bool;  func finish() -> int;  func put_u24(v: int) -> void
 func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int) -> void;  func put_full_words(w0: int, w1: int, w2: int, own: bool) -> void
 func put_delta(mask: int, res: Vector3i, ori: int, tier_b: bool, vel: int, hp: int, flags: int, ai_tag: int) -> void
-
 class_name SnapshotByteCache extends RefCounted       # net/snapshot_byte_cache.gd: client-independent FULL / C-BLIP bytes per tick (A-40)
 const CAPACITY: int;  var w0: PackedInt64Array;  var w1: PackedInt64Array;  var w2: PackedInt32Array;  var oc: PackedInt32Array;  func full(s: int, tick: int, pos_q: int, ori_bits: int, vel_bits: int, hp_flags_ai: int) -> void;  func blip_pos(s: int, tick: int, pos_q: int, blip: int) -> int
-
 class_name SnapshotDecoder extends RefCounted         # net/snapshot_decoder.gd: validate the whole packet, then apply
 enum Status { OK, MALFORMED, STALE, NO_BASELINE, MISSING_ROSTER }
-const MAX_RECORDS: int;  var store: BaselineStore;  var roster: Roster;  var gravity_def: PackedByteArray;  var gravity: float;  var dt: float
+const MAX_RECORDS: int;  var store: BaselineStore;  var roster: Roster;  var gravity_def: PackedByteArray;  var gravity: float;  var dt: float;  var born: PackedInt32Array;  var born_gen: PackedInt32Array   # born: first FULL tick of an index's roster generation (NET-58)
 var pilot: PilotBlock;  var pilot_tick: int;  var missing: PackedInt32Array;  var malformed: int;  var records_applied: int
 func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) -> void;  func current() -> BaselineFrame;  func decode(bytes: PackedByteArray) -> int;  func forget_tick(tick: int) -> void;  func reset() -> void; func accept_keyframe(tick: int) -> BaselineFrame   # NET-25 replay chunks / seek; NET-07 keyframe reset (net/keyframe/MODULE.md)
 

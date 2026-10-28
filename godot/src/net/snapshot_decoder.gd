@@ -22,6 +22,10 @@ var pilot_tick: int = 0                     # tick of the last pilot block recei
 var missing: PackedInt32Array = PackedInt32Array()
 var malformed: int = 0
 var records_applied: int = 0
+## By roster index: tick of the first FULL applied under the roster generation in `born_gen` (-1 none). NetPose shows
+## no older frame of that index (a recycled projectile slot's previous occupant, R0 B.22 A-112; NET-58).
+var born: PackedInt32Array = PackedInt32Array()
+var born_gen: PackedInt32Array = PackedInt32Array()
 var _n: int = 0
 var _idx: PackedInt32Array = PackedInt32Array()
 var _kind: PackedByteArray = PackedByteArray()
@@ -58,6 +62,9 @@ func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) 
 	var _ra: int = _rx_got.resize(BaselineStore.DEPTH)
 	var _rb: int = _rx_last.resize(BaselineStore.DEPTH)
 	_rx_tick.fill(0)
+	var e: int = born.resize(Roster.CAPACITY) | born_gen.resize(Roster.CAPACITY)
+	assert(e == OK)
+	born_gen.fill(-1)
 
 
 ## The newest decoded frame (the client's current replicated state), or null.
@@ -75,6 +82,7 @@ func forget_tick(tick: int) -> void:
 func reset() -> void:
 	store.reset()
 	_rx_tick.fill(0)
+	born_gen.fill(-1)
 	pilot_tick = 0
 	malformed = 0
 	records_applied = 0
@@ -86,6 +94,7 @@ func reset() -> void:
 func accept_keyframe(tick: int) -> BaselineFrame:
 	store.reset()
 	_rx_tick.fill(0)
+	born_gen.fill(-1)
 	var f: BaselineFrame = store.begin(tick, 0)
 	store.newest_tick = tick
 	_mark(tick, 0, true)
@@ -325,6 +334,10 @@ func _apply_all(cur: BaselineFrame) -> void:
 		var kind: int = _kind[k]
 		if kind == SnapshotCodec.Kind.FULL:
 			cur.set_full(i, _tick, _pos[k], _ori[k], _vel[k], _hp[k], _fl[k], _ai[k])
+			var g: int = roster.generation_of(i)
+			if g != born_gen[i] or _tick < born[i]:
+				born_gen[i] = g
+				born[i] = _tick
 		elif kind == SnapshotCodec.Kind.BLIP:
 			cur.set_blip(i, _tick, _ori[k])
 		else:
