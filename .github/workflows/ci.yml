@@ -125,7 +125,7 @@ jobs:
   godot-tests:
     name: godot import, scenes, gdUnit4
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25  # TA-68 stopgap: unit+sim+net took 14-15 min once TA-67 re-enabled the unit layer; split into parallel jobs is the rest of TA-68
     steps:
       - uses: actions/checkout@v4
         with:
