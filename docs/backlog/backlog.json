@@ -3323,8 +3323,10 @@
       " R0 C3-13",
       " 06 UX-18"
     ],
-    "status": "todo",
-    "note": "depends_on GD-38 for TeamStateView.CORE_SHIELD_UP (the Core shield timer); the rest of UX-18 is unaffected. R0 B.24 A-121: LANDING flags bit2 = dead stick; the grade stamp shows the +20 (02 s17.1) beside the hot x1.5."
+    "status": "done",
+    "note": "depends_on GD-38 for TeamStateView.CORE_SHIELD_UP (the Core shield timer); the rest of UX-18 is unaffected. R0 B.24 A-121: LANDING flags bit2 = dead stick; the grade stamp shows the +20 (02 s17.1) beside the hot x1.5.",
+    "pr": 136,
+    "merged": "2026-10-28"
   },
   {
     "id": "UX-19",
