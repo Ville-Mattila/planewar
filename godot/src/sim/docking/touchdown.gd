@@ -13,8 +13,8 @@ class_name Touchdown extends RefCounted
 ## `pos` on the socket `pad.pos + pad.up * radius` (A-82), nose along the pad normal, body up = its old up in the pad
 ## plane, `link` = pad, a new service stay, the DOCKED event. A CRASH (DESTROY band, or a hull emptied by the damage
 ## band) first deals `flight_common.crash_pad_damage` to the pad through `DamageSink` (HIT, attacker = the ship; 02 s2.2,
-## R0 B.24 A-120). A contact whose ship moves up the pad normal (`vel . up > 0`, strictly) is a launch leaving the pad
-## volume and is never judged (R0 B.24 A-119); exactly 0 lands.
+## R0 B.24 A-120). A contact whose own descent (`c_vec.x`, v_vert: the larger of the post-move descent and this tick's terrain hit speed) is
+## negative is a launch leaving the pad volume and is never judged (R0 B.24 A-119); exactly 0 lands.
 
 const _PER_MPS: int = 10    ## 04 s3.6 LANDING speed unit 0.1 m/s (a unit, not a tunable)
 const _Q_MAX: int = 255     ## 04 s3.6 LANDING q byte = round(q * 255)
@@ -86,7 +86,7 @@ func _contact(c: Collision, k: int, t: int) -> void:
 	var p: int = EntityId.slot(pad)
 	if not _sink.standing(s) or (_store.flags[s] & EntityStore.F_DOCKED) != 0:
 		return
-	if _store.vel[s].dot(_store.up[p]) > 0.0:                 # ascending (a launch, A-119): never judged, no band, no hold
+	if c.c_vec[k].x < 0.0:                                    # the contact's own descent < 0 (a launch, A-119): never judged
 		return
 	var head: int = _queue.head(pad)
 	var free: bool = PadQueries.serves(_store, _defs, p) and (_store.flags[p] & EntityStore.F_BUILDING) == 0 \
