@@ -101,6 +101,8 @@ func _unsupplied_spent(ticks: int) -> int:
 	var cut: int = CombatTestKit.spawn(w, &"autocannon_turret", 1, 1, _at(0.0))
 	CombatTestKit.power(w, 1, 1)
 	# no supply root in the world: GD-18's network flags the tower unsupplied by itself
+	var foe: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(300.0, 300.0))        # CB13a: an envelope target, so the tower may fire
+	w.store().hp[EntityId.slot(foe)] = 1000000.0
 	FireTestKit.hook(w).hold(cut, PilotInput.FIRE1)
 	var s: int = EntityId.slot(cut)
 	var before: int = w.store().ammo[s]

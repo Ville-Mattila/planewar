@@ -293,3 +293,35 @@ func test_cb13a_save_and_restore_mid_window_is_byte_exact() -> void:
 		if w.serialize() != w2.serialize():
 			fail("diverged at +%d" % k)
 			return
+
+
+# The cadence (A-129): one scan per fire window, never one per shot. A per-shot scan mutant makes `scans` equal the rounds.
+func test_cb13a_the_scan_runs_once_per_window_not_once_per_shot() -> void:
+	var a: Array = _gated(&"autocannon_turret", &"dart")
+	var w: SimWorld = a[0]
+	FireTestKit.hook(w).hold(a[1], PilotInput.FIRE1)
+	var p: Vector3 = _at(100.0, 300.0)
+	w._combat.fire.scans = 0
+	var rounds: int = _spent(w, a[1], a[2], p, 108)                           # 3.6 s: three windows of five rounds
+	assert_int(rounds).is_equal(15)
+	assert_int(w._combat.fire.scans).override_failure_message("scans %d for %d rounds" % [w._combat.fire.scans, rounds]).is_between(3, 4)
+
+
+func test_cb13a_flak_scans_once_per_salvo() -> void:
+	var a: Array = _gated(&"flak_battery", &"dart")
+	var w: SimWorld = a[0]
+	FireTestKit.hook(w).hold(a[1], PilotInput.FIRE1)
+	w._combat.fire.scans = 0
+	var rounds: int = _spent(w, a[1], a[2], _at(300.0, 400.0), 121)           # reload 2.0 s: three salvos of two shells
+	assert_int(rounds).is_equal(6)
+	assert_int(w._combat.fire.scans).is_between(3, 4)
+
+
+func test_cb13a_a_held_trigger_with_nothing_engageable_rescans_on_the_documented_cadence() -> void:
+	var a: Array = _gated(&"autocannon_turret", &"bomber")
+	var w: SimWorld = a[0]
+	FireTestKit.hook(w).hold(a[1], PilotInput.FIRE1)
+	w._combat.fire.scans = 0
+	var hi: float = _num(_tower(&"autocannon_turret"), "h_rel_max")
+	var _n: int = _spent(w, a[1], a[2], _at(1.5 * hi, 300.0), 60)
+	assert_int(w._combat.fire.scans).is_equal(60 / WeaponFire.RESCAN_EVERY)
