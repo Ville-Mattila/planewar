@@ -8065,5 +8065,37 @@
     "note": "Handled by R0-amendments-20 A-136 (PR task/PM-05-text-and-cadence): 04 s4.1 and R0 A-132 say the client learns a projectile's death from its ROSTER_REMOVE (<= 3 ticks + latency), dead-reckoned <= 3 ticks then stale until then; A-134 and 04 row 0x86 say the encoder returns empty above RECORDS_MAX; no code change. Status -> done when the PR merges.",
     "pr": 139,
     "merged": "2026-10-28"
+  },
+  {
+    "id": "TA-67",
+    "title": "CI runs the gdUnit4 unit layer again (pipefail SIGPIPE skip since TA-66)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "TA-66"
+    ],
+    "milestone": "M2",
+    "acceptance": "Layer probe is pipe-free; a missing unit layer fails; tools/check_gdunit_report.py fails a layer whose report has 0 tests; other pipe-under-pipefail patterns in workflows fixed; the CI log shows unit/sim/net case counts",
+    "docs": [
+      "docs/03-technical-architecture.md"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "TA-68",
+    "title": "CI: godot-tests job runtime headroom (14m20s of a 15-min timeout after TA-67)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "TA-67"
+    ],
+    "milestone": "M2",
+    "acceptance": "unit/sim/net run as parallel jobs (or the job split otherwise) so each finishes well under its timeout with >= 30 % headroom; the PR pipeline wall clock stays within the 03 CI budget; check_gdunit_report guard kept per layer",
+    "docs": [
+      "docs/03-technical-architecture.md"
+    ],
+    "status": "todo"
   }
 ]
