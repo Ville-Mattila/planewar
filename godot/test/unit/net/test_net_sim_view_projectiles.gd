@@ -55,7 +55,8 @@ func test_rocket_meta_and_defaults() -> void:
 	assert_int(_v.team(r)).is_equal(1)
 	assert_int(_v.owner(r)).is_equal(-1)                     # the scene's rocket has no owning player (NONE_U8)
 	assert_float(_v.radius(r)).is_equal_approx(_s.content.projectiles[ps.projectile_def[i]].radius_m, 1e-6)
-	assert_int(_v.def_kind(r)).is_equal(local.def_kind(r))   # -1: not an EntityStore kind
+	assert_int(_v.def_kind(r)).is_equal(-1)                  # R0 B.25 A-133: no EntityStore.K_* for a projectile
+	assert_int(_v.def_kind(r)).is_equal(local.def_kind(r))
 	assert_int(_v.flags(r)).is_equal(local.flags(r))
 	assert_float(_v.hp01(r)).is_equal(local.hp01(r))
 	assert_int(_v.possessor(r)).is_equal(local.possessor(r))

@@ -142,11 +142,13 @@ func _recycle_after_failure(left_interest: bool) -> void:
 		if t >= recycle_at and joined < 0:
 			assert_bool(listed).override_failure_message("listed during the hold at %d" % t).is_false()
 	assert_int(removed_at).is_equal(fail_at + h)
-	assert_int(joined).is_equal(removed_at + h)
+	assert_int(joined).is_equal(recycle_at + ProjectileMembers.READMIT_TICKS)   # A-132: 6 ticks after the death
+	assert_int(joined).is_greater_equal(removed_at + h)
 
 
-## KEYFRAME encodes at most RECORDS_MAX records (the message stays <= Protocol.MAX_RELIABLE_BYTES even at the worst record
-## size) over a cache holding more: every entity slot plus 1,500 projectile entities; the mirror equals the decode.
+## R0 B.25 A-134: a KEYFRAME holds <= RECORDS_MAX (2,848) records. An encode over more (every entity slot plus 1,500
+## projectile entities) is refused (a caps bug, not a message to split) and leaves the mirror alone; exactly RECORDS_MAX
+## stays <= MAX_RELIABLE_BYTES at the worst record size and decodes to the mirror; a roster_count above it is MALFORMED.
 func test_keyframe_caps_the_records_of_one_encode() -> void:
 	var codec: SnapshotCodec = SnapshotCodec.new(G, HZ)
 	var roster: Roster = Roster.new()
@@ -167,13 +169,21 @@ func test_keyframe_caps_the_records_of_one_encode() -> void:
 	assert_int(idx.size()).is_greater(KeyframeCodec.RECORDS_MAX)
 	var kc: KeyframeCodec = KeyframeCodec.new()
 	var server: BaselineStore = BaselineStore.new(0)
-	var b: PackedByteArray = kc.encode(codec, server, 4, 1, Protocol.KeyframeScope.ALL, idx)
+	assert_int(KeyframeCodec.RECORDS_MAX).is_equal(2848)
+	assert_bool(kc.encode(codec, server, 4, 1, Protocol.KeyframeScope.ALL, idx).is_empty()).is_true()
+	assert_int(server.newest_tick).is_less(4)
+	var b: PackedByteArray = kc.encode(codec, server, 4, 1, Protocol.KeyframeScope.ALL, idx.slice(0, KeyframeCodec.RECORDS_MAX))
 	assert_int(kc.count).is_equal(KeyframeCodec.RECORDS_MAX)
 	assert_int(b.size()).is_less_equal(Protocol.MAX_RELIABLE_BYTES)
 	assert_int(KeyframeCodec.HEADER_BYTES + KeyframeCodec.RECORDS_MAX * KeyframeCodec.RECORD_WORST_BYTES).is_less_equal(Protocol.MAX_RELIABLE_BYTES)
 	var dec: SnapshotDecoder = SnapshotDecoder.new(G, HZ, 0, roster)
 	assert_int(KeyframeCodec.new().decode(b, dec)).is_equal(KeyframeCodec.Status.OK)
 	assert_bool(dec.current().same_state(server.frame_at(4))).is_true()
+	var over: PackedByteArray = b.duplicate()               # roster_count RECORDS_MAX + 1 with one more record appended
+	over.encode_u16(KeyframeCodec.OFF_COUNT, KeyframeCodec.RECORDS_MAX + 1)
+	over.append_array(PackedByteArray([1]) + b.slice(b.size() - 18))
+	var kd: KeyframeCodec = KeyframeCodec.new()
+	assert_int(kd.decode(over, SnapshotDecoder.new(G, HZ, 0, roster))).is_equal(KeyframeCodec.Status.MALFORMED)
 
 
 ## A recycled projectile index on the client (round 2): between the new generation's ENTITY_META and its first (FULL)
