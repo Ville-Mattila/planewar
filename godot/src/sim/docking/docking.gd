@@ -3,7 +3,8 @@ class_name Docking extends RefCounted
 ## service") and driven by `SimWorld`: `track` in step 4 (after the assist substitution: `PilotTrack`), `land` at the end
 ## of step 9 (`Touchdown`: PAD contacts -> grade, LANDING, damage / crash, DOCKED), `step` in step 10 after Production
 ## (one pass over the ships: service of every ship DOCKED on a live finished service pad (`PadService`), a ship whose pad
-## is gone is released from it, the queue wishes, then `PadQueue.update`). State (S4, economy section, format 13): the
+## is gone is released from it, the launch hold of a ship whose thrust stays >= launch_thrust_min (A-119: `timer_b`, then
+## LAUNCHED), the queue wishes, then `PadQueue.update`). State (S4, economy section, format 13): the
 ## queue, the per-ship service record, `LandingLog`, `PilotTrack`. No Nodes, signals or RNG; constants from defs only.
 
 var queue: PadQueue
@@ -15,6 +16,11 @@ var touchdown: Touchdown
 
 var _store: EntityStore
 var _defs: WorldDefs
+var _events: SimEvents
+var _inputs: InputSlots = null          ## the input slots of the last `track` (step 4 hands them over; read in step 10)
+var _hz: int = 30
+var _launch_min: float = 0.0            ## flight_common.launch_thrust_min (A-119)
+var _hold_ticks: int = 0                ## ceil(flight_common.launch_hold_s x hz); 0 = the launch rule is off (def key absent)
 var _radius: float = 0.0                ## economy.pad_queue_radius_m: horizontal queue zone around a busy pad (A-125)
 var _wish_ship: PackedInt32Array = PackedInt32Array()   ## step scratch: ships that want a pad this tick (ascending slot)
 var _wish_pad: PackedInt32Array = PackedInt32Array()    ## ... the pad each waits for (0 none)
@@ -28,6 +34,7 @@ var _cand_id: PackedInt32Array = PackedInt32Array()
 var _team_at: PackedInt32Array = PackedInt32Array()       ## TEAMS + 1 bucket starts
 var _team_fill: PackedInt32Array = PackedInt32Array()     ## TEAMS fill cursors
 var _docked_s: PackedInt32Array = PackedInt32Array()    ## step scratch: DOCKED ship slots, ascending
+var _launching: PackedInt32Array = PackedInt32Array()   ## step scratch: ship slots whose launch hold completed this tick
 var _n_wish: int = 0
 var _n_cand: int = 0
 var _n_docked: int = 0
@@ -38,6 +45,12 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, economy: E
 		applier: CommandApplier, hz: int) -> void:
 	_store = store
 	_defs = defs
+	_events = events
+	_hz = hz
+	var raw: Dictionary = defs.common.raw if defs.common != null else {}
+	if raw.has("launch_hold_s") and raw.has("launch_thrust_min"):    # needs content: typed fields (GD-44)
+		_launch_min = Def.num(raw["launch_thrust_min"])
+		_hold_ticks = ceili(Def.num(raw["launch_hold_s"]) * float(hz))
 	_radius = Def.num(defs.economy.raw.get("pad_queue_radius_m", 0.0)) if defs.economy != null else 0.0   # needs content: typed field
 	grade = LandingGrade.from_def(defs.content.scoring)
 	if grade == null:
@@ -49,7 +62,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, economy: E
 	touchdown = Touchdown.new(store, defs, events, DamageSink.new(store, events, applier, defs), queue, service, landings, grade,
 		pilots, hz)
 	var e: int = _wish_ship.resize(InputSlots.ENTITY_SLOTS) | _wish_pad.resize(InputSlots.ENTITY_SLOTS)
-	e |= _cand.resize(InputSlots.ENTITY_SLOTS) | _cand_mark.resize(InputSlots.ENTITY_SLOTS) | _docked_s.resize(InputSlots.ENTITY_SLOTS)
+	e |= _cand.resize(InputSlots.ENTITY_SLOTS) | _cand_mark.resize(InputSlots.ENTITY_SLOTS) | _docked_s.resize(InputSlots.ENTITY_SLOTS) | _launching.resize(InputSlots.ENTITY_SLOTS)
 	e |= _cand_up.resize(InputSlots.ENTITY_SLOTS) | _cand_pos.resize(InputSlots.ENTITY_SLOTS) | _cand_team.resize(InputSlots.ENTITY_SLOTS) | _cand_id.resize(InputSlots.ENTITY_SLOTS)
 	e |= _dock_mark.resize(InputSlots.ENTITY_SLOTS) | _team_at.resize(PlayerTable.TEAMS + 1) | _team_fill.resize(PlayerTable.TEAMS)
 	assert(e == OK)
@@ -59,6 +72,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, economy: E
 
 ## Step 4: possessed ships' last non-human tick and DOCK button (`PilotTrack.track`).
 func track(inputs: InputSlots) -> void:
+	_inputs = inputs
 	pilots.track(inputs)
 
 
@@ -130,8 +144,9 @@ func read_state(buf: StreamPeerBuffer) -> bool:
 
 
 # The docked ships: one whose pad is gone is released from it (DOCKED / LANDED and `link` cleared, falls from the next
-# step 5); the rest on a live finished service pad are served in one pass; a launch pad's ship is LaunchBay's.
-func _serve_docked(dt: float) -> void:
+# step 5); the rest on a live finished service pad are served in one pass, or leave it (A-119); a launch pad's ship is
+# LaunchBay's.
+func _release_orphans() -> void:
 	for k: int in _n_docked:
 		var s: int = _docked_s[k]
 		if _store.link[s] == 0:                               # docked on nothing (no pad to lose): left as it is
@@ -141,11 +156,21 @@ func _serve_docked(dt: float) -> void:
 			_store.link[s] = 0
 			_store.dirty[s] |= EntityStore.DIRTY_POSE | EntityStore.DIRTY_CONTROL
 			_docked_s[k] = -1
+
+
+func _serve_docked(dt: float) -> void:
+	_release_orphans()
 	service.open()
 	var links: PackedInt32Array = _store.link
 	var did: PackedInt32Array = _store.def_id
 	var flags: PackedByteArray = _store.flags
 	var pad_r: PackedFloat32Array = _defs.pad_radius_by_def
+	var hold_on: bool = _hold_ticks > 0 and _inputs != null
+	var thrust: PackedFloat64Array = _inputs.e_thrust if hold_on else PackedFloat64Array()
+	var hold: PackedFloat32Array = _store.timer_b if hold_on else PackedFloat32Array()   # one copy-on-write when a hold is written
+	var hold_dirty: bool = false
+	var hz: float = float(_hz)
+	var n_launch: int = 0
 	for k: int in _n_docked:
 		var s: int = _docked_s[k]
 		if s < 0:
@@ -153,12 +178,45 @@ func _serve_docked(dt: float) -> void:
 		var p: int = links[s] & EntityId.SLOT_MASK
 		var d: int = did[p]
 		if d < pad_r.size() and pad_r[d] > 0.0 and (flags[p] & EntityStore.F_BUILDING) == 0:   # PadQueries.serves, finished
+			if hold_on:                                       # A-119: the launch hold, k ticks of thrust >= launch_thrust_min
+				if thrust[s] < _launch_min:
+					if hold[s] != 0.0:
+						hold[s] = 0.0
+						hold_dirty = true
+				else:
+					var ticks: int = roundi(hold[s] * hz) + 1
+					hold[s] = float(ticks) / hz
+					hold_dirty = true
+					if ticks >= _hold_ticks:
+						_launching[n_launch] = s
+						n_launch += 1
+						continue                              # leaving: no service this tick
 			service.serve(s, p, dt)
 			if _cand_mark[p] != _pass:
 				_cand_mark[p] = _pass
 				_cand[_n_cand] = p
 				_n_cand += 1
 	service.close()
+	if hold_dirty:
+		_store.timer_b = hold
+	hold = PackedFloat32Array()
+	for i: int in n_launch:                                   # after `close`: the launches write the store's own arrays
+		_launch(_launching[i])
+
+
+# The launch (A-119): off the pad along its normal at launch_speed_mps, the stay closed at its fill (no refund, no
+# SERVICED), the pad free, LAUNCHED (a ship, b pad).
+func _launch(s: int) -> void:
+	var pad: int = _store.link[s]
+	_store.flags[s] &= ~(EntityStore.F_DOCKED | EntityStore.F_LANDED)
+	_store.link[s] = 0
+	_store.vel[s] = _store.up[pad & EntityId.SLOT_MASK] * _defs.common.launch_speed_mps
+	_store.rates[s] = Vector3.ZERO
+	_store.timer_b[s] = 0.0
+	_store.dirty[s] |= EntityStore.DIRTY_POSE | EntityStore.DIRTY_CONTROL
+	service.svc_gen[s] = -1
+	service.svc_bits[s] = 0
+	var _e: SimEvent = _events.emit(SimEvent.Kind.LAUNCHED, _store.id_of(s), pad, _store.pos[s], 0.0, _store.team[s])
 
 
 func _on_service_pad(s: int) -> bool:
