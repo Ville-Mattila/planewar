@@ -7976,5 +7976,55 @@
       "04 s5.6"
     ],
     "status": "todo"
+  },
+  {
+    "id": "GD-46",
+    "title": "sim: SimView.boost_cooldown01 so the HUD boost ring can show a fraction (UX-18 follow-up)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "UX-18"
+    ],
+    "milestone": "M3",
+    "acceptance": "SimView gains boost_cooldown01(id) -> float in [0,1] on LocalSimView and NetSimView (TEST-02 clause); UX-18 StatusClusterView boost ring switches from the 3-state boost_state to the fraction; sim/MODULE.md append",
+    "docs": [
+      "docs/06-platforms-input-ux.md",
+      "godot/src/sim/MODULE.md"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "PM-04",
+    "title": "Architect: ui access to Core shield state (TeamStateView in the ui named types, or a SimView.core_shield_up accessor) (UX-18 follow-up)",
+    "lane": "architect",
+    "tier": "Fable",
+    "size_days": 0.1,
+    "depends_on": [
+      "UX-18"
+    ],
+    "milestone": "M3",
+    "acceptance": "Ruling in R0-amendments-NN choosing one form; StatusMath.CORE_SHIELD_UP mirror in godot/src/ui/hud/ removed by the follow-up task it names",
+    "docs": [
+      "docs/01-vision-and-core-decisions.md",
+      "tools/deps.json"
+    ],
+    "status": "todo"
+  },
+  {
+    "id": "LOC-2",
+    "title": "Finnish strings for the UX-18 landing HUD locale keys",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 0.1,
+    "depends_on": [
+      "UX-18"
+    ],
+    "milestone": "M3",
+    "acceptance": "fi entries for the 29 UX-18 keys in en.json; check_locale and build_po --check green; owner proofreads (AI-tag drafts)",
+    "docs": [
+      "docs/07-art-audio-content.md"
+    ],
+    "status": "todo"
   }
 ]
