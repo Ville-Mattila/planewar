@@ -232,6 +232,11 @@ func economy() -> EconomyHub:
 	return _econ
 
 
+## The match result of 02 s17.1 as of now (final once MATCH_END fired): per-player rows and the structure value per team.
+func match_result() -> MatchResult:
+	return _econ.score.result(_state.winner_team, _state.ended_tick if _state.ended() else _state.tick)
+
+
 func terrain() -> Terrain:
 	return _terrain
 
@@ -295,6 +300,7 @@ func _wire(rules: MatchRules) -> void:
 	_view.production = _econ.production
 	_view.shields = _combat.shields
 	_view.docking = _econ.docking
+	_view.score = _econ.score
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
 	vision = Vision.new(_store, _defs, rules.tick_hz)
 	_view.vision = vision
@@ -332,6 +338,7 @@ func _step_combat(t: int) -> void:
 	var _absorbed: int = _combat.shields.absorb(t)           # 02 s4.3 rule 6, before the contacts (GD-10)
 	_combat.step(t, rng)
 	_econ.docking.land(t, collision)                         # GD-15: PAD contacts -> LANDING / DOCKED, crash deaths join below
+	_econ.score.on_dying(_applier.dying, t)                  # GD-27: kills, assists, landing points while the dead are still in the store
 	for s: int in _applier.dying:
 		_combat.forget(s)
 		_econ.on_death(s)
@@ -353,5 +360,6 @@ func _step_match(t: int) -> void:
 		var _e: SimEvent = _events.emit(SimEvent.Kind.CORE_EXPOSURE, 0, 0, Vector3.ZERO, clock, -1)
 	if ph == MatchRules.Phase.ENDED:
 		_state.ended_tick = t
+		_econ.score.finalize(_state.winner_team)            # GD-27: match_win
 		_control.release_all(ControlMachine.ReleaseReason.MATCH)
 		var _m: SimEvent = _events.emit(SimEvent.Kind.MATCH_END, _state.winner_team, 0, Vector3.ZERO, clock, -1)

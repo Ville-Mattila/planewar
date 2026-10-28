@@ -297,7 +297,7 @@ func test_a_wreck_save_restore_continue_is_byte_exact_and_restores_the_weight_on
 		assert_int(_p(r).weight(c)).is_equal(1)
 		assert_int(_p(w).weight(c)).is_equal(1)
 	assert_array(r.serialize()).is_equal(w.serialize())
-	assert_int(SimSerialize.FORMAT).is_equal(13)                                  # no saved state of its own (GD-39; 13 is GD-15's Docking)
+	assert_int(SimSerialize.FORMAT).is_equal(14)                                  # no saved state of its own (GD-39; 13 is GD-15's Docking, 14 GD-27's ScoreKeeper)
 
 
 func test_the_cost_is_per_wreck_event_only() -> void:
