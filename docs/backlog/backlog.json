@@ -2206,9 +2206,11 @@
       " R0 C3-13",
       " 02 GD-15"
     ],
-    "status": "todo",
+    "status": "done",
     "acceptance_append": "; R0 B.24 A-120: ships.json flight_common gains required crash_pad_damage 100 (schema, _doc 02 s2.2 / 03 s6.4 / R0 B.5) and a CRASH outcome calls DamageSink.damage(pad, crash_pad_damage, attacker = ship) before the ship's destroy, so the HIT names the ship and shields apply (test: a crash on a Pad lowers its hp by 100; on the shielded Core the shield absorbs first); A-121: LANDING flags bit2 = dead stick is ratified (04 s3.6 row 29; no protocol bump); A-124: landings detected in step 8 resolve at the end of step 9 as built (sim/MODULE.md tick paragraph cites A-124); A-125: economy.json gains required pad_queue_radius_m 500 (schema, _doc 05 s5.5 L2b + 01 s4.3) and PadQueue D6 uses it as a horizontal pad-frame distance with no altitude term (a conservative 3-D prefilter allowed), auto_dock_radius_m keeps its A-33 meaning only (test: a ship holding at 400 m / 150 m AGL with a RETURN head order is queued, one at 520 m is not, one 450 m straight above is); A-126: rearm time = rearm_time_s x the most-missing slot share as built, with one test row pinned to the 02 s2.3 literals (Dart 300 / 180 / 450 ticks, 20 + 2 x 10 Ice); A-127: PadQueue.PER_PAD stays a const citing 03 s3.2; sim/docking/MODULE.md closes CQ-2..CQ-6 and points CQ-1 at GD-43 (a ship landed on a service pad stays DOCKED until GD-43); R0 B.25 A-135: a crash on any pad, the Core included, deals crash_pad_damage to the pad through DamageSink with no shield absorption (02 s4.3 rule 6 scope: projectiles only); the pinned test is renamed test_a_crash_on_the_shielded_core_reaches_the_core_unshielded and sim/docking/MODULE.md closes CQ-8 citing A-135; crash_pad_damage and pad_queue_radius_m stay raw reads until GD-44 (CONTENT-3 types them)",
-    "note": "R0-amendments-18: CQ-1 -> GD-43 (sim) + AI-45 (brains); CQ-2 crash_pad_damage 100 in this PR; CQ-3 bit2 ratified, no net change; typed landing_grade -> CONTENT-2 then GD-27. R0-amendments-19 A-135: CQ-8 closed, no shield on a pad crash (A-120 amended); typed crash_pad_damage / pad_queue_radius_m -> CONTENT-3 then GD-44."
+    "note": "R0-amendments-18: CQ-1 -> GD-43 (sim) + AI-45 (brains); CQ-2 crash_pad_damage 100 in this PR; CQ-3 bit2 ratified, no net change; typed landing_grade -> CONTENT-2 then GD-27. R0-amendments-19 A-135: CQ-8 closed, no shield on a pad crash (A-120 amended); typed crash_pad_damage / pad_queue_radius_m -> CONTENT-3 then GD-44.",
+    "pr": 128,
+    "merged": "2026-10-28"
   },
   {
     "id": "GD-18",
