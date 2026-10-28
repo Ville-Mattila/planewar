@@ -6,7 +6,7 @@ contract change: contract tests first, same PR (ADR-11); `tools/gen_module_api.p
 
 | Field | Value |
 |---|---|
-| Responsibility | Turning step 8's PAD contacts into landings (pad-free rule, hull damage of the damage band, crash, docked pose, grade inputs: manual / hot / dead stick, LANDING then DOCKED), the per-pad queue of waiting ships, the three parallel service timers with their Ice / Ore costs and pauses, SERVICED, releasing a ship whose pad is gone. Not here: the landing volume and band (`Collision`), the grade formula and per-ship log (`sim/scoring/`), points (GD-27), the Shipyard launch (`LaunchBay`), the docked launch of a service pad (GD-43, R0 B.24 A-119), auto-dock steering (`Assist.auto_dock`, AI-10 / NET-18 wire it and call `PilotTrack.note_assist`). |
+| Responsibility | Turning step 8's PAD contacts into landings (pad-free rule, hull damage of the damage band, crash, docked pose, grade inputs: manual / hot / dead stick, LANDING then DOCKED), the per-pad queue of waiting ships, the three parallel service timers with their Ice / Ore costs and pauses, SERVICED, releasing a ship whose pad is gone, the thrust-hold launch from a service pad (D13). Not here: the landing volume and band (`Collision`), the grade formula and per-ship log (`sim/scoring/`), points (GD-27), the Shipyard launch (`LaunchBay`), auto-dock steering (`Assist.auto_dock`, AI-10 / NET-18 wire it and call `PilotTrack.note_assist`). |
 | Lane owner tier | Opus (sim lane); Sonnet against this file with an Opus review |
 | May depend on | `core`, `content`, `sim` (incl. `sim/world/` `WorldDefs`, `SimEvents`, `PlayerTable`, `InputSlots`, `PadQueries`, `StateIO`, `CommandApplier`; `sim/combat/` `DamageSink`; `sim/economy/` `Economy`; `sim/scoring/`; `sim/control/` `ControlMachine` enums; `sim/orders/` `OrderSpec`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads, RNG |
@@ -61,7 +61,7 @@ func manual(id: int, pad_pos: Vector3, pad_up: Vector3, window_m: float) -> bool
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 ```
 
-Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collision`, `crash_pad_damage`),
+Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collision`, `crash_pad_damage`, `launch_thrust_min`, `launch_hold_s`, `launch_speed_mps`),
 `economy.json` `pad_queue_radius_m` (the queue zone, A-125), `scoring.json` `landing` (+ `landing_grade.manual_window_m`), `ships.json` (`fuel_s`, `refuel_ice`,
 `refuel_time_s`, `rearm_time_s`, `repair_time_s`, `primary` / `secondary`, `hp`), `weapons.json` `rearm_ice`,
 `economy.json` `repair_ore_per_hp`, `structures.json` `pad_radius_m` / `pads`. Slots in the API are entity slots.
@@ -118,6 +118,18 @@ Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collisi
   derived, not state. `read_state` refuses malformed sizes, zero or duplicate queue entries, slots outside the main range.
 - D12 Allocation: none per entity per tick (scratch arrays are members; the service pass writes the store arrays through
   local handles, one copy-on-write per pass); `pad_queue` and LANDING / SERVICED `extra` allocate (list getter, events).
+- D13 Launch from a service pad (R0 B.24 A-119; 05 s2.5, 02 s2.3). Step 10, before the service pass: a DOCKED ship on a live
+  finished service pad whose input-slot thrust (`InputSlots.e_thrust`, pilot or brain alike, read from the slot the
+  tick's step 4 saw) is >= `flight_common.launch_thrust_min` (0.5) adds one tick to its hold in `EntityStore.timer_b`
+  (`k / hz` seconds); any tick below resets it to 0; at `ceil(launch_hold_s x hz)` ticks (0.3 s = 9 at 30 Hz) the ship
+  LAUNCHES: DOCKED and LANDED cleared, `link` 0 (A-87), `vel` = `launch_speed_mps` x pad normal, `rates` 0, `timer_b` 0,
+  the stay closed at its fill (no refund, no SERVICED if incomplete; the record is dropped), the pad free for its queue
+  head, one LAUNCHED (a ship, b pad). No fuel / ammo / HP / service gate (02 s2.3 "with what it has"; the 50 % fuel gate is
+  the brain's, AI-45). `timer_b` is zeroed at landing. A ship on a `launch_pad` structure never enters the rule (LaunchBay,
+  A-82). `Touchdown` skips a PAD contact whose ship has `vel . pad_up > 0` strictly (no landing, band or hold; a ship that
+  just launched is not re-landed), exactly 0 lands as before. S4: the hold is `timer_b` (already saved), FORMAT stays 13
+  (`test_launch::test_save_mid_hold_reloads_exact_and_launches_on_the_same_tick`). The two def fields are read raw
+  ("needs content": GD-44 switches them to `FlightCommonDef` typed fields once CONTENT-3 adds them).
 
 ## Data owned
 
@@ -139,7 +151,7 @@ the `perf_tick.gd --full` delta in the GD-15 PR perf note.
 ## Test entry points
 
 `godot/test/unit/sim/docking/test_touchdown.gd` (D1-D5), `test_pad_queue.gd` (D6), `test_service.gd` (D7-D10, the
-02 s2.3 table for every ship), `test_docking_s4.gd` (D11 against the original run, format 13 refusal), `test_docking_perf.gd` (D12, row 10 / 9),
+02 s2.3 table for every ship), `test_docking_s4.gd` (D11 against the original run, format 13 refusal), `test_launch.gd` (D13), `test_docking_perf.gd` (D12, row 10 / 9),
 helper `docking_test_kit.gd`; the SimView contract (`godot/test/unit/sim/contract/`) pins `service_progress`, `pad_queue`
 and `landing_grade_last`; `godot/test/unit/sim/test_collision.gd` (D2 impact speed).
 
@@ -152,8 +164,7 @@ and `landing_grade_last`; `godot/test/unit/sim/test_collision.gd` (D2 impact spe
 
 ## Open items
 
-- R0 B.24 (amendments 18) ruled on GD-15's CQ-1..CQ-7: launch from a service pad is GD-43 (A-119; until then a landed
-  ship stays DOCKED); `crash_pad_damage` (A-120), LANDING flags bit2 = dead stick (A-121), landings at the end of step 9
+- R0 B.24 (amendments 18) ruled on GD-15's CQ-1..CQ-7: launch from a service pad is D13 (A-119, GD-43: CQ-1 closed); `crash_pad_damage` (A-120), LANDING flags bit2 = dead stick (A-121), landings at the end of step 9
   (A-124), `pad_queue_radius_m` horizontal (A-125), rearm time by the most-missing slot (A-126) and `PER_PAD` as a const
   (A-127) are as built. 03 s6.4 now names `timer_a` the rearm line.
 - CQ-8 closed by R0 B.25 A-135 (amends A-120): a pad crash, the Core included, is never shielded; the Core takes the
