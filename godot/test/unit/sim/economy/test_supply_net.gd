@@ -179,6 +179,8 @@ func test_an_unsupplied_tower_fires_at_the_reduced_rate_from_its_remaining_pool(
 	CombatTestKit.power(w, 0, 0)
 	var fed: int = _put(w, &"autocannon_turret", 300.0)
 	var cut: int = _put(w, &"autocannon_turret", 1500.0)
+	_foe_near(w, fed)
+	_foe_near(w, cut)
 	w.step()
 	var h: FireTestKit.TriggerHook = FireTestKit.hook(w)
 	h.hold(fed, PilotInput.FIRE1)
@@ -188,6 +190,16 @@ func test_an_unsupplied_tower_fires_at_the_reduced_rate_from_its_remaining_pool(
 	var _a: Array[SimEvent] = K.run(w, 216)                    # 7.2 s: 6 bursts of 5 fed, 3 unsupplied (A-66 x 0.5)
 	assert_int(300 - w.store().ammo[sc]).is_equal(15)
 	assert_int(w.store().ammo[sf]).is_greater(300 - 30)        # the fed tower's refill claws back what it spends
+
+
+# CB13a (A-129): a tower fires only with an envelope target: a hostile Dart that cannot die, 300 m up and 300 m beside `tw`.
+func _foe_near(w: SimWorld, tw: int) -> void:
+	var p: Vector3 = w.store().pos[EntityId.slot(tw)]
+	var f: Basis = Sphere.tangent_frame(p.normalized())
+	var q: Vector3 = (p + f.x * 300.0).normalized() * (p.length() + 300.0)
+	var other: int = 1 - w.store().team[EntityId.slot(tw)]
+	var id: int = WorldTestKit.spawn(w, &"dart", other, other, q)
+	w.store().hp[EntityId.slot(id)] = 1000000.0
 
 
 func test_a_pylon_built_by_command_links_when_construction_finishes() -> void:
