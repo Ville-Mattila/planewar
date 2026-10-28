@@ -21,9 +21,13 @@ var fuse_radius_m: float = 0.0
 var arm_s: float = 0.0
 var shield_absorbed: bool = false
 var hp: int = 0  ## 0 = indestructible
+var fuse_delay_s: float = 0.0  ## timed fuse: burst at the predicted intercept + this (02 s4.2, A-66); absent = 0
+var lock_break_agl_m: float = 0.0  ## guided: lock lost below this AGL (R0 B.25 A-130); absent = 0
+var lock_break_flip_min_m: float = 0.0  ## guided: flip lock-break range lower bound (A-130); absent = 0
+var lock_break_flip_max_m: float = 0.0  ## guided: flip lock-break range upper bound (A-130); absent = 0
 
 const SPEC: Dictionary = {
-	"f": "speed_mps eject_down_mps lifetime_s radius_m blast_radius_m blast_radius_structure_m fuse_radius_m arm_s",
+	"f": "speed_mps eject_down_mps lifetime_s radius_m blast_radius_m blast_radius_structure_m fuse_radius_m arm_s fuse_delay_s lock_break_agl_m lock_break_flip_min_m lock_break_flip_max_m",
 	"i": "hp",
 	"b": "gravity transport shield_absorbed",
 	"n": "behaviour fuse",

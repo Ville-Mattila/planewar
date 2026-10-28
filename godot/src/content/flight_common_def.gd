@@ -26,6 +26,7 @@ var fuel_burn_brake_per_s: float = 0.0  ## extra fuel per second while braking (
 var fuel_burn_idle_per_s: float = 0.0  ## attitude-jet idle burn per second (A-32, 02 s2.3)
 var landing_damage_tilt_deg: float = 0.0  ## tilt up to this lands with damage, beyond destroys (A-35)
 var auto_dock_latch_mult: float = 0.0  ## auto-dock holds out to auto_dock_radius_m * this while DOCK is held (A-34)
+var crash_pad_damage: float = 0.0  ## pad HP lost to a crash landing (02 s2.2, A-120)
 var raw: Dictionary = {}
 var errors: Array[String] = []
 var unknown: Array[String] = []
@@ -36,7 +37,7 @@ const KEYS: PackedStringArray = [
 	"landing_damage_v_vert", "landing_damage_v_hor", "launch_speed_mps", "tether_len_m", "tether_drop_m",
 	"tether_tau_s", "tow_turn_rate_mult", "auto_dock_radius_m", "flip_speed_retain", "scrape_clear_s",
 	"fuel_burn_boost_per_s", "fuel_burn_brake_per_s", "fuel_burn_idle_per_s", "landing_damage_tilt_deg",
-	"auto_dock_latch_mult",
+	"auto_dock_latch_mult", "crash_pad_damage",
 ]
 
 
