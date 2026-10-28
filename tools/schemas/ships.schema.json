@@ -535,6 +535,18 @@
           "minimum": 0,
           "maximum": 10000,
           "$comment": "R0 B.24 A-120 (02 s2.2, 03 s6.4, B.5): damage a pad takes when a ship crashes on it (DamageSink, attacker = the ship); canonical 100"
+        },
+        "launch_thrust_min": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "$comment": "R0 B.24 A-119 (05 s2.5 Possess while DOCKED, 02 s2.3): input thrust at or above this, held launch_hold_s, launches a ship docked on a service pad; canonical 0.5"
+        },
+        "launch_hold_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 5,
+          "$comment": "R0 B.24 A-119: seconds the thrust must stay at or above launch_thrust_min (ceil(launch_hold_s x tick_hz) ticks); canonical 0.3"
         }
       },
       "required": [
@@ -555,7 +567,9 @@
         "landing_safe_pitch_deg",
         "landing_safe_v_hor",
         "landing_safe_v_vert",
+        "launch_hold_s",
         "launch_speed_mps",
+        "launch_thrust_min",
         "overspeed_dps",
         "scrape_clear_s",
         "terrain_damage_speed",
