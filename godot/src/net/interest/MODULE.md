@@ -46,7 +46,7 @@ func in_roster(s: int) -> bool;  func tier_of(s: int) -> int;  func roster_count
 func assign(it: Interest) -> void                      # called by Interest.assign
 
 class_name ProjectileMembers extends RefCounted        # interest/projectile_members.gd: an InterestClient's projectile entities (A-112)
-const HOLD_TICKS: int; const NONE: int;  var count: int   # 3 (100 ms, NET-58, not in 04); -1
+const HOLD_TICKS: int; const READMIT_TICKS: int; const NONE: int;  var count: int   # 3; 6 (04 s4.1, R0 B.25 A-132); -1
 func reset() -> void;  func add(s: int) -> void
 func sweep(it: Interest, t: int, vt: int, rgen: PackedInt32Array, last_tier: PackedInt32Array, hold: PackedInt32Array, c_set: PackedInt32Array, out_s: PackedInt32Array, out_reason: PackedInt32Array) -> void
 
@@ -76,8 +76,8 @@ static func entity_mask(id: int, tick: int, ticks: PackedInt32Array, gens: Packe
   shell, canister rows only): V = own team, or the shooter or target in V (`SnapshotCodec.c_vmask`, gen-checked);
   tiered by their own position like any entity; ENTITY_META before the first record. Swept every tick before selection
   (`ProjectileMembers`), no 30 s ghost: DEATH (absent / new generation), OUT_OF_VISION or LEFT_INTEREST is sent
-  HOLD_TICKS after it first holds, and once a member is dead (whatever failed first) its index is neither listed nor
-  admitted until HOLD_TICKS after that REMOVE, so
+  HOLD_TICKS (3) after it first holds, and once a member is dead (whatever failed first) its index is neither listed nor
+  admitted for READMIT_TICKS (6) after the death (04 s4.1, R0 B.25 A-132), so
   the reliable ROSTER_REMOVE trails the last record and leads a recycled slot's (0-tick quarantine, A-20) next META
   and record by more than the 04 s15.1 BAD jitter spread; a failing member also leaves `c_set` at once.
 

@@ -19,7 +19,7 @@ A change to "Public API", "Wire layout" or "Invariants" is a contract change: co
 
 ```gdscript
 class_name KeyframeCodec extends RefCounted           # net/keyframe/keyframe_codec.gd; scratch arrays sized once (1,536 entries)
-const HEADER_BYTES: int; const COUNT_MAX: int; const OFF_SEQ: int; const OFF_TICK: int; const OFF_SCOPE: int; const OFF_COUNT: int; const RECORDS_MAX: int; const RECORD_WORST_BYTES: int   # 10 3584 1 3 7 8; 2978 = (65,535 - 10) / 22 records per encode (NET-58); 22
+const HEADER_BYTES: int; const COUNT_MAX: int; const OFF_SEQ: int; const OFF_TICK: int; const OFF_SCOPE: int; const OFF_COUNT: int; const RECORDS_MAX: int; const RECORD_WORST_BYTES: int   # 10 3584 1 3 7 8; 2848 = (65,535 - 10) / 23, the 04 s2.3 roster_count bound (R0 B.25 A-134); 22
 enum Status { OK, MALFORMED, STALE, MISSING_ROSTER }
 var seq: int; var tick: int; var scope: int; var count: int; var malformed: int; var missing: PackedInt32Array
 func encode(codec: SnapshotCodec, store: BaselineStore, at_tick: int, keyframe_seq: int, key_scope: int, indices: PackedInt32Array) -> PackedByteArray   # empty when prepare_tick(at_tick) was not run, scope or seq invalid; resets `store`, mirror frame at_tick = the records
@@ -51,7 +51,7 @@ forgets every frame and packet receipt, begins the frame of `tick` against nothi
 ## Wire layout
 
 KEYFRAME (04 s2.3 0x86): id u8, keyframe_seq u16, tick u32, scope u8 (`Protocol.KeyframeScope`: ALL 0, ROSTER_REPAIR 1), count u16,
-then `count` records in ascending roster index; <= 65,535 B (Protocol.MAX_RELIABLE_BYTES): an encode writes <= RECORDS_MAX (2,978) records.
+then `count` records in ascending roster index; <= 65,535 B (Protocol.MAX_RELIABLE_BYTES): roster_count <= RECORDS_MAX (2,848; R0 B.25 A-134): an encode over more returns empty, a larger count is MALFORMED.
 A record is the SNAPSHOT FULL record (04 s3.5): gap (u8 1-254 from the previous record, the first record's gap is its index, 0 only
 for index 0; else 0xFF + u16 index) then 0xFF, vec3q 8, quat_s3 4, vel 3, hp 1, flags 1, ai_tag 1 for an entry of the client's own
 team = 19 B (+1). Canonical gaps only (an escape where a u8 gap fits is MALFORMED). All FULLs: the keyframe has no baseline.

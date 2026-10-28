@@ -13,9 +13,10 @@ const HEADER_BYTES: int = 10                # id, seq u16, tick u32, scope u8, c
 const COUNT_MAX: int = Roster.CAPACITY
 ## Largest record: a 3-byte escape gap, the FULL mask and body, the own-team ai_tag byte.
 const RECORD_WORST_BYTES: int = 3 + _BODY_AFTER_MASK_WITH_MASK + Codec.AI_TAG_BYTES   # 22
-## Records one encode writes (2,978): any message stays under Protocol.MAX_RELIABLE_BYTES; the interest caps (1,240)
-## stay far below it. Records past it arrive as snapshot FULLs (absent from the reset mirror).
-const RECORDS_MAX: int = int(float(Protocol.MAX_RELIABLE_BYTES - HEADER_BYTES) / float(RECORD_WORST_BYTES))
+## 04 s2.3 row 0x86 / R0 B.25 A-134: roster_count <= 2,848 = (65,535 - 10) / 23 (RECORD_WORST_BYTES + 1 spare byte per
+## record), so a KEYFRAME stays under Protocol.MAX_RELIABLE_BYTES. The interest caps (1,240) stay far below it; an encode
+## over more is refused (a caps bug, not a message to split) and a larger count is MALFORMED on decode.
+const RECORDS_MAX: int = int(float(Protocol.MAX_RELIABLE_BYTES - HEADER_BYTES) / float(RECORD_WORST_BYTES + 1))
 const OFF_SEQ: int = 1
 const OFF_TICK: int = 3
 const OFF_SCOPE: int = 7
@@ -77,7 +78,8 @@ func forget() -> void:
 
 ## Server: the KEYFRAME for `indices` (roster indices; any order, duplicates and entities not in this tick's cache are
 ## skipped) as of `at_tick`, with `store` (the client's mirror) reset to exactly these FULL records, frame `at_tick`.
-## Empty when SnapshotCodec.prepare_tick(at_tick) has not run or `keyframe_seq` / `key_scope` is out of range.
+## Empty when SnapshotCodec.prepare_tick(at_tick) has not run, `keyframe_seq` / `key_scope` is out of range or more than
+## RECORDS_MAX records qualify (A-134).
 func encode(codec: SnapshotCodec, store: BaselineStore, at_tick: int, keyframe_seq: int, key_scope: int,
 		indices: PackedInt32Array) -> PackedByteArray:
 	if at_tick <= 0 or at_tick != codec.cache_tick or keyframe_seq < 0 or keyframe_seq > 0xFFFF \
@@ -91,7 +93,7 @@ func encode(codec: SnapshotCodec, store: BaselineStore, at_tick: int, keyframe_s
 		if s == prev or s < 0 or s >= SnapshotCodec.CAPACITY or codec.c_tick[s] != at_tick:
 			continue
 		if n >= RECORDS_MAX:
-			break
+			return PackedByteArray()        # A-134: more than one KEYFRAME holds; the mirror is not touched
 		prev = s
 		_idx[n] = s
 		_pos[n] = codec.c_pos[s]
@@ -121,7 +123,7 @@ func decode(bytes: PackedByteArray, dec: SnapshotDecoder) -> int:
 	var ktick: int = bytes.decode_u32(OFF_TICK)
 	var kscope: int = bytes[OFF_SCOPE]
 	var kcount: int = bytes.decode_u16(OFF_COUNT)
-	if ktick == 0 or kscope > Protocol.KeyframeScope.ROSTER_REPAIR or kcount > COUNT_MAX \
+	if ktick == 0 or kscope > Protocol.KeyframeScope.ROSTER_REPAIR or kcount > RECORDS_MAX \
 			or size < HEADER_BYTES + kcount * _RECORD_MIN:
 		return _bad()
 	var at: int = _parse(bytes, kcount, dec)

@@ -178,10 +178,9 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
   with its default, as `LocalSimView` does. TEST-02: `ids_in_cell` and `projectiles_near` pass; `alive`, `read_poses`,
   `radius`, `def_kind`, `wrecks` stay exempt for the wreck only (not in team 0's V, 04 s4.1); the rocket part of them is
   asserted in `test_net_sim_view_projectiles.gd`. `NetViewRig.lattice` keeps snapped entities in their GRID_HASH cell.
-- CQ-6 (sim, Architect): on a live projectile id `LocalSimView.def_id` / `owner` / `team` return -1 and `radius` 0.0
-  (EntityStore-only reads) while A-112 has `NetSimView` return the ENTITY_META values (ProjectileDef id, shooter's owner /
-  team) and the def radius. TEST-02 has no clause on them; ask: `LocalSimView` reads `ProjectileStore` for these four
-  (needs sim), or `NetSimView` returns the defaults.
+- CQ-6 closed by R0 B.25 A-133: on a live projectile id both views answer `def_id` (ProjectileDef id), `owner` / `team`
+  (the shooter's), `radius` (def `radius_m`) and `def_kind` -1. `NetSimView` does (ENTITY_META, `test_net_sim_view_projectiles.gd`);
+  **GD-45** aligns `LocalSimView` and adds the TEST-02 clause for both views.
 - CQ-2 closed by A-111: net may name `TeamStateView`, `PlayerStateView`, `OrderSpec`; `team_state` / `player_state` /
   `order_head` / `pending_order` are NET-39's (exempt "NET-39, A-111"). CORE_SHIELD_UP travels meanwhile in TEAM_STATE
   (`team_flags`).
