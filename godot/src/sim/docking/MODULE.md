@@ -146,7 +146,8 @@ HIT (landing damage). Consumes Collision's PAD contacts (step 8), Kinematics' te
 03 s4.2 row 10 (0.8 ms p95; SL-1 grade < 0.05 ms reserved) and row 9 for the landings. `test_docking_perf.gd` (PerfGate,
 hard counters): one pass over the ships (~0.06 us per ship), ~2.5 us per ship in service, the queue O(wishes x same-team
 busy or queued pads) after the altitude filter; a landing costs one O(ships) hot scan (~30 us at 688 ships). Numbers and
-the `perf_tick.gd --full` delta in the GD-15 PR perf note.
+the `perf_tick.gd --full` delta in the GD-15 PR perf note. D13 adds one thrust compare per docked ship in the service loop
+(a `timer_b` write only while thrust is held or just dropped): no measurable change on the 48-in-service case.
 
 ## Test entry points
 

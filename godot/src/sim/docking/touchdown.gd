@@ -13,7 +13,8 @@ class_name Touchdown extends RefCounted
 ## `pos` on the socket `pad.pos + pad.up * radius` (A-82), nose along the pad normal, body up = its old up in the pad
 ## plane, `link` = pad, a new service stay, the DOCKED event. A CRASH (DESTROY band, or a hull emptied by the damage
 ## band) first deals `flight_common.crash_pad_damage` to the pad through `DamageSink` (HIT, attacker = the ship; 02 s2.2,
-## R0 B.24 A-120).
+## R0 B.24 A-120). A contact whose ship moves up the pad normal (`vel . up > 0`, strictly) is a launch leaving the pad
+## volume and is never judged (R0 B.24 A-119); exactly 0 lands.
 
 const _PER_MPS: int = 10    ## 04 s3.6 LANDING speed unit 0.1 m/s (a unit, not a tunable)
 const _Q_MAX: int = 255     ## 04 s3.6 LANDING q byte = round(q * 255)
@@ -85,6 +86,8 @@ func _contact(c: Collision, k: int, t: int) -> void:
 	var p: int = EntityId.slot(pad)
 	if not _sink.standing(s) or (_store.flags[s] & EntityStore.F_DOCKED) != 0:
 		return
+	if _store.vel[s].dot(_store.up[p]) > 0.0:                 # ascending (a launch, A-119): never judged, no band, no hold
+		return
 	var head: int = _queue.head(pad)
 	var free: bool = PadQueries.serves(_store, _defs, p) and (_store.flags[p] & EntityStore.F_BUILDING) == 0 \
 			and _occ[p] == 0 and (head == 0 or head == id)
@@ -151,6 +154,7 @@ func _dock(s: int, p: int, id: int, pad: int) -> void:
 	_store.pos[s] = _store.pos[p] + n * _store.radius[s]
 	_store.vel[s] = Vector3.ZERO
 	_store.rates[s] = Vector3.ZERO
+	_store.timer_b[s] = 0.0                                  # the launch hold starts from zero (A-119)
 	_store.flags[s] |= EntityStore.F_DOCKED | EntityStore.F_LANDED
 	_store.link[s] = pad
 	_store.dirty[s] |= EntityStore.DIRTY_POSE | EntityStore.DIRTY_CONTROL

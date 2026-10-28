@@ -45,7 +45,7 @@ static func _hook(id: int, schedule: Callable) -> ThrustHook:
 func _docked(w: SimWorld, pad: int, schedule: Callable) -> int:
 	var id: int = DockingTestKit.ship_over(w, &"dart", 0, 0, pad, DockingTestKit.HIGH)
 	DockingTestKit.dock(w, id, pad)
-	w.store().fuel[EntityId.slot(id)] = DockingTestKit.ship_def(&"dart").fuel_s * 0.5
+	w.store().fuel[EntityId.slot(id)] = DockingTestKit.ship_def(&"dart").fuel_s * 0.5 - 0.001   # missing a hair over 10 Ice
 	w.set_ai_hook(_hook(id, schedule))
 	var _d: Array[SimEvent] = w.drain_events()
 	return id
@@ -128,8 +128,9 @@ func test_thrust_below_the_minimum_never_launches() -> void:
 
 func test_a_hold_broken_at_eight_ticks_restarts() -> void:
 	var gap: int = _hold_ticks() - 1                                             # thrust on for 8 ticks, one off, then on
-	var t0: int = _w.tick()
-	var id: int = _docked(_w, _pad, func(t: int) -> float: return 0.0 if t == t0 + gap + 1 else 1.0)
+	var brk: Array[int] = [0]                                                   # the tick of the gap, set once the scene is posed
+	var id: int = _docked(_w, _pad, func(t: int) -> float: return 0.0 if t == brk[0] else 1.0)
+	brk[0] = _w.tick() + gap + 1
 	assert_int(_run(_w, id, gap + 1 + _hold_ticks() - 1)).is_equal(0)
 	assert_float(_w.store().timer_b[EntityId.slot(id)]).is_greater(0.0)
 	assert_int(_run(_w, id, 1)).is_equal(1)                                      # 9 ticks after the break
