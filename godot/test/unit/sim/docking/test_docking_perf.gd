@@ -90,6 +90,7 @@ func test_docking_step_with_48_ships_in_service_and_40_queued() -> void:
 	var dt: float = 1.0 / float(WorldTestKit.content().rules.tick_hz)
 	var us: PackedFloat64Array = PackedFloat64Array()
 	var ice0: int = w.economy().economy.stockpile(0).y
+	d.track(InputSlots.new())                                                    # GD-43: the launch-hold read of the 48 docked ships (thrust 0)
 	for i: int in TICKS:
 		var t0: int = Time.get_ticks_usec()
 		d.step(w.tick() + i + 1, dt)
