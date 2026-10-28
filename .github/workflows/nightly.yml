@@ -149,5 +149,5 @@ jobs:
         continue-on-error: true
         run: |
           find ios -maxdepth 2 -name '*.xcodeproj' -print
-          p="$(find ios -maxdepth 2 -name '*.xcodeproj' | head -1)"
+          p="$(find ios -maxdepth 2 -name '*.xcodeproj' -print -quit)"
           if [ -n "$p" ]; then xcodebuild -project "$p" -list; fi

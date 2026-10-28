@@ -148,10 +148,18 @@ jobs:
           export GODOT_BIN="$RUNNER_TEMP/godot-headless"
           cd godot
           for layer in unit sim net; do
-            if find test/$layer -name 'test_*.gd' | grep -q .; then
+            # No pipes here: under bash -eo pipefail `find | grep -q` SIGPIPEs and skips the layer (TA-67).
+            if [ -n "$(find "test/$layer" -name 'test_*.gd' -print -quit 2>/dev/null)" ]; then
               echo "::group::gdUnit4 $layer"
               ./addons/gdUnit4/runtest.sh -a res://test/$layer -c --ignoreHeadlessMode -rd reports/$layer
               echo "::endgroup::"
+              # Guard: the layer must have produced a report with > 0 test cases.
+              python3 ../tools/check_gdunit_report.py "reports/$layer" "$layer"
+            elif [ "$layer" = unit ]; then
+              echo "::error::test/unit has no test_*.gd files; the unit layer must exist"
+              exit 1
+            else
+              echo "layer $layer has no tests; skipping"
             fi
           done
       - name: Upload test reports
@@ -178,7 +186,7 @@ jobs:
       - uses: ./.github/actions/setup-godot
       - name: validate_glb on every committed model (07 s4.7; V01-V15), .glb.import files current
         run: |
-          if find godot/assets/models -name '*.glb' 2>/dev/null | grep -q .; then
+          if [ -n "$(find godot/assets/models -name '*.glb' -print -quit 2>/dev/null)" ]; then
             python tools/art/validate_glb.py godot/assets/models --quiet
             python tools/art/write_import.py godot/assets/models --check
           else
