@@ -7933,7 +7933,10 @@
       "R0-amendments-19 A-135",
       "R0 B.1"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 135,
+    "merged": "2026-10-28",
+    "note": "Merged without launch_thrust_min/launch_hold_s (not in ships.json yet, GD-43) and with the rocket lock_break_* assertion conditional on GD-09 shipping the keys."
   },
   {
     "id": "GD-44",
@@ -7952,7 +7955,8 @@
       "R0-amendments-19 A-130",
       "R0-amendments-19 A-135"
     ],
-    "status": "todo"
+    "status": "todo",
+    "acceptance_append": " ; CONTENT-3 carry-over: FlightCommonDef gains launch_thrust_min / launch_hold_s (required) once GD-43 ships them, and test_typed_raw_keys.gd::test_rocket_lock_break_if_shipped loses its early return (rocket 40/100/500 asserted unconditionally)."
   },
   {
     "id": "GD-45",
