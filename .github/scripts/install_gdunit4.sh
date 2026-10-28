@@ -13,4 +13,4 @@ cp -r "$tmp"/gdUnit4-*/addons/gdUnit4 godot/addons/gdUnit4
 chmod +x godot/addons/gdUnit4/runtest.sh 2>/dev/null || true
 rm -rf "$tmp"
 echo "gdUnit4 ${TAG} installed"
-ls godot/addons/gdUnit4 | head -20
+ls godot/addons/gdUnit4
