@@ -12,6 +12,7 @@ var _proj: ProjectileStore
 var _defs: WorldDefs
 var _scratch: ProjectileState = ProjectileState.new()
 var _expired: PackedInt32Array = PackedInt32Array()
+var terrain: Terrain = null   ## GD-09: the AGL of a locked target (SimWorld wires it; null = no AGL rule)
 
 
 func _init(store: EntityStore, projectiles: ProjectileStore, defs: WorldDefs) -> void:
@@ -40,6 +41,8 @@ func step(tick: int, dt: float) -> void:
 		else:
 			var v: Vector3 = vel[i]
 			if (_proj.flags[i] & ProjectileStore.F_GUIDED) != 0:
+				_lock_check(i, p, d, dt)
+			if (_proj.flags[i] & ProjectileStore.F_GUIDED) != 0:
 				v = _reaim(i, p, v, dt)
 			var st: ProjectileState = Kinematics.step_projectile(p, v, defs[d], rules, dt, _scratch)
 			pos[i] = st.p
@@ -54,6 +57,43 @@ func step(tick: int, dt: float) -> void:
 	_proj.ttl = ttl
 	for i: int in _expired:
 		var _f: bool = _proj.free_slot(i, tick)
+
+
+# In-flight lock loss (02 s4.4, GD-09): a guided shot loses its target for good, flying straight to the end of its life,
+# when a flying ship target is under the shot's `lock_break_agl_m` AGL, or when the target starts a flip this tick while the shot is
+# between `lock_break_flip_min_m` and `lock_break_flip_max_m` away. Deterministic, no dice; the windows are projectile defs.
+func _lock_check(i: int, p: Vector3, d: int, dt: float) -> void:
+	var t: int = _proj.target[i]
+	if t == 0 or not _store.alive(t):
+		return
+	var ts: int = EntityId.slot(t)
+	var tp: Vector3 = _store.pos[ts]
+	var hit: bool = false
+	var agl_min: float = _defs.lock_break_agl[d]
+	if agl_min > 0.0 and terrain != null and _flying_ship(ts):
+		var r: float = tp.length()
+		hit = r - Sphere.PLANET_RADIUS - terrain.height_at(tp / r) < agl_min
+	var far: float = _defs.lock_break_flip_max[d]
+	if not hit and far > 0.0 and _flip_started(ts, dt):
+		var dist: float = p.distance_to(tp)
+		hit = dist >= _defs.lock_break_flip_min[d] and dist <= far
+	if hit:
+		_proj.target[i] = 0
+		_proj.flags[i] = _proj.flags[i] & ~ProjectileStore.F_GUIDED
+
+
+# Ships in the air only: ground units and structures sit on the datum (AGL 0) and a landed ship is a target at rest.
+func _flying_ship(ts: int) -> bool:
+	return _store.kind[ts] == EntityStore.K_SHIP and (_store.flags[ts] & EntityStore.F_LANDED) == 0
+
+
+# Whether ship slot `ts` began a flip in step 5 of this tick: its timer is within one tick of the full duration.
+func _flip_started(ts: int, dt: float) -> bool:
+	var ft: float = _store.flip_time[ts]
+	if ft <= 0.0 or _store.kind[ts] != EntityStore.K_SHIP:
+		return false
+	var def: ShipDef = _defs.ship(_store.owner[ts], _store.def_id[ts])
+	return def != null and ft > def.flip_duration_s - (dt + 0.5 * dt)
 
 
 # Turns v toward the live target by at most the weapon's turn rate this tick; speed unchanged.

@@ -3,13 +3,13 @@ extends GdUnitTestSuite
 ## Missile Tower's lock hold (`lock_time_s`, AGL floor), vision fairness of the trigger, the unsupplied rate (GD-18) with
 ## the brain unchanged, and a byte-exact S4 restore in mid-fight (AiState FORMAT 7 with a live hit record). Every
 ## envelope number is read from towers.json through the def (no literal): the scenarios place targets relative to
-## `h_rel_min` / `h_rel_max`. The turret slew is Ai17Kit's stand-in for GD-09.
+## `h_rel_min` / `h_rel_max`. The turret slew is the sim's own (GD-09).
 
 const HZ: int = 30
 const C0: Vector3 = Vector3(1, 0, 0)
 
 var _w: SimWorld
-var _d: Ai17Kit.SlewDriver
+var _d: AiDriver
 var _brain: TowerBrain
 var _tw: int
 
@@ -243,10 +243,10 @@ func test_restore_mid_fight_is_byte_exact() -> void:
 	var wa: SimWorld = a[0]
 	var wb: SimWorld = b[0]
 	assert_bool(wa.serialize() == wb.serialize()).is_true()    # the same seed twice: the same bytes
-	var da: Ai17Kit.SlewDriver = a[1]
+	var da: AiDriver = a[1]
 	assert_int(da.state.target[EntityId.slot(a[3] as int)]).is_not_equal(0)   # mid-fight: the tower is tracking
 	var bytes: PackedByteArray = wa.serialize()
-	var d2: Ai17Kit.SlewDriver = Ai17Kit.make_driver(null)
+	var d2: AiDriver = Ai17Kit.make_driver(null)
 	var ca: DartKit.CruiseBrain = a[2]
 	var c2: DartKit.CruiseBrain = DartKit.CruiseBrain.new(ca.gains, Terrain.new())
 	c2.speed = ca.speed
@@ -255,7 +255,6 @@ func test_restore_mid_fight_is_byte_exact() -> void:
 	d2.set_brain(DartKit.class_of(&"bomber"), c2)
 	var w2: SimWorld = SimWorld.deserialize(bytes, Ai17Kit.content(), d2)
 	assert_object(w2).is_not_null()
-	d2.store = w2.store()
 	d2.set_terrain(w2.terrain())
 	c2.terrain = w2.terrain()
 	assert_bool(w2.serialize() == bytes).is_true()
@@ -276,7 +275,7 @@ func test_restore_mid_fight_is_byte_exact() -> void:
 func _fight(seed_value: int) -> Array:
 	var w: SimWorld = Ai17Kit.world(seed_value)
 	var brain: TowerBrain = Ai17Kit.brain()
-	var d: Ai17Kit.SlewDriver = Ai17Kit.driver(w, true, 3, brain)
+	var d: AiDriver = Ai17Kit.driver(w, true, 3, brain)
 	var cb: DartKit.CruiseBrain = DartKit.CruiseBrain.new(DartKit.gains_of(&"bomber"), w.terrain())
 	cb.speed = 60.0
 	cb.agl = 250.0

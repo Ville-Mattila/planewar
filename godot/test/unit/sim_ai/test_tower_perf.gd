@@ -34,7 +34,7 @@ func _ring(w: SimWorld, c: Vector3, def: StringName, k: int, radius: float, agl:
 func _world() -> Array:
 	var w: SimWorld = Ai17Kit.world(33)
 	var brain: TowerBrain = Ai17Kit.brain()
-	var d: Ai17Kit.SlewDriver = Ai17Kit.driver(w, true, 3, brain)
+	var d: AiDriver = Ai17Kit.driver(w, true, 3, brain)
 	for k: int in 4:   # power: 4 Cores (+20 each) carry the 12 towers and 2 masts above tower_offline_ratio
 		var _core: int = Ai14Kit.core(w, DartKit.offset(Vector3(-1, 0, 0), 400.0 * float(k), 0.0), 0)
 	var a: Vector3 = Vector3(1, 0, 0)
