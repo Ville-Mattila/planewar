@@ -179,9 +179,9 @@ func test_keyframe_caps_the_records_of_one_encode() -> void:
 	var dec: SnapshotDecoder = SnapshotDecoder.new(G, HZ, 0, roster)
 	assert_int(KeyframeCodec.new().decode(b, dec)).is_equal(KeyframeCodec.Status.OK)
 	assert_bool(dec.current().same_state(server.frame_at(4))).is_true()
-	var over: PackedByteArray = b.duplicate()               # roster_count RECORDS_MAX + 1 with one more record appended
+	var over: PackedByteArray = b.duplicate()               # roster_count RECORDS_MAX + 1, one more well-formed 20 B record
 	over.encode_u16(KeyframeCodec.OFF_COUNT, KeyframeCodec.RECORDS_MAX + 1)
-	over.append_array(PackedByteArray([1]) + b.slice(b.size() - 18))
+	over.append_array(b.slice(b.size() - 20))                # the last record again (gap 1, FULL + ai_tag): well formed, slot +1
 	var kd: KeyframeCodec = KeyframeCodec.new()
 	assert_int(kd.decode(over, SnapshotDecoder.new(G, HZ, 0, roster))).is_equal(KeyframeCodec.Status.MALFORMED)
 
