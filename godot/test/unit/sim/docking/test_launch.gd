@@ -181,19 +181,33 @@ func test_a_ship_on_a_launch_pad_never_enters_the_rule() -> void:
 	assert_bool(_docked_flag(_w, id)).is_true()
 
 
-func test_an_ascending_pad_contact_is_never_judged_and_a_contact_at_zero_lands() -> void:
+func test_an_ascending_contact_is_never_judged_and_a_contact_at_zero_descent_lands() -> void:
 	var id: int = DockingTestKit.ship_over(_w, &"dart", 0, 0, _pad, 5.0)
-	var s: int = EntityId.slot(id)
-	var up: Vector3 = _w.store().up[EntityId.slot(_pad)]
-	_w.store().vel[s] = up * 0.5                                                  # ascending, even by a little
-	var _b: int = DockingTestKit.contact(_w, id, _pad, 20.0, 40.0, 90.0, 0.0)     # a DESTROY-band contact is skipped too
+	var _b: int = DockingTestKit.contact(_w, id, _pad, -0.5, 40.0, 90.0, 0.0)     # the contact's own descent < 0: skipped, whatever the band
 	assert_int(DockingTestKit.of_kind(_w.drain_events(), SimEvent.Kind.LANDING).size()).is_equal(0)
 	assert_bool(_docked_flag(_w, id)).is_false()
 	assert_bool(_w.store().alive(id)).is_true()
-	_w.store().vel[s] = Vector3.ZERO
-	var _c: int = DockingTestKit.contact(_w, id, _pad, 1.0, 1.0, 0.0, 0.0)
+	var _c: int = DockingTestKit.contact(_w, id, _pad, 0.0, 1.0, 0.0, 0.0)
 	assert_int(DockingTestKit.of_kind(_w.drain_events(), SimEvent.Kind.LANDING).size()).is_equal(1)
 	assert_bool(_docked_flag(_w, id)).is_true()
+
+
+# A crash at 4 m off centre drifting 3 m/s inward: the terrain push-out turns the normal speed around, so the ship's own
+# velocity after the move can point up the normal; the contact's descent (this tick's hit speed) still judges it.
+func test_a_crash_drifting_toward_the_centre_is_judged_through_the_tick() -> void:
+	var c: FlightCommonDef = DockingTestKit.common()
+	var sd: ShipDef = DockingTestKit.ship_def(&"dart")
+	var st: EntityStore = _w.store()
+	var up: Vector3 = st.up[EntityId.slot(_pad)]
+	var east: Vector3 = st.fwd[EntityId.slot(_pad)]
+	var v: Vector3 = -up * (c.landing_damage_v_vert + 5.0) - east * 3.0
+	var id: int = DockingTestKit.ship_over(_w, &"dart", 0, 0, _pad, sd.bounding_radius, 4.0, v)
+	var _d: Array[SimEvent] = _w.drain_events()
+	_w.step()
+	var ev: Array[SimEvent] = _w.drain_events()
+	assert_int(DockingTestKit.of_kind(ev, SimEvent.Kind.LANDING).size()).is_equal(1)
+	assert_int(DockingTestKit.of_kind(ev, SimEvent.Kind.DEATH).size()).is_equal(1)
+	assert_bool(_w.view().alive(id)).is_false()
 
 
 # S4: a save in the middle of the hold reloads byte-exact and launches on the same tick as the original continues.

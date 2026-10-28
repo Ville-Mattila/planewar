@@ -126,7 +126,7 @@ Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collisi
   the stay closed at its fill (no refund, no SERVICED if incomplete; the record is dropped), the pad free for its queue
   head, one LAUNCHED (a ship, b pad). No fuel / ammo / HP / service gate (02 s2.3 "with what it has"; the 50 % fuel gate is
   the brain's, AI-45). `timer_b` is zeroed at landing. A ship on a `launch_pad` structure never enters the rule (LaunchBay,
-  A-82). `Touchdown` skips a PAD contact whose ship has `vel . pad_up > 0` strictly (no landing, band or hold; a ship that
+  A-82). `Touchdown` skips a PAD contact whose own descent `c_vec.x` (D2 v_vert, which counts the tick's terrain hit speed) is < 0 strictly (no landing, band or hold; a ship that
   just launched is not re-landed), exactly 0 lands as before. S4: the hold is `timer_b` (already saved), FORMAT stays 13
   (`test_launch::test_save_mid_hold_reloads_exact_and_launches_on_the_same_tick`). The two def fields are read raw
   ("needs content": GD-44 switches them to `FlightCommonDef` typed fields once CONTENT-3 adds them).
