@@ -8,6 +8,8 @@ class_name WeaponFire extends RefCounted
 ## the closest approach + the projectile's `fuse_delay_s` (burst tick in `ProjectileStore.target`). Lane-internal. Tower aim,
 ## envelopes, AGL floor, flip lock break, target priority: GD-09; supply graph and refill: GD-18 (writes `unsupplied`).
 
+const RESCAN_EVERY: int = 1   ## CB13a: a tower holding the trigger with no target rescans every this-many ticks (staggered by slot); 1 = every tick
+
 const _BLOCKED: int = EntityStore.F_DOCKED | EntityStore.F_BUILDING
 const _STATE: PackedStringArray = ["lock_target", "lock_time", "unsupplied"]
 
@@ -15,6 +17,7 @@ var lock_target: PackedInt32Array = PackedInt32Array()   ## per main-range slot:
 var lock_time: PackedFloat32Array = PackedFloat32Array()   ## per slot: seconds the candidate has been held
 var unsupplied: PackedByteArray = PackedByteArray()        ## per slot: 1 = tower outside the supply network (GD-18 writes)
 var tower_power: PackedFloat32Array = PackedFloat32Array() ## per team tower rate multiplier, 0 = offline (GD-13; SimWorld sets it each tick, not state)
+var scans: int = 0                                         ## CB13a diagnostic: envelope scans run by the tower gate (tests pin the cadence; not state)
 var terrain: Terrain = null                                ## GD-09: the AGL floor of a tower's seeker (SimWorld wires it; null = no floor)
 
 var _store: EntityStore
@@ -215,10 +218,15 @@ func _gate(s: int, k: int, fresh: bool) -> bool:
 	if _tower[d] == 0 or _lock[k] > 0.0:
 		return true
 	var t: int = lock_target[s]
-	if fresh or t == 0 or not _lockable(s, t, _mask[d], _r2[k], _cone[k]):
-		t = _pick(s, k, _mask[d], _cone[k])
-		lock_target[s] = t
-		lock_time[s] = 0.0
+	var held: bool = t != 0 and _lockable(s, t, _mask[d], _r2[k], _cone[k])
+	if held and not fresh:
+		return true
+	if t == 0 and (_tick + s) % RESCAN_EVERY != 0:
+		return false                                      # nothing engageable: retry on this slot's cadence
+	scans += 1
+	t = _pick(s, k, _mask[d], _cone[k])
+	lock_target[s] = t
+	lock_time[s] = 0.0
 	return t != 0
 
 
