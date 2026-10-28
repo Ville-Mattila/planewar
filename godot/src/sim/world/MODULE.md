@@ -118,7 +118,7 @@ static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: 
 - W4: `ShipMotion` and `ProjectileMotion` allocate nothing per entity: one `ShipState`, one `PilotInput`, one `ProjectileState` scratch; each SoA array is copied at most once per tick (copy-on-write of the local handle).
 - W5: every class holding state has `write_state` / `read_state`; `SimWorld.serialize` writes them in a fixed order and `deserialize(serialize())` reproduces each byte for byte (S4).
 - W6: Control state, overlay and `ReleaseReason` are `ControlMachine`'s enums (AI-02, sim/control/MODULE.md CM1); nothing here redefines them.
-- W7: `EconomyHub` owns no state of its own (Docking's is saved after Production's in its section, format 13); `on_death` runs for every dying entity before the deferred free (structures: footprint, site, queue; GD-19: ships, ground units and finished structures: their wrecks, `Salvage.on_death`), so a freed slot never keeps a footprint or a queue.
+- W7: `EconomyHub` owns no state of its own (Docking's is saved after Production's in its section, format 13; GD-27's `ScoreKeeper` after Docking's, format 14; it feeds `end_tick` at the end of step 10 and `SimEvents.drains` tells it the list was emptied); `on_death` runs for every dying entity before the deferred free (structures: footprint, site, queue; GD-19: ships, ground units and finished structures: their wrecks, `Salvage.on_death`), so a freed slot never keeps a footprint or a queue.
 
 ## Data owned
 

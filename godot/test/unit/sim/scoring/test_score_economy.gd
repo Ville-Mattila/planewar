@@ -28,7 +28,7 @@ func test_salvage_delivered_is_a_quarter_point_per_ore_commander_side_when_unpos
 
 func test_salvage_delivered_by_a_possessed_hauler_scores_to_the_pilot() -> void:
 	var hauler: int = ScoringTestKit.spawn(_w, &"hauler", 0, 0)
-	assert_bool(WorldTestKit.possess(_w, hauler, 0)).is_true()
+	assert_bool(DockingTestKit.possess(_w, hauler, 0)).is_true()
 	_salvage(hauler, 100)
 	assert_object(ScoringTestKit.score(_w, 0)).is_equal(Vector2i(floori(100.0 * _d.salvage_points_per_ore), 0))
 

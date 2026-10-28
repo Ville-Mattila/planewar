@@ -11,7 +11,7 @@ class_name SimSerialize
 ## same build on the same machine (ADR-03/06): the bytes are a function of the state alone.
 
 const MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const FORMAT: int = 13          ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section; 8: TA-58 content hash; 9: TA-57 pending hook events; 10: GD-17 launch bay + replenish targets (Production state); 11: TA-65 the step-7 Spatial index (no rebuild on load); 12: GD-10 the shield domes (after the fire state, in the combat section); 13: GD-15 Docking (pad queues, service records, landing log, pilot track) at the end of the economy section
+const FORMAT: int = 14          ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section; 8: TA-58 content hash; 9: TA-57 pending hook events; 10: GD-17 launch bay + replenish targets (Production state); 11: TA-65 the step-7 Spatial index (no rebuild on load); 12: GD-10 the shield domes (after the fire state, in the combat section); 13: GD-15 Docking (pad queues, service records, landing log, pilot track) at the end of the economy section; 14: GD-27 `ScoreKeeper` (ledger, assist hit ring, Ore spent high-water, match_win flag) after Docking in the economy section
 const HASH_BYTES: int = 32
 const HEADER_BYTES: int = 12 + 2 * HASH_BYTES   ## magic, format, raw size (u32 each), SHA-256 of the raw body, content hash
 const COMPRESSION: int = FileAccess.COMPRESSION_ZSTD

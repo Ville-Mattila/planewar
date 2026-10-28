@@ -51,7 +51,7 @@ func test_rows_are_the_active_players_in_slot_order_with_their_team() -> void:
 
 func test_the_counters_follow_the_events_that_feed_them() -> void:
 	var dart: int = ScoringTestKit.spawn(_w, &"dart", 0, 0)
-	assert_bool(WorldTestKit.possess(_w, dart, 0)).is_true()                  # one sortie
+	assert_bool(DockingTestKit.possess(_w, dart, 0)).is_true()                  # one sortie
 	var victim: int = ScoringTestKit.spawn(_w, &"scout", 1, 1)
 	ScoringTestKit.kill(_w, victim, dart)                                     # a kill, a death
 	var pad: int = ScoringTestKit.spawn(_w, &"pad", 1, 1)
@@ -79,9 +79,9 @@ func test_the_counters_follow_the_events_that_feed_them() -> void:
 
 func test_pilot_time_counts_per_ship_class_in_the_04_order() -> void:
 	var lancer: int = ScoringTestKit.spawn(_w, &"lancer", 0, 0)
-	assert_bool(WorldTestKit.possess(_w, lancer, 0)).is_true()
+	assert_bool(DockingTestKit.possess(_w, lancer, 0)).is_true()
 	for _t: int in 3 * ScoringTestKit.hz():
-		WorldTestKit.step_piloted(_w, 0)
+		DockingTestKit.step_piloted(_w, 0)
 	var t: PackedInt32Array = _row(_w.match_result(), 0).pilot_time_s
 	assert_int(t[1]).is_greater_equal(3)                                      # dart 0, lancer 1, bomber 2, scout 3, hauler 4
 	assert_int(t[0] + t[2] + t[3] + t[4]).is_equal(0)
@@ -116,7 +116,7 @@ func test_match_end_tick_finalizes_the_win_and_the_result_reports_it() -> void:
 
 func test_the_ledger_round_trips_through_serialize() -> void:
 	var dart: int = ScoringTestKit.spawn(_w, &"dart", 0, 0)
-	assert_bool(WorldTestKit.possess(_w, dart, 0)).is_true()
+	assert_bool(DockingTestKit.possess(_w, dart, 0)).is_true()
 	var helper: int = ScoringTestKit.spawn(_w, &"dart", 2, 0)
 	var victim: int = ScoringTestKit.spawn(_w, &"lancer", 1, 1)
 	ScoringTestKit.hit(_w, victim, helper, ScoringTestKit.hp(_w, victim) * 0.5)   # an assist waiting in the hit log

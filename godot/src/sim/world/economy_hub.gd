@@ -13,6 +13,7 @@ var repair: SelfRepair
 var supply: SupplyNet                    ## GD-18: the Pylon graph, supplied flags and tower refill (02 s5.4)
 var salvage: Salvage                     ## GD-19: wrecks, pods, tows and delivery (02 s13)
 var docking: Docking                     ## GD-15: landing grade, pad queues, resupply service (03 s6.4, 02 s2.3)
+var score: ScoreKeeper                   ## GD-27: score events and the match result counters (02 s17.1)
 
 var _store: EntityStore
 var _players: PlayerTable
@@ -41,6 +42,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	supply = SupplyNet.new(store, defs, rules.tick_hz)
 	salvage = Salvage.new(store, defs, economy, events, terrain, rules.tick_hz, rules.caps.wrecks if rules.caps != null else 0)
 	docking = Docking.new(store, players, defs, economy, events, applier, rules.tick_hz)
+	score = ScoreKeeper.new(store, players, defs, events, rules.tick_hz)
 	validator.build = build
 	validator.production = production
 
@@ -92,6 +94,7 @@ func step(t: int, dt: float) -> void:
 	supply.step(t, economy.structure_epoch)
 	repair.unsupplied = supply.unsupplied   # the repair pass reads the flags of this tick
 	repair.step(t)
+	score.end_tick(build.spent_ore)                  # GD-27: the events of steps 9-10, pilot time, Ore spent
 
 
 ## Step 9, before the deferred free of slot `s`: it leaves its wrecks (GD-19); a dying structure frees its footprint, its site and its queue.
@@ -150,11 +153,13 @@ func write_state(buf: StreamPeerBuffer) -> void:
 	construction.write_state(buf)
 	production.write_state(buf)
 	docking.write_state(buf)
+	score.write_state(buf)
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
 	return build.read_state(buf) and economy.read_state(buf) and construction.read_state(buf) \
-			and production.read_state(buf) and docking.read_state(buf)
+			and production.read_state(buf) and docking.read_state(buf) \
+			and score.read_state(buf)
 
 
 func _stamp(slot: int, def: int, dir: Vector3) -> bool:

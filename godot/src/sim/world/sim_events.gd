@@ -7,6 +7,7 @@ const MAX_PENDING: int = 1 << 20   ## a saved queue claiming more is refused
 
 var list: Array[SimEvent] = []
 var tick: int = 0
+var drains: int = 0   ## number of `drain` calls so far (not saved): lets a reader of `list` (ScoreKeeper) notice the list was emptied
 var pending: Array[SimEvent] = []   ## drained events waiting for the AI hook's next step 3 (A-71); part of the saved state (S4)
 
 
@@ -28,6 +29,7 @@ func emit(kind: SimEvent.Kind, a: int, b: int, at: Vector3, value: float, team: 
 
 ## Returns the events since the last drain and empties the list. `keep`: also queue them for `forward` (an AI hook is attached).
 func drain(keep: bool = false) -> Array[SimEvent]:
+	drains += 1
 	var out: Array[SimEvent] = []
 	out.assign(list)
 	list.clear()

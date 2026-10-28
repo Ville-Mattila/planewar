@@ -1,5 +1,5 @@
 extends GdUnitTestSuite
-## GD-15 S4 (sim/MODULE.md S4, format 13; sim/docking/MODULE.md D11): the Docking state (pad queue, per-ship service
+## GD-15 S4 (sim/MODULE.md S4, format 13+; sim/docking/MODULE.md D11): the Docking state (pad queue, per-ship service
 ## record, landing log, pilot track) is in the economy section. The original world is run straight through once as the
 ## reference (the combat/test_fire_s4_exact.gd pattern): its per-tick event bytes and, every CHECK_EVERY ticks, its raw
 ## state bytes plus the Docking reads of SimView. At each save point the save is reloaded (same bytes again on
@@ -175,13 +175,13 @@ func test_reload_continues_like_the_original() -> void:
 				return
 
 
-func test_the_format_is_13_and_a_format_12_file_is_refused() -> void:
-	assert_int(SimSerialize.FORMAT).is_equal(13)
+func test_the_format_has_the_docking_section_and_the_previous_format_is_refused() -> void:
+	assert_int(SimSerialize.FORMAT).is_greater_equal(13)                      # 13 added Docking; GD-27 made it 14
 	var w: SimWorld = _scene().w
 	var bytes: PackedByteArray = w.serialize()
 	assert_int(SimSerialize.check(bytes)).is_equal(SimSerialize.Status.OK)
 	var old: PackedByteArray = bytes.duplicate()
-	old.encode_u32(4, 12)
+	old.encode_u32(4, SimSerialize.FORMAT - 1)
 	assert_int(SimSerialize.check(old)).is_equal(SimSerialize.Status.OLD_FORMAT)
 	assert_object(SimWorld.deserialize(old, WorldTestKit.content(), null)).is_null()
 
