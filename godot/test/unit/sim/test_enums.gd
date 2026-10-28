@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## S14 (TA-18): the ordinals in sim/MODULE.md "Enumerations" (R0 B.3, append-only) equal the GDScript enums, for
-## every enumeration the sim defines so far (control state, overlay and `ReleaseReason`: `ControlMachine`, AI-02). The bullet format "label ...: 0 NAME, 1 NAME" is part of the contract
+## every enumeration the sim defines so far (control state, overlay and `ReleaseReason`: `ControlMachine`, AI-02; `LandingGrade.Grade`: GD-15). The bullet format "label ...: 0 NAME, 1 NAME" is part of the contract
 ## (R0 B.9 A-21); pairs are read in sequence, so prose numbers inside a bullet are ignored.
 
 const SIM_MODULE: String = "res://src/sim/MODULE.md"
@@ -74,3 +74,8 @@ func test_control_state_overlay_release_reason() -> void:
 	_check("AI overlay (", ControlMachine.Overlay)
 	_check("`ReleaseReason`:", ControlMachine.ReleaseReason)
 	assert_int(_doc_names("`ReleaseReason`:").size()).is_equal(8)
+
+
+func test_landing_grade() -> void:
+	_check("`LandingGrade.Grade`:", LandingGrade.Grade)
+	assert_int(_doc_names("`LandingGrade.Grade`:").size()).is_equal(7)

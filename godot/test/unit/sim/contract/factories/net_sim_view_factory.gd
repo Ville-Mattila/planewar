@@ -26,6 +26,10 @@ const _EXEMPT: PackedStringArray = [
 	"visible_enemy_ships", "stockpile", "unit_count",
 	# NET-39 (R0 B.22 A-111: net may name the types now; the TEAM_DETAIL / TEAM_STATE player rows are NET-39's).
 	"team_state", "player_state",
+	# GD-15 tightened these from defaults to Docking values. service_progress: the pilot block carries it for the own
+	# possessed unit only (04 s3.7), and the scene's docked `c` is not possessed; pad_queue: TEAM_DETAIL pads (NET-39);
+	# landing_grade_last: the LANDING event is not routed into the client view yet (net_unknown.gd).
+	"service_progress", "pad_queue", "landing_grade_last",
 ]
 
 

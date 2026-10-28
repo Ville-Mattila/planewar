@@ -213,10 +213,10 @@ func test_restore_keeps_the_step_7_index_and_cells() -> void:
 	assert_int(w2.spatial.touched_count).is_equal(w.spatial.touched_count)
 
 
-# FORMAT 12 (GD-10 added the shield domes after the fire state; TA-65 had added the Spatial section): bytes stamped 11 are
-# refused as OLD_FORMAT and do not load.
+# FORMAT 12 (GD-10 added the shield domes after the fire state; TA-65 had added the Spatial section; GD-15 bumped it to 13
+# for the Docking state): bytes stamped 11 are refused as OLD_FORMAT and do not load.
 func test_format_12_refuses_format_11_bytes() -> void:
-	assert_int(SimSerialize.FORMAT).is_equal(12)
+	assert_int(SimSerialize.FORMAT).is_greater_equal(12)
 	assert_str(SimSerialize.SECTIONS[SimSerialize.SECTIONS.size() - 1]).is_equal("spatial")
 	var w: SimWorld = _setup(7, false)[0]
 	var bytes: PackedByteArray = w.serialize()

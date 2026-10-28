@@ -225,18 +225,25 @@ func test_armed_bomb_touching_a_ship_destroys_it() -> void:
 	assert_bool(CombatTestKit.alive(w, ship)).is_false()
 
 
+# A Dart of `owner` docked in `home` at its centre. Spawned clear of the pad first: since GD-15 a nose-level ship that
+# spawns inside its own pad's landing volume crashes there in that step (R0 B.5 attitude band), as it should.
+func _parked(w: SimWorld, home: int, owner: int) -> int:
+	var dart: int = CombatTestKit.spawn(w, &"dart", owner, 0, _at(300.0, 900.0))
+	CombatTestKit.move(w, dart, _at(0.0))
+	CombatTestKit.dock(w, dart, home)
+	return dart
+
+
 func test_c09_pad_dock_dies_hangar_dock_lives() -> void:
 	var w: SimWorld = CombatTestKit.world()
 	var pad: int = CombatTestKit.spawn(w, &"pad", 0, 0, _at(0.0))
-	var dart: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(0.0))
-	CombatTestKit.dock(w, dart, pad)
+	var dart: int = _parked(w, pad, 0)
 	var _b: int = _bomb(w, 14.0)
 	var _ev: Array[SimEvent] = _step(w)
 	assert_bool(CombatTestKit.alive(w, dart)).is_false()                                # Pad: destroyed
 	var w2: SimWorld = CombatTestKit.world()
 	var hangar: int = CombatTestKit.spawn(w2, &"hangar", 0, 0, _at(0.0))
-	var dart2: int = CombatTestKit.spawn(w2, &"dart", 0, 0, _at(0.0))
-	CombatTestKit.dock(w2, dart2, hangar)
+	var dart2: int = _parked(w2, hangar, 0)
 	var _b2: int = _bomb(w2, 14.0)
 	var _ev2: Array[SimEvent] = _step(w2)
 	assert_bool(CombatTestKit.alive(w2, dart2)).is_true()                               # Hangar: unharmed
@@ -259,20 +266,20 @@ func test_rocket_does_40_to_the_target_and_no_splash() -> void:
 func test_bulwark_hangar_blocks_rockets_but_other_hangars_do_not() -> void:
 	var w: SimWorld = CombatTestKit.world()
 	var hb: int = CombatTestKit.spawn(w, &"hangar", 4, 0, _at(0.0))
-	var db: int = CombatTestKit.spawn(w, &"dart", 4, 0, _at(0.0))
+	var db: int = _parked(w, hb, 4)
 	w.store().radius[EntityId.slot(hb)] = 1.0               # isolate the ship from the roof sphere
-	CombatTestKit.dock(w, db, hb)
 	var _r: int = CombatTestKit.shot(w, &"rocket", &"rocket_lancer", _at(0.0, 4.0), 1, 1)
 	var _ev: Array[SimEvent] = _step(w)
 	assert_float(CombatTestKit.hp(w, db)).is_equal(100.0)
 	var w2: SimWorld = CombatTestKit.world()
 	var h0: int = CombatTestKit.spawn(w2, &"hangar", 0, 0, _at(0.0))
-	var d0: int = CombatTestKit.spawn(w2, &"dart", 0, 0, _at(0.0))
+	var d0: int = _parked(w2, h0, 0)
 	w2.store().radius[EntityId.slot(h0)] = 1.0
-	CombatTestKit.dock(w2, d0, h0)
 	var _r2: int = CombatTestKit.shot(w2, &"rocket", &"rocket_lancer", _at(0.0, 4.0), 1, 1)
 	var _ev2: Array[SimEvent] = _step(w2)
-	assert_float(CombatTestKit.hp(w2, d0)).is_equal(60.0)
+	var dart_def: ShipDef = WorldTestKit.content().ships[WorldTestKit.def_id(&"dart") - DefRanges.SHIP_BASE]
+	var heal: float = float(dart_def.hp) / (dart_def.repair_time_s * float(WorldTestKit.content().rules.tick_hz))
+	assert_float(CombatTestKit.hp(w2, d0)).is_equal_approx(60.0 + heal, 1e-3)   # GD-15: step 10 repairs the docked ship one tick
 
 
 # --- rule 5: flak ------------------------------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 {
-  "_doc": "R0 B.1 ships.json: ShipDef[] plus flight_common (owner 02). Values from 02 s2.1-2.4 and the R0 B.1 canonical ship table (speeds and rates anchor +-15 %). flight_common: 02 s2.2 paragraph, R0 B.1 canonical values (eff_fade_start 0.8 ... auto_dock_radius_m 150); flight_common has no _doc slot. Bomber a_thrust 14 and Hauler 15 per R0 OQ-R0-7 (hover floor 2.0 * rules.gravity = 12.0, O-2). Mesh paths per 07 s10 (ship_<id>).",
+  "_doc": "R0 B.1 ships.json: ShipDef[] plus flight_common (owner 02). Values from 02 s2.1-2.4 and the R0 B.1 canonical ship table (speeds and rates anchor +-15 %). flight_common: 02 s2.2 paragraph, R0 B.1 canonical values (eff_fade_start 0.8 ... auto_dock_radius_m 150); flight_common has no _doc slot; crash_pad_damage 100: 02 s2.2 impact and landing (destroyed, and the pad takes 100 damage), 03 s6.4, R0 B.5, B.24 A-120. Bomber a_thrust 14 and Hauler 15 per R0 OQ-R0-7 (hover floor 2.0 * rules.gravity = 12.0, O-2). Mesh paths per 07 s10 (ship_<id>).",
   "flight_common": {
     "eff_fade_start": 0.8,
     "brake_factor": 0.6,
@@ -25,7 +25,8 @@
     "fuel_burn_brake_per_s": 0.6,
     "fuel_burn_idle_per_s": 0.05,
     "landing_damage_tilt_deg": 45,
-    "auto_dock_latch_mult": 5
+    "auto_dock_latch_mult": 5,
+    "crash_pad_damage": 100
   },
   "ships": [
     {

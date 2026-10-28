@@ -137,6 +137,7 @@ def check_cross(rep: Report, defs: dict[str, Any]) -> None:
     check_quality_tiers(rep, defs)
 
 
+
 QUALITY_TIERS = ("LOW", "MEDIUM", "HIGH")
 
 

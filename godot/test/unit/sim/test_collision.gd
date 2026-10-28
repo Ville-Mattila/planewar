@@ -241,8 +241,30 @@ func test_pad_volume_is_evaluated_every_tick_while_inside() -> void:
 		assert_int(_kit.collision.c_b[k]).is_equal(_kit.store.id_of(ps.x))
 		assert_int(_kit.collision.c_class[k]).is_equal(Collision.L_SAFE)
 		assert_float(_kit.collision.c_value[k]).is_equal_approx(absf(9.0 - float(t)), 1e-3)
-		assert_vector(_kit.collision.c_vec[k]).is_equal_approx(Vector3(0.0, 4.0, 0.0), Vector3.ONE * 1e-3)
+		# GD-15: the tick's terrain contact (hit_normal_speed 1.0) is the descent when the move left none (sliding)
+		assert_vector(_kit.collision.c_vec[k]).is_equal_approx(Vector3(1.0, 4.0, 0.0), Vector3.ONE * 1e-3)
 	assert_vector(up).is_equal(Vector3(1, 0, 0))
+
+
+# GD-15: Kinematics pushed a fast arrival out of the terrain and zeroed its normal speed (03 s5.3 step 6); the PAD
+# contact grades the impact (that tick's hit_normal_speed), not the zeroed velocity. Without a terrain contact this
+# tick, or with a stale one, the post-move descent stands.
+func test_pad_descent_is_the_terrain_impact_speed_of_the_same_tick() -> void:
+	var ps: Vector2i = _pad_and_ship(0)
+	var up: Vector3 = _kit.store.up[ps.x]
+	var hit: float = _kit.common.landing_damage_v_vert + 1.0
+	_kit.store.vel[ps.y] = Vector3.ZERO
+	_kit.collision.report_terrain(ps.y, 1, hit)
+	_kit.detect(1)
+	var k: int = _kit.first(Collision.C_PAD)
+	assert_float(_kit.collision.c_vec[k].x).is_equal_approx(hit, 1e-4)
+	assert_int(_kit.collision.c_class[k]).is_equal(Collision.L_DESTROY)
+	_kit.detect(2)                                                         # no contact reported for tick 2
+	assert_float(_kit.collision.c_vec[_kit.first(Collision.C_PAD)].x).is_equal(0.0)
+	_kit.store.vel[ps.y] = -up * 3.0
+	_kit.collision.report_terrain(ps.y, 3, 1.0)                            # the move's own descent is larger
+	_kit.detect(3)
+	assert_float(_kit.collision.c_vec[_kit.first(Collision.C_PAD)].x).is_equal_approx(3.0, 1e-4)
 
 
 func test_pad_bands_from_current_speed_and_tilt() -> void:

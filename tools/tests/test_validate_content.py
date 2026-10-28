@@ -327,6 +327,28 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class PadQueueRadius(Tree):
+    """R0 B.24 A-125: pad_queue_radius_m minimum = the largest pad_radius_m (50, the pad_radius_m schema maximum)."""
+
+    def test_minimum_matches_the_largest_possible_pad_radius(self) -> None:
+        eco = json.loads((REPO / "tools" / "schemas" / "economy.schema.json").read_text(encoding="utf-8"))
+        st = json.loads((REPO / "tools" / "schemas" / "structures.schema.json").read_text(encoding="utf-8"))
+        pad_max = st["$defs"]["structure"]["properties"]["pad_radius_m"]["maximum"]
+        self.assertEqual(eco["properties"]["pad_queue_radius_m"]["minimum"], pad_max)
+
+    def test_below_the_minimum_fails_once(self) -> None:
+        self.patch("godot/content/defs/economy.json", "set", ["pad_queue_radius_m"], 49)
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("pad_queue_radius_m", out)
+        self.assertIn("1 violations", out)
+
+    def test_at_the_minimum_passes(self) -> None:
+        self.patch("godot/content/defs/economy.json", "set", ["pad_queue_radius_m"], 50)
+        code, out = run(self.root)
+        self.assertEqual(code, 0, out)
+
+
 class Feat01Defs(Tree):
     """FEAT-01 (08 SL-1, SL-2, SL-3, SL-5): the real defs pass; each negative trips exactly one rule."""
 

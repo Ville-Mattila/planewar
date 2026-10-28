@@ -21,6 +21,8 @@ const CARGO_KIND: int = 1
 const HP01: float = 0.5
 const FUEL01: float = 0.25
 const FLIP_CD01: float = 0.5            ## flip_time = -0.5 * flip_cooldown_s
+const C_SERVICE: Vector3 = Vector3(0.4, 0.5, 0.8)   ## GD-15: docked `c`'s fuel01, rearm line (1 of 2 bombs), hp01
+const C_GRADE: int = LandingGrade.Grade.CLEAN   ## GD-15: `c`'s last landing
 const MOVE_POINT: Vector3 = Vector3(100.0, 200.0, 300.0)
 const EXTRA_STEPS: int = 3
 
@@ -96,6 +98,13 @@ func _script_state() -> void:
 	var sc: int = EntityId.slot(c)
 	st.flags[sc] |= EntityStore.F_DOCKED
 	st.link[sc] = pad
+	st.fuel[sc] = dart.fuel_s * C_SERVICE.x              # GD-15: mid-service on `pad` (Docking reads the store)
+	st.timer_a[sc] = C_SERVICE.y
+	st.bombs[sc] = 1
+	st.hp[sc] = st.hp[sc] * C_SERVICE.z
+	var dk: Docking = world.economy().docking
+	dk.landings.record(c, C_GRADE, 0.7)
+	dk.queue.update(PackedInt32Array([a]), PackedInt32Array([pad]), 1)   # `a` waits for `pad`
 	var pr: ProjectileStore = world.projectiles()
 	pr.kind[pr.index_of(rocket)] = ProjectileStore.ROCKET
 	pr.target[pr.index_of(rocket)] = a

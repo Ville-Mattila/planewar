@@ -47,7 +47,7 @@ static func move(w: SimWorld, id: int, p: Vector3) -> void:
 	w.store().vel[s] = Vector3.ZERO
 
 
-## Docks ship `ship` in structure `home` (DOCKED flag + link), as Docking will.
+## Docks ship `ship` in structure `home` (DOCKED flag + link; the stand-in path, without a landing: sim/docking).
 static func dock(w: SimWorld, ship: int, home: int) -> void:
 	var s: int = EntityId.slot(ship)
 	w.store().flags[s] |= EntityStore.F_DOCKED

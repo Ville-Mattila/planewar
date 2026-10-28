@@ -2,9 +2,9 @@ class_name SimViewContract extends RefCounted
 ## The SimView contract (01 s9.4, R0 C2-05 / B.5 / A-56) as data: `run(view, scene)` evaluates one clause per accessor
 ## on the scripted scene and records the accessor names that failed (`failed`) and that were exercised
 ## (`covered`). It never asserts, so the same clauses judge a real view (must fail nothing) and a mutant (must fail
-## the broken accessor). Accessors whose system has not landed (service / pad queue: GD-15; field_remaining,
-## player_score, landing_grade_last: scoring; path_grid_version: TA-50)
-## are held to the neutral default of the SimView base class; the clause changes when the system lands.
+## the broken accessor). Accessors whose system has not landed (field_remaining, player_score: GD-27 scoring;
+## path_grid_version: TA-50) are held to the neutral default of the SimView base class; the clause changes when the
+## system lands. GD-15 tightened service_progress, pad_queue and landing_grade_last to scripted Docking values.
 
 const EPS: float = 1e-4
 
@@ -100,7 +100,8 @@ func _vitals() -> void:
 	_t(&"link", _v.link(s.c) == s.pad and _v.link(s.a) == 0 and _v.link(s.dead) == 0)
 	_t(&"boost_state", _v.boost_state(s.a) == 2 and _v.boost_state(s.b) == 0 and _v.boost_state(s.dead) == 0)   # 2 cooling, 0 ready
 	_t(&"flip_cooldown01", _near(_v.flip_cooldown01(s.a), SimViewScene.FLIP_CD01, &"flip_cooldown01") and _v.flip_cooldown01(s.b) == 0.0)
-	_t(&"landing_grade_last", _v.landing_grade_last(s.a) == -1)
+	_t(&"landing_grade_last", _v.landing_grade_last(s.c) == SimViewScene.C_GRADE and _v.landing_grade_last(s.a) == -1
+			and _v.landing_grade_last(s.dead) == -1)
 	_t(&"supply01", _near(_v.supply01(s.tower), SimViewScene.TOWER_SUPPLY01, &"supply01") and _v.supply01(s.core) == 0.0
 			and _v.supply01(s.a) == 0.0 and _v.supply01(s.dead) == 0.0)
 	_t(&"wreck_ore", _near(_v.wreck_ore(s.wreck), SimViewScene.WRECK_ORE, &"wreck_ore") and _v.wreck_ore(s.a) == 0.0 and _v.wreck_ore(s.core) == 0.0
@@ -151,8 +152,12 @@ func _docking_and_orders() -> void:
 	_t(&"dock_state", _v.dock_state(s.c) == 2 and _v.dock_state(s.a) == 0 and _v.dock_state(s.dead) == 0)   # 2 DOCKED
 	_t(&"service_state", _v.service_state(s.c) == 1 and _v.service_state(s.a) == 0 and _v.service_state(s.dead) == 0)   # 1 DOCKED
 	_t(&"pad_occupant", _v.pad_occupant(s.pad) == s.c and _v.pad_occupant(s.core) == 0 and _v.pad_occupant(s.dead) == 0)
-	_t(&"service_progress", _v.service_progress(s.c) == Vector3.ZERO)
-	_t(&"pad_queue", _v.pad_queue(s.pad).is_empty())
+	var sp: Vector3 = _v.service_progress(s.c)
+	var want: Vector3 = SimViewScene.C_SERVICE
+	_t(&"service_progress", _near(sp.x, want.x, &"service_progress") and _near(sp.y, want.y, &"service_progress")
+			and _near(sp.z, want.z, &"service_progress") and _v.service_progress(s.a) == Vector3.ZERO
+			and _v.service_progress(s.dead) == Vector3.ZERO)
+	_t(&"pad_queue", Array(_v.pad_queue(s.pad)) == [s.a] and _v.pad_queue(s.core).is_empty() and _v.pad_queue(s.dead).is_empty())
 	var head: OrderSpec = _v.order_head(s.a)
 	_t(&"order_head", head != null and head.kind == OrderSpec.Kind.MOVE and head.point.is_equal_approx(SimViewScene.MOVE_POINT)
 			and _v.order_head(s.b) == null and _v.order_head(s.dead) == null)
