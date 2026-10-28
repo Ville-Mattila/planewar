@@ -134,6 +134,7 @@ func test_c12_towers_fire_zero_at_ratio_045_and_scale_above_half() -> void:
 			var _id: int = WorldTestKit.spawn(w, &"shipyard", 1, 1, Vector3(0.0, R, float(i) * 100.0))
 		if yards == 9:
 			var _rf: int = WorldTestKit.spawn(w, &"refinery", 1, 1, Vector3(0.0, -R, 0.0))
+		_foe_near(w, gun)
 		FireTestKit.hook(w).hold(gun, PilotInput.FIRE1)
 		var ratio: float = w.economy().economy.power_ratio(1)
 		if yards == 9:
@@ -143,6 +144,16 @@ func test_c12_towers_fire_zero_at_ratio_045_and_scale_above_half() -> void:
 	assert_int(shots[0]).is_equal(30)                                 # 6 bursts of 5 at full power
 	assert_int(shots[1]).is_between(1, 29)                            # ratio 0.74
 	assert_int(shots[2]).is_equal(0)                                  # offline
+
+
+# CB13a (A-129): a tower fires only with an envelope target: a hostile Dart that cannot die, 300 m up and 300 m beside `tw`.
+func _foe_near(w: SimWorld, tw: int) -> void:
+	var p: Vector3 = w.store().pos[EntityId.slot(tw)]
+	var f: Basis = Sphere.tangent_frame(p.normalized())
+	var q: Vector3 = (p + f.x * 300.0).normalized() * (p.length() + 300.0)
+	var other: int = 1 - w.store().team[EntityId.slot(tw)]
+	var id: int = WorldTestKit.spawn(w, &"dart", other, other, q)
+	w.store().hp[EntityId.slot(id)] = 1000000.0
 
 
 ## C-12 (production and construction halves): production time scales with the ratio, construction does not.
