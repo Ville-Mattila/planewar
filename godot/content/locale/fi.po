@@ -172,10 +172,97 @@ msgstr ""
 msgid "hud.bomb.tti"
 msgstr ""
 
+msgid "hud.cd.boost"
+msgstr ""
+
+msgid "hud.cd.flip"
+msgstr ""
+
+msgid "hud.cons.ammo"
+msgstr ""
+
+msgid "hud.cons.bombs"
+msgstr ""
+
+msgid "hud.cons.fuel"
+msgstr ""
+
+msgid "hud.cons.rockets"
+msgstr ""
+
+msgid "hud.grade.ace"
+msgstr ""
+
+msgid "hud.grade.auto"
+msgstr ""
+
+msgid "hud.grade.bent"
+msgstr ""
+
+msgid "hud.grade.clean"
+msgstr ""
+
+msgid "hud.grade.crash"
+msgstr ""
+
+msgid "hud.grade.dead_stick"
+msgstr ""
+
+msgid "hud.grade.fair"
+msgstr ""
+
+msgid "hud.grade.hard"
+msgstr ""
+
+msgid "hud.grade.hot"
+msgstr ""
+
+msgid "hud.grade.pts"
+msgstr ""
+
 msgid "hud.heading.north"
 msgstr ""
 
 msgid "hud.heading.pole"
+msgstr ""
+
+msgid "hud.land.flare"
+msgstr ""
+
+msgid "hud.land.horiz"
+msgstr ""
+
+msgid "hud.land.hover"
+msgstr ""
+
+msgid "hud.land.nose"
+msgstr ""
+
+msgid "hud.land.occupied"
+msgstr ""
+
+msgid "hud.land.vert"
+msgstr ""
+
+msgid "hud.service.ammo"
+msgstr ""
+
+msgid "hud.service.fuel"
+msgstr ""
+
+msgid "hud.service.launch"
+msgstr ""
+
+msgid "hud.service.repair"
+msgstr ""
+
+msgid "hud.service.wait_ice"
+msgstr ""
+
+msgid "hud.service.wait_ore"
+msgstr ""
+
+msgid "hud.shield"
 msgstr ""
 
 msgid "hud.speed"

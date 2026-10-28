@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/hud/grade_stamp_view.gd" id="1"]
+
+[node name="GradeStampView" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 240.0
+offset_bottom = 140.0
+mouse_filter = 2
+script = ExtResource("1")

@@ -172,11 +172,98 @@ msgstr "LOW"
 msgid "hud.bomb.tti"
 msgstr "TTI"
 
+msgid "hud.cd.boost"
+msgstr "BOOST"
+
+msgid "hud.cd.flip"
+msgstr "FLIP"
+
+msgid "hud.cons.ammo"
+msgstr "AMMO"
+
+msgid "hud.cons.bombs"
+msgstr "BOMBS"
+
+msgid "hud.cons.fuel"
+msgstr "FUEL"
+
+msgid "hud.cons.rockets"
+msgstr "ROCKETS"
+
+msgid "hud.grade.ace"
+msgstr "ACE"
+
+msgid "hud.grade.auto"
+msgstr "AUTO"
+
+msgid "hud.grade.bent"
+msgstr "BENT"
+
+msgid "hud.grade.clean"
+msgstr "CLEAN"
+
+msgid "hud.grade.crash"
+msgstr "CRASH"
+
+msgid "hud.grade.dead_stick"
+msgstr "DEAD STICK"
+
+msgid "hud.grade.fair"
+msgstr "FAIR"
+
+msgid "hud.grade.hard"
+msgstr "HARD"
+
+msgid "hud.grade.hot"
+msgstr "HOT"
+
+msgid "hud.grade.pts"
+msgstr "pts"
+
 msgid "hud.heading.north"
 msgstr "N"
 
 msgid "hud.heading.pole"
 msgstr "POLE"
+
+msgid "hud.land.flare"
+msgstr "Pitch up, hold thrust"
+
+msgid "hud.land.horiz"
+msgstr "H-SPD"
+
+msgid "hud.land.hover"
+msgstr "Hover and settle"
+
+msgid "hud.land.nose"
+msgstr "NOSE FROM VERT"
+
+msgid "hud.land.occupied"
+msgstr "Pad occupied"
+
+msgid "hud.land.vert"
+msgstr "V-SPD"
+
+msgid "hud.service.ammo"
+msgstr "AMMO"
+
+msgid "hud.service.fuel"
+msgstr "FUEL"
+
+msgid "hud.service.launch"
+msgstr "Thrust to launch"
+
+msgid "hud.service.repair"
+msgstr "REPAIR"
+
+msgid "hud.service.wait_ice"
+msgstr "Waiting for Ice"
+
+msgid "hud.service.wait_ore"
+msgstr "Waiting for Ore"
+
+msgid "hud.shield"
+msgstr "SHIELD"
 
 msgid "hud.speed"
 msgstr "SPD"
