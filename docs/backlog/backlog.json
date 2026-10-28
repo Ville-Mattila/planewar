@@ -7754,9 +7754,11 @@
       "04 s4.1",
       "04 s3.7"
     ],
-    "status": "todo",
+    "status": "done",
     "acceptance_append": "; R0 B.25 A-132: a projectile's ROSTER_REMOVE follows its death or exit from V by 3 ticks and its index is not listed or re-admitted for 6 ticks (ProjectileMembers constants citing 04 s4.1 / A-132; the LocalTransport TARGET / BAD run with 0 malformed and 0 ROSTER_GAP is the contract test; NetSimView.alive false for the dead projectile from the first tick without a record); A-133: NetSimView.def_id / owner / team / radius keep the META values and def_kind returns -1 for a projectile index (one test row); net/client/MODULE.md CQ-6 points at GD-45; A-134: KeyframeCodec.RECORDS_MAX 2,848 ratified (decoder MALFORMED above it, encoder asserts), PROTOCOL_VERSION 1",
-    "note": "R0-amendments-19: the 3 / 6 tick roster hold is a 04 s4.1 rule (A-132, no def field); view alignment on projectile ids is GD-45 (A-133); RECORDS_MAX 2,848 ratified (A-134). R0-amendments-20 A-136: the A-132 'alive false from the first tick without a record' sentence and A-134 'encoder asserts' are corrected in 04 / R0; MODULE.md wording follows if it repeats them."
+    "note": "R0-amendments-19: the 3 / 6 tick roster hold is a 04 s4.1 rule (A-132, no def field); view alignment on projectile ids is GD-45 (A-133); RECORDS_MAX 2,848 ratified (A-134). R0-amendments-20 A-136: the A-132 'alive false from the first tick without a record' sentence and A-134 'encoder asserts' are corrected in 04 / R0; MODULE.md wording follows if it repeats them.",
+    "pr": 133,
+    "merged": "2026-10-28"
   },
   {
     "id": "TEST-5",
@@ -8098,6 +8100,7 @@
     "docs": [
       "docs/03-technical-architecture.md"
     ],
-    "status": "todo"
+    "status": "todo",
+    "note": "Stopgap #141 raised the godot-tests timeout to 25 min; the parallel-job split is still open."
   }
 ]
