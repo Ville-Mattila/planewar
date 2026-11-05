@@ -2391,8 +2391,11 @@
       " R0 C2-17",
       " 02 GD-27"
     ],
-    "status": "todo",
-    "acceptance_append": "; R0 B.24 A-121 / A-122: the dead-stick +20 is read from LANDING flags bit2 (or LandingLog) and the hot x1.5 from bit1; LandingGrade.from_def reads the typed ScoringDef.landing_grade (CONTENT-2) and the scoring.raw read and the sim/scoring/MODULE.md open item are removed"
+    "status": "done",
+    "acceptance_append": "; R0 B.24 A-121 / A-122: the dead-stick +20 is read from LANDING flags bit2 (or LandingLog) and the hot x1.5 from bit1; LandingGrade.from_def reads the typed ScoringDef.landing_grade (CONTENT-2) and the scoring.raw read and the sim/scoring/MODULE.md open item are removed",
+    "pr": 140,
+    "merged": "2026-11-05",
+    "note": "Review nits left: test_launch.gd:223 / test_docking_s4.gd:179 FORMAT asserts relaxed to >= 13 (format 14 still pinned by test_wreck_paths and test_serialize_all); PR perf note omits ScoreShooters.find worst case; overkill inflating the assist 25 % denominator is with the Architect."
   },
   {
     "id": "GD-33",
