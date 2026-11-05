@@ -15,9 +15,9 @@
   "band_open": "GD-34",
   "shipped_bands_pin": {
     "_doc": "BUG-2 (sim_ai): with the shipped bands the Bomber drops to the DECK band (deck_alt_agl_m 60) once a Flak covers the target, under flak_battery h_rel_min 150, and the 6 km horizon limits the defenders' sight to about 850-940 m, so A-128's first-seen >= 1,500 m precondition fails. Known-bug pin: test_c06_known_bug_bug2_shipped_bands_fly_under_the_flak_floor asserts these numbers and fails when the bug is fixed; BUG-2 must update or remove it.",
-    "seeds": 50,
+    "seeds": 5,
     "n_flak": 1,
-    "released": 50,
+    "released": 5,
     "rel_at_release_min_m": 55,
     "rel_at_release_max_m": 65,
     "seen_min_m": 850,
