@@ -1,0 +1,14 @@
+{
+  "_doc": "docs/06 s7.2 selection, picking, control groups, rally points (UX-20). Pick radii in du per input class; paint circle grows paint_min_du -> paint_max_du over paint_grow_s.",
+  "pick_radius_touch_du": 22.0,
+  "pick_radius_pointer_du": 10.0,
+  "pick_radius_gamepad_du": 28.0,
+  "pick_tie_du": 1.0,
+  "paint_min_du": 30.0,
+  "paint_max_du": 240.0,
+  "paint_grow_s": 1.2,
+  "group_count": 10,
+  "rally_segments": 12,
+  "rally_flag_height_m": 6.0,
+  "rally_classes": ["shipyard", "vehicle_bay"]
+}
