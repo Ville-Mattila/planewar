@@ -8100,7 +8100,9 @@
     "docs": [
       "docs/03-technical-architecture.md"
     ],
-    "status": "todo",
-    "note": "Stopgap #141 raised the godot-tests timeout to 25 min; the parallel-job split is still open."
+    "status": "done",
+    "note": "Stopgap #141 raised the godot-tests timeout to 25 min; the parallel-job split is still open.",
+    "pr": 142,
+    "merged": "2026-11-05"
   }
 ]
