@@ -7880,8 +7880,10 @@
       "02 s2.3",
       "03 s6.4"
     ],
-    "status": "todo",
-    "note": "R0 B.25 A-135: launch_thrust_min / launch_hold_s may be read raw with a 'needs content' comment; CONTENT-3 / GD-44 type and switch them."
+    "status": "done",
+    "note": "R0 B.25 A-135: launch_thrust_min / launch_hold_s may be read raw with a 'needs content' comment; CONTENT-3 / GD-44 type and switch them.",
+    "pr": 137,
+    "merged": "2026-11-05"
   },
   {
     "id": "AI-45",
