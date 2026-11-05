@@ -26,7 +26,9 @@
   "fuel_burn_idle_per_s": 0.05,
   "landing_damage_tilt_deg": 45,
   "auto_dock_latch_mult": 5,
-  "crash_pad_damage": 100
+  "crash_pad_damage": 100,
+  "launch_thrust_min": 0.5,
+  "launch_hold_s": 0.3
  },
  "ships": [
   {
