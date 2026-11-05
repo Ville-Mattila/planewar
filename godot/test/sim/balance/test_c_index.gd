@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## GD-26 index of the thirteen 02 s18.3 scenario tests C-01..C-13: each id names the test files and functions that carry
 ## it; the suite fails when one is renamed or deleted, so "all thirteen run on every PR" cannot rot silently. The scenario
 ## JSON files in test/sim/scenarios/ are run by `test_scenarios.gd` (TA-33). Wall time of the heavy ones (local laptop):
-## C-06 about 33 s (150 runs), C-08 about 40 s (200 runs), the rest a few seconds each.
+## C-06 about 33 s (150 runs), C-08 about 110 s (200 runs to 60 s, AI-46), the rest a few seconds each.
 
 # id -> [[file, function], ...]
 const INDEX: Dictionary = {
@@ -14,7 +14,7 @@ const INDEX: Dictionary = {
 	"C-06": [["res://test/sim/balance/test_c06_bomber_vs_flak.gd", "test_c06_one_flak_the_bomber_survives_to_release_at_least_the_floor"],
 		["res://test/sim/balance/test_c06_bomber_vs_flak.gd", "test_c06_two_flak_the_bomber_dies_before_release_at_least_the_floor"]],
 	"C-07": [["res://test/unit/sim/combat/test_shield_domes.gd", "test_c07_four_bombs_within_five_seconds_three_absorbed_fourth_passes_and_the_dome_collapses"]],
-	"C-08": [["res://test/sim/balance/test_c08_dart_duel.gd", "test_c08_the_band_or_its_tripwire"]],
+	"C-08": [["res://test/sim/balance/test_c08_dart_duel.gd", "test_c08_the_band_over_the_decided_duels"]],
 	"C-09": [["res://test/unit/sim/combat/test_combat_world.gd", "test_c09_pad_dock_dies_hangar_dock_lives"]],
 	"C-10": [["res://test/unit/content/test_doctrine_resolve.gd", "test_vanguard_examples"],
 		["res://test/unit/content/test_doctrine_resolve.gd", "test_bulwark_examples"],

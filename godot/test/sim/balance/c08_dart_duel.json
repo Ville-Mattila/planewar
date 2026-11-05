@@ -1,20 +1,24 @@
 {
-  "_doc": "GD-26 C-08 band file (02 s18.3: Dart vs Dart, both autopilot, 200 seeds, each side wins 45-55 %). Read as each side's share of the DECIDED duels (a duel is decided when one Dart dies within cap_s; the rest are draws). `band_open` 'AI-46' (A-140: AI-46 owns the decisive setup and the lethality finding) = the band cannot be evaluated: measured, 199 of 200 duels were draws  at cap_s 15 (the real DartBrain pair merge inside gun range in every duel but spend about 2.4 rounds per duel and almost never land the 100 HP), so fewer than min_decided duels decide and the share is noise. The test is then a tripwire: it asserts decided < min_decided and band_open, and fails as soon as the sample can be evaluated (then it asserts the band). `measured` pins the counts of the 200 fixed seeds (any drift in DartBrain, the flight model or the gun is a deliberate JSON update). Lives in test/sim/balance/ (not scenarios/): sim_scenario.schema.json cannot hold these keys. Longer caps were run for the record: 45 s gave 191 draws of 200 (7 / 2 wins), 60 s gave 36 draws of 40.",
+  "_doc": "C-08 band file (02 s18.3: Dart vs Dart, both autopilot, 200 seeds, each side wins 45-55 %), on the R0 B.27 A-140 setup (AI-46): the pair 1,200 m apart nose to nose at 300 m AGL on the flat datum, both under the real DartBrain AUTO, one player per side and no doctrine (C08Rig.world), seeds 2k - 1 and 2k fly one seeded geometry with the sides and the spawn order swapped, cap_s 60. A duel is decided when exactly one Dart dies within cap_s; a ram (both die, 01 s3.1.3) and a timeout are draws. The test asserts decided >= min_decided and each side's share of the decided duels inside the band. `measured` pins the counts of the 200 fixed seeds (any drift in DartBrain, the flight model or the gun is a deliberate JSON update). Per duel (AI-46 acceptance): rounds fired 29.3, of them with the true lead inside the 05 s6.2 fire cone 14.7 (50 %), hits 8.6 = 29 % of the rounds fired (02 s11.2 goal 12-18 % vs a manoeuvring Dart), EXTEND entries 6.4 of which break-offs 5.3, median time to the kill 33.5 s. Before AI-46 on this rig: 13 decided (6 / 7), 85 rams, 10.2 rounds, 6.2 in the cone, 3.5 hits, 4.9 EXTEND, 3.6 break-offs. GD-26's shipped setup (600 m, cap 15 s; its rig gave the FOE player the Vanguard doctrine) measured 199 of 200 draws with 487 rounds; AI-46 on that setup with this rig: 200 draws (no Dart dies inside 15 s), 3.8 rounds, 1.0 hits, 0 rams per duel (before: 2 decided, 49 rams, 2.8 rounds). Lives in test/sim/balance/ (A-138): sim_scenario.schema.json cannot hold these keys.",
   "seeds": 200,
-  "cap_s": 15,
-  "separation_m": 600,
+  "cap_s": 60,
+  "separation_m": 1200,
   "band": {
     "win_share_min_pct": 45,
     "win_share_max_pct": 55
   },
-  "min_decided": 40,
-  "band_open": "AI-46",
+  "min_decided": 80,
   "measured": {
-    "team0_wins": 1,
-    "foe_wins": 0,
-    "draws": 199,
-    "rounds_total": 487,
+    "team0_wins": 45,
+    "foe_wins": 44,
+    "draws": 111,
+    "rams": 3,
+    "rounds_total": 5863,
+    "rounds_in_cone": 2946,
+    "hits": 1711,
+    "extends": 1283,
+    "breakoffs": 1062,
     "duels_within_650_m": 200,
-    "duels_with_a_shot": 85
+    "duels_with_a_shot": 200
   }
 }

@@ -86,7 +86,8 @@ func test_rocket_lock_holds_lock_time_s_before_the_first_rocket() -> void:
 
 # 05 s6.4: while an enemy Bomber is known within bomber_known_m, rockets on anything else stop at bomber_reserve (2);
 # on the Bomber itself the reserve is spent. The Lancer carries 3 rockets; target: an enemy Hauler 1.3 km ahead, an
-# enemy Bomber 850 m behind it (the team sees both; the Bomber is never in the seeker cone while the Hauler is chased).
+# enemy Bomber 850 m behind it (the team sees both, a friendly Core under the chase; the Bomber is never in the seeker
+# cone while the Hauler is chased).
 func test_bomber_reserve_keeps_two_rockets_for_bombers() -> void:
 	var r: Array = _world(42)
 	var w: SimWorld = r[0]
@@ -103,6 +104,9 @@ func test_bomber_reserve_keeps_two_rockets_for_bombers() -> void:
 	var bomber: int = DartKit.spawn(w, &"bomber", DartKit.FOE, pb, h * 60.0, h)
 	cb.heading[bomber] = DartKit.heading(pb, Vector3(0, 1, 0))
 	w.store().rockets[EntityId.slot(lancer)] = 3
+	# AI-46: a friendly Core (sensor 2,000 m) under the chase keeps the Bomber team-visible, so the second order does not
+	# hang on the Lancer's own 1.4 km sensor edge after the Hauler kill (the outcome then depended on where it died)
+	var _core: int = Ai14Kit.core(w, DartKit.offset(Vector3(1, 0, 0), 0.0, 1300.0), 0)
 	DartKit.order(w, lancer, OrderSpec.make(OrderSpec.Kind.ATTACK, hauler))
 	var s: int = EntityId.slot(lancer)
 	var reserve_seen: bool = false

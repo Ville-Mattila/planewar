@@ -8,6 +8,12 @@ class_name DartCombat extends RefCounted
 ## (flip when ready, then `heading_change_deg` off and down to the deck for `duration_s`, on an HP drop of
 ## `hp_drop_trigger` within `hp_window_s`). Target lost (not visible for `lost_s`): the caller's choice point.
 ## Brains read only what the team sees: an invisible target's last seen position is `goal` (no velocity).
+## AI-46 (GD-26 C-08, R0 B.27 A-140): the nose, not the velocity, is put on the lead (`nose_on` solves the 05 s5.2
+## nose-lead law; `lag_lead` adds the line-of-sight rate over `kp_att`, the attitude loop's tracking lag); against an
+## approaching target ahead (a head-on pass) the speed command holds the closing speed at `fire_range_m` /
+## (2 `break_ttc_s`), so the break-off gap is at most half the fire range, and INTERCEPT does not boost into such a
+## pass (the target approaching while the Dart flies toward it); the break-off turns away from where the target will
+## be at closest approach (`break_side`), not where it is.
 
 const F_BOOST: int = AttackRun.F_BOOST
 const F_FLIP: int = AttackRun.F_FLIP
@@ -82,10 +88,12 @@ func act_engage(id: int, view: SimView, st: AiState, out: PilotInput, p: Vector3
 	var dist: float = p.distance_to(pt)
 	var in_range: bool = seen and dist < prm.fire_range
 	var dir: Vector3 = (st.aim_lead[s] - p).normalized()   # outside fire range: the think's cached lead (05 s4.3)
+	var steer: Vector3 = dir
 	if in_range:
 		dir = aim_offset((AimSolver.lead_point(p, v, pt, vt, prm.slug_speed) - p).normalized(), st.aim_err[s], up)
-	var speed: float = vt.length() + (prm.engage_margin if dist > prm.standoff else -prm.engage_margin)
-	var v_cmd: Vector3 = _nose_on(dir, v, -b.z) * maxf(speed, prm.engage_margin)
+		steer = lag_lead(dir, pt - p, vt - v, gains.kp_att)
+	var v_cmd: Vector3 = nose_on(steer, v, b, st.integ[s].x, up, gains.kp_path, prm.aoa_comp_cos) \
+			* engage_speed(p, -b.z, pt, vt, dist)
 	var agl: float = p.length() - Sphere.PLANET_RADIUS - st.ground_h[s]
 	v_cmd = Guidance.floored(Guidance.cleared(v_cmd, v, up, st.lift[s]), up, agl, prm.deck_agl, prm.kp_alt, prm.vz_max)
 	out.buttons = 0
@@ -102,16 +110,64 @@ func act_engage(id: int, view: SimView, st: AiState, out: PilotInput, p: Vector3
 		out.buttons |= PilotInput.FIRE1
 
 
-## The velocity direction that puts the nose on `dir`: `dir` minus the nose's current offset from the velocity (the
-## angle of attack), applied up to `aoa_comp_max_deg`; the slugs leave along the nose, not the velocity.
-func _nose_on(dir: Vector3, v: Vector3, nose: Vector3) -> Vector3:
+## ENGAGE speed command (05 s6.2, R0 B.17 A-93; AI-46): the target's speed + `engage_speed_margin_mps` beyond
+## `standoff_m`, - the margin inside it; against a target ahead of `nose` and approaching (a head-on pass) the speed
+## that holds the closing speed at `fire_range_m` / (2 `break_ttc_s`): the break-off (gap < closing x `break_ttc_s`)
+## then comes at half the fire range at the latest, after `break_ttc_s` of firing (at `v_cruise` each the pair closes
+## at 220 m/s and broke off at 440-640 m, inside a 650 m fire range). Never below the margin.
+func engage_speed(p: Vector3, nose: Vector3, pt: Vector3, vt: Vector3, dist: float) -> float:
+	var r: Vector3 = pt - p
+	var toward: float = -vt.dot(r) / maxf(dist, 1.0)   # the target's speed toward the shooter
+	if toward > 0.0 and r.dot(nose) > 0.0:
+		return maxf(prm.fire_range / (2.0 * prm.break_ttc) - toward, prm.engage_margin)
+	return maxf(vt.length() + (prm.engage_margin if dist > prm.standoff else -prm.engage_margin), prm.engage_margin)
+
+
+## The velocity command whose 05 s5.2 nose target is `dir` (the slugs leave along the nose, not the velocity), while
+## `dir` is within acos(`max_cos`) (`aoa_comp_max_deg`) of the velocity; beyond it `dir` (the turn is the velocity's).
+## The law puts the nose at the velocity turned by `kp_path` x the path error (in the frame of the body right `b.x`
+## about the velocity) plus `ix` (the pitch integrator) along the local vertical; this solves it for the path error.
+## AI-46: the AI-13 form `dir - (nose - v)` settled with 1 / (1 + kp_path) of the angle of attack still on the nose,
+## 2 degrees at 10 degrees of AoA, past the 1.3-1.7 degree fire cone at 300-400 m.
+static func nose_on(dir: Vector3, v: Vector3, b: Basis, ix: float, up: Vector3, kp_path: float, max_cos: float) -> Vector3:
 	var u: float = v.length()
-	if u < 1.0:
+	if u < 1.0 or kp_path <= 0.0:
 		return dir
 	var vh: Vector3 = v / u
-	if nose.dot(vh) < prm.aoa_comp_cos:
+	var c: float = dir.dot(vh)
+	if c < max_cos:
 		return dir
-	return (dir - (nose - vh)).normalized()
+	var hr: Vector3 = b.x - vh * b.x.dot(vh)   # FlightController.track_velocity's path frame
+	hr = hr.normalized() if hr.length_squared() > 0.0 else vh.cross(up).normalized()
+	var vu: Vector3 = hr.cross(vh)
+	var vn: Vector3 = up - vh * vh.dot(up)
+	vn = vn.normalized() if vn.length_squared() > 0.0 else vu
+	var perp: Vector3 = dir - vh * c
+	var q: Vector3 = -vn * ix                  # the lead the path error must add to the integrator's
+	if perp.length_squared() > 0.0:
+		q += perp.normalized() * atan2(perp.length(), c)
+	var e_p: float = q.dot(vu) / kp_path
+	var e_l: float = q.dot(hr) / kp_path
+	return vh * (cos(e_p) * cos(e_l)) + hr * (cos(e_p) * sin(e_l)) + vu * sin(e_p)
+
+
+## `dir` led by the attitude loop's tracking lag (AI-46): the line-of-sight rate `r x v_rel / |r|^2` over the pointing
+## gain `kp_att` (the 05 s5.2 attitude loop is proportional, so a nose tracking a turning sight line trails it by
+## rate / kp_att; 1-2 degrees in a crossing pass, the size of the fire cone).
+static func lag_lead(dir: Vector3, r: Vector3, v_rel: Vector3, kp_att: float) -> Vector3:
+	if kp_att <= 0.0:
+		return dir
+	var w: Vector3 = r.cross(v_rel) / maxf(r.length_squared(), 1.0)
+	return (dir + w.cross(dir) / kp_att).normalized()
+
+
+## Break-off side (05 s6.2 EXTEND "a 90 degree break to the side away from it", AI-46): the sign of the 90 degree
+## rotation of heading `h` about `up` that turns away from where the target will be at the closest approach within
+## `horizon_s` (`r` = target - self, `v_rel` = its velocity - own). The current bearing turned both ships of a
+## crossing pass into the other's path (C-08: 85 of 200 duels ended in a ram at the A-140 setup).
+static func break_side(h: Vector3, r: Vector3, v_rel: Vector3, up: Vector3, horizon_s: float) -> float:
+	var t: float = clampf(-r.dot(v_rel) / maxf(v_rel.length_squared(), 1.0), 0.0, horizon_s)
+	return -1.0 if h.cross(r + v_rel * t).dot(up) > 0.0 else 1.0
 
 
 ## Two independent standard normals (Box-Muller over two `range_f` draws of `r`).
@@ -148,7 +204,8 @@ func _intercept(id: int, s: int, p: Vector3, d: float, view: SimView, st: AiStat
 	var dir: Vector3 = (st.goal[s] - p).normalized()
 	var closing: float = maxf(prm.boost_speed - vt.dot(dir), prm.engage_margin)
 	var aim: Vector3 = st.goal[s] + vt * (d / closing)
-	var boost: bool = d > prm.boost_close
+	var head_on: bool = vt.dot(dir) < 0.0 and view.vel(id).dot(dir) > 0.0   # AI-46: the pair closes by itself
+	var boost: bool = d > prm.boost_close and not head_on
 	if boost:
 		st.bflags[s] |= F_BOOST
 	st.guidance_vel[s] = (aim - p).normalized() * (prm.boost_speed if boost else prm.cruise_speed)
@@ -176,7 +233,9 @@ func _extend(id: int, view: SimView, st: AiState, tick: int) -> int:
 	if away.dot(h) > -0.5:
 		st.guidance_point[s] = (h + away).normalized()
 	else:
-		var side: float = -1.0 if h.cross(st.goal[s] - p).dot(up) > 0.0 else 1.0
+		var t: int = st.target[s]
+		var v_rel: Vector3 = view.vel(t) - view.vel(id) if view.visible_to(view.team(id), t) else -view.vel(id)
+		var side: float = break_side(h, st.goal[s] - p, v_rel, up, prm.break_ttc)
 		st.guidance_point[s] = h.rotated(up, side * PI * 0.5)
 	st.timer[s] = float(tick)
 	st.bflags[s] |= F_BOOST
