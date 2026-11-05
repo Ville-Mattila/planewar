@@ -9,6 +9,8 @@ class_name AttackRun extends RefCounted
 ## **High** with Autocannon only, otherwise **Low**; the towers come from one structure query around the aim point
 ## (the threat map of 05 s7.4 does not exist yet, so the IP bearing is the direct one and only towers the team sees
 ## count; re-evaluated at R1 and R2 thinks). Abort (to R4): hp01 < `abort_hp01` during R2.
+## The Deck dive under a known Flak, below its `h_rel_min` 150 m floor, is designed counterplay, not a defect (R0 B.27 A-138;
+## 05 s6.3 R1, 02 s10.3 / s11.2); SC-53 `bomber_deck_under_flak` and GD-26's C-06c control leg pin it.
 ## State in AiState: `sub` = step | band << 4, `passes`, `goal` (aim point), `guidance_point` (IP, then the egress
 ## heading), `aim_lead` (bomb-sight offset), `wp` (bombs left when the stick ends), `timer` (step start tick), and the
 ## `bflags` bits below. No allocation except `ids_near` (the SimView list getter).

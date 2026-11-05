@@ -31,6 +31,7 @@ var rel_min_in_range: float = INF      # the Bomber's lowest height over the fir
 var rel_max_in_range: float = -INF
 var band_at_r2: int = -1               # AttackRun band on the last tick the run is in RUN_IN (R2)
 var rel_max_r2: float = -INF           # the Bomber's greatest height over the nearest Flak inside range_m during R2
+var n_gun: int = 0                     # SC-53 variant (BUG-2): autocannon_turret towers added beside the Refinery
 var flak_ammo0: int = 0
 var flak_shells: int = 0               # shells the Flak spent (ammo drop) by the end of the run
 var in_range_with_bombs: bool = false  # the Bomber was within flak_gun range_m of the Flak with its bombs aboard
@@ -85,6 +86,9 @@ func build(seed_value: int, n_flak: int, rel_m: float = 0.0) -> void:
 		var dir: Vector3 = DartKit.offset(C0, -FLAK_AHEAD_M - 160.0 * k, FLAK_ABEAM_M * side)
 		flaks.append(Ai17Kit.tower(w, &"flak_battery", DartKit.FOE, dir, DartKit.offset(C0, -3000.0, 0.0)))
 		side = -side
+	for k: int in n_gun:
+		var gdir: Vector3 = DartKit.offset(C0, -200.0 - 160.0 * k, 120.0)
+		var _gun: int = Ai17Kit.tower(w, &"autocannon_turret", DartKit.FOE, gdir, DartKit.offset(C0, -3000.0, 0.0))
 	var lat: float = float((seed_value * 37) % 301 - 150)                           # +-150 m of lateral start offset
 	var alt: float = rel_m if rel_m > 0.0 else float(Ai14Kit.ap(&"bomber").get("cruise_alt_agl_m", 400.0))
 	var p0: Vector3 = DartKit.above(w, DartKit.offset(C0, -START_M, lat), alt)
@@ -173,6 +177,7 @@ func run() -> void:
 			_count_shells()
 			rel_at_release = v.pos(bomber).length() - v.pos(ref).length()
 			break
+	_count_shells()                                                                 # idempotent: also when the run times out (an aborted Bomber)
 
 
 func _count_shells() -> void:
