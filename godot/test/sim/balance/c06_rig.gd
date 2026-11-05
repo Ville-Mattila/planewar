@@ -14,6 +14,7 @@ const MAX_S: float = 140.0
 const SEE_MIN_M: float = 1500.0        # A-128: first seen at >= 1,500 m from the Flak (sensor_radius 1,600)
 const C0: Vector3 = Vector3(1, 0, 0)
 const HZ: int = 30
+const REL_TOL_M: float = 50.0         # the forced 600 m setup holds to this over the Flak
 
 var w: SimWorld
 var driver: AiDriver
@@ -26,12 +27,16 @@ var release_tick: int = -1             # first tick a bomb left the Bomber alive
 var death_tick: int = -1
 var rel_at_release: float = NAN        # the Bomber's height over the first Flak when it released
 var ticks_run: int = 0
+var rel_target_m: float = 0.0          # the forced band height (0 = the brain's own bands)
+var rel_min_in_range: float = INF      # the Bomber's lowest height over the first Flak while inside flak_gun range_m
+var rel_max_in_range: float = -INF
 var in_range_with_bombs: bool = false  # the Bomber was within flak_gun range_m of the Flak with its bombs aboard
 
 
 ## `rel_m` > 0 flies every attack band at that height (the C-06 setup, the Bomber 600 m over the Flak); 0 keeps the
 ## brain's own bands (05 s6.3: the DECK band, 60 m, once it knows a Flak covers the target).
 func build(seed_value: int, n_flak: int, rel_m: float = 0.0) -> void:
+	rel_target_m = rel_m
 	w = Ai17Kit.world(seed_value)
 	driver = Ai14Kit.make_driver(w.terrain(), true, 3, [false, false, true, false])
 	driver.set_brain(Ai17Kit.tower_cls(), Ai17Kit.brain())
@@ -90,6 +95,11 @@ func run_preconditions() -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
 	if first_seen_m < SEE_MIN_M:
 		out.append("the defenders first saw the Bomber at %.0f m (< %.0f m)" % [first_seen_m, SEE_MIN_M])
+	if rel_target_m > 0.0:
+		if rel_min_in_range < rel_target_m - REL_TOL_M or rel_max_in_range > rel_target_m + REL_TOL_M:
+			out.append("the Bomber flew %.0f..%.0f m over the Flak inside its range, not %.0f +- %.0f m" % [rel_min_in_range, rel_max_in_range, rel_target_m, REL_TOL_M])
+		if not is_nan(rel_at_release) and absf(rel_at_release - rel_target_m) > REL_TOL_M:
+			out.append("the Bomber released at %.0f m over the Flak, not %.0f m" % [rel_at_release, rel_target_m])
 	if not in_range_with_bombs:
 		out.append("the Bomber never entered flak_gun range_m with bombs aboard")
 	return out
@@ -111,6 +121,9 @@ func run() -> void:
 			first_seen_m = d
 		if v.bombs(bomber) > 0 and d < range_m:
 			in_range_with_bombs = true
+			var rel_now: float = v.pos(bomber).length() - v.pos(ref).length()
+			rel_min_in_range = minf(rel_min_in_range, rel_now)
+			rel_max_in_range = maxf(rel_max_in_range, rel_now)
 		if v.bombs(bomber) < bombs0:
 			release_tick = k
 			rel_at_release = v.pos(bomber).length() - v.pos(ref).length()
@@ -128,11 +141,15 @@ func released() -> bool:
 	return release_tick >= 0
 
 
-## One sweep over seeds 1..`seeds`: {released, died, pre_fail (messages)}. Run preconditions are checked when `n_flak` > 0.
+## One sweep over seeds 1..`seeds`: {released, died, pre_fail (messages), rel_lo / rel_hi (height over the Flak at release), seen_lo / seen_hi}. Run preconditions are checked when `n_flak` > 0.
 static func sweep(n_flak: int, seeds: int, rel_m: float) -> Dictionary:
 	var released_n: int = 0
 	var died_n: int = 0
 	var pre_fail: PackedStringArray = PackedStringArray()
+	var rel_lo: float = INF
+	var rel_hi: float = -INF
+	var seen_lo: float = INF
+	var seen_hi: float = -INF
 	for sd: int in range(1, seeds + 1):
 		var r: C06Rig = C06Rig.new()
 		r.build(sd, n_flak, rel_m)
@@ -142,6 +159,11 @@ static func sweep(n_flak: int, seeds: int, rel_m: float) -> Dictionary:
 		if n_flak > 0:
 			for m: String in r.run_preconditions():
 				pre_fail.append("seed %d: %s" % [sd, m])
+		if r.released():
+			rel_lo = minf(rel_lo, r.rel_at_release)
+			rel_hi = maxf(rel_hi, r.rel_at_release)
+		seen_lo = minf(seen_lo, r.first_seen_m)
+		seen_hi = maxf(seen_hi, r.first_seen_m)
 		released_n += 1 if r.released() else 0
 		died_n += 1 if r.death_tick >= 0 else 0
-	return {"released": released_n, "died": died_n, "pre_fail": pre_fail}
+	return {"released": released_n, "died": died_n, "pre_fail": pre_fail, "rel_lo": rel_lo, "rel_hi": rel_hi, "seen_lo": seen_lo, "seen_hi": seen_hi}

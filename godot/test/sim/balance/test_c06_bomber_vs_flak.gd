@@ -76,3 +76,36 @@ func test_c06_one_seed_is_deterministic() -> void:
 	assert_int(a.death_tick).is_equal(b.death_tick)
 	assert_int(a.release_tick).is_equal(b.release_tick)
 	assert_bool(a.w.serialize() == b.w.serialize()).is_true()
+
+
+func test_c06_the_forced_600_m_setup_holds_over_the_flak() -> void:
+	var r: C06Rig = C06Rig.new()
+	r.build(3, 1, float(_cfg["bomber_rel_m"]))
+	r.run()
+	assert_float(r.rel_min_in_range).is_greater_equal(float(_cfg["bomber_rel_m"]) - C06Rig.REL_TOL_M)
+	assert_float(r.rel_max_in_range).is_less_equal(float(_cfg["bomber_rel_m"]) + C06Rig.REL_TOL_M)
+	assert_array(Array(r.run_preconditions())).is_empty()
+
+
+func _flak_floor_m() -> float:
+	for sd: StructureDef in Ai17Kit.content().structures:
+		if sd.id == &"flak_battery":
+			return float(sd.tower["h_rel_min"])
+	return 0.0
+
+
+## BUG-2 (sim_ai) known-bug pin: the shipped bands (rel_m 0) put the Bomber at the 60 m DECK band, under the Flak's 150 m
+## floor, so all 50 release and the defenders first see it at about 850-940 m (< A-128's 1,500 m). Passes while the bug
+## stands; fails once it is fixed, and BUG-2 must then update `shipped_bands_pin` in the JSON and this test.
+func test_c06_known_bug_bug2_shipped_bands_fly_under_the_flak_floor() -> void:
+	var pin: Dictionary = _cfg["shipped_bands_pin"]
+	var r: Dictionary = C06Rig.sweep(int(pin["n_flak"]), int(pin["seeds"]), 0.0)
+	var what: String = "BUG-2 pin: released %s, rel %.0f..%.0f, seen %.0f..%.0f (fixed? update shipped_bands_pin)" % [r["released"], r["rel_lo"], r["rel_hi"], r["seen_lo"], r["seen_hi"]]
+	assert_int(int(r["released"])).override_failure_message(what).is_equal(int(pin["released"]))
+	assert_float(float(r["rel_lo"])).override_failure_message(what).is_greater_equal(float(pin["rel_at_release_min_m"]))
+	assert_float(float(r["rel_hi"])).override_failure_message(what).is_less_equal(float(pin["rel_at_release_max_m"]))
+	assert_float(float(r["rel_hi"])).override_failure_message(what).is_less(_flak_floor_m())
+	assert_float(float(r["seen_lo"])).override_failure_message(what).is_greater_equal(float(pin["seen_min_m"]))
+	assert_float(float(r["seen_hi"])).override_failure_message(what).is_less_equal(float(pin["seen_max_m"]))
+	assert_float(float(r["seen_hi"])).override_failure_message(what).is_less(C06Rig.SEE_MIN_M)
+	assert_bool((r["pre_fail"] as PackedStringArray).size() > 0).override_failure_message(what).is_true()
