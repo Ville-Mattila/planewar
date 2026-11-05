@@ -4,20 +4,24 @@ class_name DrawerDetail extends RefCounted
 ## its construction sites as queue items (CANCEL_BUILD). `verdicts` is one DrawerMath.Cancel per item.
 
 
-static func slots(info: TileInfo, queue_len: int, verdicts: PackedInt32Array) -> Array[DetailSlot]:
+const FIXED_SLOTS: int = 6    ## back, batch, cancel one, replenish -, value, + (queue items follow)
+
+
+## `has_factory`: false disables the batch and the replenish stepper (there is nowhere to queue).
+static func slots(info: TileInfo, queue_len: int, verdicts: PackedInt32Array, has_factory: bool = true) -> Array[DetailSlot]:
 	var out: Array[DetailSlot] = []
 	out.append(_slot(DetailSlot.Kind.BACK, 0, true, &""))
 	if info.is_unit:
 		var room: bool = DrawerMath.batch(queue_len) > 0
-		var ok: bool = info.state == DrawerMath.State.AVAILABLE and room
+		var ok: bool = info.state == DrawerMath.State.AVAILABLE and room and has_factory
 		out.append(_slot(DetailSlot.Kind.BATCH, 0, ok, &"" if ok else (&"ui.prod.reason.queue_full" if not room else &"ui.prod.reason.unavailable")))
 		var last: DrawerMath.Cancel = _verdict(verdicts, queue_len - 1)
 		var can: bool = queue_len > 0 and DrawerMath.cancel_allowed(last)
 		var why: StringName = &"ui.prod.reason.queue_empty" if queue_len == 0 else DrawerMath.cancel_reason(last)
 		out.append(_slot(DetailSlot.Kind.CANCEL_LAST, 0, can, why))
-		out.append(_slot(DetailSlot.Kind.REPL_DEC, 0, info.replenish > 0, &""))
+		out.append(_slot(DetailSlot.Kind.REPL_DEC, 0, has_factory and info.replenish > 0, &"ui.prod.reason.unavailable"))
 		out.append(_slot(DetailSlot.Kind.REPL_VALUE, 0, false, &""))
-		out.append(_slot(DetailSlot.Kind.REPL_INC, 0, DrawerMath.stepper(info.replenish, 1) > info.replenish, &""))
+		out.append(_slot(DetailSlot.Kind.REPL_INC, 0, has_factory and DrawerMath.stepper(info.replenish, 1) > info.replenish, &"ui.prod.reason.unavailable"))
 	for i: int in queue_len:
 		var v: DrawerMath.Cancel = _verdict(verdicts, i)
 		out.append(_slot(DetailSlot.Kind.QUEUE_ITEM, i, DrawerMath.cancel_allowed(v), DrawerMath.cancel_reason(v)))

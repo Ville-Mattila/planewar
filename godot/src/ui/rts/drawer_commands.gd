@@ -33,7 +33,7 @@ static func replenish(view: SimView, ctx: DrawerContext, factory: int, unit: Str
 	for id: StringName in DrawerCatalog.unit_ids():
 		var d: int = ContentDB.def_index(id)
 		var t: int = target if id == unit else view.auto_replenish_target(ctx.player, d)
-		if t > 0 and roster.size() < 16:
+		if t > 0 and roster.size() < 2 * int(RtsParams.param("replenish_pairs_max")):
 			var _a: bool = roster.append(d)
 			var _b: bool = roster.append(t)
 	return Command.toggle_auto_replenish(ctx.player, factory, not roster.is_empty(), roster)

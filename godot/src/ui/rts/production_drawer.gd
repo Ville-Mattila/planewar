@@ -97,6 +97,8 @@ func refresh(view: SimView, ctx: DrawerContext, focus: Vector3) -> void:
 	_focus = focus
 	_sync_tabs()
 	var off: StringName = DrawerModel.disabled_reason(ctx)
+	if off != &"":
+		_detail = &""                                # no detail page for a player without rights
 	_infos = DrawerModel.tiles(view, ctx, units_tab)
 	if _detail != &"":
 		_fill_detail()
@@ -110,7 +112,14 @@ func refresh(view: SimView, ctx: DrawerContext, focus: Vector3) -> void:
 		_reason.text = ""
 
 
+## The one guard: true while the player has no production rights (eliminated); nothing may open, emit or arm then.
+func _locked() -> bool:
+	return _view == null or DrawerModel.disabled_reason(_ctx) != &""
+
+
 func open_detail(id: StringName) -> void:
+	if _locked():
+		return
 	_detail = id
 	var team: int = _ctx.team
 	_detail_factory = DrawerModel.best_factory(_view, team, id, _focus) if DrawerCatalog.factory_of(id) != &"" else -1
@@ -160,7 +169,7 @@ func _fill_detail() -> void:
 		for s: int in _detail_sites:
 			var _a: bool = owners.append(_view.owner(s))
 		verdicts = DrawerModel.queue_verdicts(_view, _ctx, -1, owners)
-	_slots = DrawerDetail.slots(info, mini(_queue_len(), DrawerLayout.capacity() - 6), verdicts)
+	_slots = DrawerDetail.slots(info, mini(_queue_len(), DrawerLayout.capacity() - DrawerDetail.FIXED_SLOTS), verdicts, _detail_factory >= 0)
 	for i: int in _tiles.size():
 		_tiles[i].visible = i < _slots.size()
 		if i < _slots.size():
@@ -184,12 +193,12 @@ func _sync_tabs() -> void:
 
 
 func _on_secondary(_t: DrawerTile, i: int) -> void:
-	if _detail == &"" and i < _infos.size():
+	if not _locked() and _detail == &"" and i < _infos.size():
 		open_detail(_infos[i].id)
 
 
 func _on_tile(i: int) -> void:
-	if _view == null or _tiles[i].long_fired:
+	if _locked() or _tiles[i].long_fired:
 		return
 	if _detail != &"":
 		if i < _slots.size() and _slots[i].enabled:
@@ -204,10 +213,12 @@ func _on_tile(i: int) -> void:
 	if info.is_unit:
 		_emit(DrawerCommands.produce_at_best(_view, _ctx, info.id, 1, _focus))
 	else:
-		build_armed.emit(info.id)
+		_arm(info.id)
 
 
 func _run_slot(s: DetailSlot) -> void:
+	if _locked():
+		return
 	var info: TileInfo = _info_of(_detail)
 	var len_q: int = _queue_len()
 	match s.kind:
@@ -229,5 +240,10 @@ func _run_slot(s: DetailSlot) -> void:
 
 
 func _emit(c: Command) -> void:
-	if c != null:
+	if c != null and not _locked():
 		command_ready.emit(c)
+
+
+func _arm(id: StringName) -> void:
+	if not _locked():
+		build_armed.emit(id)

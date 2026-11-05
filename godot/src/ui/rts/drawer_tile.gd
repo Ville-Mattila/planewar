@@ -52,6 +52,8 @@ func _on_long_press() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
+	if disabled:
+		return                                       # a disabled drawer takes no secondary input either (06 s7.5)
 	var mb: InputEventMouseButton = event as InputEventMouseButton
 	var jb: InputEventJoypadButton = event as InputEventJoypadButton
 	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_RIGHT:
