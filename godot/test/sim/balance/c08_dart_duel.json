@@ -1,0 +1,20 @@
+{
+  "_doc": "GD-26 C-08 band file (02 s18.3: Dart vs Dart, both autopilot, 200 seeds, each side wins 45-55 %). Read as each side's share of the DECIDED duels (a duel is decided when one Dart dies within cap_s; the rest are draws). `band_open` 'AI-46' (A-140: AI-46 owns the decisive setup and the lethality finding) = the band cannot be evaluated: measured, 199 of 200 duels were draws  at cap_s 15 (the real DartBrain pair merge inside gun range in every duel but spend about 2.4 rounds per duel and almost never land the 100 HP), so fewer than min_decided duels decide and the share is noise. The test is then a tripwire: it asserts decided < min_decided and band_open, and fails as soon as the sample can be evaluated (then it asserts the band). `measured` pins the counts of the 200 fixed seeds (any drift in DartBrain, the flight model or the gun is a deliberate JSON update). Lives in test/sim/balance/ (not scenarios/): sim_scenario.schema.json cannot hold these keys. Longer caps were run for the record: 45 s gave 191 draws of 200 (7 / 2 wins), 60 s gave 36 draws of 40.",
+  "seeds": 200,
+  "cap_s": 15,
+  "separation_m": 600,
+  "band": {
+    "win_share_min_pct": 45,
+    "win_share_max_pct": 55
+  },
+  "min_decided": 40,
+  "band_open": "AI-46",
+  "measured": {
+    "team0_wins": 1,
+    "foe_wins": 0,
+    "draws": 199,
+    "rounds_total": 487,
+    "duels_within_650_m": 200,
+    "duels_with_a_shot": 85
+  }
+}

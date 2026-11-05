@@ -17,3 +17,11 @@ format is `tools/schemas/sim_scenario.schema.json`; `python tools/validate_conte
   step `at`: `possessor`, `alive`, `hp01`, `ore`, `queue_size`, `ship_count`, `structure_count`, `event_count`, with
   `op` (eq default, ge, le, gt, lt, approx + `tol`).
 - Every active scenario is also run with its first expectation corrupted and must then report a mismatch.
+
+## Balance scenarios C-01..C-13 (GD-26, 02 s18.3)
+
+`balance/test_c_index.gd` maps every C-xx id to the test that carries it (a rename fails the index). C-05, C-06 and C-08 live
+in `balance/` with rigs (`c05_rig.gd`, `c06_rig.gd`, `c08_rig.gd`) on the real tower and Dart / Bomber brains. C-06 and C-08
+read their bands from `balance/c06_bomber_vs_flak.json` and `balance/c08_dart_duel.json` (a measured floor and a `band_open:
+GD-34` marker where the 02 band is missed; not in `scenarios/` because `sim_scenario.schema.json` forbids extra keys). C-11
+also has `scenarios/outpost_presence_boundary.json` (350 m refused, 250 m accepted, 700 m from the Core refused with SPACING).
