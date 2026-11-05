@@ -26,7 +26,7 @@ var repair_time_mult: float = 1.0    ## repair_time_s x this after a manual FAIR
 
 
 ## The parameters of `scoring.landing` (q_weights, q_norms, q_thresholds, hot_enemy_range_m, hot_hit_window_s,
-## dead_stick_fuel01, repair_time_mult) and `scoring.landing_grade.manual_window_m`; null when a key is missing or a
+## dead_stick_fuel01, repair_time_mult) and `scoring.landing_grade.manual_window_m` (the typed `ScoringDef.landing_grade`); null when a key is missing or a
 ## norm is not positive (validate_content.py enforces the shipped file).
 static func from_def(scoring: ScoringDef) -> LandingGrade:
 	if scoring == null:
@@ -35,7 +35,7 @@ static func from_def(scoring: ScoringDef) -> LandingGrade:
 	var w: Dictionary = _dict(l, "q_weights")
 	var n: Dictionary = _dict(l, "q_norms")
 	var t: Dictionary = _dict(l, "q_thresholds")
-	var lg: Dictionary = _dict(scoring.raw, "landing_grade")   # needs content: typed ScoringDef.landing_grade
+	var lg: Dictionary = scoring.landing_grade   # typed ScoringDef.landing_grade (CONTENT-2, R0 B.24 A-122)
 	var keys: Array = [[w, "v_vert"], [w, "v_horiz"], [w, "tilt"], [w, "offset"], [n, "v_vert_mps"], [n, "v_horiz_mps"],
 		[n, "tilt_deg"], [t, "fair"], [t, "clean"], [t, "ace"], [l, "hot_enemy_range_m"], [l, "hot_hit_window_s"],
 		[l, "dead_stick_fuel01"], [l, "repair_time_mult"], [lg, "manual_window_m"]]

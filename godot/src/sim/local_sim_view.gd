@@ -23,6 +23,7 @@ var _pathing: Pathing = null
 var production: Production = null   ## set by SimWorld (TA-19): queue and progress reads
 var shields: ShieldDomes = null       ## set by SimWorld (GD-38): `shield01` and the CORE_SHIELD_UP flag read it
 var vision: Vision = null             ## set by SimWorld (TA-63): `visible_enemy_ships` reads its per-team lists
+var score: ScoreKeeper = null          ## set by SimWorld (GD-27): player_score
 var docking: Docking = null           ## set by SimWorld (GD-15): service progress, pad queues, landing grades
 
 
@@ -325,6 +326,10 @@ func match_phase() -> int:
 
 func match_clock_s() -> float:
 	return float(_state.tick) / float(_rules.tick_hz) if _rules.tick_hz > 0 else 0.0
+
+
+func player_score(slot: int) -> Vector2i:
+	return score.score_of(slot) if score != null else Vector2i.ZERO
 
 
 func landing_grade_last(id: int) -> int:
