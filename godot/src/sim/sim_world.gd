@@ -68,6 +68,7 @@ func load_map(map: MapDef, _seed: int, rules: MatchRules) -> Result:
 		err = _load_pathing(_MAPS_ROOT + String(_map_id))
 		if err != OK:
 			return Result.failure(err, "SimWorld: path grid of %s failed to load" % _map_id)
+		var _fields: int = _econ.harvest.fields.load_map_dir(_MAPS_ROOT + String(_map_id))   # GD-12: the recipe's Ore Fields
 	collision.configure(_defs.projectile_radius, _defs.pad_radius_by_def, _defs.common, rules.tick_hz)
 	collision.launch_pad = _defs.launch_pad_by_def
 	_match_seed = _seed

@@ -111,7 +111,7 @@ var flee_radius: float; var search_agl: float; var flee_ticks: int; var flee_cle
 static func from_content(ap: Dictionary, def: ShipDef, c: ContentSet) -> ScoutParams
 class_name HarvestPicker extends RefCounted        # GD-12: 05 s6.6 PICK_FIELD; pure, no world access (AI-16's Harvester brain builds the picture from `SimView.field_remaining` + the map's field table)
 static func utility(remaining01: float, path_len_m: float, assigned: int, risk01: float, assigned_weight: float) -> float   # remaining01 / (1 + km) / (1 + w x assigned) x (1 - risk01)
-static func pick(from_dir: Vector3, dirs: PackedVector3Array, remaining01: PackedFloat32Array, free_slots: PackedInt32Array, assigned: PackedInt32Array, assigned_weight: float, avoid: int) -> int   # best U over fields with Ore left and a free slot, skipping `avoid`; -1 for none; ties lowest index
+static func pick(from_dir: Vector3, dirs: PackedVector3Array, remaining01: PackedFloat32Array, free_slots: PackedInt32Array, assigned: PackedInt32Array, assigned_weight: float, avoid: int) -> int   # best U over fields with Ore left and a free slot, skipping `avoid`; -1 for none; ties lowest index; the 05 risk term is 0 here (AI-16 adds risk)
 ```
 
 ## Invariants

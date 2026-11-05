@@ -12,7 +12,7 @@ enum State { TRAVEL = 0, MINING = 1, WAITING = 2, UNLOADING = 3 }
 const STATE_SHIFT: int = 24
 const _INDEX_MASK: int = (1 << STATE_SHIFT) - 1
 const _CARGO_ORE: int = 1                  ## `cargo_kind` ORE (03 s3.4)
-const _MIN_CLAIM_ORE: float = 1.0          ## a field with less than this left is not worth a mining slot
+const _MIN_CLAIM_ORE: float = 1.0          ## structural: Ore is credited in whole units (`roundi`), so under 1 Ore there is nothing to take
 
 var fields: OreFields = OreFields.new()
 

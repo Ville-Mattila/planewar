@@ -306,11 +306,12 @@ func shield01(id: int) -> float:
 	return shields.charge01(EntityId.slot(id), _state.tick) if shields != null and _store.alive(id) else 0.0
 
 
-## Remaining Ore of a live wreck (its `hp`, GD-19); 0.0 for any other entity or a dead id.
+## Ore left in Ore Field `node` (map `ore_field` node order, GD-12); 0 out of range.
 func field_remaining(node: int) -> int:
 	return fields.remaining(node) if fields != null else 0
 
 
+## Remaining Ore of a live wreck (its `hp`, GD-19); 0.0 for any other entity or a dead id.
 func wreck_ore(id: int) -> float:
 	return _store.hp[EntityId.slot(id)] if _store.alive(id) and _store.kind[EntityId.slot(id)] == EntityStore.K_WRECK else 0.0
 

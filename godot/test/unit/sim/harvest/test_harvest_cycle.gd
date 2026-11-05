@@ -146,7 +146,7 @@ func test_a_refinery_unloads_two_at_a_time_and_the_third_waits_for_a_dock() -> v
 	for h: int in hs:
 		unloading += 1 if K.state(w, h) == Harvest.State.UNLOADING else 0
 		waiting += 1 if K.state(w, h) == Harvest.State.WAITING else 0
-	assert_int(unloading).is_equal(2)                           # economy.json refinery_docks = 2
+	assert_int(unloading).is_equal(2)                           # structures.json refinery `docks` = 2
 	assert_int(waiting).is_equal(1)
 	assert_int(K.delivered(w)).is_equal(0)
 	K.step(w, int(6.0 * HZ))                                    # unload_time_s = 6

@@ -6,7 +6,7 @@ same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines (ADR
 
 | Field | Value |
 |---|---|
-| Responsibility | The Ore Fields of a match (capacity, regen, radius, `max_miners`, Ore left), regen that stops at Core Exposure, mining while a Harvester stands still in a field with a free miner slot, and unloading at a friendly finished Refinery's docks over `unload_time_s`, credited through `Economy.credit`. Not here: driving (the autopilot writes the input slot, `GroundMotion` moves the unit), choosing a field (`sim_ai` `HarvestPicker`), the dock queue wait beyond "WAITING until a dock is free", Ice extraction and Haulers, the map loader that calls `OreFields.load_nodes`. |
+| Responsibility | The Ore Fields of a match (capacity, regen, radius, `max_miners`, Ore left), regen that stops at Core Exposure, mining while a Harvester stands still in a field with a free miner slot, and unloading at a friendly finished Refinery's docks over `unload_time_s`, credited through `Economy.credit`. Not here: driving (the autopilot writes the input slot, `GroundMotion` moves the unit), choosing a field (`sim_ai` `HarvestPicker`), the dock queue wait beyond "WAITING until a dock is free" and Ice extraction / Haulers. `SimWorld.load_map` loads the fields (`OreFields.load_map_dir`). |
 | Lane owner tier | Sonnet against this file (Opus review) |
 | May depend on | `core`, `content`, `sim` (incl. `sim/world/`: `WorldDefs`, `StateIO`, `InputSlots`; `sim/economy/` `Economy`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads, RNG |
@@ -21,6 +21,8 @@ var dirs: PackedVector3Array;  var capacity: PackedInt32Array;  var amount: Pack
 var regen_per_s: PackedFloat32Array;  var radius_m: PackedFloat32Array;  var max_miners: PackedInt32Array
 var miners: PackedInt32Array                                                 # derived by Harvest each step, never saved
 func add(dir: Vector3, cap: int, regen_rate: float, radius: float, miners_max: int) -> int   # a full field; its index
+func load_map_dir(map_dir: String) -> int                                    # clears, then loads `<dir>/features.json` nodes (SimWorld.load_map calls it; -1 when unreadable)
+func clear() -> void
 func load_nodes(nodes: Array) -> int                                         # the `ore_field` nodes of a map's features.json, in file order; count added
 func count() -> int;  func remaining(i: int) -> int;  func capacity_of(i: int) -> int;  func radius_of(i: int) -> float
 func max_miners_of(i: int) -> int;  func miners_of(i: int) -> int;  func dir_of(i: int) -> Vector3
@@ -70,6 +72,8 @@ dock count from `structures.json` `docks`; the delivery reach is `economy.json` 
 - H8 State (S4). The only state outside `EntityStore` is `OreFields.amount` with its table, written after the ScoreKeeper in the
   economy section (`SimSerialize.FORMAT` 15); the table is saved whole so a restored world needs no loader. Unit state is `link`,
   `cargo`, `cargo_kind`, `timer_a`; `miners` and the per-Refinery dock counts are re-derived every pass.
+- H1a Loading. `SimWorld.load_map` of a map id calls `fields.load_map_dir` after terrain and path grid: the field table equals the
+  `ore_field` nodes of features.json, each full; the flat datum (no map id) has none. Test: `test_harvest_map.gd`.
 - H9 Cost. `step` returns at once with no ground unit and no field. Otherwise one pass over the ground units (twice) and the fields;
   the Refinery list is rebuilt only when `Economy.structure_epoch` or the structure count moves. No Dictionary, no per-unit allocation.
 
@@ -90,10 +94,10 @@ None. Consumes nothing.
 
 `godot/test/unit/sim/harvest/test_ore_fields.gd` (H1, H2, H8: table, load_nodes, field_at, regen, Exposure stop, state bytes, `field_remaining`),
 `test_harvest_cycle.gd` (H3-H8: trip time at 450 / 600 m, `max_miners`, slot freeing, depletion, docks, enemy Refinery, Exposure leaves mining, S4 mid-cycle),
-`test_harvest_perf.gd` (H9). Fixtures: `harvest_test_kit.gd` (flat-datum world, field / Refinery / Harvester by metres of arc, a straight-line stand-in driver).
+`test_harvest_map.gd` (H1a), `test_harvest_perf.gd` (H9). Fixtures: `harvest_test_kit.gd` (flat-datum world, field / Refinery / Harvester by metres of arc, a straight-line stand-in driver).
 
 ## How to add X (recipes for the cheapest tier)
 
-- **A field from a map:** `world.economy().harvest.fields.load_nodes(features["nodes"])` once after `load_map` (the loader that
-  reads `features.json` is the app / match-setup lane's; GD-12 leaves it to the first task that starts a map match with fields).
+- **A field from a map:** add an `ore_field` node to the recipe's features.json; `SimWorld.load_map` loads it (table cleared first,
+  so a second load or a restore never doubles it; `deserialize` then replaces it with the saved table, H8). Test: `test_harvest_map.gd`.
 - **A second Refinery-like structure:** give its def `docks` > 0 in `structures.json`; nothing else.
