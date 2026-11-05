@@ -1,5 +1,5 @@
 {
-  "_doc": "docs/06 s7.2 selection, picking, control groups, rally points (UX-20). Pick radii in du per input class; paint circle grows paint_min_du -> paint_max_du over paint_grow_s.",
+  "_doc": "docs/06 s7.2 selection, picking, control groups, rally points (UX-20). Pick radii in du per input class; paint circle grows paint_min_du -> paint_max_du over paint_grow_s. UX-22 (docs/06 s4.4, s4.5, s7.5): production drawer grid 3 x 6, tile and tab sizes per profile in du, top = y under the top bar, long_press_s opens the tile detail, replenish_max the auto-replenish stepper, batch_count the long-press batch.",
   "pick_radius_touch_du": 22.0,
   "pick_radius_pointer_du": 10.0,
   "pick_radius_gamepad_du": 28.0,
@@ -10,5 +10,22 @@
   "group_count": 10,
   "rally_segments": 12,
   "rally_flag_height_m": 6.0,
-  "rally_classes": ["shipyard", "vehicle_bay"]
+  "rally_classes": [
+    "shipyard",
+    "vehicle_bay"
+  ],
+  "drawer_cols": 3,
+  "drawer_rows": 6,
+  "drawer_gap_du": 4.0,
+  "drawer_tile_compact_du": 44.0,
+  "drawer_tile_regular_du": 64.0,
+  "drawer_tab_w_compact_du": 44.0,
+  "drawer_tab_w_regular_du": 48.0,
+  "drawer_top_compact_du": 52.0,
+  "drawer_top_regular_du": 48.0,
+  "drawer_strip_regular_du": 64.0,
+  "replenish_max": 12,
+  "batch_count": 5,
+  "long_press_s": 0.45,
+  "drawer_tab_h_du": 140.0
 }
