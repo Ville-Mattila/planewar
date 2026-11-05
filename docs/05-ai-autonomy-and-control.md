@@ -599,6 +599,8 @@ switch only if U(new) > switch_margin * U(current)
 
 Abort (to R4): HP < 50 % during R2, or 2+ escorts lost in the squad (s7.6).
 
+The R1 band rule is canonical for the autopilot Bomber's attack altitude (R0 B.27 A-138; 02 s11.2 restates it): a Bomber that knows a Flak or Missile Tower covers its target, and no Autocannon, flies the Deck band under the Flak's 150 m floor, which is the counterplay 02 s10.3 designs, not a defect. 02 s18.3 C-06's "600 m" is a scenario setup that pins the three `attack_run` band heights, not a statement about this machine; SC-53 pins the Deck ingress.
+
 **6.3.1 Bomb prediction.** `Ballistics.predict_impact(p, v, def: ProjectileDef, rules)` integrates the bomb (`behaviour` ballistic, `gravity` and `transport` true, `eject_down_mps` 40) with the same CF projectile step as the sim (`Kinematics.step_projectile(p, v, def, rules, dt)`) at 0.1 s steps (max 60 steps) at think, and with a closed-form local-flat refinement each tick between thinks. The same function drives the HUD bomb sight and the FULL-tier "Bomb release" assist (06), so human and autopilot see the same prediction. Only bombs and siege shells need this integrator; every gun, flak and rail solver is a straight-line intercept (B.5).
 
 ### 6.4 Lancer, Bomber, Scout
@@ -1049,6 +1051,7 @@ Each scenario is one gdUnit4 test function named after its ID. "Survives" = not 
 | SC-50 | scripted_director_wave | `tiny_test` mission stub with a bot script (`mode` replace, `reactive` false) sending one wave at 1:00 | wave ordered on the scripted tick (+- reaction delay); no opening-book commands; rate cap respected |
 | SC-51 | path_ticket_flow | 20 Harvesters re-path in one tick on `tiny_test` | every unit brakes while its ticket is pending; all paths arrive within 30 ticks |
 | SC-52 | canister_divert (SL-5, v1 stretch) | Dart AUTO at 40 % fuel; `SUPPLY_DROP` on it; no enemies | diverts, collects within 40 s, fuel +40 %, bombs unchanged; resumes PATROL |
+| SC-53 | bomber_deck_under_flak (R0 B.27 A-138; BUG-2) | Bomber ATTACK on a structure covered by one visible Flak and no Autocannon, 10 seeds; variant with one Autocannon added | ingress band DECK at R2; height over the Flak below `h_rel_min` 150 while inside `range_m`; Flak fires 0 shells; the stick is released. Variant: band LOW (250 m) and the Flak fires |
 
 ### 11.3 Soak metrics (bot-vs-bot, ADR-11)
 
@@ -1205,3 +1208,4 @@ Revised 2026-10-10 against `reviews/R0-resolution-register.md` and 01 v1.1.
 | R0 B.20 A-107, A-108 (CONTRACT-0 amendments 14, 2026-10-21) | GD-19 (PR #106) review: C15's event cell lists `WRECK_SPAWNED` before `RELEASED` / `DEATH`; the Hauler brain (AI-15) completes a HAUL / TOW order on `SALVAGE_DELIVERED` and fails it on the target wreck's `DEATH(cause EXPIRED)` (A-61; `Salvage` emits no ORDER_DONE), reads wreck value through `SimView.wreck_ore` (GD-41) and hooks within `economy.json` `salvage_hook_m` | s2.4 C15, s6.5 |
 | R0 B.23 A-118 (CONTRACT-0 amendments 17, 2026-10-27) | AI-17 (PR #124) review: s6.8 points at the 02 s4.4 slew law; `TurretAim.slew` divides azimuth by cos(elevation) (AI-44); the tower candidate cap is AI-30's decision from a raid-over-a-base case | s6.8 |
 | R0 B.24 A-119, A-125 (CONTRACT-0 amendments 18, 2026-10-27) | GD-15 (PR #128) CQ-1 / CQ-5: the possess-while-DOCKED launch names its def fields and is the one sim rule for pilots and brains; DOCKED mode waits for `SERVICED` or `auto_launch_fuel01` while paused (AI-45); the L2b hold orbit lies inside the 500 m queue zone | s2.5, s5.5, s6.2 |
+| R0 B.27 A-138, A-140 (CONTRACT-0 amendments 21, 2026-11-05) | GD-26 (PR #144): s6.3's R1 band rule is named canonical for the Bomber's attack altitude (02 s18.3 C-06's 600 m is a pinned scenario setup); SC-53 `bomber_deck_under_flak` appended to the catalogue (BUG-2 re-scoped); the symmetric Dart-vs-Dart AUTO duel finding (199 / 200 draws) is AI-46's | s6.3, s11.2 |
