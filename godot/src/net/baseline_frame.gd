@@ -9,6 +9,8 @@ const CAPACITY: int = Roster.CAPACITY
 ## `ori` / `ori_c` after a record of the other form: unknown, so the next record in that form carries ORI.
 ## (Re-deriving one form from the other costs ~2 us per record; FULL records still derive `ori_c`.)
 const ORI_UNKNOWN: int = -1
+## The all-default frame `_reset` copies from (never written: its mark stays 0).
+static var _blank: BaselineFrame = BaselineFrame.new()
 
 var tick: int = 0                           # 0 = unused
 var base_tick: int = 0                      # the baseline this frame was decoded against
@@ -23,6 +25,11 @@ var flags: PackedByteArray = PackedByteArray()
 var ai: PackedByteArray = PackedByteArray()
 var blip: PackedInt32Array = PackedInt32Array()
 var etick: PackedInt32Array = PackedInt32Array()
+## High-water mark (NET-59): one past the highest roster index any set_* call wrote since the last clear / copy. Every
+## entry at or above it holds its default (present 0, blip BLIP_UNKNOWN, everything else 0), so clear / copy_from move
+## only [0, hi) of real data and a reader past the mark sees defaults, never stale state. Only the set_* functions and
+## clear / copy_from write the arrays, so they alone maintain it.
+var hi: int = 0
 
 
 func _init() -> void:
@@ -36,6 +43,7 @@ func _init() -> void:
 	var _h: int = ai.resize(CAPACITY)
 	var _i: int = blip.resize(CAPACITY)
 	var _j: int = etick.resize(CAPACITY)
+	blip.fill(DeadReckon.BLIP_UNKNOWN)
 	clear(0)
 
 
@@ -44,23 +52,38 @@ func clear(t: int) -> void:
 	tick = t
 	base_tick = 0
 	usable = true
-	present.fill(0)
-	pos.fill(0)
-	ori.fill(0)
-	ori_c.fill(0)
-	vel.fill(0)
-	hp.fill(0)
-	flags.fill(0)
-	ai.fill(0)
-	blip.fill(DeadReckon.BLIP_UNKNOWN)
-	etick.fill(0)
+	_reset()
+
+
+## Back to the all-default state. Nothing was written since the last reset when the mark is 0, so nothing to do; else the
+## arrays are re-taken from the shared blank frame (a memcpy each, ~1 us total vs ~8 us for ten fills).
+func _reset() -> void:
+	if hi == 0:
+		return
+	hi = 0
+	present = _blank.present.duplicate()
+	pos = _blank.pos.duplicate()
+	ori = _blank.ori.duplicate()
+	ori_c = _blank.ori_c.duplicate()
+	vel = _blank.vel.duplicate()
+	hp = _blank.hp.duplicate()
+	flags = _blank.flags.duplicate()
+	ai = _blank.ai.duplicate()
+	blip = _blank.blip.duplicate()
+	etick = _blank.etick.duplicate()
 
 
 ## Copies `src` (packed arrays are shared by reference, so duplicate) and tags the copy with tick `t` and base `src.tick`.
+## A straight duplicate (one memcpy, ~1 us for all ten arrays) beat slicing to `src.hi` and zero-extending (3-10 us,
+## bench_baseline_copy.gd), so the mark is carried over rather than used to limit the copy.
 func copy_from(src: BaselineFrame, t: int) -> void:
 	tick = t
 	base_tick = src.tick
 	usable = true
+	_reset()                                    # old data goes first, judged by the destination's own mark
+	hi = src.hi
+	if hi == 0:
+		return
 	present = src.present.duplicate()
 	pos = src.pos.duplicate()
 	ori = src.ori.duplicate()
@@ -75,6 +98,8 @@ func copy_from(src: BaselineFrame, t: int) -> void:
 
 ## FULL record: every field replaced. `ai_tag` < 0 keeps the stored tag (other team's entity).
 func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void:
+	if i >= hi:
+		hi = i + 1
 	present[i] = 1
 	pos[i] = pos_q
 	ori[i] = ori_bits & 0xFFFFFFFF
@@ -92,6 +117,8 @@ func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: in
 ## coarse_of_full(ori_bits), `fine_vel` = DeadReckon.fine_from_bits(vel bits). Same state as set_full.
 func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int, fine_vel: int, hp_b: int,
 		flag_b: int, ai_tag: int) -> void:
+	if i >= hi:
+		hi = i + 1
 	present[i] = 1
 	pos[i] = pos_q
 	ori[i] = ori_bits & 0xFFFFFFFF
@@ -109,6 +136,8 @@ func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int,
 ## sent velocity or DeadReckon.dr_fine when VEL is absent); optional groups by `mask` (SnapshotCodec.MASK_*).
 func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: int, ori_bits: int, hp_b: int,
 		flag_b: int, ai_tag: int) -> void:
+	if i >= hi:
+		hi = i + 1
 	pos[i] = pos_q
 	vel[i] = fine_vel
 	etick[i] = t
@@ -132,6 +161,8 @@ func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: in
 
 ## C-BLIP record: position becomes the blip's bucket centre in the stored cell, velocity zero.
 func set_blip(i: int, t: int, blip_bits: int) -> void:
+	if i >= hi:
+		hi = i + 1
 	pos[i] = DeadReckon.blip_pos(Codec.pos_cell(pos[i]), blip_bits)
 	vel[i] = 0
 	blip[i] = blip_bits
@@ -140,6 +171,8 @@ func set_blip(i: int, t: int, blip_bits: int) -> void:
 
 ## set_blip with the bucket position passed in: `pos_q` = DeadReckon.blip_pos(cell of pos[i], blip_bits).
 func set_blip_at(i: int, t: int, blip_bits: int, pos_q: int) -> void:
+	if i >= hi:
+		hi = i + 1
 	pos[i] = pos_q
 	vel[i] = 0
 	blip[i] = blip_bits
