@@ -220,7 +220,7 @@ func test_save_mid_hold_reloads_exact_and_launches_on_the_same_tick() -> void:
 	var r: SimWorld = SimWorld.deserialize(bytes, WorldTestKit.content(), _hook(id, sched))
 	assert_object(r).is_not_null()
 	assert_bool(r.serialize() == bytes).is_true()
-	assert_int(SimSerialize.FORMAT).is_equal(13)                                   # the hold is timer_b: no new saved array
+	assert_int(SimSerialize.FORMAT).is_greater_equal(13)                           # the hold is timer_b: no new saved array (14 is GD-27)
 	var launched_at: int = 0
 	for k: int in _hold_ticks():
 		_w.step()

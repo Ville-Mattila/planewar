@@ -39,12 +39,12 @@ func grade_of(id: int) -> int;  func q_of(id: int) -> float                  # -
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 
 class_name ScoreKeeper extends RefCounted                                     # GD-27: EconomyHub.score; fed inside SimWorld.step()
-var ledger: ScoreLedger;  var hits: ScoreHits
+var ledger: ScoreLedger;  var hits: ScoreHits;  var shooters: ScoreShooters;  var sorties: SortieTracker
 func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, events: SimEvents, hz: int) -> void
 func score_of(slot: int) -> Vector2i                                          # (pilot, commander); SimView.player_score
 func landing_points(grade: int, flags: int) -> float                          # grade points x hot_mult (bit1) + dead_stick_bonus (bit2); 0 unless manual (bit0) and HARD..ACE
 func scan() -> void                                                           # events emitted since the last scan: HIT, LANDING, POSSESSED, BUILD_DONE, SALVAGE_DELIVERED
-func on_dying(dying: PackedInt32Array, t: int) -> void                        # end of step 9, before the frees: scan, then kills / deaths / structures / assists
+func on_dying(dying: PackedInt32Array, t: int) -> void                        # end of step 9, before the frees: scan, remember the dying as shooters, then kills / deaths / structures / assists
 func end_tick(spent_ore: PackedInt32Array) -> void                            # end of step 10: scan, pilot time per class, Ore spent (commander_ore_spent on its high-water mark)
 func finalize(winner_team: int) -> void                                       # MATCH_END: match_win to each member of the winner, once
 func ore_mined(player: int, ore: int) -> void;  func ice_delivered(player: int, ice: int, possessed: bool) -> void   # seams of GD-12 / GD-14
@@ -65,8 +65,22 @@ func record(victim_id: int, by_owner: int, by_pilot: bool, amount: float, t: int
 func shares(victim_id: int, t: int, window_ticks: int, total: PackedFloat32Array, by_pilot: PackedFloat32Array) -> float
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 
+class_name ScoreShooters extends RefCounted                                   # who a dead shooter was: a 1,024-record ring (EntityId, owner, team, was possessed); a shot outlives its shooter
+const CAP: int
+func _init() -> void
+func record(entity_id: int, by_owner: int, by_team: int, was_pilot: bool) -> void
+func find(entity_id: int) -> int                                              # ring index, newest first; -1 unknown
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
+
+class_name SortieTracker extends RefCounted                                   # one sortie per ship flight a player flew
+func _init() -> void
+func note(ship_id: int, player: int) -> bool                                  # true the first time `player` flies `ship_id` in its current flight
+func land(ship_id: int) -> void                                               # DOCKED ends the flight
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
+
 class_name MatchResult extends RefCounted                                     # SimWorld.match_result(); 02 s17.1 / 04 s2.3 MATCH_END (encoded by NET-22)
-var winner_team: int;  var tick: int;  var structure_value: PackedInt32Array;  var players: Array[PlayerResult]   # active players in slot order; structure_value per team
+var winner_team: int;  var tick: int;  var structure_value: PackedInt32Array;  var players: Array[PlayerResult]
+static func build(ledger: ScoreLedger, table: PlayerTable, hz: int, winner: int, at_tick: int, value_by_team: PackedInt32Array) -> MatchResult   # active players in slot order; structure_value per team
 
 class_name PlayerResult extends RefCounted
 var slot: int;  var team: int;  var score_pilot: int;  var score_commander: int;  var kills: int;  var deaths: int
@@ -90,7 +104,11 @@ var ore_mined: int;  var ore_spent: int;  var ice_delivered: int;  var pilot_tim
 - G6 Pilot / Commander (02 s17.1): a point earned by the entity its owner possesses (`PlayerTable.possessed`) is Pilot; the rest is
   Commander. Kills and structure kills of an unpossessed entity (AUTO / ORDERED) pay `commander_auto_kill_share` of the value
   to the Commander side. Only enemy-team kills of a killer that damaged the victim within `assist.window_s` score. Score never
-  changes the match.
+  changes the match. A shot that outlives its shooter (a bomb from a downed Bomber, a rocket whose Dart died, a shell from a
+  destroyed tower) scores for the owner, team and Pilot side the shooter had when it died (`ScoreShooters`, matched by the full
+  EntityId so a reused slot never matches).
+- G6b `sorties` = one per ship flight a player flew (BAL-16): the first possession of a flying ship, or the launch of a ship
+  the player holds; release and re-possession in the same flight do not count again; DOCKED ends the flight.
 - G7 Points: kills = `kill_points` (+ `kill_hauler_loaded_bonus` for a Hauler with cargo or a tow); structure kills =
   (cost_ore + cost_ice) x `structure_destroyed_ratio` of a finished structure, `core_destroyed` for the Core; every enemy
   structure hit pays `structure_damage_points_per_hp` per hp dealt (overkill included); an assist (>= `assist.min_share` of the
