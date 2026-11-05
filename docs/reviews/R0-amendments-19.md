@@ -28,6 +28,8 @@ Reading order: the B.25 rows in `docs/reviews/R0-resolution-register.md` are the
 
 **Not accepted:** keeping C-06 in GD-09 (a tower-rule task cannot reach a balance band); amending the band now (no measurement under valid preconditions exists yet; the PR's 0/50 came from a Bomber with the brain removed and the 12/12 from a defender that did not see); a C-06 that counts "released" without "survived" or vice versa (02 s18.3 asserts both legs).
 
+**Erratum (B.27 A-138 / A-139, 2026-11-05):** the band file lives in `godot/test/sim/balance/` (the TA-33 schema forbids its keys); "real `BomberBrain` ATTACK at 600 m rel" means the brain with its three `attack_run` band heights pinned to 600 m by the rig, because the shipped 05 s6.3 rule dives to the Deck band under a known Flak (counterplay, not a bug); the +-15 % latitude does not bind `flak_gun.spread_deg`; the >= 1,500 m first-seen precondition applies to the pinned leg only. See `R0-amendments-21.md`.
+
 ## A-129 (Q2) A-118 (e) is the strict form: a tower round spawns only while the tower holds an envelope target; the target is refreshed once per fire window, never per shot
 
 **Evidence.**
