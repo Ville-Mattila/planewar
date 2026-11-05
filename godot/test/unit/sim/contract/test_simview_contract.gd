@@ -70,6 +70,29 @@ func test_a_view_that_returns_every_default_fails_the_contract() -> void:
 		assert_bool(c.failed.has(n)).override_failure_message("default SimView passed %s" % n).is_true()
 
 
+## R0 B.25 A-133 (GD-45): radius and def_kind are exempt for NetSimView in the table (its wreck), so the rocket's pair is
+## judged here on EVERY view, with def_id / owner / team re-stated: both views must give the same answer.
+func test_a_live_rocket_answers_def_id_owner_team_radius_def_kind_on_every_view() -> void:
+	for f: SimViewFactory in SimViewFactories.all():
+		var scene: SimViewScene = SimViewScene.build()
+		var v: SimView = f.make(scene)
+		var r: int = scene.rocket
+		var ps: ProjectileStore = scene.world.projectiles()
+		var def: ProjectileDef = scene.content.projectiles[ps.projectile_def[ps.index_of(r)]]
+		var tag: String = f.label()
+		assert_int(v.def_id(r)).override_failure_message(tag + " def_id").is_equal(int(scene.content.projectile_index[&"rocket"]))
+		assert_int(v.owner(r)).override_failure_message(tag + " owner").is_equal(SimViewScene.ROCKET_OWNER)
+		assert_int(v.team(r)).override_failure_message(tag + " team").is_equal(1)
+		assert_float(v.radius(r)).override_failure_message(tag + " radius").is_equal_approx(def.radius_m, 1e-6)
+		assert_int(v.def_kind(r)).override_failure_message(tag + " def_kind").is_equal(-1)
+		var stale: int = EntityId.make(EntityId.slot(r), EntityId.gen(r) + 7)
+		assert_int(v.def_id(stale)).is_equal(-1)
+		assert_int(v.owner(stale)).is_equal(-1)
+		assert_int(v.team(stale)).is_equal(-1)
+		assert_float(v.radius(stale)).is_equal(0.0)
+		assert_int(v.def_kind(stale)).is_equal(-1)
+
+
 func test_read_poses_equals_pos_and_basis_element_wise_on_every_view() -> void:
 	# R0 B.11 A-56, restated outside the clause table: 1,000 draws, pre-sized arrays, alive count returned.
 	for f: SimViewFactory in SimViewFactories.all():

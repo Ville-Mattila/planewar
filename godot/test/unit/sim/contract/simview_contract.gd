@@ -72,9 +72,12 @@ func _identity() -> void:
 	var sa: int = _slot(s.a)
 	var want: Basis = Basis(_st.fwd[sa].cross(_st.up[sa]), _st.up[sa], -_st.fwd[sa])     # 03 s15.4: Godot -Z forward
 	_t(&"basis", _v.basis(s.a).is_equal_approx(want) and _v.basis(s.dead) == Basis.IDENTITY)
-	_t(&"def_id", _v.def_id(s.a) == dart and _v.def_id(s.core) == WorldTestKit.def_id(&"core") and _v.def_id(s.dead) == -1)
-	_t(&"owner", _v.owner(s.a) == 0 and _v.owner(s.b) == 1 and _v.owner(s.wreck) == -1 and _v.owner(s.dead) == -1)
-	_t(&"team", _v.team(s.a) == 0 and _v.team(s.b) == 1 and _v.team(s.wreck) == -1 and _v.team(s.dead) == -1)
+	_t(&"def_id", _v.def_id(s.a) == dart and _v.def_id(s.core) == WorldTestKit.def_id(&"core") and _v.def_id(s.dead) == -1
+			and _v.def_id(s.rocket) == int(WorldTestKit.content().projectile_index[&"rocket"]))     # R0 B.25 A-133: a projectile id answers its ProjectileDef id
+	_t(&"owner", _v.owner(s.a) == 0 and _v.owner(s.b) == 1 and _v.owner(s.wreck) == -1 and _v.owner(s.dead) == -1
+			and _v.owner(s.rocket) == SimViewScene.ROCKET_OWNER)
+	_t(&"team", _v.team(s.a) == 0 and _v.team(s.b) == 1 and _v.team(s.wreck) == -1 and _v.team(s.dead) == -1
+			and _v.team(s.rocket) == 1)
 	_t(&"flags", (_v.flags(s.a) & EntityStore.F_POSSESSABLE) != 0 and (_v.flags(s.a) & EntityStore.F_ALIVE) != 0
 			and (_v.flags(s.c) & EntityStore.F_DOCKED) != 0 and (_v.flags(s.a) & EntityStore.F_DOCKED) == 0 and _v.flags(s.dead) == 0)
 	_t(&"radius", _near(_v.radius(s.a), s.ship_def().bounding_radius, &"radius") and _near(_v.radius(s.wreck), 5.0, &"radius") and _v.radius(s.dead) == 0.0)

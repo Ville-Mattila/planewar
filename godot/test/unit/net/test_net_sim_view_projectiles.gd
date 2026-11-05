@@ -53,7 +53,7 @@ func test_rocket_meta_and_defaults() -> void:
 	assert_int(_v.def_id(r)).is_equal(int(_s.content.projectile_index[&"rocket"]))
 	assert_int(_v.team(r)).is_equal(ps.team[i])
 	assert_int(_v.team(r)).is_equal(1)
-	assert_int(_v.owner(r)).is_equal(-1)                     # the scene's rocket has no owning player (NONE_U8)
+	assert_int(_v.owner(r)).is_equal(SimViewScene.ROCKET_OWNER)   # the shooter's owner at spawn (A-133)
 	assert_float(_v.radius(r)).is_equal_approx(_s.content.projectiles[ps.projectile_def[i]].radius_m, 1e-6)
 	assert_int(_v.def_kind(r)).is_equal(-1)                  # R0 B.25 A-133: no EntityStore.K_* for a projectile
 	assert_int(_v.def_kind(r)).is_equal(local.def_kind(r))
