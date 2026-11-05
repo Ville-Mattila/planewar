@@ -41,14 +41,18 @@ func test_cradle_and_the_flat_datum() -> void:
 	assert_int(flat.economy().harvest.fields.count()).is_equal(0)
 
 
-func test_a_second_load_map_does_not_double_the_fields() -> void:
+func test_loading_a_map_dir_again_into_the_same_table_does_not_double_it() -> void:
+	var expect: Array = _nodes("tiny_test")
 	var w: SimWorld = _load(&"tiny_test")
-	var n: int = w.economy().harvest.fields.count()
-	var map: MapDef = MapDef.new()
-	map.id = &"tiny_test"
-	var res: Result = w.load_map(map, 7, WorldTestKit.rules())
-	assert_bool(res.ok).is_true()
-	assert_int(w.economy().harvest.fields.count()).is_equal(n)
+	var f: OreFields = w.economy().harvest.fields
+	f.amount[0] = 10.0                                   # some Ore mined away
+	f.miners[0] = 1
+	assert_int(f.load_map_dir("res://content/maps/tiny_test")).is_equal(expect.size())
+	assert_int(f.count()).is_equal(expect.size())
+	for i: int in expect.size():
+		var nd: Dictionary = expect[i]
+		assert_int(f.remaining(i)).is_equal(int(nd["capacity"]))
+	assert_int(f.miners_of(0)).is_equal(0)
 
 
 func test_save_restore_keeps_the_fields_and_their_ore() -> void:
