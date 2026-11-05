@@ -1,0 +1,10 @@
+{
+  "_doc": "GD-26 C-06 band file (02 s18.3, R0 B.25 A-128). The 02 band is band.one_flak_survive_min 60 (% of Bombers that release with one Flak) and band.two_flak_die_min 80 (% that die before release with two). one_flak_survive_min / two_flak_die_min are the regression floors the test enforces: the 02 band for a half that is met (two Flak: measured 98 %), else the measured rate minus 10 points, floored at 0 (A-128; one Flak: measured 0 %), with the measured rates in `measured`. 'band open: GD-34' = the 02 band is missed under valid preconditions; GD-34 retunes the anchors by data and restores the floors to the band. Lives in test/sim/balance/, not test/sim/scenarios/: tools/schemas/sim_scenario.schema.json (additionalProperties false, the TA-33 runner) cannot hold these keys.",
+  "seeds": 50,
+  "bomber_rel_m": 600,
+  "band": { "one_flak_survive_min": 60, "two_flak_die_min": 80 },
+  "one_flak_survive_min": 0,
+  "two_flak_die_min": 80,
+  "measured": { "one_flak_survive_pct": 0, "two_flak_die_pct": 98 },
+  "band_open": "GD-34"
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "outpost_presence_boundary",
+  "title": "C-11: a unit 350 m from the Outpost site is refused with NO_PRESENCE, a site 700 m from the own Core is refused with SPACING, a unit 250 m from the site is accepted",
+  "refs": ["02 s6.2", "02 s6.3", "02 C-11", "02 GD-26"],
+  "status": "active",
+  "world": { "kind": "solo_kit", "seed": 7 },
+  "ticks": 10,
+  "script": [
+    { "at": 1, "do": "spawn", "def": "dart", "owner": 0, "team": 0, "alt": -80, "east": -650, "pin": true, "as": "far_ship" },
+    { "at": 3, "do": "build", "player": 0, "def": "outpost", "west_m": 1000, "expect": "REJECTED_PLACEMENT", "expect_reject": "NO_PRESENCE" },
+    { "at": 5, "do": "build", "player": 0, "def": "outpost", "west_m": 700, "expect": "REJECTED_PLACEMENT", "expect_reject": "SPACING" },
+    { "at": 6, "do": "spawn", "def": "dart", "owner": 0, "team": 0, "alt": -80, "east": -750, "pin": true, "as": "near_ship" },
+    { "at": 8, "do": "build", "player": 0, "def": "outpost", "west_m": 1000, "expect": "ACCEPTED" }
+  ],
+  "checks": [
+    { "at": 7, "query": "structure_count", "def": "outpost", "owner": 0, "value": 0 },
+    { "at": 10, "query": "structure_count", "def": "outpost", "owner": 0, "value": 1 }
+  ]
+}
