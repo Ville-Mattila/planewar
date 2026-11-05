@@ -1,11 +1,9 @@
 class_name Ai17Kit extends RefCounted
 ## AI-17 fixtures: the shipped defs plus the AI-14 autopilot fixture and `ai17_autopilots.json` (`ap_tower`; needs
 ## content AI-19), a SimWorld on them (players 0 and 2 on team 0, 1 on team 1) and an AiDriver whose tower class runs
-## `TowerBrain` with the per-team intel (teams 0 and 1 tracked). The sim does not slew a turret yet (GD-09), so the
-## driver is a `SlewDriver`: it hands the brain a sink that also applies each tower's `pitch` / `yaw` drive to the
-## entity's `fwd` / `up` (the R0 B.23 A-118 law GD-09 implements: azimuth about the site
-## normal, elevation about the tangent right, unit-norm clamp, full rate in the commanded tick, pole truncation),
-## inside step 3, so the sim fires along the slewed muzzle at step 9.
+## `TowerBrain` with the per-team intel (teams 0 and 1 tracked). The sim slews the turret itself (GD-09, `TurretSlew`,
+## R0 B.23 A-118 / B.24 A-123): the plain `AiDriver` writes `pitch` / `yaw` into the input slot and step 5 turns the
+## muzzle, so the scenarios run against the real law (the AI-17 stand-in `AiDriver` is gone).
 
 const AUTOPILOTS: String = "res://test/sim/ai/ai17_autopilots.json"
 
@@ -57,15 +55,12 @@ static func world(seed_value: int = 7) -> SimWorld:
 
 
 ## The same driver unhooked (a restore configures it before SimWorld.deserialize, as a session does).
-## `w` null: the store is set after `SimWorld.deserialize` (`d.store = w2.store()`).
-static func make_driver(w: SimWorld, with_intel: bool = true, rng_seed: int = 3, b: TowerBrain = null) -> SlewDriver:
-	var d: SlewDriver = SlewDriver.new(Rng.new(rng_seed))
+## `_w` is unused now (kept so callers keep their shape: a restore passes null).
+static func make_driver(_w: SimWorld, with_intel: bool = true, rng_seed: int = 3, b: TowerBrain = null) -> AiDriver:
+	var d: AiDriver = AiDriver.new(Rng.new(rng_seed))
 	d.set_class_table(AiClassTable.from_content(content()))
 	var tb: TowerBrain = b if b != null else brain()
 	d.set_brain(tower_cls(), tb)
-	d.store = w.store() if w != null else null
-	d.turn = tb.prm
-	d.dt = 1.0 / float(content().rules.tick_hz)
 	if with_intel:
 		var intel: TeamIntel = TeamIntel.new(IntelKit.tables(), IntelKit.profile("team"), content().rules.tick_hz)
 		intel.track(0, true)
@@ -74,8 +69,8 @@ static func make_driver(w: SimWorld, with_intel: bool = true, rng_seed: int = 3,
 	return d
 
 
-static func driver(w: SimWorld, with_intel: bool = true, rng_seed: int = 3, b: TowerBrain = null) -> SlewDriver:
-	var d: SlewDriver = make_driver(w, with_intel, rng_seed, b)
+static func driver(w: SimWorld, with_intel: bool = true, rng_seed: int = 3, b: TowerBrain = null) -> AiDriver:
+	var d: AiDriver = make_driver(w, with_intel, rng_seed, b)
 	w.set_ai_hook(d)
 	return d
 
@@ -131,65 +126,3 @@ static func shots_of(w: SimWorld, id: int) -> int:
 		if pr.shooter[i] == id:
 			n += 1
 	return n
-
-
-class SlewSink extends CommandSinkBase:
-	var inner: CommandSinkBase = null
-	var store: EntityStore = null
-	var prm: TowerParams = null
-	var dt: float = 0.0
-
-	func submit(cmd: Command) -> CommandResult:
-		return inner.submit(cmd)
-
-	func drive(id: int, input: PilotInput) -> bool:
-		var ok: bool = inner.drive(id, input)
-		var env: TowerEnvelope = prm.envelope(store.def_id[EntityId.slot(id)]) if ok and store != null else null
-		if env != null and (input.pitch != 0.0 or input.yaw != 0.0):
-			_slew_a118(EntityId.slot(id), input, env.turn_rad_s * dt)
-		return ok
-
-	# The A-118 slew the sim (GD-09) implements: azimuth about the site normal, then elevation about the tangent right
-	# truncated at the pole, the (pitch, yaw) pair clamped on the unit norm, the commanded rate in full this tick, up
-	# re-orthonormalised against fwd with right kept tangent. No rate lag, no roll.
-	func _slew_a118(s: int, input: PilotInput, step: float) -> void:
-		var n: Vector3 = store.pos[s].normalized()
-		var f: Vector3 = store.fwd[s]
-		var r: Vector3 = f.cross(store.up[s]).normalized()
-		var p: float = input.pitch
-		var y: float = input.yaw
-		var m: float = sqrt(p * p + y * y)
-		if m > 1.0:
-			p /= m
-			y /= m
-		var qa: Quaternion = Quaternion(n, y * step)
-		f = qa * f
-		r = qa * r
-		var el: float = asin(clampf(f.dot(n), -1.0, 1.0))
-		var de: float = clampf(p * step, -PI * 0.5 - el, PI * 0.5 - el)
-		f = (Quaternion(r, de) * f).normalized()
-		store.fwd[s] = f
-		store.up[s] = r.cross(f).normalized()
-
-	func set_ai_tag(id: int, tag: int) -> void:
-		inner.set_ai_tag(id, tag)
-
-	func end_overlay(id: int) -> void:
-		inner.end_overlay(id)
-
-	func pathing() -> Pathing:
-		return inner.pathing()
-
-
-class SlewDriver extends AiDriver:
-	var store: EntityStore = null
-	var turn: TowerParams = null
-	var dt: float = 0.0
-	var _slew: SlewSink = SlewSink.new()
-
-	func on_tick(tick: int, view: SimView, sink: CommandSinkBase) -> void:
-		_slew.inner = sink
-		_slew.store = store
-		_slew.prm = turn
-		_slew.dt = dt
-		super.on_tick(tick, view, _slew)

@@ -35,6 +35,7 @@ var _motion: ProjectileMotion = null
 var _combat: Combat = null
 var _ships: ShipMotion = null
 var _ground: GroundMotion = null
+var _turrets: TurretSlew = null
 var _profiler: TickProfiler = TickProfiler.new()
 var _view: LocalSimView = null
 var _sink: SimSink = null
@@ -147,6 +148,7 @@ func step() -> void:
 	_profiler.lap(TickProfiler.ROW_AI)
 	_ships.step(t, _dt)                                      # 5 (DOCKED skipped, A-41)
 	_ground.step(t, _dt)                                     # 5: GroundMotion (TA-38)
+	_turrets.step(_dt)                                       # 5: tower slew (GD-09, A-118)
 	_profiler.lap(TickProfiler.ROW_KINEMATICS)
 	_motion.step(t, _dt)                                     # 6
 	_profiler.lap(TickProfiler.ROW_PROJECTILES)
@@ -281,6 +283,8 @@ func _wire(rules: MatchRules) -> void:
 	_intake = CommandIntake.new(_validator, _applier, _state)
 	_motion = ProjectileMotion.new(_store, _proj, _defs)
 	_combat = Combat.new(_store, _proj, collision, spatial, _defs, rules, _events, _applier, _inputs)
+	_combat.fire.terrain = _terrain
+	_motion.terrain = _terrain
 	_ships = ShipMotion.new(_store, _inputs, _defs, collision, _terrain)
 	_profiler.enabled = rules.profile_enabled
 	_econ = EconomyHub.new(_store, _players, _defs, rules, _terrain, _events, _applier, _validator)
@@ -291,6 +295,7 @@ func _wire(rules: MatchRules) -> void:
 	_pathing.set_terrain(_terrain)
 	_econ.salvage.paths.pathing = _pathing   # GD-39: a resting wreck blocks its path cell (255)
 	_ground = GroundMotion.new(_store, _inputs, _defs, _terrain, _pathing)
+	_turrets = TurretSlew.new(_store, _inputs, _defs)
 	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state, _pathing)
 	_view.production = _econ.production
 	_view.shields = _combat.shields

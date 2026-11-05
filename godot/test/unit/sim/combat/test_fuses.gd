@@ -127,10 +127,12 @@ func test_flak_battery_fuses_for_the_closest_approach_plus_delay() -> void:
 		assert_int(ps.target[i]).is_greater(w.tick())
 
 
-func test_flak_without_a_target_bursts_at_the_end_of_its_life() -> void:
+func test_flak_with_the_closest_approach_behind_it_bursts_at_the_end_of_its_life() -> void:
 	var w: SimWorld = CombatTestKit.world()
 	CombatTestKit.power(w, 1, 1)
 	var flak: int = CombatTestKit.spawn(w, &"flak_battery", 1, 1, _at(0.0))
+	var foe: int = CombatTestKit.spawn(w, &"dart", 0, 0, _at(300.0, -400.0))        # CB13a: the gate needs an envelope target; it is behind the muzzle
+	w.store().hp[EntityId.slot(foe)] = 1000000.0
 	FireTestKit.hook(w).hold(flak, PilotInput.FIRE1)
 	w.step()
 	var mine: PackedInt32Array = FireTestKit.fired_by(w, flak)
