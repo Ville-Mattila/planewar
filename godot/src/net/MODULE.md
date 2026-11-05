@@ -175,7 +175,7 @@ func frame_at(t: int) -> BaselineFrame;  func begin(t: int, base_tick: int) -> B
 class_name BaselineFrame extends RefCounted           # net/baseline_frame.gd: what one client holds per roster index after a tick
 const CAPACITY: int; const ORI_UNKNOWN: int
 var tick: int;  var base_tick: int;  var usable: bool;  var present: PackedByteArray;  var pos: PackedInt64Array;  var ori: PackedInt64Array;  var ori_c: PackedInt32Array
-var vel: PackedInt64Array;  var hp: PackedByteArray;  var flags: PackedByteArray;  var ai: PackedByteArray;  var blip: PackedInt32Array;  var etick: PackedInt32Array
+var vel: PackedInt64Array;  var hp: PackedByteArray;  var flags: PackedByteArray;  var ai: PackedByteArray;  var blip: PackedInt32Array;  var etick: PackedInt32Array;  var hi: int   # NET-59: hi = one past the highest index written since clear/copy; every entry >= hi is default; clear skips at 0 and re-takes a blank frame (memcpy, no fills)
 func clear(t: int) -> void;  func copy_from(src: BaselineFrame, t: int) -> void;  func set_blip(i: int, t: int, blip_bits: int) -> void;  func set_blip_at(i: int, t: int, blip_bits: int, pos_q: int) -> void
 func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void;  func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int, fine_vel: int, hp_b: int, flag_b: int, ai_tag: int) -> void
 func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: int, ori_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void
