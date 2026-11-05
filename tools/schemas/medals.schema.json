@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "medals.schema.json",
+  "title": "MedalDef[] (godot/content/defs/medals.json)",
+  "$comment": "R0 B.1 medals.json (MedalDef[]); 02 s17.2 (10 medals, cosmetic only); R0 C2-17 medals[] u8 in file order on MATCH_END. Array order is the wire index: append-only (the schema fixes 10 for v1).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "medals": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/medal"
+      },
+      "$comment": "02 s17.2: exactly 10 medals in v1"
+    }
+  },
+  "required": [
+    "medals"
+  ],
+  "$defs": {
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    },
+    "medal": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "minLength": 1,
+          "maxLength": 48,
+          "$comment": "02 s17.2 Medal id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        },
+        "condition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "$comment": "02 s17.2 Condition text (evaluated server-side from SimEvents)"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "$comment": "numeric threshold in events (feather_touch 5, lock_breaker 3, many_hands 10)"
+        },
+        "amount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "$comment": "numeric threshold in the unit named by `unit` (salvage_baron 1,000 Ore, night_shift 2,000 Ice)"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "ore",
+            "ice"
+          ],
+          "$comment": "unit of `amount`"
+        },
+        "before_s": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7200,
+          "$comment": "iron_wall: no structure lost before 900 s (15:00)"
+        },
+        "grade_min": {
+          "type": "string",
+          "enum": [
+            "HARD",
+            "FAIR",
+            "CLEAN",
+            "ACE"
+          ],
+          "$comment": "feather_touch: LandingGrade names (R0 B.3) at or above this grade, manual landings only"
+        },
+        "target": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "$comment": "entity def id (towers.json / structures.json) the medal names"
+        },
+        "score_events": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "kill_scout",
+              "kill_dart",
+              "kill_hauler",
+              "kill_lancer",
+              "kill_bomber",
+              "kill_hauler_loaded_bonus",
+              "kill_harvester",
+              "kill_siege_crawler",
+              "structure_destroyed",
+              "core_destroyed",
+              "structure_damage",
+              "assist",
+              "landing_hard",
+              "landing_fair",
+              "landing_clean",
+              "landing_ace",
+              "salvage_delivered",
+              "ice_delivered_possessed",
+              "relay_capture",
+              "relay_hold_min",
+              "commander_ore_spent",
+              "commander_auto_kill",
+              "match_win"
+            ]
+          },
+          "$comment": "02 s17.1 score event names (scoring.json) the medal reads"
+        }
+      },
+      "required": [
+        "_doc",
+        "id",
+        "status",
+        "tags",
+        "condition"
+      ]
+    }
+  }
+}

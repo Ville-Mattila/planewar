@@ -1,0 +1,135 @@
+{
+  "_doc": "02 s17.2 match medals (cosmetic only, MedalDef[]); R0 B.1 medals.json (MedalDef[]); R0 C2-17 (medals[] u8 in medals.json order on MATCH_END and the result POST). Array order is the wire index: append-only, never reorder. Conditions are evaluated server-side from SimEvents (02 s17.2). Score events named in score_events are the scoring.json / 02 s17.1 event names (sim/scoring/MODULE.md). Display names are locale keys (06 s11), not here.",
+  "medals": [
+    {
+      "id": "feather_touch",
+      "status": "core",
+      "tags": [
+        "medal"
+      ],
+      "presentation": {},
+      "_doc": "02 s17.2 feather_touch; R0 C3-13 (manual CLEAN or better; LANDING event)",
+      "condition": "5 manual landings graded CLEAN or better in one match",
+      "count": 5,
+      "grade_min": "CLEAN",
+      "score_events": [
+        "landing_clean",
+        "landing_ace"
+      ]
+    },
+    {
+      "id": "two_speeds",
+      "status": "core",
+      "tags": [
+        "medal"
+      ],
+      "presentation": {},
+      "_doc": "02 s17.2 two_speeds (sortie = SortieTracker flight, sim/scoring/MODULE.md G6b)",
+      "condition": "a gun kill and a bomb kill in the same sortie"
+    },
+    {
+      "id": "under_the_floor",
+      "status": "core",
+      "tags": [
+        "medal"
+      ],
+      "presentation": {},
+      "_doc": "02 s17.2 under_the_floor; target id from towers.json",
+      "condition": "destroy a Missile Tower without being locked by it",
+      "target": "missile_tower",
+      "score_events": [
+        "structure_destroyed"
+      ]
+    },
+    {
+      "id": "lock_breaker",
+      "status": "core",
+      "tags": [
+        "medal"
+      ],
+      "presentation": {},
+      "_doc": "02 s17.2 lock_breaker",
+      "condition": "break 3 rocket locks with flips in one match",
+      "count": 3
+    },
+    {
+      "id": "salvage_baron",
+      "status": "core",
+      "tags": [
+        "medal"
+      ],
+      "presentation": {},
+      "_doc": "02 s17.2 salvage_baron; score event salvage_delivered (02 s17.1)",
+      "condition": "deliver 1,000 Ore of salvage",
+      "amount": 1000,
+      "unit": "ore",
+      "score_events": [
+        "salvage_delivered"
+      ]
+    },
+    {
+      "id": "night_shift",
+      "status": "core",
+      "tags": [
+        "medal"
+      ],
+      "presentation": {},
+      "_doc": "02 s17.2 night_shift; score event ice_delivered_possessed (02 s17.1)",
+      "condition": "deliver 2,000 Ice with possessed Haulers",
+      "amount": 2000,
+      "unit": "ice",
+      "score_events": [
+        "ice_delivered_possessed"
+      ]
+    },
+    {
+      "id": "uplink",
+      "status": "core",
+      "tags": [
+        "medal"
+      ],
+      "presentation": {},
+      "_doc": "02 s17.2 uplink; target id from structures.json; score event relay_capture (02 s17.1)",
+      "condition": "capture the Relay Station",
+      "target": "relay_station",
+      "score_events": [
+        "relay_capture"
+      ]
+    },
+    {
+      "id": "many_hands",
+      "status": "core",
+      "tags": [
+        "medal"
+      ],
+      "presentation": {},
+      "_doc": "02 s17.2 many_hands",
+      "condition": "possess 10 different entities in one match",
+      "count": 10
+    },
+    {
+      "id": "iron_wall",
+      "status": "core",
+      "tags": [
+        "medal"
+      ],
+      "presentation": {},
+      "_doc": "02 s17.2 iron_wall; 15:00 expressed as 900 s",
+      "condition": "your team loses no structure before 15:00",
+      "before_s": 900
+    },
+    {
+      "id": "last_light",
+      "status": "core",
+      "tags": [
+        "medal"
+      ],
+      "presentation": {},
+      "_doc": "02 s17.2 last_light; score event match_win (02 s17.1)",
+      "condition": "your team wins after your Core was destroyed",
+      "score_events": [
+        "match_win"
+      ]
+    }
+  ]
+}
