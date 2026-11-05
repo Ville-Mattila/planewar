@@ -295,16 +295,77 @@ func test_cb13a_save_and_restore_mid_window_is_byte_exact() -> void:
 			return
 
 
-# The cadence (A-129): one scan per fire window, never one per shot. A per-shot scan mutant makes `scans` equal the rounds.
-func test_cb13a_the_scan_runs_once_per_window_not_once_per_shot() -> void:
+# --- CB13a cadence (R0 B.26 A-137): T1-T5 ---------------------------------------------------------------------------
+
+func _scans(w: SimWorld) -> int:
+	return w._combat.fire.scans
+
+
+# T1: held on an envelope hostile for two windows (10 rounds): one scan per window, never one per shot (a per-shot scan
+# mutant, `_gate(s, k, true)` in `_burst`, gives 10).
+func test_cb13a_t1_the_scan_runs_once_per_window_not_once_per_shot() -> void:
 	var a: Array = _gated(&"autocannon_turret", &"dart")
 	var w: SimWorld = a[0]
 	FireTestKit.hook(w).hold(a[1], PilotInput.FIRE1)
-	var p: Vector3 = _at(100.0, 300.0)
 	w._combat.fire.scans = 0
-	var rounds: int = _spent(w, a[1], a[2], p, 108)                           # 3.6 s: three windows of five rounds
-	assert_int(rounds).is_equal(15)
-	assert_int(w._combat.fire.scans).override_failure_message("scans %d for %d rounds" % [w._combat.fire.scans, rounds]).is_between(3, 4)
+	var rounds: int = _spent(w, a[1], a[2], _at(100.0, 300.0), 72)
+	assert_int(rounds).is_equal(10)
+	assert_int(_scans(w)).override_failure_message("scans %d for %d rounds" % [_scans(w), rounds]).is_equal(2)
+
+
+# T2: a hostile that is not engageable: nothing spent, one scan per tick, the first round on the tick it enters.
+func test_cb13a_t2_an_idle_held_tower_retries_every_tick_and_fires_on_the_tick_the_hostile_enters() -> void:
+	var hi: float = _num(_tower(&"autocannon_turret"), "h_rel_max")
+	var a: Array = _gated(&"autocannon_turret", &"bomber")
+	var w: SimWorld = a[0]
+	var s: int = EntityId.slot(a[1])
+	FireTestKit.hook(w).hold(a[1], PilotInput.FIRE1)
+	w._combat.fire.scans = 0
+	assert_int(_spent(w, a[1], a[2], _at(1.5 * hi, 300.0), 30)).is_equal(0)
+	assert_int(_scans(w)).is_equal(30)
+	assert_float(w.store().cd_secondary[s]).is_equal(0.0)                     # a failed pick opens no window
+	assert_float(w.store().cd_primary[s]).is_equal(0.0)
+	assert_int(_spent(w, a[1], a[2], _at(0.5 * hi, 300.0), 1)).override_failure_message("no round on the tick it entered").is_equal(1)
+	assert_int(_scans(w)).is_equal(31)
+
+
+# T3: the trigger released: no scan at all.
+func test_cb13a_t3_a_released_trigger_never_scans() -> void:
+	var a: Array = _gated(&"autocannon_turret", &"dart")
+	var w: SimWorld = a[0]
+	w._combat.fire.scans = 0
+	assert_int(_spent(w, a[1], a[2], _at(100.0, 300.0), 30)).is_equal(0)
+	assert_int(_scans(w)).is_equal(0)
+
+
+# T4: a hostile leaving mid-burst: the window's pick plus the one re-pick at the first shot that is due after it left; the
+# held retry then continues on its own cadence (one scan per due tick).
+func test_cb13a_t4_mid_burst_leave_is_one_pick_and_one_repick() -> void:
+	var hi: float = _num(_tower(&"autocannon_turret"), "h_rel_max")
+	var a: Array = _gated(&"autocannon_turret", &"dart")
+	var w: SimWorld = a[0]
+	FireTestKit.hook(w).hold(a[1], PilotInput.FIRE1)
+	w._combat.fire.scans = 0
+	assert_int(_spent(w, a[1], a[2], _at(0.5 * hi, 300.0), 8)).is_between(1, 4)
+	assert_int(_scans(w)).is_equal(1)                                         # the window-open pick; the shots re-checked in O(1)
+	var out: Vector3 = _at(1.5 * hi, 300.0)
+	var left: int = 0
+	while _scans(w) < 2 and left < 6:
+		assert_int(_spent(w, a[1], a[2], out, 1)).is_equal(0)
+		left += 1
+	assert_int(_scans(w)).is_equal(2)
+	assert_int(left).is_less_equal(3)                                         # the next shot came due within 3 ticks
+
+
+# T5: an idle-held tower with no rounds scans nothing (the scan runs after the ammo check).
+func test_cb13a_t5_a_tower_with_no_rounds_never_scans() -> void:
+	var a: Array = _gated(&"autocannon_turret", &"dart")
+	var w: SimWorld = a[0]
+	w.store().ammo[EntityId.slot(a[1])] = 0
+	FireTestKit.hook(w).hold(a[1], PilotInput.FIRE1)
+	w._combat.fire.scans = 0
+	var _n: int = _spent(w, a[1], a[2], _at(100.0, 300.0), 30)
+	assert_int(_scans(w)).is_equal(0)
 
 
 func test_cb13a_flak_scans_once_per_salvo() -> void:
@@ -314,14 +375,4 @@ func test_cb13a_flak_scans_once_per_salvo() -> void:
 	w._combat.fire.scans = 0
 	var rounds: int = _spent(w, a[1], a[2], _at(300.0, 400.0), 121)           # reload 2.0 s: three salvos of two shells
 	assert_int(rounds).is_equal(6)
-	assert_int(w._combat.fire.scans).is_between(3, 4)
-
-
-func test_cb13a_a_held_trigger_with_nothing_engageable_rescans_on_the_documented_cadence() -> void:
-	var a: Array = _gated(&"autocannon_turret", &"bomber")
-	var w: SimWorld = a[0]
-	FireTestKit.hook(w).hold(a[1], PilotInput.FIRE1)
-	w._combat.fire.scans = 0
-	var hi: float = _num(_tower(&"autocannon_turret"), "h_rel_max")
-	var _n: int = _spent(w, a[1], a[2], _at(1.5 * hi, 300.0), 60)
-	assert_int(w._combat.fire.scans).is_equal(60 / WeaponFire.RESCAN_EVERY)
+	assert_int(_scans(w)).is_between(3, 4)
