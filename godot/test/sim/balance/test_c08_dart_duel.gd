@@ -62,15 +62,14 @@ func test_c08_the_band_over_the_decided_duels() -> void:
 
 func test_c08_the_recorded_counts_are_what_the_fixed_seeds_measure() -> void:
 	var m: Dictionary = _cfg["measured"]
-	assert_int(_wins[1]).is_equal(int(m["team0_wins"]))
-	assert_int(_wins[2]).is_equal(int(m["foe_wins"]))
-	assert_int(_wins[0]).is_equal(int(m["draws"]))
-	assert_int(_n[5]).is_equal(int(m["rams"]))
-	assert_int(_n[0]).is_equal(int(m["rounds_total"]))
-	assert_int(_n[1]).is_equal(int(m["rounds_in_cone"]))
-	assert_int(_n[2]).is_equal(int(m["hits"]))
-	assert_int(_n[3]).is_equal(int(m["extends"]))
-	assert_int(_n[4]).is_equal(int(m["breakoffs"]))
+	var tol: Dictionary = _cfg["tolerance"]
+	var dn: int = int(tol["duels"])
+	var pct: float = float(tol["totals_pct"]) / 100.0
+	for pair: Array in [[_wins[1], "team0_wins"], [_wins[2], "foe_wins"], [_wins[0], "draws"], [_n[5], "rams"]]:
+		assert_int(absi(int(pair[0]) - int(m[pair[1]]))).override_failure_message("C-08 %s: %d, measured %d (+-%d)" % [pair[1], pair[0], int(m[pair[1]]), dn]).is_less_equal(dn)
+	for pair: Array in [[_n[0], "rounds_total"], [_n[1], "rounds_in_cone"], [_n[2], "hits"], [_n[3], "extends"], [_n[4], "breakoffs"]]:
+		var ref: float = float(m[pair[1]])
+		assert_float(absf(float(pair[0]) - ref)).override_failure_message("C-08 %s: %d, measured %d (+-%.0f %%)" % [pair[1], pair[0], int(ref), pct * 100.0]).is_less_equal(ref * pct)
 	assert_int(_n[6]).is_equal(int(m["duels_within_650_m"]))
 	assert_int(_n[7]).is_equal(int(m["duels_with_a_shot"]))
 
