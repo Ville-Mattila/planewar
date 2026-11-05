@@ -9,11 +9,10 @@ class_name DartCombat extends RefCounted
 ## `hp_drop_trigger` within `hp_window_s`). Target lost (not visible for `lost_s`): the caller's choice point.
 ## Brains read only what the team sees: an invisible target's last seen position is `goal` (no velocity).
 ## AI-46 (GD-26 C-08, R0 B.27 A-140): the nose, not the velocity, is put on the lead (`nose_on` solves the 05 s5.2
-## nose-lead law; `lag_lead` adds the line-of-sight rate over `kp_att`, the attitude loop's tracking lag); against an
-## approaching target ahead (a head-on pass) the speed command holds the closing speed at `fire_range_m` /
-## (2 `break_ttc_s`), so the break-off gap is at most half the fire range, and INTERCEPT does not boost into such a
-## pass (the target approaching while the Dart flies toward it); the break-off turns away from where the target will
-## be at closest approach (`break_side`), not where it is.
+## nose-lead law; `lag_lead` adds the line-of-sight rate over `kp_att`, the attitude loop's tracking lag); in a
+## head-on pass (`head_on_pass`) the A-93 speed is capped so the pair closes at `fire_range_m` / (2 `break_ttc_s`)
+## at most, the break-off gap then at most half the fire range, and INTERCEPT does not boost into such a pass (the
+## same predicate); the break-off turns away from where the target will be at closest approach (`break_side`).
 
 const F_BOOST: int = AttackRun.F_BOOST
 const F_FLIP: int = AttackRun.F_FLIP
@@ -111,16 +110,26 @@ func act_engage(id: int, view: SimView, st: AiState, out: PilotInput, p: Vector3
 
 
 ## ENGAGE speed command (05 s6.2, R0 B.17 A-93; AI-46): the target's speed + `engage_speed_margin_mps` beyond
-## `standoff_m`, - the margin inside it; against a target ahead of `nose` and approaching (a head-on pass) the speed
-## that holds the closing speed at `fire_range_m` / (2 `break_ttc_s`): the break-off (gap < closing x `break_ttc_s`)
-## then comes at half the fire range at the latest, after `break_ttc_s` of firing (at `v_cruise` each the pair closes
-## at 220 m/s and broke off at 440-640 m, inside a 650 m fire range). Never below the margin.
+## `standoff_m`, - the margin inside it, capped in a head-on pass (`head_on_pass` with that speed as the own closing
+## speed) at the speed that holds the closing speed at `fire_range_m` / (2 `break_ttc_s`): the break-off (gap <
+## closing x `break_ttc_s`) then comes at half the fire range at the latest, after `break_ttc_s` of firing (at
+## `v_cruise` each the pair closed at 220 m/s and broke off at 440-640 m, inside a 650 m fire range). A cap, never
+## above A-93: min(A-93, cap), continuous where the target turns toward the shooter while A-93 is under the cap.
+## Never below the margin.
 func engage_speed(p: Vector3, nose: Vector3, pt: Vector3, vt: Vector3, dist: float) -> float:
 	var r: Vector3 = pt - p
 	var toward: float = -vt.dot(r) / maxf(dist, 1.0)   # the target's speed toward the shooter
-	if toward > 0.0 and r.dot(nose) > 0.0:
-		return maxf(prm.fire_range / (2.0 * prm.break_ttc) - toward, prm.engage_margin)
-	return maxf(vt.length() + (prm.engage_margin if dist > prm.standoff else -prm.engage_margin), prm.engage_margin)
+	var speed: float = vt.length() + (prm.engage_margin if dist > prm.standoff else -prm.engage_margin)
+	if head_on_pass(r.dot(nose), speed, toward):
+		speed = prm.fire_range / (2.0 * prm.break_ttc) - toward
+	return maxf(speed, prm.engage_margin)
+
+
+## A head-on pass (AI-46; ENGAGE's speed cap and INTERCEPT's boost share it, so they cannot disagree): the target
+## lies ahead (`ahead` > 0, its sight line on the own heading), approaches at `toward` m/s, and the pair would close
+## faster than `fire_range_m` / (2 `break_ttc_s`) with the shooter closing at `own_closing` m/s.
+func head_on_pass(ahead: float, own_closing: float, toward: float) -> bool:
+	return ahead > 0.0 and toward > 0.0 and own_closing + toward > prm.fire_range / (2.0 * prm.break_ttc)
 
 
 ## The velocity command whose 05 s5.2 nose target is `dir` (the slugs leave along the nose, not the velocity), while
@@ -204,8 +213,8 @@ func _intercept(id: int, s: int, p: Vector3, d: float, view: SimView, st: AiStat
 	var dir: Vector3 = (st.goal[s] - p).normalized()
 	var closing: float = maxf(prm.boost_speed - vt.dot(dir), prm.engage_margin)
 	var aim: Vector3 = st.goal[s] + vt * (d / closing)
-	var head_on: bool = vt.dot(dir) < 0.0 and view.vel(id).dot(dir) > 0.0   # AI-46: the pair closes by itself
-	var boost: bool = d > prm.boost_close and not head_on
+	var own: float = view.vel(id).dot(dir)
+	var boost: bool = d > prm.boost_close and not head_on_pass(own, own, -vt.dot(dir))   # AI-46: it closes by itself
 	if boost:
 		st.bflags[s] |= F_BOOST
 	st.guidance_vel[s] = (aim - p).normalized() * (prm.boost_speed if boost else prm.cruise_speed)

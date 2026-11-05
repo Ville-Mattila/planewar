@@ -10,18 +10,18 @@
   "min_decided": 80,
   "tolerance": {
     "duels": 4,
-    "totals_pct": 3
+    "totals_pct": 1
   },
   "measured": {
-    "team0_wins": 44,
-    "foe_wins": 44,
-    "draws": 112,
-    "rams": 3,
-    "rounds_total": 5856,
-    "rounds_in_cone": 2945,
-    "hits": 1708,
-    "extends": 1283,
-    "breakoffs": 1062,
+    "team0_wins": 59,
+    "foe_wins": 55,
+    "draws": 86,
+    "rams": 2,
+    "rounds_total": 6156,
+    "rounds_in_cone": 3159,
+    "hits": 1902,
+    "extends": 1131,
+    "breakoffs": 923,
     "duels_within_650_m": 200,
     "duels_with_a_shot": 200
   }

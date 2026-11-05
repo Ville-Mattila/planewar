@@ -126,6 +126,14 @@ func test_engage_speed_is_continuous_where_the_target_turns_toward() -> void:
 	assert_float(absf(opening - closing)).is_less(0.1)
 
 
+func test_head_on_pass_needs_ahead_approaching_and_closing_past_the_limit() -> void:
+	var c: DartCombat = DartCombat.new(DartKit.params(), DartKit.gains())
+	assert_bool(c.head_on_pass(1.0, 110.0, 110.0)).is_true()               # 220 > 162.5
+	assert_bool(c.head_on_pass(1.0, 19.0, 10.0)).is_false()                # crossing, barely closing
+	assert_bool(c.head_on_pass(-1.0, 110.0, 110.0)).is_false()             # behind
+	assert_bool(c.head_on_pass(1.0, 170.0, 0.0)).is_false()                # not approaching
+
+
 # INTERCEPT keeps the 05 s6.2 boost for a crossing target that is barely closing and drops it only in a head-on pass.
 func test_intercept_boosts_on_a_crossing_target_not_into_a_head_on_pass() -> void:
 	assert_bool(_intercept_boosts(true)).override_failure_message("crossing target, barely closing: boost").is_true()
