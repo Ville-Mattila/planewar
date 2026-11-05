@@ -7969,8 +7969,11 @@
       "R0-amendments-19 A-130",
       "R0-amendments-19 A-135"
     ],
-    "status": "todo",
-    "acceptance_append": " ; CONTENT-3 carry-over: FlightCommonDef gains launch_thrust_min / launch_hold_s (required) once GD-43 ships them, and test_typed_raw_keys.gd::test_rocket_lock_break_if_shipped loses its early return (rocket 40/100/500 asserted unconditionally)."
+    "status": "done",
+    "acceptance_append": " ; CONTENT-3 carry-over: FlightCommonDef gains launch_thrust_min / launch_hold_s (required) once GD-43 ships them, and test_typed_raw_keys.gd::test_rocket_lock_break_if_shipped loses its early return (rocket 40/100/500 asserted unconditionally).",
+    "pr": 143,
+    "merged": "2026-11-05",
+    "note": "Still raw (no typed fields yet): launch_pad, structure_bomb_mult, unsupplied_rate_mult, vision_hz."
   },
   {
     "id": "GD-45",
