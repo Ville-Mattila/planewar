@@ -29,7 +29,7 @@ func _lock_left(w: SimWorld, player: int) -> int:
 
 func _unit_code(w: SimWorld, id: StringName) -> int:
 	var f: int = DrawerModel.best_factory(w.view(), 0, id, Vector3.ZERO)
-	var factory: int = f if f > 0 else w.store().id_of(K.find(w, DrawerCatalog.factory_of(id)))
+	var factory: int = f if f >= 0 else w.store().id_of(K.find(w, DrawerCatalog.factory_of(id)))
 	return K.code(w, Command.produce(0, factory, K.def(id), 1))
 
 
