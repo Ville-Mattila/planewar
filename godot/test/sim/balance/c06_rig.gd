@@ -14,7 +14,6 @@ const MAX_S: float = 140.0
 const SEE_MIN_M: float = 1500.0        # A-128: first seen at >= 1,500 m from the Flak (sensor_radius 1,600)
 const C0: Vector3 = Vector3(1, 0, 0)
 const HZ: int = 30
-const REL_TOL_M: float = 50.0         # the forced 600 m setup holds to this over the Flak
 
 var w: SimWorld
 var driver: AiDriver
@@ -30,11 +29,41 @@ var ticks_run: int = 0
 var rel_target_m: float = 0.0          # the forced band height (0 = the brain's own bands)
 var rel_min_in_range: float = INF      # the Bomber's lowest height over the first Flak while inside flak_gun range_m
 var rel_max_in_range: float = -INF
+var band_at_r2: int = -1               # AttackRun band on the last tick the run is in RUN_IN (R2)
+var rel_max_r2: float = -INF           # the Bomber's greatest height over the nearest Flak inside range_m during R2
+var flak_ammo0: int = 0
+var flak_shells: int = 0               # shells the Flak spent (ammo drop) by the end of the run
 var in_range_with_bombs: bool = false  # the Bomber was within flak_gun range_m of the Flak with its bombs aboard
 
 
 ## `rel_m` > 0 flies every attack band at that height (the C-06 setup, the Bomber 600 m over the Flak); 0 keeps the
 ## brain's own bands (05 s6.3: the DECK band, 60 m, once it knows a Flak covers the target).
+## A-139: the tolerance on the held height is the altitude law's own saturation error, vz_max_mps / kp_alt of the Bomber's
+## guidance block (the altitude error at which the climb command reaches its cap), not a free number.
+static func rel_tol_m() -> float:
+	var fl: Dictionary = Ai14Kit.ap(&"bomber")["guidance"]
+	return float(fl["vz_max_mps"]) / float(fl["kp_alt"])
+
+
+## Two ticks of the altitude law's vertical-speed cap: the slack on a height that is still settling when it enters range_m.
+static func descent_slack_m() -> float:
+	return 2.0 * float(Ai14Kit.ap(&"bomber")["guidance"]["vz_max_mps"]) / float(HZ)
+
+
+static func _flak_tower() -> Dictionary:
+	for sd: StructureDef in Ai17Kit.content().structures:
+		if sd.id == &"flak_battery":
+			return sd.tower
+	return {}
+
+
+static func _flak_sensor_m() -> float:
+	for sd: StructureDef in Ai17Kit.content().structures:
+		if sd.id == &"flak_battery":
+			return sd.sensor_radius
+	return 0.0
+
+
 func build(seed_value: int, n_flak: int, rel_m: float = 0.0) -> void:
 	rel_target_m = rel_m
 	w = Ai17Kit.world(seed_value)
@@ -62,6 +91,8 @@ func build(seed_value: int, n_flak: int, rel_m: float = 0.0) -> void:
 	var h: Vector3 = DartKit.heading(p0, DartKit.above(w, C0, 0.0))
 	bomber = DartKit.spawn(w, &"bomber", 0, p0, h * Ai14Kit.ship(&"bomber").v_cruise, h)
 	bombs0 = w.view().bombs(bomber)
+	for f: int in flaks:
+		flak_ammo0 += w.view().ammo(f)
 	for _k: int in 3:
 		var _x: Array[SimEvent] = Ai17Kit.step(w)
 	DartKit.order(w, bomber, OrderSpec.make(OrderSpec.Kind.ATTACK, refinery))
@@ -93,12 +124,17 @@ func preconditions() -> PackedStringArray:
 ## `range_m` of it with its bombs aboard.
 func run_preconditions() -> PackedStringArray:
 	var out: PackedStringArray = PackedStringArray()
-	if first_seen_m < SEE_MIN_M:
-		out.append("the defenders first saw the Bomber at %.0f m (< %.0f m)" % [first_seen_m, SEE_MIN_M])
+	var tick_m: float = Ai14Kit.ship(&"bomber").v_boost / float(HZ)
+	if first_seen_m < SEE_MIN_M or first_seen_m > _flak_sensor_m() + tick_m:
+		out.append("the defenders first saw the Bomber at %.0f m (not in [%.0f, sensor %.0f + one tick])" % [first_seen_m, SEE_MIN_M, _flak_sensor_m()])
 	if rel_target_m > 0.0:
-		if rel_min_in_range < rel_target_m - REL_TOL_M or rel_max_in_range > rel_target_m + REL_TOL_M:
-			out.append("the Bomber flew %.0f..%.0f m over the Flak inside its range, not %.0f +- %.0f m" % [rel_min_in_range, rel_max_in_range, rel_target_m, REL_TOL_M])
-		if not is_nan(rel_at_release) and absf(rel_at_release - rel_target_m) > REL_TOL_M:
+		var tol: float = rel_tol_m()
+		var tw: Dictionary = _flak_tower()
+		if rel_min_in_range < rel_target_m - tol or rel_max_in_range > rel_target_m + tol:
+			out.append("the Bomber flew %.0f..%.0f m over the Flak inside its range, not %.0f +- %.0f m" % [rel_min_in_range, rel_max_in_range, rel_target_m, tol])
+		if rel_min_in_range < float(tw["h_rel_min"]) or rel_max_in_range > float(tw["h_rel_max"]):
+			out.append("the Bomber left the Flak envelope [%s, %s] inside its range" % [tw["h_rel_min"], tw["h_rel_max"]])
+		if not is_nan(rel_at_release) and absf(rel_at_release - rel_target_m) > tol:
 			out.append("the Bomber released at %.0f m over the Flak, not %.0f m" % [rel_at_release, rel_target_m])
 	if not in_range_with_bombs:
 		out.append("the Bomber never entered flak_gun range_m with bombs aboard")
@@ -115,10 +151,18 @@ func run() -> void:
 		ticks_run = k + 1
 		if not v.alive(bomber):
 			death_tick = k
+			_count_shells()
 			break
 		var d: float = v.pos(bomber).distance_to(v.pos(ref))
+		for f: int in flaks:
+			d = minf(d, v.pos(bomber).distance_to(v.pos(f)))
 		if first_seen_m == INF and v.visible_to(DartKit.FOE, bomber):
 			first_seen_m = d
+		var in_r2: bool = AttackRun.step_of(driver.state, EntityId.slot(bomber)) == AttackRun.Step.RUN_IN
+		if in_r2:
+			band_at_r2 = AttackRun.band_of(driver.state, EntityId.slot(bomber))
+			if d < range_m:
+				rel_max_r2 = maxf(rel_max_r2, v.pos(bomber).length() - v.pos(ref).length())
 		if v.bombs(bomber) > 0 and d < range_m:
 			in_range_with_bombs = true
 			var rel_now: float = v.pos(bomber).length() - v.pos(ref).length()
@@ -126,8 +170,16 @@ func run() -> void:
 			rel_max_in_range = maxf(rel_max_in_range, rel_now)
 		if v.bombs(bomber) < bombs0:
 			release_tick = k
+			_count_shells()
 			rel_at_release = v.pos(bomber).length() - v.pos(ref).length()
 			break
+
+
+func _count_shells() -> void:
+	var left: int = 0
+	for f: int in flaks:
+		left += w.view().ammo(f)
+	flak_shells = flak_ammo0 - left
 
 
 func _flak_range() -> float:

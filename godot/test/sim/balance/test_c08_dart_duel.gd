@@ -1,8 +1,8 @@
 extends GdUnitTestSuite
-## C-08 (02 s18.3, GD-26): Dart vs Dart, both under the real DartBrain AUTO, 100 fixed seeds (`C08Rig`: mirrored 600 m
+## C-08 (02 s18.3, GD-26): Dart vs Dart, both under the real DartBrain AUTO, 200 fixed seeds (`C08Rig`: mirrored 600 m
 ## apart, seeded lateral and altitude offsets, odd seeds swap the sides and the spawn order). The band (each side wins 45-55 %)
 ## is read from `c08_dart_duel.json` as a share of the decided duels. While fewer than `min_decided` duels decide the band
-## cannot be evaluated: the test pins the measured counts and asserts the tripwire (see the file's `_doc`); band open for GD-34.
+## cannot be evaluated: the test pins the measured counts and asserts the tripwire (see the file's `_doc`); band open for AI-46.
 
 const FILE: String = "res://test/sim/balance/c08_dart_duel.json"
 
@@ -44,7 +44,7 @@ func test_c08_the_band_or_its_tripwire() -> void:
 		assert_float(s0).override_failure_message("C-08: team 0 wins %.0f %% of %d decided duels" % [s0, decided]).is_between(float(band["win_share_min_pct"]), float(band["win_share_max_pct"]))
 		assert_float(s1).override_failure_message("C-08: FOE wins %.0f %% of %d decided duels" % [s1, decided]).is_between(float(band["win_share_min_pct"]), float(band["win_share_max_pct"]))
 	else:
-		assert_str(str(_cfg["band_open"])).override_failure_message("C-08 undecided (%d decided) but band_open is not recorded" % decided).is_equal("GD-34")
+		assert_str(str(_cfg["band_open"])).override_failure_message("C-08 undecided (%d decided) but band_open is not recorded" % decided).is_equal("AI-46")
 
 
 func test_c08_the_recorded_counts_are_what_the_fixed_seeds_measure() -> void:
