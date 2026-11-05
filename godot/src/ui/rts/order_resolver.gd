@@ -1,43 +1,24 @@
 class_name OrderResolver extends RefCounted
 ## Pure tap / RMB / X -> Command resolver (docs/06 s7.2, R0 C2-06). The caller classifies the target under the
-## cursor and each selected entity; this maps the pair to ORDER / SET_RALLY commands. Units a rule does not
-## cover get no command, so a mixed selection never sends an order the sim would reject as NOT_ALLOWED.
-## Towers accept ATTACK, HOLD, GUARD only (HOLD is a button, not a tap).
+## cursor; each selected id is classified by its class key (def id, towers &"tower"). Every kind is filtered
+## through OrderClassRules (order_rules.json): the sim rejects a whole ORDER if any id's class disallows the
+## kind, so a unit that cannot take a kind gets no command. order_rules.json wins over 06 s7.2 where they
+## differ (Harvester return/guard, Bomber escort). HOLD is a button, not a tap.
 
 enum Target { NEUTRAL, ENEMY, FRIENDLY_PAD, RELAY_STATION, FRIENDLY_UNIT, FRIENDLY_STRUCTURE, ORE_FIELD, ICE_EXTRACTOR, WRECK, GROUND }
 ## FRIENDLY_PAD = friendly Pad, Hangar, Core or Outpost.
-enum Sel { SHIP_ARMED, SHIP_UNARMED, HARVESTER, HAULER, GROUND_ARMED, GROUND_UNARMED, FACTORY, TOWER }
 
 const NONE: int = -1
 const RALLY: int = -2
 
 
-static func is_ship(s: Sel) -> bool:
-	return s == Sel.SHIP_ARMED or s == Sel.SHIP_UNARMED or s == Sel.HARVESTER or s == Sel.HAULER
-
-
-static func is_armed(s: Sel) -> bool:
-	return s == Sel.SHIP_ARMED or s == Sel.GROUND_ARMED
-
-
-static func is_mobile(s: Sel) -> bool:
-	return is_ship(s) or s == Sel.GROUND_ARMED or s == Sel.GROUND_UNARMED
-
-
-## Order kind for one selected entity (OrderSpec.Kind, RALLY for SET_RALLY, NONE for no command).
-## `any_armed`: the selection holds an armed unit (decides attack vs move on an enemy).
-static func plan_kind(target: Target, sel: Sel, any_armed: bool) -> int:
-	if sel == Sel.TOWER:
-		return _tower_kind(target)
-	if sel == Sel.FACTORY:
-		return RALLY if target == Target.GROUND else NONE
-	if target == Target.ENEMY:
-		return OrderSpec.Kind.ATTACK if any_armed else OrderSpec.Kind.MOVE
-	if target == Target.GROUND:
-		return OrderSpec.Kind.MOVE
-	if not is_ship(sel):
-		return _ground_unit_kind(target)
-	return _ship_kind(target, sel)
+## Order kind for one selected class (OrderSpec.Kind, RALLY for SET_RALLY, NONE for no command).
+## `any_attacker`: the selection holds a class that may ATTACK (decides attack vs move on an enemy).
+static func plan_kind(rules: OrderClassRules, target: Target, cls: StringName, any_attacker: bool) -> int:
+	var want: int = _wanted(rules, target, cls, any_attacker)
+	if want == NONE or want == RALLY:
+		return want
+	return want if rules.allows(want, cls) else NONE
 
 
 static func plan_haul_mode(target: Target) -> OrderSpec.HaulMode:
@@ -49,56 +30,49 @@ static func plan_haul_mode(target: Target) -> OrderSpec.HaulMode:
 	return OrderSpec.HaulMode.FERRY
 
 
-static func _tower_kind(target: Target) -> int:
-	if target == Target.ENEMY:
-		return OrderSpec.Kind.ATTACK
-	if target == Target.FRIENDLY_PAD or target == Target.RELAY_STATION or target == Target.FRIENDLY_UNIT or target == Target.FRIENDLY_STRUCTURE:
-		return OrderSpec.Kind.GUARD
-	return NONE
-
-
-static func _ground_unit_kind(target: Target) -> int:
+static func _wanted(rules: OrderClassRules, target: Target, cls: StringName, any_attacker: bool) -> int:
 	match target:
-		Target.FRIENDLY_PAD, Target.RELAY_STATION, Target.FRIENDLY_UNIT, Target.FRIENDLY_STRUCTURE:
+		Target.ENEMY:
+			if any_attacker:
+				return OrderSpec.Kind.ATTACK
 			return OrderSpec.Kind.MOVE
-	return NONE
-
-
-static func _ship_kind(target: Target, sel: Sel) -> int:
-	match target:
+		Target.GROUND:
+			return RALLY if rules.is_rally_class(cls) else OrderSpec.Kind.MOVE
 		Target.FRIENDLY_PAD:
 			return OrderSpec.Kind.RETURN
 		Target.RELAY_STATION:
-			return OrderSpec.Kind.HAUL if sel == Sel.HAULER else OrderSpec.Kind.GUARD
+			return OrderSpec.Kind.HAUL if rules.allows(OrderSpec.Kind.HAUL, cls) else OrderSpec.Kind.GUARD
 		Target.FRIENDLY_UNIT:
 			return OrderSpec.Kind.ESCORT
 		Target.FRIENDLY_STRUCTURE:
 			return OrderSpec.Kind.GUARD
 		Target.ORE_FIELD:
-			return OrderSpec.Kind.HARVEST_HERE if sel == Sel.HARVESTER else NONE
+			return OrderSpec.Kind.HARVEST_HERE
 		Target.ICE_EXTRACTOR, Target.WRECK:
-			return OrderSpec.Kind.HAUL if sel == Sel.HAULER else NONE
+			return OrderSpec.Kind.HAUL
 	return NONE
 
 
 ## Commands for a tap on `target` (entity `target_id` at `target_pos`; id 0 for the ground) with the selection
-## `ids` classified by `kinds` (parallel). `queue` sets the QUEUE flag (shift / selection-bar toggle).
-static func resolve(player: int, target: Target, target_id: int, target_pos: Vector3, ids: PackedInt32Array, kinds: Array[Sel], queue: bool = false) -> Array[Command]:
+## `ids` and their class keys `classes` (parallel). `queue` sets the QUEUE flag (shift / selection-bar toggle).
+static func resolve(player: int, rules: OrderClassRules, target: Target, target_id: int, target_pos: Vector3, ids: PackedInt32Array, classes: Array[StringName], queue: bool = false) -> Array[Command]:
 	var out: Array[Command] = []
-	var any_armed: bool = false
-	for k: Sel in kinds:
-		any_armed = any_armed or is_armed(k)
+	var any_attacker: bool = false
+	for c: StringName in classes:
+		any_attacker = any_attacker or rules.allows(OrderSpec.Kind.ATTACK, c)
 	var flags: int = OrderSpec.FLAG_QUEUE if queue else 0
-	var groups: Dictionary = {}   # key = kind * 4 + haul_mode -> PackedInt32Array
+	var groups: Dictionary = {}   # kind * 4 + haul mode -> PackedInt32Array
 	var order_keys: Array[int] = []
 	for i: int in ids.size():
-		var kind: int = plan_kind(target, kinds[i], any_armed)
+		var kind: int = plan_kind(rules, target, classes[i], any_attacker)
 		if kind == NONE:
 			continue
 		if kind == RALLY:
 			out.append(Command.set_rally(player, ids[i], target_pos))
 			continue
-		var key: int = kind * 4 + plan_haul_mode(target) if kind == OrderSpec.Kind.HAUL else kind * 4
+		var key: int = kind * 4
+		if kind == OrderSpec.Kind.HAUL:
+			key += plan_haul_mode(target)
 		if not groups.has(key):
 			groups[key] = PackedInt32Array()
 			order_keys.append(key)
@@ -106,14 +80,15 @@ static func resolve(player: int, target: Target, target_id: int, target_pos: Vec
 		var _a: bool = g.append(ids[i])
 		groups[key] = g
 	for key: int in order_keys:
-		var spec: OrderSpec = _spec(key >> 2, key & 3,target_id, target_pos, flags)
+		var spec: OrderSpec = _spec(key >> 2, key & 3, target_id, target_pos, flags)
 		var g: PackedInt32Array = groups[key]
 		for c: int in range(0, g.size(), OrderSpec.WIRE_MAX_IDS):
 			out.append(Command.order(player, g.slice(c, c + OrderSpec.WIRE_MAX_IDS), spec))
 	return out
 
 
-## SUPPLY button (SL-5): ORDER supply_drop(target) for the commander `ids`.
+## SUPPLY button (SL-5): ORDER supply_drop(target) for the commander `ids`. supply_drop is off in
+## order_rules.json until the C1-13 scope gate, so the sim rejects it until then.
 static func resolve_supply(player: int, target_id: int, ids: PackedInt32Array, queue: bool = false) -> Array[Command]:
 	var spec: OrderSpec = OrderSpec.make(OrderSpec.Kind.SUPPLY_DROP, target_id, Vector3.ZERO, OrderSpec.FLAG_QUEUE if queue else 0)
 	var out: Array[Command] = []

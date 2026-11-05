@@ -9,5 +9,6 @@
   "paint_grow_s": 1.2,
   "group_count": 10,
   "rally_segments": 12,
-  "rally_flag_height_m": 6.0
+  "rally_flag_height_m": 6.0,
+  "rally_classes": ["shipyard", "vehicle_bay"]
 }
