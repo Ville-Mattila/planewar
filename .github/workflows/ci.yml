@@ -122,10 +122,36 @@ jobs:
         if: steps.changed.outputs.run == 'true'
         run: python -m unittest discover -s tools/tests -p "test_bake_check.py"
 
-  godot-tests:
-    name: godot import, scenes, gdUnit4
+  # TA-68: the old single job (import + scenes + unit + sim + net, 14-20 min) is split. Each gdUnit4 shard re-imports
+  # (~1 min; a godot/.godot cache is not reliable enough to bet the gate on). Unit is sharded by subdirectory:
+  # test/unit/sim alone, and "rest" = every other entry, so a new subdirectory lands in exactly one shard.
+  # The TA-67 guard (> 0 cases) runs per shard; a missing or empty shard is an error.
+  godot-scenes:
+    name: godot import, scenes
     runs-on: ubuntu-latest
-    timeout-minutes: 25  # TA-68 stopgap: unit+sim+net took 14-15 min once TA-67 re-enabled the unit layer; split into parallel jobs is the rest of TA-68
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: ./.github/actions/setup-godot
+      - name: Import
+        run: godot --headless --path godot --import
+      - name: validate_scenes (TEST-01; every .tscn under res://scenes loads and instantiates)
+        run: godot --headless --path godot -s res://tools/validate_scenes.gd
+
+  gdunit:
+    name: gdUnit4 ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: unit-sim, layer: unit, shard: sim }
+          - { name: unit-rest, layer: unit, shard: rest }
+          - { name: sim, layer: sim, shard: all }
+          - { name: net, layer: net, shard: all }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -135,41 +161,20 @@ jobs:
         run: .github/scripts/install_gdunit4.sh
       - name: Import
         run: godot --headless --path godot --import
-      - name: validate_scenes (TEST-01; every .tscn under res://scenes loads and instantiates)
-        run: godot --headless --path godot -s res://tools/validate_scenes.gd
-      - name: gdUnit4 unit/sim/net
+      - name: gdUnit4 ${{ matrix.name }}
         run: |
-          # runtest.sh starts a windowed Godot unless GODOT_BIN adds --headless.
-          {
-            echo '#!/usr/bin/env bash'
-            echo "exec $GODOT_BIN --headless \"\$@\""
-          } > "$RUNNER_TEMP/godot-headless"
-          chmod +x "$RUNNER_TEMP/godot-headless"
-          export GODOT_BIN="$RUNNER_TEMP/godot-headless"
-          cd godot
-          for layer in unit sim net; do
-            # No pipes here: under bash -eo pipefail `find | grep -q` SIGPIPEs and skips the layer (TA-67).
-            if [ -n "$(find "test/$layer" -name 'test_*.gd' -print -quit 2>/dev/null)" ]; then
-              echo "::group::gdUnit4 $layer"
-              ./addons/gdUnit4/runtest.sh -a res://test/$layer -c --ignoreHeadlessMode -rd reports/$layer
-              echo "::endgroup::"
-              # Guard: the layer must have produced a report with > 0 test cases.
-              python3 ../tools/check_gdunit_report.py "reports/$layer" "$layer"
-            elif [ "$layer" = unit ]; then
-              echo "::error::test/unit has no test_*.gd files; the unit layer must exist"
-              exit 1
-            else
-              echo "layer $layer has no tests; skipping"
-            fi
-          done
+          # The layer must exist (TA-67): a layer with no test_*.gd is an error, never a silent skip.
+          if [ -z "$(find "godot/test/${{ matrix.layer }}" -name 'test_*.gd' -print -quit 2>/dev/null)" ]; then
+            echo "::error::godot/test/${{ matrix.layer }} has no test_*.gd files; the layer must exist"
+            exit 1
+          fi
+          .github/scripts/gdunit_shard.sh "${{ matrix.layer }}" "${{ matrix.shard }}" "${{ matrix.name }}"
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gdunit-reports
-          path: |
-            reports
-            godot/reports
+          name: gdunit-reports-${{ matrix.name }}
+          path: godot/reports
           if-no-files-found: ignore
 
   art-import:
