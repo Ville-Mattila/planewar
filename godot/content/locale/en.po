@@ -276,3 +276,147 @@ msgstr "Uplink lost above 2,000 m. Autopilot is descending."
 
 msgid "hud.vs"
 msgstr "VS"
+
+msgid "ui.prod.auto"
+msgstr "AUTO {n}"
+
+msgid "ui.prod.back"
+msgstr "BACK"
+
+msgid "ui.prod.badge.auto"
+msgstr "A{n}"
+
+msgid "ui.prod.batch"
+msgstr "x{n}"
+
+msgid "ui.prod.cancel.not_owner"
+msgstr "Only the player who queued this can cancel it"
+
+msgid "ui.prod.cancel.other_team"
+msgstr "Not your team's queue"
+
+msgid "ui.prod.cancel_item"
+msgstr "X {n}"
+
+msgid "ui.prod.cancel_last"
+msgstr "CANCEL"
+
+msgid "ui.prod.def.autocannon_turret"
+msgstr "CANNON"
+
+msgid "ui.prod.def.bomber"
+msgstr "BOMBER"
+
+msgid "ui.prod.def.core"
+msgstr "CORE"
+
+msgid "ui.prod.def.dart"
+msgstr "DART"
+
+msgid "ui.prod.def.flak_battery"
+msgstr "FLAK"
+
+msgid "ui.prod.def.hangar"
+msgstr "HANGAR"
+
+msgid "ui.prod.def.harvester"
+msgstr "HARVEST"
+
+msgid "ui.prod.def.hauler"
+msgstr "HAULER"
+
+msgid "ui.prod.def.ice_extractor"
+msgstr "EXTRACT"
+
+msgid "ui.prod.def.lancer"
+msgstr "LANCER"
+
+msgid "ui.prod.def.missile_tower"
+msgstr "MISSILE"
+
+msgid "ui.prod.def.outpost"
+msgstr "OUTPOST"
+
+msgid "ui.prod.def.pad"
+msgstr "PAD"
+
+msgid "ui.prod.def.rail_lance"
+msgstr "RAIL"
+
+msgid "ui.prod.def.reactor"
+msgstr "REACTOR"
+
+msgid "ui.prod.def.refinery"
+msgstr "REFINE"
+
+msgid "ui.prod.def.relay_pylon"
+msgstr "PYLON"
+
+msgid "ui.prod.def.relay_station"
+msgstr "RELAY"
+
+msgid "ui.prod.def.scout"
+msgstr "SCOUT"
+
+msgid "ui.prod.def.sensor_mast"
+msgstr "SENSOR"
+
+msgid "ui.prod.def.shield_projector"
+msgstr "SHIELD"
+
+msgid "ui.prod.def.shipyard"
+msgstr "YARD"
+
+msgid "ui.prod.def.siege_crawler"
+msgstr "CRAWLER"
+
+msgid "ui.prod.def.solar_array"
+msgstr "SOLAR"
+
+msgid "ui.prod.def.vehicle_bay"
+msgstr "VEH BAY"
+
+msgid "ui.prod.disabled.eliminated"
+msgstr "Eliminated: production is disabled"
+
+msgid "ui.prod.minus"
+msgstr "-"
+
+msgid "ui.prod.plus"
+msgstr "+"
+
+msgid "ui.prod.reason.cap"
+msgstr "Cap reached"
+
+msgid "ui.prod.reason.ice"
+msgstr "Need {ice} more Ice"
+
+msgid "ui.prod.reason.lock"
+msgstr "Share locked until {time}: {left} Ore of your share left"
+
+msgid "ui.prod.reason.locked"
+msgstr "Requires {need}"
+
+msgid "ui.prod.reason.ore"
+msgstr "Need {ore} more Ore"
+
+msgid "ui.prod.reason.queue_empty"
+msgstr "Queue empty"
+
+msgid "ui.prod.reason.queue_full"
+msgstr "Queue full"
+
+msgid "ui.prod.reason.unavailable"
+msgstr "Not available"
+
+msgid "ui.prod.tab.build"
+msgstr "BUILD"
+
+msgid "ui.prod.tab.units"
+msgstr "UNITS"
+
+msgid "ui.prod.tile.cap"
+msgstr "CAP"
+
+msgid "ui.prod.tile.lock"
+msgstr "LOCK"
