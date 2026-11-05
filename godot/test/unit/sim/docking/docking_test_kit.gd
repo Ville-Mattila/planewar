@@ -22,7 +22,7 @@ static func queue_radius() -> float:
 
 ## flight_common.crash_pad_damage (R0 B.24 A-120): what a pad takes when a ship crashes on it.
 static func crash_pad_damage() -> float:
-	return Def.num(common().raw.get("crash_pad_damage", 0.0))
+	return common().crash_pad_damage
 
 
 static func ship_def(id: StringName) -> ShipDef:

@@ -38,10 +38,8 @@ func test_lock_break_keys_parse() -> void:
 	assert_float(p.lock_break_flip_max_m).is_equal(500.0)
 
 
-func test_rocket_lock_break_if_shipped() -> void:
+func test_rocket_lock_break() -> void:
 	var p: ProjectileDef = _proj(&"rocket")
-	if not p.raw.has("lock_break_agl_m"):
-		return  # arrives with GD-09 (PR #132)
 	assert_float(p.lock_break_agl_m).is_equal(40.0)
 	assert_float(p.lock_break_flip_min_m).is_equal(100.0)
 	assert_float(p.lock_break_flip_max_m).is_equal(500.0)
@@ -65,3 +63,15 @@ func test_pad_queue_radius_required() -> void:
 	var d: Dictionary = ContentDB.economy.raw.duplicate(true)
 	d.erase("pad_queue_radius_m")
 	assert_bool(EconomyDef.from_dict(d).errors.is_empty()).is_false()
+
+
+func test_launch_fields() -> void:
+	assert_float(ContentDB.flight_common.launch_thrust_min).is_equal(0.5)
+	assert_float(ContentDB.flight_common.launch_hold_s).is_equal(0.3)
+
+
+func test_launch_fields_required() -> void:
+	for key: String in ["launch_thrust_min", "launch_hold_s"]:
+		var d: Dictionary = ContentDB.flight_common.raw.duplicate(true)
+		d.erase(key)
+		assert_bool(FlightCommonDef.from_dict(d).errors.is_empty()).is_false()

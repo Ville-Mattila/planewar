@@ -47,7 +47,7 @@ func _init(store: EntityStore, defs: WorldDefs, events: SimEvents, sink: DamageS
 	_grade = grade
 	_pilots = pilots
 	_hz = hz
-	_pad_dmg = Def.num(defs.common.raw.get("crash_pad_damage", 0.0)) if defs.common != null else 0.0   # needs content: typed field
+	_pad_dmg = defs.common.crash_pad_damage if defs.common != null else 0.0
 	var e: int = _occ.resize(InputSlots.ENTITY_SLOTS)
 	assert(e == OK)
 	_occ.fill(0)

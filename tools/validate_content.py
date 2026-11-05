@@ -130,6 +130,11 @@ def check_cross(rep: Report, defs: dict[str, Any]) -> None:
         if isinstance(lo, (int, float)) and isinstance(hi, (int, float)) and lo >= hi:
             rep.add(f"godot/content/defs/weapons.json:/weapons/{n}/range_min_m",
                     f"range_min_m {lo} must be < range_m {hi} (R0 B.8 A-2)")
+    for n, proj in enumerate(collection(defs.get("projectiles"), "projectiles")):
+        lo, hi = proj.get("lock_break_flip_min_m"), proj.get("lock_break_flip_max_m")
+        if isinstance(lo, (int, float)) and isinstance(hi, (int, float)) and lo > hi:
+            rep.add(f"godot/content/defs/projectiles.json:/projectiles/{n}/lock_break_flip_min_m",
+                    f"lock_break_flip_min_m {lo} must be <= lock_break_flip_max_m {hi} (R0 B.25 A-130)")
     if "bot_promises" in defs:
         check_profiles(rep, rules.get("tick_hz", 30), defs)
     check_amendments_02(rep, defs)
