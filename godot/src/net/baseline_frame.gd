@@ -80,9 +80,9 @@ func copy_from(src: BaselineFrame, t: int) -> void:
 	tick = t
 	base_tick = src.tick
 	usable = true
+	_reset()                                    # old data goes first, judged by the destination's own mark
 	hi = src.hi
 	if hi == 0:
-		_reset()
 		return
 	present = src.present.duplicate()
 	pos = src.pos.duplicate()

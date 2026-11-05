@@ -22,12 +22,27 @@ func test_mark_tracks_every_setter() -> void:
 	assert_int(f.hi).is_equal(4)
 	f.set_full_cached(9, 1, 5, 6, 7, 8, 9, 10, 11)
 	assert_int(f.hi).is_equal(10)
-	f.set_delta(5, 2, false, 0, 1, 2, 3, 4, 5, -1)
-	assert_int(f.hi).is_equal(10)
+	f.set_delta(15, 2, false, 0, 1, 2, 3, 4, 5, -1)     # each setter raises the mark above its current value
+	assert_int(f.hi).is_equal(16)
 	f.set_blip(20, 2, 4)
 	assert_int(f.hi).is_equal(21)
 	f.set_blip_at(30, 2, 4, 99)
 	assert_int(f.hi).is_equal(31)
+	f.set_delta(2, 3, true, 0, 1, 2, 3, 4, 5, -1)       # a lower index never lowers it
+	assert_int(f.hi).is_equal(31)
+
+
+func test_copy_of_empty_source_clears_stale_destination() -> void:
+	var dst: BaselineFrame = BaselineFrame.new()
+	_full(dst, 40, 1)
+	_full(dst, HIGH, 1)
+	var empty: BaselineFrame = BaselineFrame.new()
+	dst.copy_from(empty, 9)
+	assert_int(dst.hi).is_equal(0)
+	assert_int(dst.present[40]).is_equal(0)
+	assert_bool(dst.same_state(empty)).is_true()
+	for i: int in [0, 40, HIGH]:
+		assert_bool(_is_default(dst, i)).is_true()
 
 
 func test_clear_after_removals_shrinks_mark_and_resets_all() -> void:
