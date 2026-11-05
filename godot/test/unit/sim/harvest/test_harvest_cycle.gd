@@ -138,6 +138,7 @@ func _loaded_at_dock(w: SimWorld, ref: int, n: int) -> Array[int]:
 func test_a_refinery_unloads_two_at_a_time_and_the_third_waits_for_a_dock() -> void:
 	var w: SimWorld = K.world()
 	var ref: int = K.refinery(w)
+	w._players.team_ore[0] = 0                                  # room under the storage cap for all three loads
 	var hs: Array[int] = _loaded_at_dock(w, ref, 3)
 	K.step(w, 15)
 	var unloading: int = 0
@@ -158,7 +159,7 @@ func test_a_refinery_unloads_two_at_a_time_and_the_third_waits_for_a_dock() -> v
 
 func test_an_enemy_refinery_takes_no_delivery() -> void:
 	var w: SimWorld = K.world()
-	var ref: int = SalvageTestKit.put(w, &"refinery", 1, 1, 0.0, 0.0)
+	var ref: int = K.refinery(w, 0.0, 1)
 	var e: float = w.store().radius[ref] + DOCK_STANDOFF_M
 	var h: int = K.harvester(w, e)
 	w.store().cargo[h] = 300.0

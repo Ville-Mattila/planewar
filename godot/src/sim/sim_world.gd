@@ -306,6 +306,7 @@ func _wire(rules: MatchRules) -> void:
 	_view.shields = _combat.shields
 	_view.docking = _econ.docking
 	_view.score = _econ.score
+	_view.fields = _econ.harvest.fields
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
 	vision = Vision.new(_store, _defs, rules.tick_hz)
 	_view.vision = vision

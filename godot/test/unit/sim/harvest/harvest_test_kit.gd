@@ -15,12 +15,20 @@ static func dir_at(east: float) -> Vector3:
 	return Vector3(cos(east / R), sin(east / R), 0.0)
 
 
-static func refinery(w: SimWorld, east: float = 0.0) -> int:
-	return SalvageTestKit.put(w, &"refinery", 0, 0, 0.0, east)
+## Spawns `def` at `east` metres of arc along +Y from +X on the datum (SalvageTestKit.at is a tangent offset, not an arc).
+static func put(w: SimWorld, def: StringName, owner: int, east: float) -> int:
+	var s: int = w._applier.spawn(WorldTestKit.def_id(def), owner, w._players.team[owner], dir_at(east) * R, Vector3.ZERO,
+			Vector3(-sin(east / R), cos(east / R), 0.0), w.tick())
+	assert(s > 0)
+	return s
+
+
+static func refinery(w: SimWorld, east: float = 0.0, owner: int = 0) -> int:
+	return put(w, &"refinery", owner, east)
 
 
 static func harvester(w: SimWorld, east: float, owner: int = 0) -> int:
-	return SalvageTestKit.put(w, &"harvester", owner, w._players.team[owner], 0.0, east)
+	return put(w, &"harvester", owner, east)
 
 
 static func field(w: SimWorld, east: float, capacity: int = 6000, regen: float = 2.0, radius: float = 150.0,
@@ -34,7 +42,7 @@ static func step(w: SimWorld, n: int) -> void:
 
 
 static func state(w: SimWorld, h: int) -> int:
-	return w.store().cargo_kind[h]
+	return Harvest.state_of(w.store().link[h])
 
 
 static func delivered(w: SimWorld, player: int = 0) -> int:
