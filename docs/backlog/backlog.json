@@ -8111,5 +8111,24 @@
     "note": "Stopgap #141 raised the godot-tests timeout to 25 min; the parallel-job split is still open.",
     "pr": 142,
     "merged": "2026-11-05"
+  },
+  {
+    "id": "BUG-2",
+    "title": "sim_ai: Bomber dives to the 60 m DECK band under a known Flak, below its 150 m engagement floor, so Flak never engages (GD-26 C-06 finding)",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-26"
+    ],
+    "milestone": "M3",
+    "acceptance": "Per the Architect ruling on GD-26 (R0-amendments-21): with shipped content a Bomber attacking a Flak-defended target is engageable by that Flak (enters its h_rel band above target_agl_min) and is first seen at >= the A-128 precondition range, or the ruling amends the band; the GD-26 known-bug pin in test/sim/balance/test_c06_bomber_vs_flak.gd flips to a passing C-06 assertion; C-06 measured on shipped bands (no forced 600 m rig).",
+    "docs": [
+      "docs/02-game-design.md",
+      "docs/05-ai.md",
+      "docs/reviews/R0-amendments-19.md"
+    ],
+    "status": "todo",
+    "note": "Measured in GD-26 (#144): DECK 60 m vs Flak floor 150 m, 50/50 release vs one and two Flak, first seen 850-940 m. 02 s18.3 (600 m) and 05 s6.3 (DECK) disagree on Bomber altitude; Architect ruling pending."
   }
 ]
