@@ -13,6 +13,7 @@ const SHIELD01: float = 0.375      ## the Core dome's charge as a share of its c
 const WRECK_ORE: float = 85.0     ## the scripted wreck's remaining Ore (EntityStore.hp)
 const BOMBS: int = 3
 const ROCKETS: int = 2
+const ROCKET_OWNER: int = 1         ## the rocket's shooter owner at spawn (ProjectileStore.owner; team 1)
 const CONTROL: int = 2             ## POSSESSED (R0 B.3: 0 AUTO, 1 ORDERED, 2 POSSESSED; 2 bits on the wire, 04 s3.3); `a` has possessor 0
 const AI_TAG: int = 4
 const OVERLAY: int = 2              ## ControlMachine.Overlay.RECOVER_CEILING (sim/MODULE.md)
@@ -108,6 +109,7 @@ func _script_state() -> void:
 	var pr: ProjectileStore = world.projectiles()
 	pr.kind[pr.index_of(rocket)] = ProjectileStore.ROCKET
 	pr.target[pr.index_of(rocket)] = a
+	pr.owner[pr.index_of(rocket)] = ROCKET_OWNER
 	world.spatial.rebuild()
 	world.vision.rebuild_lists()             # TA-63: the per-team lists carry the masks scripted above (V5)
 
