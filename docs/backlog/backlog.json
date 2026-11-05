@@ -8124,8 +8124,8 @@
     "id": "BUG-2",
     "title": "sim_ai: Bomber dives to the 60 m DECK band under a known Flak, below its 150 m engagement floor, so Flak never engages (GD-26 C-06 finding)",
     "lane": "sim_ai",
-    "tier": "Opus",
-    "size_days": 0.5,
+    "tier": "Sonnet",
+    "size_days": 0.25,
     "depends_on": [
       "GD-26"
     ],
