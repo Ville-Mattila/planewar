@@ -69,16 +69,24 @@ func basis(id: int) -> Basis:
 	return Basis(f.cross(u), u, -f)
 
 
+## A live projectile id answers from ProjectileStore spawn data (R0 B.25 A-133): ProjectileDef id (`DefRanges.PROJECTILE_BASE`
+## + local index), the shooter's owner / team at spawn, the def's `radius_m`; `def_kind` is -1 (no EntityStore.K_*).
 func def_id(id: int) -> int:
-	return _store.def_id[EntityId.slot(id)] if _store.alive(id) else -1
+	if _store.alive(id):
+		return _store.def_id[EntityId.slot(id)]
+	return DefRanges.PROJECTILE_BASE + _proj.projectile_def[_proj.index_of(id)] if _is_live_projectile(id) else -1
 
 
 func owner(id: int) -> int:
-	return _u8(_store.owner[EntityId.slot(id)]) if _store.alive(id) else -1
+	if _store.alive(id):
+		return _u8(_store.owner[EntityId.slot(id)])
+	return _u8(_proj.owner[_proj.index_of(id)]) if _is_live_projectile(id) else -1
 
 
 func team(id: int) -> int:
-	return _u8(_store.team[EntityId.slot(id)]) if _store.alive(id) else -1
+	if _store.alive(id):
+		return _u8(_store.team[EntityId.slot(id)])
+	return _u8(_proj.team[_proj.index_of(id)]) if _is_live_projectile(id) else -1
 
 
 func hp01(id: int) -> float:
@@ -163,7 +171,9 @@ func flags(id: int) -> int:
 
 
 func radius(id: int) -> float:
-	return _store.radius[EntityId.slot(id)] if _store.alive(id) else 0.0
+	if _store.alive(id):
+		return _store.radius[EntityId.slot(id)]
+	return _defs.projectile_radius[_proj.projectile_def[_proj.index_of(id)]] if _is_live_projectile(id) else 0.0
 
 
 func def_kind(id: int) -> int:
@@ -348,6 +358,10 @@ func _ids_of(live: PackedInt32Array) -> PackedInt32Array:
 	for k: int in live.size():
 		out[k] = _store.id_of(live[k])
 	return out
+
+
+func _is_live_projectile(id: int) -> bool:
+	return EntityId.is_projectile(id) and _proj.alive(id)
 
 
 static func _u8(v: int) -> int:

@@ -114,7 +114,7 @@ class_name MatchArc;  enum Arc { OPEN, EXPAND, SIEGE, OVERTIME }            # en
 class_name SimView extends RefCounted                                        # LocalSimView (direct arrays) and NetSimView (replicated) implement it
 func alive(id: int) -> bool                                                  # 01 s9.4 accessors from here ...
 func pos(id: int) -> Vector3;  func vel(id: int) -> Vector3;  func basis(id: int) -> Basis
-func def_id(id: int) -> int;  func owner(id: int) -> int;  func team(id: int) -> int
+func def_id(id: int) -> int;  func owner(id: int) -> int;  func team(id: int) -> int   # live projectile id: ProjectileDef id, shooter owner/team at spawn (A-133)
 func hp01(id: int) -> float;  func fuel01(id: int) -> float;  func ammo(id: int) -> int;  func bombs(id: int) -> int
 func control_state(id: int) -> int                                           # Control state enum below
 func possessor(id: int) -> int                                               # player slot or -1
@@ -124,7 +124,7 @@ func visible_to(team: int, id: int) -> bool                                  # .
 func tick() -> int
 func visible_ids(team: int) -> PackedInt32Array;  func visible_enemy_ships(team: int, out: PackedInt32Array) -> int   # visible_ids allocates; walks every live slot. enemy ships: vision/MODULE.md V10 (TA-63)
 func ships() -> PackedInt32Array;  func structures() -> PackedInt32Array;  func wrecks() -> PackedInt32Array   # (03) live-slot lists
-func flags(id: int) -> int;  func radius(id: int) -> float;  func def_kind(id: int) -> int                       # (03)
+func flags(id: int) -> int;  func radius(id: int) -> float;  func def_kind(id: int) -> int      # (03); projectile id: radius_m, def_kind -1 (A-133)
 func cargo(id: int) -> float;  func cargo_kind(id: int) -> int;  func link(id: int) -> int                       # (03)
 func boost_state(id: int) -> int;  func flip_cooldown01(id: int) -> float;  func rockets(id: int) -> int
 func dock_state(id: int) -> int                                              # Dock state enum below
