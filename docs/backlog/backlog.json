@@ -8130,5 +8130,22 @@
     ],
     "status": "todo",
     "note": "Measured in GD-26 (#144): DECK 60 m vs Flak floor 150 m, 50/50 release vs one and two Flak, first seen 850-940 m. 02 s18.3 (600 m) and 05 s6.3 (DECK) disagree on Bomber altitude; Architect ruling pending."
+  },
+  {
+    "id": "NET-60",
+    "title": "net: cut the projectile share of prepare_tick and Interest (the real NET-58 hotspot; NET-59 review finding)",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "NET-59"
+    ],
+    "milestone": "M3",
+    "acceptance": "Profiled from the NET-59 review (#145): ~89 projectile rows per tick, 3 clients. (1) SnapshotCodec.prepare_tick: a projectile row no longer pays the full ~5 us _cache_entity (snapshot_codec.gd:135-147) - skip, derive or cache ori/fine per generation as the codec allows; index_of_row once per row (:113, :129) and entity_mask calls hoisted (:130-131). (2) Interest ProjectileMembers.sweep (interest/projectile_members.gd:47-76): it.stamp / it.gen / it.visible hoisted into locals. Bytes unchanged (NON_WRECK_SHA pin, bench hash identical, projectile byte budget unchanged). test_projectile_roster_perf projectile delta p95 re-measured hosted (report-only) and on the pinned runner against the 400 us bound; cite before/after vs NET-59 CI run 42055888468 (515 us hosted).",
+    "docs": [
+      "docs/04-networking-and-backend.md",
+      "godot/src/net/MODULE.md"
+    ],
+    "status": "todo"
   }
 ]
