@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "progression.schema.json",
+  "title": "ProgressionDef (godot/content/defs/progression.json)",
+  "$comment": "R0 B.1 progression.json (ProgressionDef); 02 s17.3. Singleton: no id, status or tags. Cosmetic and social only; server-authoritative (ADR-08).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "level_cap": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "value": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "$comment": "02 s17.3 level cap 50"
+        }
+      },
+      "required": [
+        "_doc",
+        "value"
+      ]
+    },
+    "xp_curve": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "base": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000,
+          "$comment": "02 s17.3 XP to L+1 = base + per_level x L (1000)"
+        },
+        "per_level": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000,
+          "$comment": "02 s17.3 250 per level"
+        }
+      },
+      "required": [
+        "_doc",
+        "base",
+        "per_level"
+      ]
+    },
+    "xp_per_match": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "mode_factor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "_doc": {
+              "$ref": "#/$defs/doc"
+            },
+            "pvp": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "$comment": "02 s17.3 PvP 1.0"
+            },
+            "coop": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "$comment": "02 s17.3 Co-op 0.8"
+            },
+            "skirmish": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10,
+              "$comment": "02 s17.3 Skirmish 0.5"
+            }
+          },
+          "required": [
+            "_doc",
+            "pvp",
+            "coop",
+            "skirmish"
+          ]
+        },
+        "win_mult": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10,
+          "$comment": "02 s17.3 x 1.25 on a win"
+        }
+      },
+      "required": [
+        "_doc",
+        "mode_factor",
+        "win_mult"
+      ]
+    },
+    "campaign_xp": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "first_clear": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000,
+          "$comment": "02 s17.3 2,000 per first clear"
+        },
+        "silver_bonus": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000,
+          "$comment": "02 s17.3 +500 silver"
+        },
+        "gold_bonus": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000,
+          "$comment": "02 s17.3 +1,000 gold"
+        }
+      },
+      "required": [
+        "_doc",
+        "first_clear",
+        "silver_bonus",
+        "gold_bonus"
+      ]
+    },
+    "mission_paints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "$comment": "02 s17.3 8 mission paints"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "gold"
+          ],
+          "$comment": "02 s17.3 campaign gold medals"
+        }
+      },
+      "required": [
+        "_doc",
+        "count",
+        "source"
+      ]
+    },
+    "levels": {
+      "type": "array",
+      "minItems": 50,
+      "maxItems": 50,
+      "$comment": "02 s17.3 cosmetic unlock table: one row per level 1..50",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "_doc": {
+            "$ref": "#/$defs/doc"
+          },
+          "level": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "$comment": "level number"
+          },
+          "unlocks": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "hull_paint",
+                    "pad_flag",
+                    "callsign_title"
+                  ],
+                  "$comment": "02 s17.3 item kinds"
+                },
+                "title": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Za-z ]*$",
+                  "$comment": "callsign_title only: 02 s17.3 titles at levels 10/20/30/40/50"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            }
+          }
+        },
+        "required": [
+          "_doc",
+          "level",
+          "unlocks"
+        ]
+      }
+    }
+  },
+  "required": [
+    "level_cap",
+    "xp_curve",
+    "xp_per_match",
+    "campaign_xp",
+    "mission_paints",
+    "levels"
+  ],
+  "$defs": {
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    }
+  }
+}

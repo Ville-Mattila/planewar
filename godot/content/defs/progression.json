@@ -1,0 +1,440 @@
+{
+  "_doc": "02 s17.3 account progression (ProgressionDef, R0 B.1 progression.json). Cosmetic and social only (01 s3.4). Server-authoritative (ADR-08). XP curve, mode factors and campaign XP per 02 s17.3; levels[] is the cosmetic unlock table derived from the 02 s17.3 unlock rules. No stat unlocks.",
+  "level_cap": {
+    "_doc": "02 s17.3 level cap 50",
+    "value": 50
+  },
+  "xp_curve": {
+    "_doc": "02 s17.3 XP to go from level L to L+1 = 1000 + 250 * L (summed to the cap: 355,250 XP, '~355,000' in 02)",
+    "base": 1000,
+    "per_level": 250
+  },
+  "xp_per_match": {
+    "_doc": "02 s17.3 XP per match = score x mode factor x 1.25 on a win",
+    "mode_factor": {
+      "_doc": "02 s17.3 PvP 1.0, Co-op 0.8, Skirmish 0.5; pvp covers pvp_1v1, pvp_2v2, pvp_team (02 s14)",
+      "pvp": 1.0,
+      "coop": 0.8,
+      "skirmish": 0.5
+    },
+    "win_mult": 1.25
+  },
+  "campaign_xp": {
+    "_doc": "02 s17.3 Campaign: 2,000 XP per first clear, +500 silver, +1,000 gold",
+    "first_clear": 2000,
+    "silver_bonus": 500,
+    "gold_bonus": 1000
+  },
+  "mission_paints": {
+    "_doc": "02 s17.3 campaign gold medals unlock 8 mission paints (one per mission; 8 missions per R0 C3-10)",
+    "count": 8,
+    "source": "gold"
+  },
+  "levels": [
+    {
+      "level": 1,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 2,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 3,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 4,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 5,
+      "unlocks": [
+        {
+          "kind": "pad_flag"
+        }
+      ],
+      "_doc": "02 s17.3 pad flag every 5 levels"
+    },
+    {
+      "level": 6,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 7,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 8,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 9,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 10,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        },
+        {
+          "kind": "pad_flag"
+        },
+        {
+          "kind": "callsign_title",
+          "title": "Spotter"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels; pad flag every 5 levels; callsign title at 10/20/30/40/50"
+    },
+    {
+      "level": 11,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 12,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 13,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 14,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 15,
+      "unlocks": [
+        {
+          "kind": "pad_flag"
+        }
+      ],
+      "_doc": "02 s17.3 pad flag every 5 levels"
+    },
+    {
+      "level": 16,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 17,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 18,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 19,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 20,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        },
+        {
+          "kind": "pad_flag"
+        },
+        {
+          "kind": "callsign_title",
+          "title": "Wingman"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels; pad flag every 5 levels; callsign title at 10/20/30/40/50"
+    },
+    {
+      "level": 21,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 22,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 23,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 24,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 25,
+      "unlocks": [
+        {
+          "kind": "pad_flag"
+        }
+      ],
+      "_doc": "02 s17.3 pad flag every 5 levels"
+    },
+    {
+      "level": 26,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 27,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 28,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 29,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 30,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        },
+        {
+          "kind": "pad_flag"
+        },
+        {
+          "kind": "callsign_title",
+          "title": "Flight Lead"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels; pad flag every 5 levels; callsign title at 10/20/30/40/50"
+    },
+    {
+      "level": 31,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 32,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 33,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 34,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 35,
+      "unlocks": [
+        {
+          "kind": "pad_flag"
+        }
+      ],
+      "_doc": "02 s17.3 pad flag every 5 levels"
+    },
+    {
+      "level": 36,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 37,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 38,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 39,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 40,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        },
+        {
+          "kind": "pad_flag"
+        },
+        {
+          "kind": "callsign_title",
+          "title": "Pad Chief"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels; pad flag every 5 levels; callsign title at 10/20/30/40/50"
+    },
+    {
+      "level": 41,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 42,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 43,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 44,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 45,
+      "unlocks": [
+        {
+          "kind": "pad_flag"
+        }
+      ],
+      "_doc": "02 s17.3 pad flag every 5 levels"
+    },
+    {
+      "level": 46,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 47,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 48,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels"
+    },
+    {
+      "level": 49,
+      "unlocks": [],
+      "_doc": "02 s17.3 no item at this level (02 s17.3 'every level unlocks one item' is not satisfiable with its own rules; see report)"
+    },
+    {
+      "level": 50,
+      "unlocks": [
+        {
+          "kind": "hull_paint"
+        },
+        {
+          "kind": "pad_flag"
+        },
+        {
+          "kind": "callsign_title",
+          "title": "Line Captain"
+        }
+      ],
+      "_doc": "02 s17.3 hull paint on even levels; pad flag every 5 levels; callsign title at 10/20/30/40/50"
+    }
+  ]
+}
