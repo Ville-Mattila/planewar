@@ -8181,6 +8181,9 @@
       "02 s11.2",
       "05 s6.2"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 150,
+    "merged": "2026-11-05",
+    "note": "Opus approve r2. C-08 114/200 decided (59/55), 2 rams; A/B [ai] +11 %. Owner accepted C-08 ~100 s hosted runtime. Follow-ups: docs lane to land 02 s18.3 C-08 row + 05 s6.2 sentences from PR body; hit rate 31 % vs 12-18 % goal to flag; Architect Q: literal 2 in fire_range/(2*break_ttc) as an intercept key?; Ai14Kit/DartKit.world give FOE Vanguard doctrine (skews symmetric rigs); nits: cap step at beam, INTERCEPT boost no hysteresis."
   }
 ]
