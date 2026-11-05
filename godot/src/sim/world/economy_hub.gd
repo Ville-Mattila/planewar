@@ -14,6 +14,7 @@ var supply: SupplyNet                    ## GD-18: the Pylon graph, supplied fla
 var salvage: Salvage                     ## GD-19: wrecks, pods, tows and delivery (02 s13)
 var docking: Docking                     ## GD-15: landing grade, pad queues, resupply service (03 s6.4, 02 s2.3)
 var score: ScoreKeeper                   ## GD-27: score events and the match result counters (02 s17.1)
+var harvest: Harvest                     ## GD-12: Ore Fields, mining and Refinery docks (02 s8.2)
 
 var _store: EntityStore
 var _players: PlayerTable
@@ -43,6 +44,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	salvage = Salvage.new(store, defs, economy, events, terrain, rules.tick_hz, rules.caps.wrecks if rules.caps != null else 0)
 	docking = Docking.new(store, players, defs, economy, events, applier, rules.tick_hz)
 	score = ScoreKeeper.new(store, players, defs, events, rules.tick_hz)
+	harvest = Harvest.new(store, defs, rules, economy)
 	validator.build = build
 	validator.production = production
 
@@ -90,6 +92,7 @@ func step(t: int, dt: float) -> void:
 	construction.step(t, dt)
 	production.step(t, dt)
 	docking.step(t, dt)
+	harvest.step(t, dt)
 	salvage.step(t)
 	supply.step(t, economy.structure_epoch)
 	repair.unsupplied = supply.unsupplied   # the repair pass reads the flags of this tick
@@ -154,12 +157,13 @@ func write_state(buf: StreamPeerBuffer) -> void:
 	production.write_state(buf)
 	docking.write_state(buf)
 	score.write_state(buf)
+	harvest.fields.write_state(buf)
 
 
 func read_state(buf: StreamPeerBuffer) -> bool:
 	return build.read_state(buf) and economy.read_state(buf) and construction.read_state(buf) \
 			and production.read_state(buf) and docking.read_state(buf) \
-			and score.read_state(buf)
+			and score.read_state(buf) and harvest.fields.read_state(buf)
 
 
 func _stamp(slot: int, def: int, dir: Vector3) -> bool:
