@@ -95,3 +95,65 @@ func test_engage_speed_holds_the_head_on_closing_speed() -> void:
 	assert_float(c.engage_speed(p, nose, pt, Vector3(0, 0, -110), 600.0)).is_equal_approx(110.0 + prm.engage_margin, 1e-3)   # tail
 	assert_float(c.engage_speed(p, nose, Vector3(0, 0, -150), Vector3(0, 0, -110), 150.0)).is_equal_approx(110.0 - prm.engage_margin, 1e-3)
 	assert_float(c.engage_speed(p, -nose, pt, Vector3(0, 0, 110), 600.0)).is_equal_approx(110.0 + prm.engage_margin, 1e-3)   # behind
+
+
+# AI-46 round 2 (review of #150): the head-on rule caps the A-93 speed; it never replaces it.
+func test_engage_speed_caps_a93_and_never_exceeds_it() -> void:
+	var prm: DartParams = DartKit.params()
+	var c: DartCombat = DartCombat.new(prm, DartKit.gains())
+	var p: Vector3 = Vector3.ZERO
+	var nose: Vector3 = Vector3(0, 0, -1)
+	# a Bomber crossing ahead inside standoff_m (180 m), 5 m/s toward the shooter: A-93 = its speed - 15
+	var vt: Vector3 = Vector3(59.8, 0, 5.0)
+	assert_float(c.engage_speed(p, nose, Vector3(0, 0, -180), vt, 180.0)).is_equal_approx(vt.length() - prm.engage_margin, 1e-3)
+	# oblique outside standoff_m, barely approaching: A-93 = its speed + 15
+	var po: Vector3 = Vector3(200, 0, -500)
+	var vo: Vector3 = Vector3(-10, 0, -100)
+	assert_float(c.engage_speed(p, nose, po, vo, po.length())).is_equal_approx(vo.length() + prm.engage_margin, 1e-3)
+	# never above A-93 in any heading of the target
+	for k: int in 36:
+		var a: float = deg_to_rad(10.0 * k)
+		var v2: Vector3 = Vector3(sin(a), 0, cos(a)) * 110.0
+		assert_float(c.engage_speed(p, nose, Vector3(0, 0, -500), v2, 500.0)).is_less_equal(110.0 + prm.engage_margin + 1e-3)
+
+
+func test_engage_speed_is_continuous_where_the_target_turns_toward() -> void:
+	var prm: DartParams = DartKit.params()
+	var c: DartCombat = DartCombat.new(prm, DartKit.gains())
+	var pt: Vector3 = Vector3(0, 0, -400)
+	var opening: float = c.engage_speed(Vector3.ZERO, Vector3(0, 0, -1), pt, Vector3(100, 0, -0.01), 400.0)
+	var closing: float = c.engage_speed(Vector3.ZERO, Vector3(0, 0, -1), pt, Vector3(100, 0, 0.01), 400.0)
+	assert_float(absf(opening - closing)).is_less(0.1)
+
+
+# INTERCEPT keeps the 05 s6.2 boost for a crossing target that is barely closing and drops it only in a head-on pass.
+func test_intercept_boosts_on_a_crossing_target_not_into_a_head_on_pass() -> void:
+	assert_bool(_intercept_boosts(true)).override_failure_message("crossing target, barely closing: boost").is_true()
+	assert_bool(_intercept_boosts(false)).override_failure_message("head-on pass: no boost").is_false()
+
+
+# One INTERCEPT think of a Dart at 300 m AGL on an enemy Dart 1,300 m away (team-visible, past boost_close_m 600):
+# crossing = the Dart heads 80 degrees off the sight line, the target crosses at 100 m/s closing at 10 m/s;
+# otherwise nose to nose at cruise. True when the think asks for BOOST.
+func _intercept_boosts(crossing: bool) -> bool:
+	var w: SimWorld = DartKit.world(9)
+	var b: DartBrain = DartKit.brain(w)
+	var d: AiDriver = DartKit.driver(w, b)
+	var c0: Vector3 = Vector3(1, 0, 0)
+	var fr: Basis = Sphere.tangent_frame(c0)
+	var ha: Vector3 = (fr.y * cos(deg_to_rad(80.0)) + fr.x * sin(deg_to_rad(80.0))) if crossing else fr.y
+	var a: int = DartKit.spawn(w, &"dart", 0, DartKit.above(w, c0, 300.0), ha * 110.0, ha)
+	var pt: Vector3 = DartKit.above(w, DartKit.offset(c0, 1300.0, 0.0) if crossing else DartKit.offset(c0, 0.0, 1300.0), 300.0)
+	var vt: Vector3 = (fr.y * 100.0 - fr.x * 10.0) if crossing else -fr.y * 110.0
+	var t: int = DartKit.spawn(w, &"dart", DartKit.FOE, pt, vt, vt.normalized())
+	for _k: int in 9:                                                       # three Vision passes
+		w.step()
+	var v: SimView = w.view()
+	var st: AiState = d.state
+	var s: int = EntityId.slot(a)
+	st.set_target(s, t)
+	st.goal[s] = v.pos(t)
+	st.seen_tick[s] = v.tick()
+	assert_bool(v.visible_to(0, t)).is_true()
+	assert_int(b.modes.combat.think(a, AiTag.Tag.INTERCEPT, v, st, v.tick())).is_equal(AiTag.Tag.INTERCEPT)
+	return (st.bflags[s] & DartCombat.F_BOOST) != 0
