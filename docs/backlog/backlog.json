@@ -8138,8 +8138,10 @@
       "docs/05-ai.md",
       "docs/reviews/R0-amendments-19.md"
     ],
-    "status": "todo",
-    "note": "Measured in GD-26 (#144): DECK 60 m vs Flak floor 150 m, 50/50 release vs one and two Flak, first seen 850-940 m. 02 s18.3 (600 m) and 05 s6.3 (DECK) disagree on Bomber altitude; Architect ruling pending. R0 B.27 A-138: closed as not-a-bug; re-scoped to the SC-53 brain-side test and two citations; owner re-tiers to Sonnet 0.25 d. The 05 s6.3 band rule is canonical; 02 s18.3 C-06's 600 m is a pinned scenario setup."
+    "status": "done",
+    "note": "Measured in GD-26 (#144): DECK 60 m vs Flak floor 150 m, 50/50 release vs one and two Flak, first seen 850-940 m. 02 s18.3 (600 m) and 05 s6.3 (DECK) disagree on Bomber altitude; Architect ruling pending. R0 B.27 A-138: closed as not-a-bug; re-scoped to the SC-53 brain-side test and two citations; owner re-tiers to Sonnet 0.25 d. The 05 s6.3 band rule is canonical; 02 s18.3 C-06's 600 m is a pinned scenario setup. Review nits: Autocannon variant only checks rel_max_r2 > 150 (test_sc53:44), lines 27-35 repeat C-06c asserts, _flak_floor_m duplicates a rig helper.",
+    "pr": 149,
+    "merged": "2026-11-05"
   },
   {
     "id": "NET-60",
