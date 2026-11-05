@@ -380,6 +380,11 @@ class Feat01Defs(Tree):
         self._edit("scoring", bump)
         self._expect_sole("weights sum to 1.01, must be 1.0")
 
+    def test_lock_break_flip_min_above_max_fails(self) -> None:
+        self._edit("projectiles", lambda d: d["projectiles"][0].update(
+            {"lock_break_flip_min_m": 600, "lock_break_flip_max_m": 500}))
+        self._expect_sole("lock_break_flip_min_m 600 must be <= lock_break_flip_max_m 500")
+
     def test_landing_grade_must_mirror_the_02_block(self) -> None:
         self._edit("scoring", lambda d: d["landing_grade"]["points"].update({"ace": 49}))
         self._expect_sole("differs from the 02 landing block")

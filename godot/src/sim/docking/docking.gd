@@ -47,11 +47,10 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, economy: E
 	_defs = defs
 	_events = events
 	_hz = hz
-	var raw: Dictionary = defs.common.raw if defs.common != null else {}
-	if raw.has("launch_hold_s") and raw.has("launch_thrust_min"):    # needs content: typed fields (GD-44)
-		_launch_min = Def.num(raw["launch_thrust_min"])
-		_hold_ticks = ceili(Def.num(raw["launch_hold_s"]) * float(hz))
-	_radius = Def.num(defs.economy.raw.get("pad_queue_radius_m", 0.0)) if defs.economy != null else 0.0   # needs content: typed field
+	if defs.common != null:
+		_launch_min = defs.common.launch_thrust_min
+		_hold_ticks = ceili(defs.common.launch_hold_s * float(hz))
+	_radius = defs.economy.pad_queue_radius_m if defs.economy != null else 0.0
 	grade = LandingGrade.from_def(defs.content.scoring)
 	if grade == null:
 		grade = LandingGrade.new()

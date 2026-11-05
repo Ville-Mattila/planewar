@@ -53,10 +53,10 @@ func _init(cs: ContentSet) -> void:
 		var pd: ProjectileDef = cs.projectiles[i]
 		projectile_radius[i] = pd.radius_m
 		straight[i] = 1 if not pd.gravity and not pd.transport else 0
-		fuse_delay_s[i] = Def.num(pd.raw.get("fuse_delay_s", 0.0))   # needs content: typed ProjectileDef field
-		lock_break_agl[i] = Def.num(pd.raw.get("lock_break_agl_m", 0.0))   # GD-09; needs content: typed field
-		lock_break_flip_min[i] = Def.num(pd.raw.get("lock_break_flip_min_m", 0.0))
-		lock_break_flip_max[i] = Def.num(pd.raw.get("lock_break_flip_max_m", 0.0))
+		fuse_delay_s[i] = pd.fuse_delay_s
+		lock_break_agl[i] = pd.lock_break_agl_m
+		lock_break_flip_min[i] = pd.lock_break_flip_min_m
+		lock_break_flip_max[i] = pd.lock_break_flip_max_m
 	for w: int in cs.weapons.size():
 		turn_rad_per_s[w] = deg_to_rad(cs.weapons[w].turn_rate_dps)
 	pad_radius_by_def.fill(0.0)

@@ -128,8 +128,8 @@ Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collisi
   the brain's, AI-45). `timer_b` is zeroed at landing. A ship on a `launch_pad` structure never enters the rule (LaunchBay,
   A-82). `Touchdown` skips a PAD contact whose own descent `c_vec.x` (D2 v_vert, which counts the tick's terrain hit speed) is < 0 strictly (no landing, band or hold; a ship that
   just launched is not re-landed), exactly 0 lands as before. S4: the hold is `timer_b` (already saved), FORMAT stays 13
-  (`test_launch::test_save_mid_hold_reloads_exact_and_launches_on_the_same_tick`). The two def fields are read raw
-  ("needs content": GD-44 switches them to `FlightCommonDef` typed fields once CONTENT-3 adds them).
+  (`test_launch::test_save_mid_hold_reloads_exact_and_launches_on_the_same_tick`). The two def fields are the typed
+  `FlightCommonDef.launch_thrust_min` / `launch_hold_s` (required; GD-44).
 
 ## Data owned
 
@@ -169,5 +169,5 @@ and `landing_grade_last`; `godot/test/unit/sim/test_collision.gd` (D2 impact spe
   (A-124), `pad_queue_radius_m` horizontal (A-125), rearm time by the most-missing slot (A-126) and `PER_PAD` as a const
   (A-127) are as built. 03 s6.4 now names `timer_a` the rearm line.
 - CQ-8 closed by R0 B.25 A-135 (amends A-120): a pad crash, the Core included, is never shielded; the Core takes the
-  full `crash_pad_damage` (`test_a_crash_on_the_shielded_core_reaches_the_core_unshielded`). The raw reads of
-  `crash_pad_damage` and `pad_queue_radius_m` stay until GD-44 (CONTENT-3 types them).
+  full `crash_pad_damage` (`test_a_crash_on_the_shielded_core_reaches_the_core_unshielded`). `crash_pad_damage` and
+  `pad_queue_radius_m` are read from the typed `FlightCommonDef` / `EconomyDef` fields (GD-44).

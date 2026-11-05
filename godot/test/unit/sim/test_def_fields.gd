@@ -7,6 +7,7 @@ extends GdUnitTestSuite
 
 const R: float = Sphere.PLANET_RADIUS
 
+var _typed_undo: Array = []     ## [Def, key, old typed value] for keys a typed field mirrors (GD-44)
 var _undo: Array = []     ## [Def, key, old value or null when absent]
 
 
@@ -19,11 +20,19 @@ func after_test() -> void:
 		else:
 			d.raw[u[1]] = u[2]
 	_undo.clear()
+	_typed_undo.reverse()
+	for u: Array in _typed_undo:
+		var t: Def = u[0]
+		t.set(u[1], u[2])
+	_typed_undo.clear()
 
 
 func _patch(d: Def, key: String, value: float) -> void:
 	_undo.append([d, key, d.raw.get(key)])
 	d.raw[key] = value
+	if key in d:                         # GD-44: the sim reads the typed field where one exists
+		_typed_undo.append([d, key, d.get(key)])
+		d.set(key, value)
 
 
 func _structure(id: StringName) -> StructureDef:
