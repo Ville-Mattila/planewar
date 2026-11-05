@@ -276,3 +276,147 @@ msgstr ""
 
 msgid "hud.vs"
 msgstr ""
+
+msgid "ui.prod.auto"
+msgstr ""
+
+msgid "ui.prod.back"
+msgstr ""
+
+msgid "ui.prod.badge.auto"
+msgstr ""
+
+msgid "ui.prod.batch"
+msgstr ""
+
+msgid "ui.prod.cancel.not_owner"
+msgstr ""
+
+msgid "ui.prod.cancel.other_team"
+msgstr ""
+
+msgid "ui.prod.cancel_item"
+msgstr ""
+
+msgid "ui.prod.cancel_last"
+msgstr ""
+
+msgid "ui.prod.def.autocannon_turret"
+msgstr ""
+
+msgid "ui.prod.def.bomber"
+msgstr ""
+
+msgid "ui.prod.def.core"
+msgstr ""
+
+msgid "ui.prod.def.dart"
+msgstr ""
+
+msgid "ui.prod.def.flak_battery"
+msgstr ""
+
+msgid "ui.prod.def.hangar"
+msgstr ""
+
+msgid "ui.prod.def.harvester"
+msgstr ""
+
+msgid "ui.prod.def.hauler"
+msgstr ""
+
+msgid "ui.prod.def.ice_extractor"
+msgstr ""
+
+msgid "ui.prod.def.lancer"
+msgstr ""
+
+msgid "ui.prod.def.missile_tower"
+msgstr ""
+
+msgid "ui.prod.def.outpost"
+msgstr ""
+
+msgid "ui.prod.def.pad"
+msgstr ""
+
+msgid "ui.prod.def.rail_lance"
+msgstr ""
+
+msgid "ui.prod.def.reactor"
+msgstr ""
+
+msgid "ui.prod.def.refinery"
+msgstr ""
+
+msgid "ui.prod.def.relay_pylon"
+msgstr ""
+
+msgid "ui.prod.def.relay_station"
+msgstr ""
+
+msgid "ui.prod.def.scout"
+msgstr ""
+
+msgid "ui.prod.def.sensor_mast"
+msgstr ""
+
+msgid "ui.prod.def.shield_projector"
+msgstr ""
+
+msgid "ui.prod.def.shipyard"
+msgstr ""
+
+msgid "ui.prod.def.siege_crawler"
+msgstr ""
+
+msgid "ui.prod.def.solar_array"
+msgstr ""
+
+msgid "ui.prod.def.vehicle_bay"
+msgstr ""
+
+msgid "ui.prod.disabled.eliminated"
+msgstr ""
+
+msgid "ui.prod.minus"
+msgstr ""
+
+msgid "ui.prod.plus"
+msgstr ""
+
+msgid "ui.prod.reason.cap"
+msgstr ""
+
+msgid "ui.prod.reason.ice"
+msgstr ""
+
+msgid "ui.prod.reason.lock"
+msgstr ""
+
+msgid "ui.prod.reason.locked"
+msgstr ""
+
+msgid "ui.prod.reason.ore"
+msgstr ""
+
+msgid "ui.prod.reason.queue_empty"
+msgstr ""
+
+msgid "ui.prod.reason.queue_full"
+msgstr ""
+
+msgid "ui.prod.reason.unavailable"
+msgstr ""
+
+msgid "ui.prod.tab.build"
+msgstr ""
+
+msgid "ui.prod.tab.units"
+msgstr ""
+
+msgid "ui.prod.tile.cap"
+msgstr ""
+
+msgid "ui.prod.tile.lock"
+msgstr ""

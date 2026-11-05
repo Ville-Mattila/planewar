@@ -27,8 +27,12 @@ func _d(id: StringName) -> int:
 	return ContentDB.def_index(id)
 
 
+func _c(lock: int = -1) -> DrawerContext:
+	return DrawerContextKit.from_view(_v, 0, lock)
+
+
 func _t(id: StringName, lock: int = -1) -> TileInfo:
-	return DrawerModel.tile(_v, 0, id, lock)
+	return DrawerModel.tile(_v, _c(lock), id)
 
 
 func test_a_plain_tile_is_available_with_its_cost() -> void:
@@ -94,9 +98,9 @@ func test_cap_reached_for_units_queues_and_structures() -> void:
 	o.add_structure(8, &"shipyard", 1, 0)
 	o.add_structure(9, &"shipyard", 1, 0)
 	o.add_structure(10, &"shipyard", 1, 0)
-	assert_int(DrawerModel.tile(o, 0, &"shipyard", -1).state).is_equal(S.AVAILABLE)   # a teammate's structures do not count
+	assert_int(DrawerModel.tile(o, DrawerContextKit.from_view(o, 0, -1), &"shipyard").state).is_equal(S.AVAILABLE)   # a teammate's structures do not count
 	o.team_view.structure_cap = 1
-	assert_int(DrawerModel.tile(o, 0, &"solar_array", -1).state).is_equal(S.CAP_REACHED)
+	assert_int(DrawerModel.tile(o, DrawerContextKit.from_view(o, 0, -1), &"solar_array").state).is_equal(S.CAP_REACHED)
 
 
 func test_queue_badges_progress_and_replenish() -> void:
@@ -121,17 +125,17 @@ func test_structure_sites_count_as_building() -> void:
 
 
 func test_tiles_lists_follow_the_tab() -> void:
-	assert_int(DrawerModel.tiles(_v, 0, false, -1).size()).is_equal(16)
-	assert_int(DrawerModel.tiles(_v, 0, true, -1).size()).is_equal(7)
-	assert_str(String(DrawerModel.tiles(_v, 0, true, -1)[0].id)).is_equal("dart")
+	assert_int(DrawerModel.tiles(_v, _c(), false).size()).is_equal(16)
+	assert_int(DrawerModel.tiles(_v, _c(), true).size()).is_equal(7)
+	assert_str(String(DrawerModel.tiles(_v, _c(), true)[0].id)).is_equal("dart")
 
 
 func test_disabled_reason_for_an_eliminated_commander() -> void:
-	assert_str(String(DrawerModel.disabled_reason(_v, 0))).is_equal("")
+	assert_str(String(DrawerModel.disabled_reason(_c()))).is_equal("")
 	_v.players[0].eliminated = true
 	_v.players[0].commander_rights = false
-	assert_str(String(DrawerModel.disabled_reason(_v, 0))).is_equal("ui.prod.disabled.eliminated")
-	assert_str(String(DrawerModel.disabled_reason(_v, 5))).is_equal("ui.prod.disabled.eliminated")   # unknown slot
+	assert_str(String(DrawerModel.disabled_reason(_c()))).is_equal("ui.prod.disabled.eliminated")
+	assert_str(String(DrawerModel.disabled_reason(DrawerContextKit.from_view(_v, 5)))).is_equal("ui.prod.disabled.eliminated")   # unknown slot
 
 
 func test_factories_finished_own_team_and_best_is_shortest_queue_then_nearest() -> void:
@@ -151,28 +155,28 @@ func test_factories_finished_own_team_and_best_is_shortest_queue_then_nearest() 
 func test_queue_verdicts_follow_the_queuer() -> void:
 	var _a: PlayerStateView = _v.add_player(1, 0)
 	var _b: PlayerStateView = _v.add_player(2, 0, 1)                               # bot teammate
-	var vs: PackedInt32Array = DrawerModel.queue_verdicts(_v, 0, 3, PackedInt32Array([0, 1, 2]))
+	var vs: PackedInt32Array = DrawerModel.queue_verdicts(_v, _c(), 3, PackedInt32Array([0, 1, 2]))
 	assert_array(vs).contains_exactly([V.OWNER, V.DENIED_NOT_OWNER, V.DELEGATED])
 	_v.players[1].connected = false
-	assert_int(DrawerModel.queue_verdicts(_v, 0, 3, PackedInt32Array([1]))[0]).is_equal(V.DELEGATED)
+	assert_int(DrawerModel.queue_verdicts(_v, _c(), 3, PackedInt32Array([1]))[0]).is_equal(V.DELEGATED)
 	_v.queues[3] = PackedInt32Array([1, 1])
-	assert_array(DrawerModel.queue_verdicts(_v, 0, 3, PackedInt32Array())).contains_exactly([V.UNKNOWN, V.UNKNOWN])   # needs sim: queuer read
+	assert_array(DrawerModel.queue_verdicts(_v, _c(), 3, PackedInt32Array())).contains_exactly([V.UNKNOWN, V.UNKNOWN])   # needs sim: queuer read
 
 
 func test_produce_commands_target_the_best_factory() -> void:
-	var c: Command = DrawerCommands.produce_at_best(_v, 0, &"dart", 1, Vector3.ZERO)
+	var c: Command = DrawerCommands.produce_at_best(_v, _c(), &"dart", 1, Vector3.ZERO)
 	assert_object(c).is_not_null()
 	assert_int(c.kind).is_equal(Command.Kind.PRODUCE)
 	assert_int(c.target).is_equal(3)
 	assert_int(c.player).is_equal(0)
 	assert_int(c.payload.decode_u16(0)).is_equal(_d(&"dart"))
 	assert_int(c.payload.decode_u8(2)).is_equal(1)
-	assert_int(DrawerCommands.produce_at_best(_v, 0, &"dart", 5, Vector3.ZERO).payload.decode_u8(2)).is_equal(5)
+	assert_int(DrawerCommands.produce_at_best(_v, _c(), &"dart", 5, Vector3.ZERO).payload.decode_u8(2)).is_equal(5)
 	_v.queues[3] = PackedInt32Array([1, 1, 1])
-	assert_int(DrawerCommands.produce_at_best(_v, 0, &"dart", 5, Vector3.ZERO).payload.decode_u8(2)).is_equal(2)   # clipped to the free slots
+	assert_int(DrawerCommands.produce_at_best(_v, _c(), &"dart", 5, Vector3.ZERO).payload.decode_u8(2)).is_equal(2)   # clipped to the free slots
 	_v.queues[3] = PackedInt32Array([1, 1, 1, 1, 1])
-	assert_object(DrawerCommands.produce_at_best(_v, 0, &"dart", 1, Vector3.ZERO)).is_null()
-	assert_object(DrawerCommands.produce_at_best(_v, 0, &"dart", 0, Vector3.ZERO)).is_null()
+	assert_object(DrawerCommands.produce_at_best(_v, _c(), &"dart", 1, Vector3.ZERO)).is_null()
+	assert_object(DrawerCommands.produce_at_best(_v, _c(), &"dart", 0, Vector3.ZERO)).is_null()
 
 
 func test_cancel_commands_match_the_sims_payloads() -> void:
@@ -190,7 +194,7 @@ func test_cancel_commands_match_the_sims_payloads() -> void:
 
 func test_replenish_command_rewrites_the_roster() -> void:
 	_v.repl[_d(&"dart")] = 2
-	var c: Command = DrawerCommands.replenish(_v, 0, 3, &"lancer", 3)
+	var c: Command = DrawerCommands.replenish(_v, _c(), 3, &"lancer", 3)
 	assert_int(c.kind).is_equal(Command.Kind.TOGGLE_AUTO_REPLENISH)
 	assert_int(c.target).is_equal(3)
 	assert_int(c.payload.decode_u8(0)).is_equal(1)
@@ -199,7 +203,7 @@ func test_replenish_command_rewrites_the_roster() -> void:
 	assert_int(c.payload.decode_u8(3)).is_equal(2)
 	assert_int(c.payload.decode_u16(4)).is_equal(_d(&"lancer"))
 	assert_int(c.payload.decode_u8(6)).is_equal(3)
-	var off: Command = DrawerCommands.replenish(_v, 0, 3, &"dart", 0)
+	var off: Command = DrawerCommands.replenish(_v, _c(), 3, &"dart", 0)
 	assert_int(off.payload.decode_u8(0)).is_equal(0)                              # no target left: disabled
 	assert_int(off.payload.size()).is_equal(1)
 

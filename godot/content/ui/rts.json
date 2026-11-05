@@ -27,5 +27,7 @@
   "replenish_max": 12,
   "batch_count": 5,
   "long_press_s": 0.45,
-  "drawer_tab_h_du": 140.0
+  "drawer_tab_h_du": 140.0,
+  "drawer_font_compact_du": 9.0,
+  "drawer_font_regular_du": 11.0
 }

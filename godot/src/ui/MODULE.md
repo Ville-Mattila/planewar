@@ -191,7 +191,7 @@ class_name RallyMath extends RefCounted   # pure statics
 static func line_points(from: Vector3, to: Vector3) -> PackedVector3Array
 class_name DrawerLayout extends RefCounted   # pure statics (UX-22, 06 s4.4 / s4.5): 3 x 6 grid, sizes per profile, numbers from rts.json drawer_*
 static func cols() -> int; static func rows() -> int; static func capacity() -> int; static func tile_du(profile: UiScale.Profile) -> float; static func gap_du() -> float; static func tab_w_du(profile: UiScale.Profile) -> float
-static func tab_h_du(profile: UiScale.Profile) -> float; static func top_du(profile: UiScale.Profile) -> float; static func grid_size(profile: UiScale.Profile) -> Vector2; static func size_du(profile: UiScale.Profile) -> Vector2
+static func tab_h_du(profile: UiScale.Profile) -> float; static func strip_du(profile: UiScale.Profile) -> float; static func font_du(profile: UiScale.Profile) -> int; static func grid_origin(profile: UiScale.Profile) -> Vector2; static func tab_rect(profile: UiScale.Profile, index: int) -> Rect2; static func strip_rect(profile: UiScale.Profile) -> Rect2; static func top_du(profile: UiScale.Profile) -> float; static func grid_size(profile: UiScale.Profile) -> Vector2; static func size_du(profile: UiScale.Profile) -> Vector2
 static func tile_rect(profile: UiScale.Profile, index: int) -> Rect2; static func fits(profile: UiScale.Profile, canvas_du: Vector2) -> bool
 class_name DrawerCatalog extends RefCounted   # which defs get a tile, all from ContentDB (buildable, produced_at, requires), doctrine-resolved costs
 static func structure_ids() -> Array[StringName]; static func unit_ids() -> Array[StringName]; static func factory_of(unit: StringName) -> StringName; static func is_factory(def: StringName) -> bool
@@ -206,23 +206,29 @@ static func cancel_reason(c: Cancel) -> StringName
 class_name TileInfo extends RefCounted   # plain data for one tile
 var id: StringName; var def: int; var is_unit: bool; var state: DrawerMath.State; var cost: Vector2i; var short: Vector2i; var queued: int; var progress01: float; var replenish: int
 var lock_left_ore: int; var need: StringName; var count: int; var limit: int
+class_name DrawerContext extends RefCounted   # plain data filled by app from player_state / team_state (ui may not name those views, deps.json)
+var player: int; var team: int; var doctrine: StringName; var commander_rights: bool; var eliminated: bool; var ore: int; var ice: int; var unit_cap: int; var structure_cap: int; var unit_count: int; var lock_left_ore: int
+func set_player(slot: int, p_team: int, kind: int, connected: bool, p_eliminated: bool) -> void; func has_player(slot: int) -> bool; func player_team(slot: int) -> int; func player_kind(slot: int) -> int; func player_connected(slot: int) -> bool; func player_eliminated(slot: int) -> bool; func stock() -> Vector2i
 class_name DrawerModel extends RefCounted   # reads SimView only: tiles, factories, queue verdicts
-static func disabled_reason(view: SimView, player: int) -> StringName; static func lock_left(view: SimView, player: int) -> int; static func tile(view: SimView, player: int, id: StringName, lock_left_ore: int) -> TileInfo
-static func tiles(view: SimView, player: int, units: bool, lock_left_ore: int) -> Array[TileInfo]; static func factories(view: SimView, team: int, unit: StringName) -> PackedInt32Array
-static func best_factory(view: SimView, team: int, unit: StringName, focus: Vector3) -> int; static func queue_verdicts(view: SimView, local: int, factory: int, queuers: PackedInt32Array) -> PackedInt32Array
+const FLAG_BUILDING: int; static func sites(view: SimView, team: int, id: StringName) -> PackedInt32Array
+static func disabled_reason(ctx: DrawerContext) -> StringName; static func tile(view: SimView, ctx: DrawerContext, id: StringName) -> TileInfo
+static func tiles(view: SimView, ctx: DrawerContext, units: bool) -> Array[TileInfo]; static func factories(view: SimView, team: int, unit: StringName) -> PackedInt32Array
+static func best_factory(view: SimView, team: int, unit: StringName, focus: Vector3) -> int; static func queue_verdicts(view: SimView, ctx: DrawerContext, factory: int, queuers: PackedInt32Array) -> PackedInt32Array
 class_name DrawerCommands extends RefCounted   # builds Commands; the host submits them through ClientSession
-static func produce_at_best(view: SimView, player: int, unit: StringName, count: int, focus: Vector3) -> Command
+static func produce_at_best(view: SimView, ctx: DrawerContext, unit: StringName, count: int, focus: Vector3) -> Command
 static func cancel_produce(player: int, factory: int, index: int) -> Command; static func cancel_build(player: int, site: int) -> Command
-static func replenish(view: SimView, player: int, factory: int, unit: StringName, target: int) -> Command
+static func replenish(view: SimView, ctx: DrawerContext, factory: int, unit: StringName, target: int) -> Command
 class_name DetailSlot extends RefCounted   # one tile-sized button of the long-press detail page
 enum Kind { BACK, BATCH, CANCEL_LAST, REPL_DEC, REPL_VALUE, REPL_INC, QUEUE_ITEM }; var kind: Kind; var index: int; var enabled: bool; var reason: StringName
+class_name DrawerText extends RefCounted   # locale keys and args of the drawer; text is translated only in reason() and slot_label()
+static func reason_key(info: TileInfo) -> StringName; static func reason_args(info: TileInfo) -> Dictionary; static func reason(info: TileInfo) -> String; static func caption_key(info: TileInfo) -> StringName; static func slot_key(slot: DetailSlot) -> StringName; static func slot_label(slot: DetailSlot, info: TileInfo) -> String
 class_name DrawerDetail extends RefCounted   # pure: detail page slots (x5, cancel one, replenish stepper, queue items)
 static func slots(info: TileInfo, queue_len: int, verdicts: PackedInt32Array) -> Array[DetailSlot]
 class_name DrawerTile extends Button   # one 44 / 64 du tile; draws cost, state, badges, progress ring
-signal secondary(tile: DrawerTile); var info: TileInfo; var profile: UiScale.Profile; func set_info(i: TileInfo) -> void
+signal secondary(tile: DrawerTile); var info: TileInfo; var profile: UiScale.Profile; func set_info(i: TileInfo) -> void; func set_plain(text_value: String, enabled: bool) -> void; var plain_text: String; var plain_on: bool; var long_fired: bool
 class_name ProductionDrawer extends Control   # scenes/ui/production_drawer.tscn; BUILD / UNITS tabs, 18 tile buttons, detail page, queue strip; emits Commands
 signal command_ready(cmd: Command); signal build_armed(def_id: StringName); var profile: UiScale.Profile; var units_tab: bool
-func refresh(view: SimView, player: int, focus: Vector3) -> void; func set_profile(p: UiScale.Profile) -> void; func tile_nodes() -> Array[DrawerTile]; func open_detail(id: StringName) -> void
+func refresh(view: SimView, ctx: DrawerContext, focus: Vector3) -> void; func set_profile(p: UiScale.Profile) -> void; func tile_nodes() -> Array[DrawerTile]; func focus_first() -> void; func open_detail(id: StringName) -> void
 func close_detail() -> void
 ```
 
@@ -275,6 +281,8 @@ ART-21 generates `theme_pw.tres` from the palette and fonts; a `tools/art` gener
 UX-06, UX-16, UX-22 and UX-37 build on `HudRoot`.
 
 needs sim: `boost_cooldown01` (SimView has only the 3-state `boost_state`, so the boost ring has no fraction); waiting-for-Ice/Ore is fed from the WAITING_FOR_* ALERT events by the caller (`LandingHudData.waiting`).
+
+needs app (UX-22): fill `DrawerContext` from `SimView.player_state` / `team_state` at 4 Hz (reference: `test/unit/ui/drawer_context_kit.gd`) and submit `command_ready` through ClientSession.
 
 needs sim (UX-22): `LocalSimView.player_state` leaves `early_spend_left_ore` at -1 and `team_state` never sets `SPEND_LOCK_ACTIVE`, so the lock display stays dark offline until they are filled; `SimView.production_queuer(factory, i)` so cancel rights show per item (until then verdict UNKNOWN is enabled and the sim answers); a construction-progress read for sites (the tile ring uses the site `hp01`).
 

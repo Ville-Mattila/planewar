@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/rts/production_drawer.gd" id="1"]
+
+[node name="ProductionDrawer" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 252.0
+offset_bottom = 472.0
+script = ExtResource("1")

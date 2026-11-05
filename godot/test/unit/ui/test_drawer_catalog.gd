@@ -41,7 +41,8 @@ func test_factory_of_comes_from_produced_at_and_is_a_structure() -> void:
 	for id: StringName in DrawerCatalog.unit_ids():
 		var f: StringName = DrawerCatalog.factory_of(id)
 		assert_bool(DrawerCatalog.is_factory(f)).is_true()
-		assert_bool(DrawerCatalog.requires(id).has(String(f))).is_true()               # tech includes the factory itself
+		for r: String in DrawerCatalog.requires(id):
+			assert_bool(ContentDB.def_index(StringName(r)) >= DefRanges.STRUCTURE_BASE).is_true()   # tech is structures; the factory itself is checked separately
 	assert_str(String(DrawerCatalog.factory_of(&"dart"))).is_equal("shipyard")
 	assert_str(String(DrawerCatalog.factory_of(&"harvester"))).is_equal("vehicle_bay")
 	assert_bool(DrawerCatalog.is_factory(&"hangar")).is_false()
