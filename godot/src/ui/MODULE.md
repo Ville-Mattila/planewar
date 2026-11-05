@@ -198,6 +198,52 @@ var shield_shown: bool
 func set_data(d: LandingHudData) -> void
 func set_shield(team_flags: int, until_s: float, clock_s: float) -> void
 func rows() -> Array[PackedStringArray]
+class_name RtsParams extends RefCounted   # ui/rts/rts_params.gd; numbers from content/ui/rts.json
+static func param(key: String) -> float
+
+class_name OrderResolver extends RefCounted   # pure statics (UX-20, 06 s7.2 table); caller classifies target and each selected entity
+enum Target { NEUTRAL, ENEMY, FRIENDLY_PAD, RELAY_STATION, FRIENDLY_UNIT, FRIENDLY_STRUCTURE, ORE_FIELD, ICE_EXTRACTOR, WRECK, GROUND }
+enum Sel { SHIP_ARMED, SHIP_UNARMED, HARVESTER, HAULER, GROUND_ARMED, GROUND_UNARMED, FACTORY, TOWER }
+const NONE: int; const RALLY: int
+static func is_ship(s: Sel) -> bool
+static func is_armed(s: Sel) -> bool
+static func is_mobile(s: Sel) -> bool
+static func plan_kind(target: Target, sel: Sel, any_armed: bool) -> int   # OrderSpec.Kind, RALLY or NONE
+static func plan_haul_mode(target: Target) -> OrderSpec.HaulMode
+static func resolve(player: int, target: Target, target_id: int, target_pos: Vector3, ids: PackedInt32Array, kinds: Array[Sel], queue: bool = false) -> Array[Command]
+static func resolve_supply(player: int, target_id: int, ids: PackedInt32Array, queue: bool = false) -> Array[Command]
+
+class_name PickMath extends RefCounted   # pure statics (UX-20)
+enum PickDevice { POINTER, TOUCH, GAMEPAD }
+enum Category { OWN_UNIT, OWN_STRUCTURE, OTHER }
+static func radius_du(input: PickDevice) -> float
+static func pick(cursor: Vector2, screen: PackedVector2Array, category: PackedInt32Array, depth: PackedFloat32Array, input: PickDevice) -> int
+static func paint_radius_du(held_s: float) -> float
+static func box_filter(ids: PackedInt32Array, is_unit: PackedByteArray) -> PackedInt32Array
+static func same_type(ids: PackedInt32Array, defs: PackedInt32Array, def_id: int) -> PackedInt32Array
+
+class_name SelectionSet extends RefCounted   # client-side selected ids
+signal changed
+func ids() -> PackedInt32Array
+func size() -> int
+func has(id: int) -> bool
+func set_ids(v: PackedInt32Array) -> void
+func add(id: int) -> void
+func toggle(id: int) -> void
+func clear() -> void
+func prune(alive: Callable) -> void
+func chunks() -> Array[PackedInt32Array]
+
+class_name ControlGroups extends RefCounted   # client-side, per match, survives possession
+func count() -> int
+func get_group(slot: int) -> PackedInt32Array
+func assign(slot: int, ids: PackedInt32Array) -> void
+func add_to(slot: int, ids: PackedInt32Array) -> void
+func recall(slot: int, alive: Callable) -> PackedInt32Array
+func clear() -> void
+
+class_name RallyMath extends RefCounted   # pure statics
+static func line_points(from: Vector3, to: Vector3) -> PackedVector3Array
 ```
 
 ## Invariants
@@ -210,11 +256,12 @@ func rows() -> Array[PackedStringArray]
 - U7: locale = `--ui_locale`, then saved override (`user://settings.cfg` [ui] locale), then OS language; only `fi` is Finnish. Finnish gaps fall back to English (`locale/fallback="en"`), never to the key. `.po` files are built from `content/locale/src/*.csv` (+ `en.json`) by `tools/locale/build_po.py`; CI fails on a stale PO, missing id, placeholder mismatch or `max_len`.
 - U8: bomb sight and lead pip use thresholds from `hud.json` (`bomb_*`, `lead_iterations`); impact within 2 m of a 1/30 s reference, pip matches a straight-flying slug (test-enforced); the HUD calls no sim physics, `app` injects `step`/`ground`.
 - U9: landing gauges switch at hud.json `gauge_*` (vert 8/15 m/s, horiz 15/25 m/s, nose 25/45 deg; strictly above a limit is the next band, equal to the sim's `flight_common`, test-enforced); the guide shows within 1,500 m of a friendly pad and below 400 m AGL or fuel < 25 %; the grade stamp decodes LANDING `extra` = [grade, q, flags (bit0 manual, bit1 hot, bit2 dead stick), v_vert, v_horiz] and takes points / hot x / dead-stick bonus from scoring.json `landing_grade` (UX-18).
+- U10: pick radii 22 / 10 / 28 du (touch / pointer / gamepad), paint circle 30 -> 240 du over 1.2 s, 10 control groups, all in `rts.json`; the resolver follows the 06 s7.2 table per selected entity (a unit a rule does not cover gets no command; Relay Station: Hauler -> haul CAPTURE, others guard; enemy: attack if the selection holds an armed unit, else move); ids chunk at 32 per ORDER (UX-20).
 - U5: thresholds and clamps live in `godot/content/ui/ui_scale.json`, not in code.
 
 ## Data owned
 
-`godot/content/ui/ui_scale.json` (scale, profile threshold, safe margin). `godot/content/ui/i18n.json` (locales, separators, units). `scenes/ui/hud_root.tscn`, `godot/content/ui/hud.json`, `scenes/ui/flight_instruments.tscn`, `scenes/ui/{landing_guide,service_panel,grade_stamp,status_cluster}.tscn`.
+`godot/content/ui/ui_scale.json` (scale, profile threshold, safe margin). `godot/content/ui/i18n.json` (locales, separators, units). `scenes/ui/hud_root.tscn`, `godot/content/ui/hud.json`, `scenes/ui/flight_instruments.tscn`, `content/ui/rts.json`. `scenes/ui/{landing_guide,service_panel,grade_stamp,status_cluster}.tscn`.
 
 ## Events emitted / consumed
 
@@ -230,6 +277,7 @@ Layout runs on boot and window resize only; no per-frame cost.
 - `godot/test/unit/ui/test_ui_tokens.gd` (U4)
 - `godot/test/unit/ui/test_bomb_sight.gd` (U8: impact vs reference, horizon/ground edges, lead vs analytic and stepped slug)
 - `godot/test/unit/ui/test_landing_hud.gd` (U9: gauge bands, guide rule, every grade stamp, shield timer, cooldown rings, SimView read)
+- `godot/test/unit/ui/test_rts_orders.gd` (U10 resolver table), `test_rts_selection.gd` (U10 picking, groups, rally)
 - `godot/test/unit/ui/test_hud_math.gd` (U6: pitch, ladder, bank, limb dip, heading wrap, bands, uplink)
 
 - `godot/test/unit/ui/test_fmt.gd` (en/fi formats), `test_locale_select.gd` (U7); Python: `tools/tests/test_locale.py`
