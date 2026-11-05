@@ -8,8 +8,6 @@ class_name WeaponFire extends RefCounted
 ## the closest approach + the projectile's `fuse_delay_s` (burst tick in `ProjectileStore.target`). Lane-internal. Tower aim,
 ## envelopes, AGL floor, flip lock break, target priority: GD-09; supply graph and refill: GD-18 (writes `unsupplied`).
 
-const RESCAN_EVERY: int = 1   ## CB13a: a tower holding the trigger with no target rescans every this-many ticks (staggered by slot); 1 = every tick
-
 const _BLOCKED: int = EntityStore.F_DOCKED | EntityStore.F_BUILDING
 const _STATE: PackedStringArray = ["lock_target", "lock_time", "unsupplied"]
 
@@ -17,7 +15,7 @@ var lock_target: PackedInt32Array = PackedInt32Array()   ## per main-range slot:
 var lock_time: PackedFloat32Array = PackedFloat32Array()   ## per slot: seconds the candidate has been held
 var unsupplied: PackedByteArray = PackedByteArray()        ## per slot: 1 = tower outside the supply network (GD-18 writes)
 var tower_power: PackedFloat32Array = PackedFloat32Array() ## per team tower rate multiplier, 0 = offline (GD-13; SimWorld sets it each tick, not state)
-var scans: int = 0                                         ## CB13a diagnostic: envelope scans run by the tower gate (tests pin the cadence; not state)
+var scans: int = 0                                         ## CB13a diagnostic: `_pick` scans run (tests pin the cadence; not state)
 var terrain: Terrain = null                                ## GD-09: the AGL floor of a tower's seeker (SimWorld wires it; null = no floor)
 
 var _store: EntityStore
@@ -191,7 +189,7 @@ func _burst(s: int, wi: int, k: int, trigger: bool, slow: float) -> void:
 	var c2: float = _due_in(_cd2[s])
 	var fired: bool = false
 	var opens: bool = c2 < _half
-	if trigger and shot_iv > 0.0 and c1 < _half:
+	if trigger and shot_iv > 0.0 and c1 < _half and _rounds(s, wi, 0) >= _cost[k] and _room():   # the scan comes last (A-137)
 		if (opens or window - c2 < (float(_bn[k]) - 0.5) * shot_iv) and _gate(s, k, opens):
 			fired = _shoot(s, wi, k, 0, 0)
 	if fired:
@@ -212,7 +210,8 @@ func _due_in(cd: float) -> float:
 # CB13a (R0 B.25 A-129): a tower's gun / flak / rail round spawns only while `lock_target[s]` holds a live hostile of its
 # `target_kinds` inside range and the envelope. `fresh` (a window opens: burst reopened, salvo or reload due) picks the
 # target with the envelope-aware scan; a shot inside a window re-checks the held one in O(1) and re-picks once if that
-# fails. Never a per-shot scan. Non-towers and lock weapons (the seeker is their gate) always pass.
+# fails; with no target it retries once per due tick (A-137: a failed pick spends nothing, at most one scan per tower per
+# tick). Never a per-shot scan. Non-towers and lock weapons (the seeker is their gate) always pass.
 func _gate(s: int, k: int, fresh: bool) -> bool:
 	var d: int = _did[s]
 	if _tower[d] == 0 or _lock[k] > 0.0:
@@ -221,9 +220,6 @@ func _gate(s: int, k: int, fresh: bool) -> bool:
 	var held: bool = t != 0 and _lockable(s, t, _mask[d], _r2[k], _cone[k])
 	if held and not fresh:
 		return true
-	if t == 0 and (_tick + s) % RESCAN_EVERY != 0:
-		return false                                      # nothing engageable: retry on this slot's cadence
-	scans += 1
 	t = _pick(s, k, _mask[d], _cone[k])
 	lock_target[s] = t
 	lock_time[s] = 0.0
@@ -313,6 +309,7 @@ func _lock_event(kind: SimEvent.Kind, s: int, t: int) -> void:
 
 
 func _pick(s: int, k: int, mask: int, cone: float) -> int:
+	scans += 1
 	var d: int = _did[s]
 	return SeekerScan.pick(_store, _pos, _tm, s, _fwd[s], mask, _r2[k], cone, _t.env_lo[d], _t.env_hi[d], _t.env_agl[d], terrain)
 

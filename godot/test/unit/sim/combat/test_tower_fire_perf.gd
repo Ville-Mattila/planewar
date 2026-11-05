@@ -10,7 +10,9 @@ extends GdUnitTestSuite
 const R: float = Sphere.PLANET_RADIUS
 const SAMPLES: int = 400
 const FOES: int = 20
-const BOUND_IDLE8_US: float = 600.0   ## 03 s4.2 row 9 fire share
+const BOUND_IDLE8_US: float = 600.0   ## 03 s4.2 row 9 fire share (gate, case c)
+const BOUND_A_US: float = 1200.0      ## case (a): reported; the whole combat row as a ceiling on a pinned runner
+const BOUND_B_US: float = 3000.0      ## case (b): reported; about 2x the dev-laptop figure, a runaway guard
 
 
 func _put(pw: PerfTickWorld, def: StringName, team: int, p: Vector3) -> int:
@@ -76,7 +78,7 @@ func test_32_firing_towers() -> void:
 	var a: Array = _build(32, &"dart", 100.0)
 	var m: Array = _measure(a[0], a[1])
 	assert_int(m[2]).override_failure_message("rounds spent").is_greater(0)
-	assert_bool(PerfGate.check("fire_step_32_firing_towers", m[0], BOUND_IDLE8_US, "03 s4.2 row 9 fire share; A-137 case (a), reported")).is_true()
+	assert_bool(PerfGate.check("fire_step_32_firing_towers", m[0], BOUND_A_US, "03 s4.2 row 9 fire share; A-137 case (a), reported")).is_true()
 
 
 func test_32_idle_held_towers() -> void:
@@ -85,7 +87,7 @@ func test_32_idle_held_towers() -> void:
 	var m: Array = _measure(a[0], a[1])
 	assert_int(m[2]).is_equal(0)
 	assert_int(m[1]).override_failure_message("one scan per tower per tick").is_equal(32 * SAMPLES)
-	assert_bool(PerfGate.check("fire_step_32_idle_held_towers", m[0], BOUND_IDLE8_US, "03 s4.2 row 9 fire share; A-137 case (b), reported")).is_true()
+	assert_bool(PerfGate.check("fire_step_32_idle_held_towers", m[0], BOUND_B_US, "03 s4.2 row 9 fire share; A-137 case (b), reported")).is_true()
 
 
 func test_8_idle_held_towers_under_the_fire_share() -> void:
