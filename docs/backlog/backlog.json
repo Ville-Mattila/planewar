@@ -8063,7 +8063,10 @@
       "docs/04-networking-and-backend.md",
       "godot/src/net/client/MODULE.md"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 145,
+    "merged": "2026-11-05",
+    "note": "Opus approve r2. Nits: bench_baseline_copy.gd:24 no-op line; re-cite perf on pinned runner when TA-42 lands."
   },
   {
     "id": "PM-05",
