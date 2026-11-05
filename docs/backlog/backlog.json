@@ -4981,7 +4981,10 @@
       "02 s17.2-17.3",
       " 02 GD-28"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 147,
+    "merged": "2026-11-05",
+    "note": "Owner defaults applied (change in progression.json / medals.json): unlock table 25 hull paints / 10 pad flags / 5 titles with 20 empty levels (02 rules over \"one per level\"); hull paints in v1 (07 Q-ART6 says v1.x); pad flags every 5 levels (02) not ACE counts (08 I-15); 8 mission paints, one per gold medal; custom mode XP factor unset (must be named before the XP code); callsign titles pending HUM-17. Nit: two_speeds, lock_breaker, many_hands, iron_wall have no machine hooks beyond condition prose."
   },
   {
     "id": "GD-30",
