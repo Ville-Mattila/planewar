@@ -3370,7 +3370,10 @@
       " R0 C2-06",
       " 06 UX-20"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 152,
+    "merged": "2026-11-05",
+    "note": "Opus approve r2. Resolver filters every kind through order_rules.json (OrderClassRules). Caller must classify target and pass def-id class keys (later UX task). Follow-ups: derive rally_classes from produced_at or pin by test; rts.json schema; Architect: 06 s7.2 vs order_rules.json (Harvester return/guard, Bomber escort, ground friendly MOVE) needs a footnote."
   },
   {
     "id": "UX-21",
