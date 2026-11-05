@@ -3411,7 +3411,10 @@
       " R0 C3-08",
       " 06 UX-22"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 154,
+    "merged": "2026-11-05",
+    "note": "Opus approve r2 (eliminated-commander guard _locked() on every emit path). App must fill DrawerContext (needs app). Follow-ups: needs sim early_spend_left_ore offline (before M3 exit); needs sim+net production_queuer; needs sim Construction.progress01 in SimView; group structures once per refresh (3.3 ms at 320 structures); batch-factory detail mismatch; test nits (private _reason, no-op has_focus line), replenish_pairs_max duplicates Command 8-pair limit. Architect: ui naming PlayerStateView/TeamStateView (ADR-14); split ui/MODULE.md (288/300)."
   },
   {
     "id": "UX-23",
