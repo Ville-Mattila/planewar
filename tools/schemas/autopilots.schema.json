@@ -1290,6 +1290,12 @@
           "minimum": 1,
           "maximum": 16,
           "description": "AI-17 ap_tower; 05 s6.8"
+        },
+        "follow": {
+          "$ref": "#/$defs/follow"
+        },
+        "harvest": {
+          "$ref": "#/$defs/harvest"
         }
       },
       "required": [
@@ -1298,7 +1304,7 @@
         "tags",
         "think_period_ticks"
       ],
-      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional.",
+      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional on the base; on the ap_harvester branch flee_radius_m, quiet_s, follow and harvest are required (R0 B.29 A-144, brains/MODULE.md HV5).",
       "anyOf": [
         {
           "properties": {
@@ -1374,7 +1380,11 @@
             }
           },
           "required": [
-            "separation"
+            "separation",
+            "flee_radius_m",
+            "quiet_s",
+            "follow",
+            "harvest"
           ]
         },
         {
@@ -1402,6 +1412,148 @@
         }
       ],
       "description": "R0 B.14 A-86: required per id: separation on every ship ap_* (dart, lancer, bomber, scout, hauler, harvester); formation on dart and lancer; guidance / intercept / attack_run / gun / evade with gun.aoa_comp_max_deg and evade.heading_change_deg on ap_dart (A-93)"
+    },
+    "follow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lookahead_m",
+        "kp_yaw",
+        "thrust_turn",
+        "turn_slow_deg",
+        "pivot_m",
+        "arrive_m",
+        "path_wait_ticks",
+        "stuck_progress_m",
+        "stuck_window_s",
+        "deviate_m",
+        "aim_every_ticks"
+      ],
+      "properties": {
+        "lookahead_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "kp_yaw": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 20
+        },
+        "thrust_turn": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "turn_slow_deg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 180
+        },
+        "pivot_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "arrive_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "path_wait_ticks": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 3600
+        },
+        "stuck_progress_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "stuck_window_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600
+        },
+        "deviate_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "aim_every_ticks": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 90
+        }
+      }
+    },
+    "harvest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hit_window_s",
+        "assigned_weight",
+        "sticky_drop",
+        "queue_s",
+        "claim_wait_s",
+        "unload_wait_s",
+        "count_margin_m",
+        "spot_frac",
+        "dock_frac",
+        "refinery_scan_s"
+      ],
+      "properties": {
+        "hit_window_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600
+        },
+        "assigned_weight": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "sticky_drop": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "queue_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600
+        },
+        "claim_wait_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600
+        },
+        "unload_wait_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600
+        },
+        "count_margin_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000
+        },
+        "spot_frac": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "dock_frac": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "refinery_scan_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600
+        }
+      }
     }
   }
 }

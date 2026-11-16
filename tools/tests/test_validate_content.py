@@ -450,3 +450,21 @@ class QualityTiers(Tree):
         code, out = run(self.root)
         self.assertEqual(code, 1, out)
         self.assertIn("1 violations", out)
+
+
+class Ap47Harvester(Tree):
+    """AI-47 (R0 B.29 A-144, brains/MODULE.md HV5): ap_harvester requires follow; the negative trips exactly one rule."""
+
+    def _edit_harvester(self, mutate: Any) -> None:
+        f = self.root / "godot" / "content" / "defs" / "autopilots.json"
+        data = json.loads(f.read_text(encoding="utf-8"))
+        ap = [a for a in data["autopilots"] if a["id"] == "ap_harvester"][0]
+        mutate(ap)
+        f.write_text(json.dumps(data), encoding="utf-8")
+
+    def test_harvester_without_follow_fails(self) -> None:
+        self._edit_harvester(lambda ap: ap.pop("follow"))
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+        self.assertIn('got "ap_harvester"', out)   # schemalite reports the anyOf branch, not the key
