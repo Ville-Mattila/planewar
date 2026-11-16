@@ -23,6 +23,8 @@ var _ext_node: PackedInt32Array = PackedInt32Array()   ## derived, parallel to `
 var _ext_reach2: PackedFloat32Array = PackedFloat32Array()   ## derived, parallel to `_ext`: (radius + salvage_deliver_m)^2
 var _refs: PackedInt32Array = PackedInt32Array()       ## derived: structures with `docks` > 0, ascending slot
 var _refs_reach2: PackedFloat32Array = PackedFloat32Array()  ## derived, parallel to `_refs`
+var _holds: int = -1                                   ## ships holding Ice; -1 = unknown (re-counted when the ship count changes)
+var _ships_n: int = -1
 var _loaded: int = 0                                   ## Extractors holding Ice after this pass's extraction (a Hauler has nothing to load at 0)
 var _epoch: int = -1
 var _count: int = -1
@@ -42,13 +44,17 @@ func _init(store: EntityStore, defs: WorldDefs, economy: Economy, score: ScoreKe
 ## Step 10: every Extractor in ascending slot order (extract, pipe), then every Hauler in ascending slot order.
 func step(dt: float) -> void:
 	_refresh()
-	if _ext.is_empty() and _refs.is_empty():
-		return
+	if _store.ships.size() != _ships_n or _holds < 0:
+		_count_holds()
+	if _ext.is_empty() and _holds <= 0:
+		return                                           # I9: no Extractor and no Ice in a hold
 	_loaded = 0
 	for i: int in _ext.size():
 		_extract(_ext[i], _ext_node[i], dt)
 		if _store.cargo[_ext[i]] > 0.0:
 			_loaded += 1
+	if _loaded == 0 and _holds <= 0:
+		return
 	ship_scans += 1
 	for s: int in _store.ships:
 		_haul(s, dt)
@@ -104,6 +110,8 @@ func _pipe(e: int) -> void:
 
 # One Hauler: unload at a Refinery in reach when it holds Ice, else load from the first Extractor in reach with Ice.
 func _haul(s: int, dt: float) -> void:
+	if _store.cargo[s] <= 0.0 and _loaded == 0:
+		return                                           # empty hold, nothing to load: no def lookup
 	var sd: ShipDef = _defs.ship(_store.owner[s], _store.def_id[s])
 	if sd == null or sd.cargo_ice <= 0:
 		return
@@ -135,6 +143,8 @@ func _load(s: int, e: int, hold: float, dt: float) -> void:
 	if take <= 0.0:
 		return
 	_store.cargo[e] -= take
+	if _store.cargo[s] <= 0.0:
+		_holds += 1
 	_store.cargo[s] += take
 	_store.cargo_kind[s] = _CARGO_ICE
 	if _store.cargo[e] <= 0.0:
@@ -152,6 +162,8 @@ func _unload(s: int, dt: float) -> void:
 	var after: float = before - amt
 	_store.cargo[s] = after
 	_store.cargo_kind[s] = _CARGO_ICE if after > 0.0 else 0
+	if after <= 0.0:
+		_holds = maxi(_holds - 1, 0)
 	var n: int = roundi(before) - roundi(after)
 	if n <= 0:
 		return
@@ -194,3 +206,12 @@ func _refresh() -> void:
 func _reach2(s: int) -> float:
 	var d: float = _store.radius[s] + _deliver
 	return d * d
+
+
+# Ships holding Ice, counted once and again whenever the ship count changes (a dead holder only makes the count high, which costs a scan).
+func _count_holds() -> void:
+	_ships_n = _store.ships.size()
+	_holds = 0
+	for s: int in _store.ships:
+		if _store.cargo[s] > 0.0:
+			_holds += 1

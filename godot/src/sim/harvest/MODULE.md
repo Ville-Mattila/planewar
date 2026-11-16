@@ -48,7 +48,7 @@ func node_at(dir: Vector3) -> int                                            # n
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # S4: the whole table (self-describing)
 
 class_name IceExtract extends RefCounted                                     # GD-14; EconomyHub.ice, step 10 after Harvest
-var nodes: IceNodes
+var nodes: IceNodes;  var ship_scans: int                                    # ship_scans: diagnostic hard counter, not state
 func _init(store: EntityStore, defs: WorldDefs, economy: Economy, score: ScoreKeeper)   # score may be null (no result counters)
 func step(dt: float) -> void                                                 # Extractors in ascending slot order, then Haulers in ascending slot order
 func refinery_for(extractor: int) -> int                                     # slot of the friendly finished Refinery piping this Extractor, -1 for none
@@ -120,7 +120,7 @@ dock count from `structures.json` `docks`; the delivery reach is `economy.json` 
   each pass (the Refinery and Extractor lists are rebuilt when `Economy.structure_epoch` or the structure count moves).
 - I8 Relay pad service (02 s5.3, s2.3). The Relay Station def is a service pad (`pads` 1, `pad_radius_m` 12); a ship docked on one held by its
   own team is served at the normal costs, a ship of another team is not. The capture that sets the holder is GD-23. Test: `test_relay_pad_service.gd`.
-- I9 Cost. `step` returns at once with no Extractor and no ship carrying Ice. Otherwise one pass over the Extractors and one over the ships;
+- I9 Cost. `step` returns at once with no Extractor and no ship carrying Ice (a count of Ice holds, re-counted when the ship count changes; `IceExtract.ship_scans` counts the ship passes run). Otherwise one pass over the Extractors and one over the ships;
   no Dictionary, no per-entity allocation. Test: `test_ice_perf.gd` (PerfGate).
 
 ## Data owned
