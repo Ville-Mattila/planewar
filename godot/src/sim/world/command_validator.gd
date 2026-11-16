@@ -119,7 +119,9 @@ func check(cmd: Command) -> int:
 		Command.Kind.PILOT_INPUT:
 			return CommandResult.Code.ACCEPTED if cmd.payload.size() == CommandPayload.PILOT_BYTES else CommandResult.Code.REJECTED_MALFORMED
 		Command.Kind.SURRENDER:
-			return CommandResult.Code.ACCEPTED if cmd.target == 0 else CommandResult.Code.REJECTED_MALFORMED
+			if cmd.target != 0:
+				return CommandResult.Code.REJECTED_MALFORMED
+			return CommandResult.Code.ACCEPTED if _players.is_active(p) and _players.kind[p] == PlayerTable.KIND_HUMAN else CommandResult.Code.REJECTED_NO_RIGHTS   # bots do not vote (02 s12.1)
 		Command.Kind.SET_ADJUTANT:
 			return _check_adjutant(cmd)
 		Command.Kind.DEBUG_SPAWN:

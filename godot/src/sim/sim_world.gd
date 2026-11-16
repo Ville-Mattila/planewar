@@ -30,6 +30,7 @@ var _validator: CommandValidator = null
 var _applier: CommandApplier = null
 var _control: ControlMachine = null
 var _intake: CommandIntake = null
+var _judge: MatchJudge = null         ## GD-20: elimination, defeat, surrender, hard end (sim/match/)
 var _econ: EconomyHub = null            ## Build, Economy, Construction, Production (TA-19)
 var _motion: ProjectileMotion = null
 var _combat: Combat = null
@@ -254,6 +255,11 @@ func shields() -> ShieldDomes:
 	return _combat.shields
 
 
+## The match judge (GD-20): structure value, winner and end reason reads for tests and the view; mutated only by `step()` and commands.
+func judge() -> MatchJudge:
+	return _judge
+
+
 func projectiles() -> ProjectileStore:
 	return _proj
 
@@ -308,6 +314,9 @@ func _wire(rules: MatchRules) -> void:
 	_view.shields = _combat.shields
 	_view.docking = _econ.docking
 	_view.build = _econ.build
+	_judge = MatchJudge.new(_store, _players, _defs, rules, _events, _applier, _control, _econ.score, _state)
+	_combat.bind_judge(_judge)
+	_intake.judge = _judge
 	_view.score = _econ.score
 	_view.fields = _econ.harvest.fields
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)
@@ -346,6 +355,7 @@ func _step_combat(t: int) -> void:
 	_combat.fire.tower_power = _econ.economy.tower_rates()   # 02 s8.4: from the step-10 power cache
 	var _absorbed: int = _combat.shields.absorb(t)           # 02 s4.3 rule 6, before the contacts (GD-10)
 	_combat.step(t, rng)
+	_judge.step_selfdestruct(t)                              # GD-20: due self-destructs join this tick's deaths (cause SELF_DESTRUCT)
 	_econ.docking.land(t, collision)                         # GD-15: PAD contacts -> LANDING / DOCKED, crash deaths join below
 	_econ.score.on_dying(_applier.dying, t)                  # GD-27: kills, assists, landing points while the dead are still in the store
 	for s: int in _applier.dying:
@@ -354,21 +364,13 @@ func _step_combat(t: int) -> void:
 	_applier.resolve_deaths(t)
 
 
-# Step 10 match timers (02 s12.1): CORE_EXPOSURE once at core_exposure_s; at hard_end_s every possession is released
-# (05 C16) and MATCH_END fires (winner by surviving structure value is Economy's, GD-20). Shield, caps, scoring join here.
+# Step 10 match timers (02 s12.1), after the economy: `MatchJudge.step` fires CORE_EXPOSURE once at core_exposure_s, eliminates
+# a player whose last Core fell, defeats a team (05 C16 `release_team`), counts surrender votes and ends the match at
+# hard_end_s by structure value (every possession released, MATCH_END; GD-20, sim/match/).
 func _step_match(t: int) -> void:
 	if _state.ended():
 		return
 	_econ.step(t, _dt)
 	_combat.fire.unsupplied = _econ.supply.unsupplied   # GD-18: step 9 of the next tick reads this tick's flags
 	_combat.shields.step(t)                             # GD-10: collapse ends, Core shield expiry, Projector recharge
-	var ph: MatchRules.Phase = _rules.phase(t)
-	var clock: float = float(t) / float(_rules.tick_hz)
-	if ph != MatchRules.Phase.PLAYING and _state.exposure_tick < 0:
-		_state.exposure_tick = t
-		var _e: SimEvent = _events.emit(SimEvent.Kind.CORE_EXPOSURE, 0, 0, Vector3.ZERO, clock, -1)
-	if ph == MatchRules.Phase.ENDED:
-		_state.ended_tick = t
-		_econ.score.finalize(_state.winner_team)            # GD-27: match_win
-		_control.release_all(ControlMachine.ReleaseReason.MATCH)
-		var _m: SimEvent = _events.emit(SimEvent.Kind.MATCH_END, _state.winner_team, 0, Vector3.ZERO, clock, -1)
+	_judge.step(t)

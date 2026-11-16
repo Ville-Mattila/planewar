@@ -6,6 +6,7 @@ class_name CommandIntake extends RefCounted
 
 var pending: Array[Command] = []
 var economy: EconomyHub = null   ## BUILD / CANCEL_BUILD / PRODUCE / CANCEL_PRODUCE go here (TA-19); set by SimWorld
+var judge: MatchJudge = null     ## SURRENDER goes here (GD-20); set by SimWorld
 
 var _validator: CommandValidator
 var _applier: CommandApplier
@@ -49,6 +50,9 @@ func apply_all(tick: int) -> void:
 	for cmd: Command in pending:
 		if economy != null and EconomyHub.handles(cmd.kind):
 			economy.apply(cmd)
+		elif cmd.kind == Command.Kind.SURRENDER:
+			if judge != null and _validator.check(cmd) == CommandResult.Code.ACCEPTED:
+				judge.vote(cmd.player, tick)
 		else:
 			_applier.apply(cmd, tick)
 	pending.clear()

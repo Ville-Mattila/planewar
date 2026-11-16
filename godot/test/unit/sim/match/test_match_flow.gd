@@ -24,45 +24,51 @@ func test_the_modes_carry_the_documented_timers() -> void:
 # --- Playing -> Exposure ------------------------------------------------------------------------------------------------
 
 func test_playing_becomes_exposure_at_the_mode_timer() -> void:
-	_each(func(mode: StringName, per_team: int) -> void:
-		var w: SimWorld = K.world(mode, per_team)
-		var at: int = int(K.rules(mode).core_exposure_s)
-		var before: Array[SimEvent] = K.run_to(w, at - 1)
-		assert_int(K.of_kind(before, SimEvent.Kind.CORE_EXPOSURE).size()).is_equal(0)
-		assert_int(w.view().match_phase()).is_equal(MatchRules.Phase.PLAYING)
-		assert_int(w.view().team_state(0).flags & TeamStateView.CORE_EXPOSURE).is_equal(0)
-		var on: Array[SimEvent] = K.run_to(w, at)
-		assert_int(K.of_kind(on, SimEvent.Kind.CORE_EXPOSURE).size()).is_equal(1)
-		assert_int(w.view().match_phase()).is_equal(MatchRules.Phase.EXPOSURE)
-		assert_int(w.view().team_state(0).flags & TeamStateView.CORE_EXPOSURE).is_equal(TeamStateView.CORE_EXPOSURE)
-		assert_int(K.of_kind(K.run_to(w, at + 5), SimEvent.Kind.CORE_EXPOSURE).size()).is_equal(0))   # once
+	_each(_test_playing_becomes_exposure_at_the_mode_timer)
+
+
+func _test_playing_becomes_exposure_at_the_mode_timer(mode: StringName, per_team: int) -> void:
+	var w: SimWorld = K.world(mode, per_team)
+	var at: int = int(K.rules(mode).core_exposure_s)
+	var before: Array[SimEvent] = K.run_to(w, at - 1)
+	assert_int(K.of_kind(before, SimEvent.Kind.CORE_EXPOSURE).size()).is_equal(0)
+	assert_int(w.view().match_phase()).is_equal(MatchRules.Phase.PLAYING)
+	assert_int(w.view().team_state(0).flags & TeamStateView.CORE_EXPOSURE).is_equal(0)
+	var on: Array[SimEvent] = K.run_to(w, at)
+	assert_int(K.of_kind(on, SimEvent.Kind.CORE_EXPOSURE).size()).is_equal(1)
+	assert_int(w.view().match_phase()).is_equal(MatchRules.Phase.EXPOSURE)
+	assert_int(w.view().team_state(0).flags & TeamStateView.CORE_EXPOSURE).is_equal(TeamStateView.CORE_EXPOSURE)
+	assert_int(K.of_kind(K.run_to(w, at + 5), SimEvent.Kind.CORE_EXPOSURE).size()).is_equal(0)   # once
 
 
 func test_the_core_shield_is_up_until_core_shield_until_s() -> void:
-	_each(func(mode: StringName, per_team: int) -> void:
-		var w: SimWorld = K.world(mode, per_team)
-		var until: int = int(WorldTestKit.content().match_rules.core_shield_until_s)
-		var early: Array[SimEvent] = K.run_to(w, until - 1)
-		assert_int(w.view().team_state(0).flags & TeamStateView.CORE_SHIELD_UP).is_equal(TeamStateView.CORE_SHIELD_UP)
-		var downs: int = 0
-		for e: SimEvent in early:
-			downs += 1 if e.kind == SimEvent.Kind.ALERT and e.a == AlertKind.Kind.CORE_SHIELD_DOWN else 0
-		assert_int(downs).is_equal(0)
-		var late: Array[SimEvent] = K.run_to(w, until)
-		assert_int(w.view().team_state(0).flags & TeamStateView.CORE_SHIELD_UP).is_equal(0)
-		for e: SimEvent in late:
-			downs += 1 if e.kind == SimEvent.Kind.ALERT and e.a == AlertKind.Kind.CORE_SHIELD_DOWN else 0
-		assert_int(downs).is_greater(0))
+	_each(_shield_case)
+
+
+func _shield_case(mode: StringName, per_team: int) -> void:
+	var w: SimWorld = K.world(mode, per_team)
+	var until: int = int(WorldTestKit.content().match_rules.core_shield_until_s)
+	var early: Array[SimEvent] = K.run_to(w, until - 1)
+	assert_int(w.view().team_state(0).flags & TeamStateView.CORE_SHIELD_UP).is_equal(TeamStateView.CORE_SHIELD_UP)
+	var downs: int = 0
+	for e: SimEvent in early:
+		downs += 1 if e.kind == SimEvent.Kind.ALERT and e.a == AlertKind.Kind.CORE_SHIELD_DOWN else 0
+	assert_int(downs).is_equal(0)
+	var late: Array[SimEvent] = K.run_to(w, until)
+	assert_int(w.view().team_state(0).flags & TeamStateView.CORE_SHIELD_UP).is_equal(0)
+	for e: SimEvent in late:
+		downs += 1 if e.kind == SimEvent.Kind.ALERT and e.a == AlertKind.Kind.CORE_SHIELD_DOWN else 0
+	assert_int(downs).is_greater(0)
 
 
 # --- Playing / Exposure -> Ended: a team has no Core ----------------------------------------------------------------------
 
 func _core_loss(mode: StringName, per_team: int, at: int) -> void:
 	var w: SimWorld = K.world(mode, per_team)
-	var dart: int = WorldTestKit.spawn(w, &"dart", per_team, 1, WorldTestKit.at(400.0, -9000.0))
-	assert_int(w.apply_command(CommandPayload.simple(per_team, Command.Kind.POSSESS, dart)).code).is_equal(CommandResult.Code.ACCEPTED)
+	var unit: int = WorldTestKit.spawn(w, &"dart", per_team, 1, WorldTestKit.at(400.0, -900.0))
+	assert_int(w.apply_command(CommandPayload.simple(per_team, Command.Kind.POSSESS, unit)).code).is_equal(CommandResult.Code.ACCEPTED)
 	var _pre: Array[SimEvent] = K.run_to(w, at - 1)
-	assert_int(w.view().player_state(per_team).possessed).is_equal(dart)
+	assert_int(w.view().player_state(per_team).possessed).is_equal(unit)
 	for p: int in per_team:                                       # the whole of team 1's Cores
 		K.kill_core(w, per_team + p)
 	var ev: Array[SimEvent] = K.run_to(w, at)
@@ -74,18 +80,22 @@ func _core_loss(mode: StringName, per_team: int, at: int) -> void:
 	assert_int(w.view().match_phase()).is_equal(MatchRules.Phase.ENDED)
 	assert_int(w.match_result().winner_team).is_equal(0)
 	assert_int(w.judge().winner()).is_equal(0)
+	assert_bool(w.view().team_state(1).eliminated).is_true()          # TeamStateView.eliminated: the defeated team
+	assert_bool(w.view().team_state(0).eliminated).is_false()
 	assert_int(w.view().player_state(per_team).possessed).is_equal(0)   # C16: the team's pilots are released
 	var released: Array[SimEvent] = K.of_kind(ev, SimEvent.Kind.RELEASED)
-	assert_bool(released.any(func(e: SimEvent) -> bool: return e.a == dart)).is_true()
+	assert_bool(released.any(func(e: SimEvent) -> bool: return e.a == unit)).is_true()
 	assert_int(K.of_kind(K.run_to(w, at + 3), SimEvent.Kind.MATCH_END).size()).is_equal(0)   # M7: once
 
 
 func test_core_loss_ends_a_playing_match() -> void:
-	_each(func(mode: StringName, per_team: int) -> void: _core_loss(mode, per_team, 40))
+	for m: String in K.MODES:
+		_core_loss(StringName(m), _per_team(StringName(m)), 40)
 
 
 func test_core_loss_ends_an_exposure_match() -> void:
-	_each(func(mode: StringName, per_team: int) -> void: _core_loss(mode, per_team, int(K.rules(mode).core_exposure_s) + 20))
+	for m: String in K.MODES:
+		_core_loss(StringName(m), _per_team(StringName(m)), int(K.rules(StringName(m)).core_exposure_s) + 20)
 
 
 func test_a_dead_team_is_a_spectator_and_commands_after_the_end_are_refused_by_phase() -> void:
@@ -140,36 +150,43 @@ func test_surrender_while_in_exposure() -> void:
 # --- Exposure -> Ended: hard end -------------------------------------------------------------------------------------------
 
 func test_hard_end_goes_to_the_higher_structure_value() -> void:
-	_each(func(mode: StringName, per_team: int) -> void:
-		var w: SimWorld = K.world(mode, per_team)
-		var hard: int = int(K.rules(mode).hard_end_s)
-		var refinery: int = K.structure(w, 0, &"refinery")        # team 0 has been bombed
-		var _r: CommandResult = w.apply_command(CommandPayload.debug_set(0, w.store().id_of(refinery), CommandPayload.SET_HP, 10.0))
-		var _early: Array[SimEvent] = K.run_to(w, hard - 1)
-		assert_int(w.view().match_phase()).is_equal(MatchRules.Phase.EXPOSURE)
-		assert_float(w.judge().structure_value(1)).is_greater(w.judge().structure_value(0))
-		var ends: Array[SimEvent] = K.of_kind(K.run_to(w, hard), SimEvent.Kind.MATCH_END)
-		assert_int(ends.size()).is_equal(1)
-		assert_int(ends[0].tick).is_equal(hard)
-		assert_int(ends[0].a).is_equal(1)
-		assert_int(ends[0].extra[0]).is_equal(MatchJudge.EndReason.HARD_END_VALUE)
-		assert_int(w.view().match_phase()).is_equal(MatchRules.Phase.ENDED))
+	_each(_test_hard_end_goes_to_the_higher_structure_value)
+
+
+func _test_hard_end_goes_to_the_higher_structure_value(mode: StringName, per_team: int) -> void:
+	var w: SimWorld = K.world(mode, per_team)
+	var hard: int = int(K.rules(mode).hard_end_s)
+	var refinery: int = K.structure(w, 0, &"refinery")
+	var _a: Array[SimEvent] = K.run_to(w, hard - 2)
+	var _r: CommandResult = w.apply_command(CommandPayload.debug_set(0, w.store().id_of(refinery), CommandPayload.SET_HP, 10.0))   # team 0 is bombed late (self-repair would heal it)
+	var _early: Array[SimEvent] = K.run_to(w, hard - 1)
+	assert_int(w.view().match_phase()).is_equal(MatchRules.Phase.EXPOSURE)
+	assert_float(w.judge().structure_value(1)).is_greater(w.judge().structure_value(0))
+	var ends: Array[SimEvent] = K.of_kind(K.run_to(w, hard), SimEvent.Kind.MATCH_END)
+	assert_int(ends.size()).is_equal(1)
+	assert_int(ends[0].tick).is_equal(hard)
+	assert_int(ends[0].a).is_equal(1)
+	assert_int(ends[0].extra[0]).is_equal(MatchJudge.EndReason.HARD_END_VALUE)
+	assert_int(w.view().match_phase()).is_equal(MatchRules.Phase.ENDED)
 
 
 func test_hard_end_tie_goes_to_structure_damage_then_draws() -> void:
-	_each(func(mode: StringName, per_team: int) -> void:
-		var hard: int = int(K.rules(mode).hard_end_s)
-		var w: SimWorld = K.world(mode, per_team)                  # mirrored bases: equal value
-		assert_float(w.judge().structure_value(0)).is_equal(w.judge().structure_value(1))
-		w.judge().note_damage(1, 40.0)
-		w.judge().note_damage(0, 90.0)
-		var ends: Array[SimEvent] = K.of_kind(K.run_to(w, hard), SimEvent.Kind.MATCH_END)
-		assert_int(ends[0].a).is_equal(0)                            # more damage dealt to enemy structures
-		var d: SimWorld = K.world(mode, per_team)                  # no damage either side: draw
-		var drawn: Array[SimEvent] = K.of_kind(K.run_to(d, hard), SimEvent.Kind.MATCH_END)
-		assert_int(drawn[0].a).is_equal(-1)
-		assert_int(d.judge().winner()).is_equal(-1)
-		assert_int(d.judge().end_reason()).is_equal(MatchJudge.EndReason.HARD_END_VALUE))
+	_each(_test_hard_end_tie_goes_to_structure_damage_then_draws)
+
+
+func _test_hard_end_tie_goes_to_structure_damage_then_draws(mode: StringName, per_team: int) -> void:
+	var hard: int = int(K.rules(mode).hard_end_s)
+	var w: SimWorld = K.world(mode, per_team)                  # mirrored bases: equal value
+	assert_float(w.judge().structure_value(0)).is_equal(w.judge().structure_value(1))
+	w.judge().note_damage(1, 40.0)
+	w.judge().note_damage(0, 90.0)
+	var ends: Array[SimEvent] = K.of_kind(K.run_to(w, hard), SimEvent.Kind.MATCH_END)
+	assert_int(ends[0].a).is_equal(0)                            # more damage dealt to enemy structures
+	var d: SimWorld = K.world(mode, per_team)                  # no damage either side: draw
+	var drawn: Array[SimEvent] = K.of_kind(K.run_to(d, hard), SimEvent.Kind.MATCH_END)
+	assert_int(drawn[0].a).is_equal(-1)
+	assert_int(d.judge().winner()).is_equal(-1)
+	assert_int(d.judge().end_reason()).is_equal(MatchJudge.EndReason.HARD_END_VALUE)
 
 
 # --- Commander elimination and the self-destruct ----------------------------------------------------------------------------
@@ -178,7 +195,7 @@ func test_a_lost_core_eliminates_the_commander_and_the_structures_self_destruct(
 	for m: String in K.MODES:
 		var mode: StringName = StringName(m)
 		var w: SimWorld = K.world(mode, 2)                         # players 0 and 1 share team 0
-		var dart: int = WorldTestKit.spawn(w, &"dart", 1, 0, WorldTestKit.at(300.0, 700.0))
+		var unit: int = WorldTestKit.spawn(w, &"harvester", 1, 0, WorldTestKit.at(0.0, 700.0))
 		K.kill_core(w, 1)
 		var ev: Array[SimEvent] = K.run_to(w, w.tick() + 1)
 		var t0: int = w.tick()
@@ -203,8 +220,8 @@ func test_a_lost_core_eliminates_the_commander_and_the_structures_self_destruct(
 				causes.append(e.extra[0])
 		assert_array(Array(causes)).is_equal([SimEvent.DeathCause.SELF_DESTRUCT])
 		assert_int(K.of_kind(boom, SimEvent.Kind.WRECK_SPAWNED).size()).is_greater(0)  # the normal wrecks (GD-19)
-		assert_bool(w.view().alive(dart)).is_true()                                   # units stay with their owner
-		assert_int(w.view().owner(dart)).is_equal(1)
+		assert_bool(w.view().alive(unit)).is_true()                                   # units stay with their owner
+		assert_int(w.view().owner(unit)).is_equal(1)
 		assert_bool(w.view().alive(w.store().id_of(K.structure(w, 0, &"refinery")))).is_true()   # a teammate's are untouched
 
 

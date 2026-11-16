@@ -8,6 +8,7 @@ var _store: EntityStore
 var _events: SimEvents
 var _applier: CommandApplier
 var _defs: WorldDefs
+var judge: MatchJudge = null   ## GD-20: told the damage dealt to finished enemy structures (the hard-end tie-break)
 
 
 func _init(store: EntityStore, events: SimEvents, applier: CommandApplier, defs: WorldDefs) -> void:
@@ -27,13 +28,15 @@ func damage(s: int, amount: float, attacker: int, tick: int) -> bool:
 	if amount <= 0.0 or not standing(s) or _invulnerable(s):
 		return false
 	_stamp(s, attacker, tick)
-	var left: float = _store.hp[s] - amount
+	var had: float = _store.hp[s]
+	var left: float = had - amount
 	var _e: SimEvent = _events.emit(SimEvent.Kind.HIT, _store.id_of(s), attacker, _store.pos[s], amount, _store.team[s])
 	if left <= 0.0:
 		_store.hp[s] = 0.0
-		_applier.kill(s)
+		_applier.kill_for(s, SimEvent.DeathCause.KILLED)
 	else:
 		_store.hp[s] = left
+	_report(s, minf(amount, had), attacker)
 	return true
 
 
@@ -42,9 +45,20 @@ func destroy(s: int, attacker: int, tick: int) -> bool:
 	if not standing(s) or _invulnerable(s):
 		return false
 	_stamp(s, attacker, tick)
+	var had: float = _store.hp[s]
 	_store.hp[s] = 0.0
-	_applier.kill(s)
+	_applier.kill_for(s, SimEvent.DeathCause.KILLED)
+	_report(s, had, attacker)
 	return true
+
+
+# Damage dealt to a finished structure by an attacker of another team still in the store (a shooter that died first is lost to the tie-break).
+func _report(s: int, dealt: float, attacker: int) -> void:
+	if judge == null or _store.kind[s] != EntityStore.K_STRUCTURE or (_store.flags[s] & EntityStore.F_BUILDING) != 0 			or not _store.alive(attacker):
+		return
+	var t: int = _store.team[EntityId.slot(attacker)]
+	if t != _store.team[s]:
+		judge.note_damage(t, dealt)
 
 
 func _stamp(s: int, attacker: int, tick: int) -> void:

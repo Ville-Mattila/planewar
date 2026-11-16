@@ -44,7 +44,7 @@ func test_scripted_100_ticks_event_sequence() -> void:
 		[60, K.CORE_EXPOSURE, 0, -1],
 		[71, K.RELEASED, c, ControlMachine.ReleaseReason.DISCONNECT],
 		[80, K.POSSESSED, b, -1],
-		[90, K.RELEASED, b, ControlMachine.ReleaseReason.MATCH], [90, K.MATCH_END, -1, -1],
+		[90, K.RELEASED, b, ControlMachine.ReleaseReason.MATCH], [90, K.MATCH_END, -1, MatchJudge.EndReason.HARD_END_VALUE],   # GD-20: draw by structure value, reason in extra[0]
 	]
 	assert_array(got).is_equal(expected)
 	# the AI hook ran every tick; drive() was refused exactly while C was possessed (ticks 45..70)

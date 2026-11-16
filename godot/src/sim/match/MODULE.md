@@ -55,7 +55,7 @@ func selfdestruct_tick(player: int) -> int                                   # t
 ## Performance budget
 
 Not a hot path: step 10 scans `store.structures` once (<= 480 entries, no allocation, scratch arrays are members) and
-8-slot tables; step 9 reads a `PackedInt32Array` of 8. Well under 0.05 ms at 4v4.
+8-slot tables; step 9 reads a `PackedInt32Array` of 8. Measured 0.053 ms per tick for step + step_selfdestruct at 76 structures, 8 players (4v4, debug build, headless); `structure_value` runs once, at the hard end.
 
 ## Test entry points
 

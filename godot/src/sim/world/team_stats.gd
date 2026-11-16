@@ -95,7 +95,7 @@ static func fill_team(v: TeamStateView, team: int, store: EntityStore, defs: Wor
 	v.unit_cap = rules.caps.units
 	v.structure_cap = rules.caps.structures
 	pl.members(team, v.members)
-	v.eliminated = false
+	v.eliminated = state.defeated[team] != 0   # GD-20: the team lost its last Core or surrendered
 	v.flags = TeamStateView.CORE_EXPOSURE if state.exposure_tick >= 0 else 0
 	if pb.x < pb.y:
 		v.flags |= TeamStateView.LOW_POWER

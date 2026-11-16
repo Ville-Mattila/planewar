@@ -103,7 +103,7 @@ func test_structure_value_is_the_cost_of_the_finished_structures_of_the_team() -
 func test_match_end_tick_finalizes_the_win_and_the_result_reports_it() -> void:
 	var w: SimWorld = WorldTestKit.world(7, WorldTestKit.rules(-1.0, 2.0))
 	var _e: Array[SimEvent] = w.drain_events()
-	w._state.winner_team = 1                                                  # Economy decides the winner (GD-20)
+	var _pad: int = ScoringTestKit.spawn(w, &"pad", 1, 1)                      # GD-20: the hard end goes to the higher structure value
 	for _t: int in 2 * ScoringTestKit.hz() + 2:
 		w.step()
 	assert_bool(w._state.ended()).is_true()

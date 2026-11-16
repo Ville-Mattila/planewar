@@ -47,6 +47,11 @@ func _init(store: EntityStore, projectiles: ProjectileStore, collision: Collisio
 		_armed_ttl[d] = pd.lifetime_s - pd.arm_s if pd.arm_s > 0.0 else pd.lifetime_s + 1.0
 
 
+## GD-20: the judge DamageSink tells about the damage dealt to finished enemy structures.
+func bind_judge(judge: MatchJudge) -> void:
+	_sink.judge = judge
+
+
 ## Weapon fire, then every HIT, GROUND and RAM contact of the last Collision.step, then the fuses.
 func step(tick: int, dice: Rng) -> void:
 	fire.step(tick, dice)

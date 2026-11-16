@@ -34,6 +34,7 @@ func test_a_kill_by_a_shot_whose_possessed_shooter_died_pays_the_pilot() -> void
 func test_a_structure_kill_by_a_shot_whose_unpossessed_shooter_died_pays_the_commander_share() -> void:
 	var shooter: int = _dead_shooter(&"dart", false)
 	var core: int = ScoringTestKit.spawn(_w, &"core", 1, 1)
+	var _spare: int = ScoringTestKit.spawn(_w, &"core", 1, 1)                 # a second Core keeps the match running (GD-20)
 	var dealt: float = ScoringTestKit.hp(_w, core) + 1.0
 	ScoringTestKit.kill(_w, core, shooter)
 	var cmd: float = (float(_d.core_destroyed)) * _d.commander_auto_kill_share + dealt * _d.structure_damage_points_per_hp
