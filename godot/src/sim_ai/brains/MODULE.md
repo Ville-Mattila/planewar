@@ -109,6 +109,9 @@ class_name ScoutParams extends RefCounted          # AI-14: ap_scout `flee_radiu
 const KEYS: PackedStringArray; const SEARCH_KEYS: PackedStringArray
 var flee_radius: float; var search_agl: float; var flee_ticks: int; var flee_clear: float; var fuel_reserve_s: float; var fuel_s: float; var armed_by_def: PackedByteArray
 static func from_content(ap: Dictionary, def: ShipDef, c: ContentSet) -> ScoutParams
+class_name HarvestPicker extends RefCounted        # GD-12: 05 s6.6 PICK_FIELD; pure, no world access (AI-16's Harvester brain builds the picture from `SimView.field_remaining` + the map's field table)
+static func utility(remaining01: float, path_len_m: float, assigned: int, risk01: float, assigned_weight: float) -> float   # remaining01 / (1 + km) / (1 + w x assigned) x (1 - risk01)
+static func pick(from_dir: Vector3, dirs: PackedVector3Array, remaining01: PackedFloat32Array, free_slots: PackedInt32Array, assigned: PackedInt32Array, assigned_weight: float, avoid: int) -> int   # best U over fields with Ore left and a free slot, skipping `avoid`; -1 for none; ties lowest index; the 05 risk term is 0 here (AI-16 adds risk)
 ```
 
 ## Invariants
@@ -196,6 +199,8 @@ static func from_content(ap: Dictionary, def: ShipDef, c: ContentSet) -> ScoutPa
 - Bomber Deck ingress (R0 B.27 A-138, BUG-2): a Bomber that knows a Flak covers its target, with no Autocannon, flies the Deck band under the Flak's `h_rel_min` 150 m floor; this is designed counterplay (05 s6.3 R1, 02 s10.3), not a bug. 02 s18.3 C-06's 600 m is a pinned scenario setup (`C06Rig`). SC-53 `test_sc53_bomber_deck_under_flak.gd` pins the Deck leg and the Autocannon variant (LOW 250 m, Flak fires).
 
 ## Test entry points
+
+GD-12: `godot/test/unit/sim_ai/test_harvest_picker.gd` (`HarvestPicker`: the 05 s6.6 utility, depletion / max_miners re-targeting, crowding, `avoid`). The mining cycle itself is `sim/harvest/MODULE.md`.
 
 `godot/test/unit/sim_ai/test_dart_brain.gd`, `test_dart_perf.gd`, `test_dart_combat_aim.gd` (AI-46), C-08 `godot/test/sim/balance/test_c08_dart_duel.gd` (AI-13; fixtures `godot/test/sim/ai/dart_kit.gd`,
 `ai13_autopilots.json`); `godot/test/sim/ai/test_sc_dart.gd` (SC-01, SC-28, SC-29), `test_sc_dart_terrain.gd` (SC-09,

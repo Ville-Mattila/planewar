@@ -2,7 +2,7 @@ class_name LocalSimView extends SimView
 ## `SimView` over a local `SimWorld`'s arrays (03 s15.4): presentation offline, `sim_ai`, tests, `net`'s encoder.
 ## Reads are valid until the next `step()` and allocate nothing except the list getters (S3): `order_head` /
 ## `pending_order` refill one reused `OrderSpec` each, `team_state` / `player_state` one reused view per slot.
-## Accessors whose system has not landed return the `SimView` default: field_remaining (Economy), scores (GD-27).
+## Accessors whose system has not landed return the `SimView` default: scores (GD-27); field_remaining reads `fields` (GD-12).
 ## `visible_to` / `visible_ids` (walks every live slot) / `visible_enemy_ships` (Vision's list): `visible_mask` bit t (Vision, sim/vision/, team t's last staggered pass) or the own team.
 ## basis(id) = Basis(right, up, -fwd) with right = fwd x up (Godot's -Z forward).
 
@@ -24,6 +24,7 @@ var production: Production = null   ## set by SimWorld (TA-19): queue and progre
 var shields: ShieldDomes = null       ## set by SimWorld (GD-38): `shield01` and the CORE_SHIELD_UP flag read it
 var vision: Vision = null             ## set by SimWorld (TA-63): `visible_enemy_ships` reads its per-team lists
 var score: ScoreKeeper = null          ## set by SimWorld (GD-27): player_score
+var fields: OreFields = null           ## set by SimWorld (GD-12): field_remaining
 var docking: Docking = null           ## set by SimWorld (GD-15): service progress, pad queues, landing grades
 
 
@@ -303,6 +304,11 @@ func supply01(id: int) -> float:
 ## Dome charge / effective cap (SH11); 0 for a collapsed or removed dome and for an entity without one.
 func shield01(id: int) -> float:
 	return shields.charge01(EntityId.slot(id), _state.tick) if shields != null and _store.alive(id) else 0.0
+
+
+## Ore left in Ore Field `node` (map `ore_field` node order, GD-12); 0 out of range.
+func field_remaining(node: int) -> int:
+	return fields.remaining(node) if fields != null else 0
 
 
 ## Remaining Ore of a live wreck (its `hp`, GD-19); 0.0 for any other entity or a dead id.
