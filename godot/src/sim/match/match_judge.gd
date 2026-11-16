@@ -43,17 +43,24 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	assert(e == OK)
 
 
-## Step 1: a SURRENDER from `player` (already validated). Counted only from the minimum clock, from a human of a team
-## still in the match; the verdict (unanimity) is `step`'s.
+## Step 1: a SURRENDER from `player`, counted when `check_vote` accepts it; the verdict (unanimity) is `step`'s.
 func vote(player: int, tick: int) -> void:
-	if _state.ended() or _mr == null or not _players.is_active(player) or _players.eliminated[player] != 0:
-		return
-	var t: int = _players.team[player]
-	if _players.kind[player] != PlayerTable.KIND_HUMAN or t < 0 or t >= PlayerTable.TEAMS or _state.defeated[t] != 0:
-		return
-	var min_s: float = _mr.surrender_min_s_1v1 if _one_v_one() else _mr.surrender_min_s
-	if tick >= _ticks(min_s):
+	if check_vote(player, tick) == CommandResult.Code.ACCEPTED:
 		_state.votes[player] = 1
+
+
+## The verdict on a SURRENDER from `player` applied at `tick` (02 s12.1, 04 V-TEAM): REJECTED_PHASE before the minimum
+## clock or after the match; REJECTED_NO_RIGHTS unless the player is a connected human of a team still in the match.
+## The validator asks this at intake (applied tick = intake tick + 1) and again in step 1; `vote` counts exactly what passes.
+func check_vote(player: int, tick: int) -> int:
+	if _mr == null or not _players.is_active(player):
+		return CommandResult.Code.REJECTED_MALFORMED
+	if _state.ended() or tick < _ticks(_mr.surrender_min_s_1v1 if _one_v_one() else _mr.surrender_min_s):
+		return CommandResult.Code.REJECTED_PHASE
+	var t: int = _players.team[player]
+	if _players.kind[player] != PlayerTable.KIND_HUMAN or _players.connected[player] == 0 or t < 0 or t >= PlayerTable.TEAMS 			or _state.defeated[t] != 0:
+		return CommandResult.Code.REJECTED_NO_RIGHTS
+	return CommandResult.Code.ACCEPTED
 
 
 ## Step 9, before the score pass: the structures and sites of every player whose deadline came die with SELF_DESTRUCT
@@ -187,7 +194,7 @@ func _defeat(t: int, tick: int, reason: int) -> void:
 	_control.release_team(t)
 
 
-# M4: a team whose connected, non-eliminated human members have all voted surrenders.
+# M4: a team whose connected human members (02 s12.1; an eliminated teammate still votes) have all voted surrenders.
 func _count_surrenders(tick: int) -> void:
 	for t: int in PlayerTable.TEAMS:
 		if _state.defeated[t] != 0:
@@ -196,7 +203,7 @@ func _count_surrenders(tick: int) -> void:
 		var voted: int = 0
 		for p: int in PlayerTable.SLOTS:
 			if _players.is_active(p) and _players.team[p] == t and _players.kind[p] == PlayerTable.KIND_HUMAN \
-					and _players.connected[p] != 0 and _players.eliminated[p] == 0:
+					and _players.connected[p] != 0:
 				voters += 1
 				voted += _state.votes[p]
 		if voters > 0 and voted == voters:

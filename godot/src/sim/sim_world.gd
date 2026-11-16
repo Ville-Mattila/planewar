@@ -317,6 +317,7 @@ func _wire(rules: MatchRules) -> void:
 	_judge = MatchJudge.new(_store, _players, _defs, rules, _events, _applier, _control, _econ.score, _state)
 	_combat.bind_judge(_judge)
 	_intake.judge = _judge
+	_validator.judge = _judge
 	_view.score = _econ.score
 	_view.fields = _econ.harvest.fields
 	_sink = SimSink.new(_intake, _store, _inputs, _pathing)

@@ -47,6 +47,7 @@ func submit_system(cmd: Command) -> CommandResult:
 ## Step 1: applies every queued command in arrival order, then empties the queue.
 func apply_all(tick: int) -> void:
 	_validator.begin_tick()
+	_validator.apply_tick = tick
 	for cmd: Command in pending:
 		if economy != null and EconomyHub.handles(cmd.kind):
 			economy.apply(cmd)

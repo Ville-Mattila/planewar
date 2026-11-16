@@ -17,6 +17,8 @@ const QUEUE_MAX: int = 256
 const SYSTEM: int = -1
 const _STATE: PackedStringArray = ["_tokens", "_last", "_claimed"]
 
+var judge: MatchJudge = null                            ## GD-20: SURRENDER is judged by `MatchJudge.check_vote` (set by SimWorld)
+var apply_tick: int = 0                               ## the tick step 1 applies the command in: validate() sets it to tick + 1, CommandIntake.apply_all to its tick
 var order_rules: OrderRules = null                    ## null: every ORDER is REJECTED_INVALID_ORDER
 var build: Build = null                               ## set by EconomyHub: BUILD runs `can_place`, PRODUCE the early share lock
 var production: Production = null                     ## set by EconomyHub: queue room, item owners (S12, S13)
@@ -55,6 +57,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 func validate(cmd: Command, tick: int, ended: bool, queued: int) -> CommandResult:
 	var r: CommandResult = CommandResult.new()
 	var p: int = cmd.player
+	apply_tick = tick + 1
 	if p < 0 or p >= PlayerTable.SLOTS or not _players.is_active(p):
 		r.code = CommandResult.Code.REJECTED_MALFORMED
 		return r
@@ -121,7 +124,7 @@ func check(cmd: Command) -> int:
 		Command.Kind.SURRENDER:
 			if cmd.target != 0:
 				return CommandResult.Code.REJECTED_MALFORMED
-			return CommandResult.Code.ACCEPTED if _players.is_active(p) and _players.kind[p] == PlayerTable.KIND_HUMAN else CommandResult.Code.REJECTED_NO_RIGHTS   # bots do not vote (02 s12.1)
+			return judge.check_vote(p, apply_tick) if judge != null else CommandResult.Code.REJECTED_PHASE   # bots, absent humans, early votes: refused here, never dropped later
 		Command.Kind.SET_ADJUTANT:
 			return _check_adjutant(cmd)
 		Command.Kind.DEBUG_SPAWN:
