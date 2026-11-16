@@ -9,6 +9,8 @@ var _v: HudScenarioView
 
 
 func before_test() -> void:
+	var r: Result = ContentDB.load_all()
+	assert_bool(r.ok).is_true()
 	_v = HudScenarioView.new()
 	_v.add(SHIP, &"dart", 0, Vector3(0.0, R + 300.0, 0.0))
 
@@ -83,12 +85,12 @@ func test_tower_rule_per_envelope() -> void:
 
 func test_tower_inside_uses_relative_height_and_agl_floor() -> void:
 	var flak: Dictionary = {"h_rel_min": 150, "h_rel_max": 1500}
-	assert_bool(TowerHint.inside(flak, 100.0, 100.0)).is_false()
-	assert_bool(TowerHint.inside(flak, 800.0, 800.0)).is_true()
-	assert_bool(TowerHint.inside(flak, 1600.0, 800.0)).is_false()
+	assert_bool(TowerHint.in_envelope(flak, 100.0, 100.0)).is_false()
+	assert_bool(TowerHint.in_envelope(flak, 800.0, 800.0)).is_true()
+	assert_bool(TowerHint.in_envelope(flak, 1600.0, 800.0)).is_false()
 	var missile: Dictionary = {"h_rel_min": -300, "h_rel_max": 1500, "target_agl_min": 40}
-	assert_bool(TowerHint.inside(missile, 0.0, 30.0)).is_false()
-	assert_bool(TowerHint.inside(missile, 0.0, 50.0)).is_true()
+	assert_bool(TowerHint.in_envelope(missile, 0.0, 30.0)).is_false()
+	assert_bool(TowerHint.in_envelope(missile, 0.0, 50.0)).is_true()
 
 
 func test_hints_for_hostile_towers_in_sensor_range_one_per_type_nearest_first() -> void:

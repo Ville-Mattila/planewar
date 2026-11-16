@@ -118,7 +118,7 @@ func set_data(d: LandingHudData) -> void
 func set_shield(team_flags: int, until_s: float, clock_s: float) -> void
 func rows() -> Array[PackedStringArray]
 class_name ThreatMath extends RefCounted   # pure statics (UX-19, 06 s6.1)
-static func angle(rel: Vector3, b: Basis) -> float; static func ring_pos(angle: float, radius: float) -> Vector2   # angle 0 = up, clockwise positive, (-PI, PI]
+static func angle(rel: Vector3, b: Basis) -> float; static func ring_pos(a: float, radius: float) -> Vector2   # angle 0 = up, clockwise positive, (-PI, PI]
 static func intensity(dist: float, range_m: float) -> float; static func ahead(rel: Vector3, b: Basis) -> bool
 class_name ThreatArrow extends RefCounted   # plain data
 var id: int; var angle: float; var dist: float; var intensity: float; var ahead: bool
@@ -128,17 +128,18 @@ static func from_view(v: SimView, ship: int, team: int) -> ThreatData
 class_name TowerHint extends RefCounted     # one hint per hostile tower type in its sensor range, nearest first, at most tower_hint_max
 enum Rule { BELOW, ABOVE }
 var tower: int; var def: StringName; var rule: Rule; var limit_m: float; var inside: bool; var dist: float
-static func rule_for(env: Dictionary) -> Rule; static func limit_for(env: Dictionary) -> float; static func inside(env: Dictionary, h_rel: float, agl: float) -> bool
+static func rule_for(env: Dictionary) -> Rule; static func limit_for(env: Dictionary) -> float; static func in_envelope(env: Dictionary, h_rel: float, agl: float) -> bool
 static func key(r: Rule) -> StringName; static func from_view(v: SimView, ship: int, team: int, agl: float) -> Array[TowerHint]
 func text() -> String
 class_name PilotBadge extends RefCounted    # plain data
 var entity: int; var slot: int; var label: String; var pos: Vector3
 class_name PilotedBadges extends RefCounted
 static func from_view(v: SimView, local_slot: int, local_team: int, names: Dictionary) -> Array[PilotBadge]   # names: slot -> display name (lobby roster)
+static func name_of(slot: int, names: Dictionary) -> String   # roster name or the localised "Player N"
 class_name PendingLine extends RefCounted   # "Order from Aino: escort Bomber 2 (on release)"
 var entity: int; var kind: int; var issuer: int; var issuer_name: String; var target: int; var target_label: String
-static func from_view(v: SimView, id: int, names: Dictionary, target_label: Callable) -> PendingLine   # null when no pending order; Callable(id: int) -> String
-static func verb_key(kind: int) -> StringName
+static func from_view(v: SimView, id: int, names: Dictionary, label: Callable) -> PendingLine   # null when no pending order; Callable(id: int) -> String
+static func verb_key(k: int) -> StringName
 func text() -> String
 class_name HandoverToast extends RefCounted # one toast, replaced by a newer request
 var entity: int; var requester: int; var requester_name: String; var left_s: float

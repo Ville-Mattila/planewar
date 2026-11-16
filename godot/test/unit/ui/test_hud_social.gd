@@ -11,6 +11,8 @@ var _names: Dictionary = {0: "Ville", 1: "Aino", 2: "Matti"}
 
 
 func before_test() -> void:
+	var r: Result = ContentDB.load_all()
+	assert_bool(r.ok).is_true()
 	_v = HudScenarioView.new()
 
 
@@ -51,8 +53,9 @@ func test_badge_without_a_roster_name_falls_back_to_a_localised_slot_label() -> 
 func test_pending_order_line_names_issuer_verb_and_target() -> void:
 	_v.add(1, &"dart", 0, Vector3(0, R + 100, 0), POSSESSED, 0)
 	_v.add(7, &"bomber", 0, Vector3(50, R + 100, 0))
-	_v.pending[1] = OrderSpec.make(OrderSpec.Kind.ESCORT, 7)
-	_v.pending[1].issuer = 1
+	var spec: OrderSpec = OrderSpec.make(OrderSpec.Kind.ESCORT, 7)
+	spec.issuer = 1
+	_v.pending[1] = spec
 	var p: PendingLine = PendingLine.from_view(_v, 1, _names, func(_id: int) -> String: return "Bomber 2")
 	assert_object(p).is_not_null()
 	assert_int(p.kind).is_equal(OrderSpec.Kind.ESCORT)
@@ -73,8 +76,9 @@ func test_every_order_kind_has_a_verb_key_in_the_locale() -> void:
 
 func test_point_order_without_target_uses_the_marker_wording() -> void:
 	_v.add(1, &"dart", 0, Vector3(0, R + 100, 0))
-	_v.pending[1] = OrderSpec.make(OrderSpec.Kind.MOVE, 0, Vector3(0, R, 100))
-	_v.pending[1].issuer = 0
+	var spec: OrderSpec = OrderSpec.make(OrderSpec.Kind.MOVE, 0, Vector3(0, R, 100))
+	spec.issuer = 0
+	_v.pending[1] = spec
 	var p: PendingLine = PendingLine.from_view(_v, 1, _names, Callable())
 	assert_str(p.text()).is_equal("Order from Ville: move to marker (on release)")
 
@@ -138,9 +142,9 @@ func test_beacon_added_on_deploy_removed_on_collect_and_team_filtered() -> void:
 
 func test_beacon_pip_sits_on_the_compass_tape_by_bearing() -> void:
 	var b: BeaconTracker = BeaconTracker.new()
-	var spot: Vector3 = Vector3(0.0, R, -500.0)
+	var ship_pos: Vector3 = Vector3(R * 0.5, R * 0.8, 0.0)
+	var spot: Vector3 = ship_pos + Vector3(0.0, 0.0, -500.0)   # a little off the nose
 	b.on_event(_event(SimEvent.Kind.CANISTER_DEPLOYED, 40, 1, spot, 0), 0)
-	var ship_pos: Vector3 = Vector3(500.0, R, 1.0)   # beacon lies to the west-north-west
 	var n: Vector3 = ship_pos.normalized()
 	var heading: float = HudMath.heading_deg(Vector3(0, 0, -1), n)
 	var pips: Array[BeaconPip] = b.pips(ship_pos, heading, 280.0, 90.0)
@@ -153,8 +157,8 @@ func test_beacon_pip_sits_on_the_compass_tape_by_bearing() -> void:
 
 func test_beacon_beyond_the_tape_span_is_pinned_to_the_edge() -> void:
 	var b: BeaconTracker = BeaconTracker.new()
-	b.on_event(_event(SimEvent.Kind.CANISTER_DEPLOYED, 40, 1, Vector3(0, R, 500), 0), 0)
-	var ship_pos: Vector3 = Vector3(0.0, R, -500.0)
+	var ship_pos: Vector3 = Vector3(R * 0.5, R * 0.8, 0.0)
+	b.on_event(_event(SimEvent.Kind.CANISTER_DEPLOYED, 40, 1, ship_pos + Vector3(0, 0, 500), 0), 0)
 	var n: Vector3 = ship_pos.normalized()
 	var heading: float = HudMath.heading_deg(Vector3(0, 0, -1), n)   # flying away from the canister
 	var pips: Array[BeaconPip] = b.pips(ship_pos, heading, 280.0, 90.0)
