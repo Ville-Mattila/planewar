@@ -8074,7 +8074,10 @@
     "docs": [
       "docs/07-art-audio-content.md"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 163,
+    "merged": "2026-11-16",
+    "notes": "29 keys moved from en.json to locale/src/ui_hud.csv (CSV is source of truth). Owner: HUD width check for raised max_len rows (service.fuel, cons.fuel, cd.flip, grade.hot). Reviewer suggestions: SYOKSY -> KOLARI for crash, \"pist\" -> \"p.\", POLTTO -> POLTTOAINE if width allows."
   },
   {
     "id": "NET-59",
