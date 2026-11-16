@@ -2568,8 +2568,11 @@
       "05 s4.4",
       " 05 AI-19"
     ],
-    "status": "todo",
-    "acceptance_append": "; every ap_* flight block carries the 16 FlightGains keys of R0 B.12 A-67 with the AI-05 anchors and lift_max_frac / lift_min_time_s (A-67); AiDriver reads think_period_ticks from the def instead of its constructor default (A-71); adopt the single AI-06 damping_only recommended set (godot/test/tuning/recommended_gains.json) for every ap_* flight block (A-68); every ship ap_* carries the 11-key separation block and ap_dart / ap_lancer the 8-key formation block of R0 B.14 A-86 with the AI-11 anchors (godot/test/sim/ai/ai11_params.json, lookahead_miss_m 80), schema ranges and per-class required as A-86 states; engage_radius_m stays in order_rules.json only; ap_dart carries the guidance (8 keys), intercept (12 keys incl. standoff_m 200, break_ttc_s 2.0) and attack_run (12 keys) blocks, gun.aoa_comp_max_deg 20 and evade.heading_change_deg 60 of R0 B.17 A-93 with the AI-13 anchors (godot/test/sim/ai/ai13_autopilots.json); schema: required on ap_dart, optional elsewhere, every key required when the block is present, ranges per A-93"
+    "status": "done",
+    "acceptance_append": "; every ap_* flight block carries the 16 FlightGains keys of R0 B.12 A-67 with the AI-05 anchors and lift_max_frac / lift_min_time_s (A-67); AiDriver reads think_period_ticks from the def instead of its constructor default (A-71); adopt the single AI-06 damping_only recommended set (godot/test/tuning/recommended_gains.json) for every ap_* flight block (A-68); every ship ap_* carries the 11-key separation block and ap_dart / ap_lancer the 8-key formation block of R0 B.14 A-86 with the AI-11 anchors (godot/test/sim/ai/ai11_params.json, lookahead_miss_m 80), schema ranges and per-class required as A-86 states; engage_radius_m stays in order_rules.json only; ap_dart carries the guidance (8 keys), intercept (12 keys incl. standoff_m 200, break_ttc_s 2.0) and attack_run (12 keys) blocks, gun.aoa_comp_max_deg 20 and evade.heading_change_deg 60 of R0 B.17 A-93 with the AI-13 anchors (godot/test/sim/ai/ai13_autopilots.json); schema: required on ap_dart, optional elsewhere, every key required when the block is present, ranges per A-93",
+    "pr": 158,
+    "merged": "2026-11-16",
+    "notes": "Schema append (A-86/A-93/A-119, AI-08..17 fixture keys) done in this PR under an orchestrator exception; test_assist.gd and test_control_rules.gd (sim lane) updated under exception, handover test mutant-proven. Decisions: single shared ap_tower; ap_crawler required keys only; entry-level _doc. Architect: A-68 damping_only flight gains shipped WITHOUT the landing overrides (approach_min_speed_mps 41, glide_deg 9.6, kd_pos 0.9, sink_gain 0.26); AI-06 only measured both together, flight-only half never measured."
   },
   {
     "id": "AI-20",
@@ -8249,5 +8252,24 @@
     "pr": 161,
     "merged": "2026-11-16",
     "notes": "needs app: nothing in src fills the drawer lock_left_ore from player_state yet. needs ui: drop the \"needs sim (UX-22)\" note in ui/MODULE.md; test_drawer_sim_agreement._lock_left should read the view. local_sim_view.gd at 389/400 lines. For NET-39: encoder uses Build.early_spend_left and clamps below the 0xFFFF sentinel."
+  },
+  {
+    "id": "AI-47",
+    "title": "content: move AI-16's ap_harvester keys from the test fixture into content/defs/autopilots.json and the schema",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "AI-16",
+      "AI-19"
+    ],
+    "milestone": "M3",
+    "acceptance": "The ap_harvester keys listed in brains/MODULE.md note HV5 (fixture godot/test/sim/ai/ai16_autopilots.json) are in godot/content/defs/autopilots.json with _doc citations and in tools/schemas/autopilots.schema.json; the AI-16 tests load the shipped def instead of the fixture (or the fixture is kept only for negative cases); validate_content and the sim_ai suites green",
+    "docs": [
+      "05 s6.7",
+      "godot/src/sim_ai/brains/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
   }
 ]
