@@ -4569,7 +4569,7 @@
     "status": "todo",
     "acceptance_append": "; the replicated ai_tag u8 is an AiTag.Tag ordinal (R0 B.17 A-94); net stays opaque to it (no decode, no enum); the contract test round-trips the values 0 and 33; R0 B.22 A-111: NetSimView overrides team_state (TEAM_STATE fields + members from TEAM_DETAIL players; other teams unknown with the default view), player_state (TEAM_DETAIL players + PLAYER_STATUS), order_head and pending_order (TEAM_DETAIL orders into a reused OrderSpec per slot, S3 no allocation on read) now that net may name TeamStateView, PlayerStateView and OrderSpec; the TEST-02 factory drops those four from exempt(); R0 B.23 A-116: NetSimView.link resolves the ship and pad ends from DOCKED / LAUNCHED events (both ids, per roster index, cleared by ROSTER_REMOVE) and own-team TEAM_DETAIL pads (occupant, the inverse of pad_occupant); link(docked own ship) == pad and link(pad) == ship exact, link(enemy ship docked before it entered the roster) == 0 with field_unknown true, link(towed wreck) == 0 with field_unknown true (tow end not replicated; TETHERED / UNTETHERED events are the named path, not built); the TEST-02 factory drops link from exempt() for the docked clauses; A-117: NetUnknown.NEVER is split into NEVER (not replicated: overlay, cargo, cargo_kind, path_grid_version, the tow / Extractor ends of link) and PENDING (rows whose decoder has not landed: shield01 GD-38, wreck_ore GD-41, landing_grade_last, the uncarried flags bits; this PR empties the TEAM_DETAIL entries), unknown(id) is the OR over received-or-not for the carried accessors only (drops the NEVER.is_empty() term), field_unknown(id, accessor) is unchanged as the per-field query; test_net_sim_view.gd asserts unknown(own possessed unit) == false, unknown(own-team tier-A ship) == false, unknown(C blip) == true, unknown(other-team entity) == true after TEAM_DETAIL; net/client/MODULE.md CS8 rewritten to A-117; the mutant-under-quantum check gains production_progress01 (PR #118 review nit)",
     "note": "A-116 adds link ship / pad ends and A-117 the NEVER / PENDING split (+0.25 d, re-sized at PM-01).",
-    "notes": "R0 B.28 A-141: until NetSimView.team_state is implemented it returns null online, so a ui widget that reads team_state hides."
+    "notes": "R0 B.28 A-141: until NetSimView.team_state is implemented it returns null online, so a ui widget that reads team_state hides. GD-47: encode early_spend_left_ore via Build.early_spend_left, clamp to u16 below the 0xFFFF sentinel; the TEST-02 spend-lock clause then binds NetSimView."
   },
   {
     "id": "NET-40",
@@ -8242,9 +8242,9 @@
       "godot/src/sim/MODULE.md",
       "02 early-share lock"
     ],
-    "status": null,
-    "pr": null,
-    "merged": null,
-    "notes": null
+    "status": "done",
+    "pr": 161,
+    "merged": "2026-11-16",
+    "notes": "needs app: nothing in src fills the drawer lock_left_ore from player_state yet. needs ui: drop the \"needs sim (UX-22)\" note in ui/MODULE.md; test_drawer_sim_agreement._lock_left should read the view. local_sim_view.gd at 389/400 lines. For NET-39: encoder uses Build.early_spend_left and clamps below the 0xFFFF sentinel."
   }
 ]
