@@ -1,0 +1,39 @@
+{
+  "_doc": "AI-16 test fixture in the autopilots.json shape (05 s4.4, s5.7, s6.6; needs content: AI-19 writes these into autopilots.json). Only ap_harvester: the AI-14 fixture's entry (think_period_ticks 10, safety_min_hold_s 0.5) plus the AI-16 keys: flee_radius_m 600 and quiet_s 15 (05 s6.6 / s4.4), the `follow` block (05 s5.7: lookahead_m 40, kp_yaw 2.0, thrust_turn 0.4 at turn_slow_deg 45, path_wait_ticks 30 = the 'not answered within 30 ticks' strike, stuck_progress_m 5 in stuck_window_s 10; AI-16 additions pivot_m 20, arrive_m 3, deviate_m 120, aim_every_ticks 4) and the `harvest` block (05 s6.6: assigned_weight 0.5, sticky_drop 0.3, queue_s 20 = 'queue_len x 20 s'; AI-16 additions hit_window_s 3 = 'HIT in the last 3 s', claim_wait_s 5, unload_wait_s 5, count_margin_m 30, spot_frac 0.5, dock_frac 0.5, refinery_scan_s 5). Ai16Kit replaces the AI-14 fixture's ap_harvester with this entry.",
+  "autopilots": [
+    {
+      "id": "ap_harvester",
+      "status": "core",
+      "tags": [],
+      "think_period_ticks": 10,
+      "safety_min_hold_s": 0.5,
+      "flee_radius_m": 600,
+      "quiet_s": 15,
+      "follow": {
+        "lookahead_m": 40,
+        "kp_yaw": 2.0,
+        "thrust_turn": 0.4,
+        "turn_slow_deg": 45,
+        "pivot_m": 20,
+        "arrive_m": 3,
+        "path_wait_ticks": 30,
+        "stuck_progress_m": 5,
+        "stuck_window_s": 10,
+        "deviate_m": 120,
+        "aim_every_ticks": 4
+      },
+      "harvest": {
+        "hit_window_s": 3,
+        "assigned_weight": 0.5,
+        "sticky_drop": 0.3,
+        "queue_s": 20,
+        "claim_wait_s": 5,
+        "unload_wait_s": 5,
+        "count_margin_m": 30,
+        "spot_frac": 0.5,
+        "dock_frac": 0.5,
+        "refinery_scan_s": 5
+      }
+    }
+  ]
+}
