@@ -157,6 +157,9 @@ msgstr "UNLOAD"
 msgid "hud.alt"
 msgstr "ALT"
 
+msgid "hud.badge.slot"
+msgstr "Player {n}"
+
 msgid "hud.band.deck"
 msgstr "DECK"
 
@@ -168,6 +171,9 @@ msgstr "HIGH"
 
 msgid "hud.band.low"
 msgstr "LOW"
+
+msgid "hud.beacon.canister"
+msgstr "SUPPLY"
 
 msgid "hud.bomb.tti"
 msgstr "TTI"
@@ -226,6 +232,12 @@ msgstr "N"
 msgid "hud.heading.pole"
 msgstr "POLE"
 
+msgid "hud.hint.above"
+msgstr "{name}: climb above {m} m"
+
+msgid "hud.hint.below"
+msgstr "{name}: stay below {m} m"
+
 msgid "hud.land.flare"
 msgstr "Pitch up, hold thrust"
 
@@ -243,6 +255,51 @@ msgstr "Pad occupied"
 
 msgid "hud.land.vert"
 msgstr "V-SPD"
+
+msgid "hud.pending.line"
+msgstr "Order from {name}: {order} (on release)"
+
+msgid "hud.pending.system"
+msgstr "Command"
+
+msgid "hud.pending.target"
+msgstr "target"
+
+msgid "hud.pending.verb.attack"
+msgstr "attack {target}"
+
+msgid "hud.pending.verb.attack_via"
+msgstr "attack {target}"
+
+msgid "hud.pending.verb.escort"
+msgstr "escort {target}"
+
+msgid "hud.pending.verb.guard"
+msgstr "guard {target}"
+
+msgid "hud.pending.verb.harvest_here"
+msgstr "harvest here"
+
+msgid "hud.pending.verb.haul"
+msgstr "haul {target}"
+
+msgid "hud.pending.verb.hold"
+msgstr "hold position"
+
+msgid "hud.pending.verb.move"
+msgstr "move to marker"
+
+msgid "hud.pending.verb.patrol"
+msgstr "patrol"
+
+msgid "hud.pending.verb.patrol_route"
+msgstr "patrol route"
+
+msgid "hud.pending.verb.return"
+msgstr "return to pad"
+
+msgid "hud.pending.verb.supply_drop"
+msgstr "drop supplies"
 
 msgid "hud.service.ammo"
 msgstr "AMMO"
@@ -267,6 +324,30 @@ msgstr "SHIELD"
 
 msgid "hud.speed"
 msgstr "SPD"
+
+msgid "hud.threat.arrow"
+msgstr "Hostile"
+
+msgid "hud.threat.lock"
+msgstr "ROCKET LOCK"
+
+msgid "hud.toast.request"
+msgstr "{name} asks to fly your unit"
+
+msgid "hud.tower.autocannon_turret"
+msgstr "Autocannon"
+
+msgid "hud.tower.flak_battery"
+msgstr "Flak"
+
+msgid "hud.tower.missile_tower"
+msgstr "Missiles"
+
+msgid "hud.tower.rail_lance"
+msgstr "Rail Lance"
+
+msgid "hud.tower.shield_projector"
+msgstr "Shield"
 
 msgid "hud.uplink"
 msgstr "UPLINK"
