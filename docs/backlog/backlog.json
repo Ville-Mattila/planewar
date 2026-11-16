@@ -2170,7 +2170,10 @@
       "02 s8.2",
       " 02 GD-12"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 153,
+    "merged": "2026-11-16",
+    "notes": "Follow-ups: perf hosted 841.6/600 us at 200 Harvesters and 163.6/150 us at 40 (~4 us per Harvester vs row 10 1.5 us), optimise later; PR body perf note still says bound 1000 us (tests use 600/150). Architect: Q1 Harvester state in EntityStore.link needs an R0 row (A-104 precedent); Q2 reuse salvage_deliver_m for docking?; Q3 refinery_docks vs docks. AI-16 builds the Harvester brain; _MIN_CLAIM_ORE justification to cite."
   },
   {
     "id": "GD-14",
