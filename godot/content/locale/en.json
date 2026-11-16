@@ -88,5 +88,19 @@
   "ui.prod.reason.unavailable": "Not available",
   "ui.prod.cancel.not_owner": "Only the player who queued this can cancel it",
   "ui.prod.cancel.other_team": "Not your team's queue",
-  "ui.prod.disabled.eliminated": "Eliminated: production is disabled"
+  "ui.prod.disabled.eliminated": "Eliminated: production is disabled",
+  "ui.place.reject.eliminated": "Commander eliminated",
+  "ui.place.reject.prereq": "Requires {need}",
+  "ui.place.reject.cap": "Cap reached",
+  "ui.place.reject.occupied": "Blocked",
+  "ui.place.reject.slope": "Slope over {max} deg",
+  "ui.place.reject.node": "On a resource node",
+  "ui.place.reject.not_visible": "Not in team vision",
+  "ui.place.reject.enemy_radius": "Inside enemy build range",
+  "ui.place.reject.no_radius": "Outside build radius",
+  "ui.place.reject.no_presence": "Move a unit within {m} m",
+  "ui.place.reject.spacing": "Too close to another base",
+  "ui.place.reject.funds": "Not enough Ore or Ice",
+  "ui.place.reject.spend_locked": "Share locked until {time}",
+  "ui.place.reject.generic": "Cannot place here"
 }

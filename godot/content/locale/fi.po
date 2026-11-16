@@ -277,6 +277,48 @@ msgstr ""
 msgid "hud.vs"
 msgstr ""
 
+msgid "ui.place.reject.cap"
+msgstr ""
+
+msgid "ui.place.reject.eliminated"
+msgstr ""
+
+msgid "ui.place.reject.enemy_radius"
+msgstr ""
+
+msgid "ui.place.reject.funds"
+msgstr ""
+
+msgid "ui.place.reject.generic"
+msgstr ""
+
+msgid "ui.place.reject.no_presence"
+msgstr ""
+
+msgid "ui.place.reject.no_radius"
+msgstr ""
+
+msgid "ui.place.reject.node"
+msgstr ""
+
+msgid "ui.place.reject.not_visible"
+msgstr ""
+
+msgid "ui.place.reject.occupied"
+msgstr ""
+
+msgid "ui.place.reject.prereq"
+msgstr ""
+
+msgid "ui.place.reject.slope"
+msgstr ""
+
+msgid "ui.place.reject.spacing"
+msgstr ""
+
+msgid "ui.place.reject.spend_locked"
+msgstr ""
+
 msgid "ui.prod.auto"
 msgstr ""
 

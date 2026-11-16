@@ -1,0 +1,22 @@
+{
+  "_doc": "docs/06 s7.3 build placement (UX-21). arm_alt_m: the camera altitude at or below which an armed structure starts positioning (dives from Commander); rotations: quarter turns; haptic_ms: pulse when validity flips; priority: the one-reason-line order, highest first (names are Build.Reject members, R0 C2-12); ring_alpha: fill alpha of the ground rings.",
+  "arm_alt_m": 1200.0,
+  "rotations": 4,
+  "haptic_ms": 8,
+  "ring_alpha": 0.35,
+  "priority": [
+    "ELIMINATED",
+    "PREREQ",
+    "NO_RADIUS",
+    "NO_PRESENCE",
+    "ENEMY_RADIUS",
+    "NOT_VISIBLE",
+    "NODE",
+    "OCCUPIED",
+    "SLOPE",
+    "SPACING",
+    "SPEND_LOCKED",
+    "FUNDS",
+    "CAP"
+  ]
+}
