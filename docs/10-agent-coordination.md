@@ -249,7 +249,7 @@ The commit-message lint (REPO-06) rejects any commit whose first line does not s
 
 ## 4. Contract-change protocol
 
-A **contract** is anything another lane compiles or validates against: `godot/src/<module>/MODULE.md` (Public API, Invariants, Events, Test entry points; `godot/src/sim/<subsystem>/MODULE.md` for `sim/steer/`, `sim/orders/`, `sim/control/`, `sim/scoring/` once they exist, R0 B.9 A-21), `tools/schemas/*.schema.json`, the append-only enumerations (R0 B.3, the `sim/MODULE.md` "Enumerations" block, whose bullet format `test_protocol.gd` parses), `tools/deps.json`, `tools/d6_allow.txt`, `project.godot`, `export_presets.cfg`, `.github/workflows/*`, `godot/content/defs/*.json` field *sets* (not values), and every ADR in 01 and `docs/adr/`.
+A **contract** is anything another lane compiles or validates against: `godot/src/<module>/MODULE.md` (Public API, Invariants, Events, Test entry points; `godot/src/sim/<subsystem>/MODULE.md` for `sim/steer/`, `sim/orders/`, `sim/control/`, `sim/scoring/` once they exist, R0 B.9 A-21; a nested `MODULE.md` of any other module, e.g. `net/client/`, `ui/rts/`, is a contract the same way, R0 B.28 A-143), `tools/schemas/*.schema.json`, the append-only enumerations (R0 B.3, the `sim/MODULE.md` "Enumerations" block, whose bullet format `test_protocol.gd` parses), `tools/deps.json`, `tools/d6_allow.txt`, `project.godot`, `export_presets.cfg`, `.github/workflows/*`, `godot/content/defs/*.json` field *sets* (not values), and every ADR in 01 and `docs/adr/`.
 
 ### 4.1 Three sizes of change
 
@@ -624,3 +624,4 @@ Not token cost but owned by the same cadence: the pinned perf runner and game ho
 |---|---|---|
 | 2026-10-10 | Editorial sweep (editor-in-chief): `CLAUDE.md` gains a pointer row for `docs/00-master-plan.md` (orientation only; task agents do not read it by default). 09/`backlog.json` REPO-02, REPO-03 and DOC-01 retitled as refinements of the companion files this document created (see 09 revision log). | `00-master-plan.md` became the entry point; the backlog titles predated the companion files. |
 | 2026-10-13 | s4 and s4.3: subsystem `MODULE.md` files under `godot/src/sim/<subsystem>/` are contracts once they exist; the `sim/MODULE.md` enumeration block's bullet format is a parsed contract (`test_protocol.gd`). | `sim/MODULE.md` reached the 300-line cap at 299 lines (R0 B.9 A-21, `docs/reviews/R0-amendments-02.md`). |
+| 2026-11-16 | s4: a nested `MODULE.md` under any module (not only `sim/<subsystem>/`) is a contract once it exists. | Nested files already exist under `net/`, `presentation/`, `sim/`, `sim_ai/` and the tools cover them; UX-22 asked whether `ui` may split (R0 B.28 A-143, `docs/reviews/R0-amendments-22.md`). |

@@ -14,7 +14,7 @@
     "input":        {"may_depend_on": ["core"],
                      "named_types": {"sim": ["PilotInput"]}},
     "ui":           {"may_depend_on": ["core", "content", "input", "camera", "presentation", "net"],
-                     "named_types": {"sim": ["SimView", "SimEvent", "Command", "CommandResult", "PilotInput", "AlertKind", "OrderSpec", "LandingGrade", "Terrain"]}},
+                     "named_types": {"sim": ["SimView", "SimEvent", "Command", "CommandResult", "PilotInput", "AlertKind", "OrderSpec", "LandingGrade", "Terrain", "TeamStateView", "PlayerStateView"]}},
     "platform":     {"may_depend_on": ["core"]},
     "campaign":     {"may_depend_on": ["core", "content", "ui"],
                      "named_types": {"sim": ["Command", "CommandResult", "SimEvent", "SimView", "CommandSinkBase"]}},
