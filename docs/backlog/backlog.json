@@ -8277,5 +8277,29 @@
     ],
     "status": "todo",
     "merged": null
+  },
+  {
+    "id": "AI-33b",
+    "title": "sim_ai: re-run SC-47 save/load at 10:00 with Commander and Adjutant state in the driver",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-33",
+      "AI-23",
+      "AI-25",
+      "AI-26",
+      "AI-27",
+      "AI-28",
+      "AI-29"
+    ],
+    "milestone": "M3",
+    "acceptance": "SC-47 skirmish saved at 10:00 with Commander bots and the Adjutant active; restored driver bytes equal; mode/target/aux_id and Commander/Adjutant state match every tick for 300 ticks after load; world bytes match; the covered Commander/Adjutant state is asserted non-default at the save point",
+    "docs": [
+      "05 SC-47",
+      "godot/src/sim_ai/MODULE.md SV1"
+    ],
+    "status": "todo",
+    "merged": null
   }
 ]
