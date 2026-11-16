@@ -21,8 +21,8 @@ func test_packets_per_link_120_per_second() -> void:
 	for i: int in 200:
 		if l.on_packet(Protocol.CH_INPUT, SessionCodec.encode_ping(i), 0) == ClientLink.Verdict.QUEUED:
 			ok += 1
-	assert_int(ok).is_equal(120)
-	assert_int(l.dropped_rate).is_greater_equal(80)
+	assert_int(ok).is_equal(119)             # the burst of 120 minus the HELLO that opened the link
+	assert_int(l.dropped_rate).is_equal(81)
 	assert_int(l.strikes).is_equal(0)
 	# a second later 120 more fit
 	assert_int(l.on_packet(Protocol.CH_INPUT, SessionCodec.encode_ping(0), 1000)).is_equal(ClientLink.Verdict.QUEUED)

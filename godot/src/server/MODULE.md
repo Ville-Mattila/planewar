@@ -47,7 +47,7 @@ var conn: int; var transport: Transport; var limits: LinkLimits; var state: Stat
 var slot: int; var team: int; var session_id: int; var direct_view: bool; var strikes: int
 var hello: HelloMsg; var expected_map_hash: PackedByteArray; var loaded_map_hash: PackedByteArray
 var connected_ms: int; var welcomed_ms: int; var close_at_ms: int; var last_seq: int; var taken_seqs: PackedInt32Array
-var dropped_rate: int; var dropped_size: int; var dropped_channel: int; var dropped_state: int; var malformed: int; var packets_in: int
+var dropped_rate: int; var dropped_size: int; var dropped_channel: int; var dropped_state: int; var dropped_queue: int; var malformed: int; var packets_in: int
 func _init(p_conn: int, p_transport: Transport, p_limits: LinkLimits, now_ms: int) -> void
 func on_packet(channel: int, bytes: PackedByteArray, now_ms: int) -> Verdict   # transport entry; never throws
 func take_commands() -> Array[Command];  func take_control() -> Array[PackedByteArray];  func take_inputs() -> Array[PackedByteArray]

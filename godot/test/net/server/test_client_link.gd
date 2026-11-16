@@ -177,8 +177,9 @@ func test_duplicate_and_stale_seq_dropped_silently() -> void:
 	assert_int(l.on_packet(Protocol.CH_CONTROL, LinkRig.command(9), 0)).is_equal(ClientLink.Verdict.DROPPED_STATE)
 	assert_int(l.strikes).is_equal(0)
 	assert_int(l.take_commands().size()).is_equal(1)
-	var _b: int = l.on_packet(Protocol.CH_CONTROL, LinkRig.command(0xFFFF), 0)
-	assert_int(l.on_packet(Protocol.CH_CONTROL, LinkRig.command(0), 0)).is_equal(ClientLink.Verdict.QUEUED)   # u16 wrap
+	var w: ClientLink = LinkRig.loading_link()
+	var _b: int = w.on_packet(Protocol.CH_CONTROL, LinkRig.command(0xFFFF), 0)
+	assert_int(w.on_packet(Protocol.CH_CONTROL, LinkRig.command(0), 0)).is_equal(ClientLink.Verdict.QUEUED)   # u16 wrap
 
 
 func test_malformed_command_answered_and_struck() -> void:
@@ -209,7 +210,9 @@ func test_input_queue_is_bounded_dropping_oldest() -> void:
 	var lim: LinkLimits = LinkLimits.new()
 	lim.input_queue_max = 4
 	lim.packet_burst = 1000.0
-	var l: ClientLink = LinkRig.new_link(0, lim)
+	var l: ClientLink = ClientLink.new(7, LinkRig.new(), lim, 0)
+	var _h: int = l.on_packet(Protocol.CH_CONTROL, LinkRig.hello(), 0)
+	var _w: bool = l.accept(LinkRig.welcome(), 0)
 	for i: int in 10:
 		var _v: int = l.on_packet(Protocol.CH_INPUT, SessionCodec.encode_ping(i), 0)
 	var q: Array[PackedByteArray] = l.take_inputs()
