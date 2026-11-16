@@ -8288,9 +8288,10 @@
       "05 s6.7",
       "godot/src/sim_ai/brains/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null,
-    "notes": "Ruling R0-amendments-23 (B.29 A-144, A-145): required confirmed; no commit split; fixture removal is AI-48."
+    "status": "done",
+    "merged": "2026-11-16",
+    "notes": "Ruling R0-amendments-23 (B.29 A-144, A-145): required confirmed; no commit split; fixture removal is AI-48.",
+    "pr": 168
   },
   {
     "id": "AI-33b",
