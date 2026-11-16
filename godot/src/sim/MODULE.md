@@ -163,7 +163,7 @@ var commander_rights: bool; var eliminated: bool                             # e
 var connected: bool; var disconnect_tick: int                                # disconnect_tick -1 while connected; bots are always connected
 var adjutant_profile: int; var adjutant_toggles: int                         # profile -1 off, else SET_ADJUTANT profile (0 assist, 1 caretaker, 2 economy); toggles bit0..3
 var unit_count: int; var structure_count: int                                # counted against unit_cap / structure_cap
-var early_spend_left_ore: int                                                # -1 = lock over / alone on the team / not own team; else max(0, early_share_ore + delivered - spent) (LocalSimView: GD-47, Build.early_spend_left)
+var early_spend_left_ore: int                                                # -1 = lock over / alone on the team (NetSimView also: not own team); else max(0, early_share_ore + delivered - spent) (LocalSimView: GD-47, Build.early_spend_left)
 
 class_name SimEvent extends RefCounted
 enum Kind { SPAWN, DEATH, HIT, BOMB_IMPACT, DOCKED, SERVICED, LAUNCHED, ORDER_DONE, ORDER_FAILED, POSSESSED, RELEASED,

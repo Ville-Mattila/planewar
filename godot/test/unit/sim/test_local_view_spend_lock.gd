@@ -68,3 +68,22 @@ func test_lock_ends_at_early_share_lock_s() -> void:
 	_ev = K.run(w, 2)
 	assert_int(w.view().player_state(0).early_spend_left_ore).is_equal(-1)
 	assert_int(w.view().team_state(0).flags & TeamStateView.SPEND_LOCK_ACTIVE).is_equal(0)
+
+
+## UX-22 acceptance: the drawer's own tile function, fed only by the real LocalSimView (default lock_left reads
+## PlayerStateView.early_spend_left_ore), shows SPEND_LOCKED where CommandValidator answers REJECTED_LOCKED, and clears.
+func test_drawer_tile_shows_the_lock_from_the_real_view_and_clears() -> void:
+	assert_bool(ContentDB.load_all().ok).is_true()
+	var w: SimWorld = _team_world(2)
+	w.economy().build.spent_ore[0] = WorldTestKit.content().economy.early_share_ore - 10     # 10 Ore of allowance left
+	var yard: int = w.store().id_of(K.find(w, &"shipyard"))
+	var dart: int = K.def(&"dart")
+	var ctx: DrawerContext = DrawerContextKit.from_view(w.view(), 0)
+	assert_int(ctx.lock_left_ore).is_equal(10)
+	assert_int(DrawerModel.tile(w.view(), ctx, &"dart").state).is_equal(DrawerMath.State.SPEND_LOCKED)
+	assert_int(K.code(w, Command.produce(0, yard, dart, 1))).is_equal(CommandResult.Code.REJECTED_LOCKED)
+	var _ev: Array[SimEvent] = K.run(w, _lock_ticks() + 1)
+	ctx = DrawerContextKit.from_view(w.view(), 0)
+	assert_int(ctx.lock_left_ore).is_equal(-1)
+	assert_int(DrawerModel.tile(w.view(), ctx, &"dart").state).is_not_equal(DrawerMath.State.SPEND_LOCKED)
+	assert_int(K.code(w, Command.produce(0, yard, dart, 1))).is_equal(CommandResult.Code.ACCEPTED)
