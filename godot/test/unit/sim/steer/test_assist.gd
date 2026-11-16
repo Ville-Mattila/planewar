@@ -43,9 +43,15 @@ func test_table_follows_content_ships_and_nulls_classes_without_a_def() -> void:
 	assert_int(t.size()).is_equal(c.ships.size())
 	for i: int in c.ships.size():
 		assert_object(t[i]).override_failure_message(String(c.ships[i].id)).is_not_null()
-	var shipped: ContentSet = WorldTestKit.content()    # no autopilots.json yet (AI-19): every entry null
-	for bp: BridgeParams in BridgeParams.table(shipped, shipped.rules, shipped.rules.tick_hz):
-		assert_object(bp).is_null()
+	# AI-19: godot/content/defs/autopilots.json ships every ship's ap_* block, so the shipped table is non-null too.
+	var shipped: ContentSet = WorldTestKit.content()
+	var st: Array[BridgeParams] = BridgeParams.table(shipped, shipped.rules, shipped.rules.tick_hz)
+	assert_int(st.size()).is_equal(shipped.ships.size())
+	for i: int in shipped.ships.size():
+		assert_object(st[i]).override_failure_message(String(shipped.ships[i].id)).is_not_null()
+		if shipped.ships[i].id == &"dart":
+			var dart_ap: Dictionary = OverlayKit.ap(&"dart")
+			assert_float(st[i].pull_up_tti_s).is_equal(float(dart_ap["safety_pull_up_tti_s"]))
 
 
 func test_pulls_up_below_the_threshold() -> void:
