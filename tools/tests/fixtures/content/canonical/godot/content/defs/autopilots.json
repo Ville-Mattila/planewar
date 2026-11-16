@@ -835,7 +835,7 @@
       "id": "ap_harvester",
       "status": "core",
       "tags": [],
-      "_doc": "05 s4.4 Harvester flee_radius_m 600 and quiet_s 15; AI-08 safety_min_hold_s (ai08_autopilots.json); separation (R0 B.14 A-86: every ship ap_* incl. harvester, ai11_params.json). AI-19 (damping_only flight per A-68, auto_launch_fuel01 per A-119).",
+      "_doc": "05 s4.4 Harvester flee_radius_m 600 and quiet_s 15; AI-08 safety_min_hold_s (ai08_autopilots.json); separation (R0 B.14 A-86: every ship ap_* incl. harvester, ai11_params.json). AI-19 (damping_only flight per A-68, auto_launch_fuel01 per A-119). AI-47 (brains/MODULE.md HV5 + R0 A-144): flee_radius_m, quiet_s, follow and harvest are required on ap_harvester (follow and harvest values 05 s5.7, 05 s6.6, AI-16).",
       "think_period_ticks": 10,
       "safety_min_hold_s": 0.5,
       "flee_radius_m": 600,

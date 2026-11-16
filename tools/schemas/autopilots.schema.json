@@ -1304,7 +1304,7 @@
         "tags",
         "think_period_ticks"
       ],
-      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional.",
+      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional on the base; on the ap_harvester branch flee_radius_m, quiet_s, follow and harvest are required (R0 B.29 A-144, brains/MODULE.md HV5).",
       "anyOf": [
         {
           "properties": {
