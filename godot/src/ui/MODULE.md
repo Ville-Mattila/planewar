@@ -149,87 +149,6 @@ var shield_shown: bool
 func set_data(d: LandingHudData) -> void
 func set_shield(team_flags: int, until_s: float, clock_s: float) -> void
 func rows() -> Array[PackedStringArray]
-class_name RtsParams extends RefCounted   # ui/rts/rts_params.gd; numbers from content/ui/rts.json
-static func param(key: String) -> float; static func list(key: String) -> Array
-class_name OrderClassRules extends RefCounted   # per-class order filter over order_rules.json (enabled_kinds x allowed_kinds); key = def id, towers = &"tower"
-static func from_raw(raw: Dictionary) -> OrderClassRules   # raw = OrderRulesDef.raw
-static func from_content() -> OrderClassRules                # ContentDB.order_rules
-func allows(kind: int, class_key: StringName) -> bool
-func is_rally_class(class_key: StringName) -> bool           # rts.json rally_classes (shipyard, vehicle_bay)
-class_name OrderResolver extends RefCounted   # pure statics (UX-20, 06 s7.2 table); caller classifies the target; each selected id by class key
-enum Target { NEUTRAL, ENEMY, FRIENDLY_PAD, RELAY_STATION, FRIENDLY_UNIT, FRIENDLY_STRUCTURE, ORE_FIELD, ICE_EXTRACTOR, WRECK, GROUND }
-const NONE: int; const RALLY: int
-static func plan_kind(rules: OrderClassRules, target: Target, cls: StringName, any_attacker: bool) -> int   # OrderSpec.Kind, RALLY or NONE; never a kind the class disallows
-static func plan_haul_mode(target: Target) -> OrderSpec.HaulMode
-static func resolve(player: int, rules: OrderClassRules, target: Target, target_id: int, target_pos: Vector3, ids: PackedInt32Array, classes: Array[StringName], queue: bool = false) -> Array[Command]
-static func resolve_supply(player: int, target_id: int, ids: PackedInt32Array, queue: bool = false) -> Array[Command]
-class_name PickMath extends RefCounted   # pure statics (UX-20)
-enum PickDevice { POINTER, TOUCH, GAMEPAD }
-enum Category { OWN_UNIT, OWN_STRUCTURE, OTHER }
-static func radius_du(input: PickDevice) -> float; static func pick(cursor: Vector2, screen: PackedVector2Array, category: PackedInt32Array, depth: PackedFloat32Array, input: PickDevice) -> int
-static func paint_radius_du(held_s: float) -> float; static func box_filter(ids: PackedInt32Array, is_unit: PackedByteArray) -> PackedInt32Array
-static func same_type(ids: PackedInt32Array, defs: PackedInt32Array, def_id: int) -> PackedInt32Array
-class_name SelectionSet extends RefCounted   # client-side selected ids
-signal changed
-func ids() -> PackedInt32Array
-func size() -> int
-func has(id: int) -> bool
-func set_ids(v: PackedInt32Array) -> void
-func add(id: int) -> void
-func toggle(id: int) -> void
-func clear() -> void
-func prune(alive: Callable) -> void
-func chunks() -> Array[PackedInt32Array]
-class_name ControlGroups extends RefCounted   # client-side, per match, survives possession
-func count() -> int
-func get_group(slot: int) -> PackedInt32Array
-func assign(slot: int, ids: PackedInt32Array) -> void
-func add_to(slot: int, ids: PackedInt32Array) -> void
-func recall(slot: int, alive: Callable) -> PackedInt32Array
-func clear() -> void
-class_name RallyMath extends RefCounted   # pure statics
-static func line_points(from: Vector3, to: Vector3) -> PackedVector3Array
-class_name DrawerLayout extends RefCounted   # pure statics (UX-22, 06 s4.4 / s4.5): 3 x 6 grid, sizes per profile, numbers from rts.json drawer_*
-static func cols() -> int; static func rows() -> int; static func capacity() -> int; static func tile_du(profile: UiScale.Profile) -> float; static func gap_du() -> float; static func tab_w_du(profile: UiScale.Profile) -> float
-static func tab_h_du(profile: UiScale.Profile) -> float; static func strip_du(profile: UiScale.Profile) -> float; static func font_du(profile: UiScale.Profile) -> int; static func grid_origin(profile: UiScale.Profile) -> Vector2; static func tab_rect(profile: UiScale.Profile, index: int) -> Rect2; static func strip_rect(profile: UiScale.Profile) -> Rect2; static func top_du(profile: UiScale.Profile) -> float; static func grid_size(profile: UiScale.Profile) -> Vector2; static func size_du(profile: UiScale.Profile) -> Vector2
-static func tile_rect(profile: UiScale.Profile, index: int) -> Rect2; static func fits(profile: UiScale.Profile, canvas_du: Vector2) -> bool
-class_name DrawerCatalog extends RefCounted   # which defs get a tile, all from ContentDB (buildable, produced_at, requires), doctrine-resolved costs
-static func structure_ids() -> Array[StringName]; static func unit_ids() -> Array[StringName]; static func factory_of(unit: StringName) -> StringName; static func is_factory(def: StringName) -> bool
-static func cost(id: StringName, doctrine: StringName = &"") -> Vector2i; static func requires(id: StringName) -> PackedStringArray; static func max_per_player(id: StringName) -> int; static func name_key(id: StringName) -> String
-class_name DrawerMath extends RefCounted   # pure statics (UX-22, 06 s7.5, R0 C3-08): tile state priority, lock, steppers, cancel rights
-enum State { AVAILABLE, UNAFFORDABLE, SPEND_LOCKED, LOCKED, CAP_REACHED }; enum Cancel { UNKNOWN, OWNER, DELEGATED, DENIED_NOT_OWNER, DENIED_TEAM }; const KIND_BOT: int; const KIND_OPEN: int
-static func classify(tech_ok: bool, capped: bool, cost: Vector2i, stock: Vector2i, lock_left_ore: int) -> State; static func short_of(cost: Vector2i, stock: Vector2i) -> Vector2i
-static func lock_blocks(lock_left_ore: int, cost_ore: int) -> bool; static func lock_end_s() -> float; static func share_ore() -> int; static func queue_max() -> int
-static func stepper(value: int, delta: int) -> int; static func batch(queue_len: int) -> int; static func pick_factory(ids: PackedInt32Array, queue_lens: PackedInt32Array, dist2: PackedFloat32Array) -> int
-static func cancel_verdict(local: int, local_team: int, queuer: int, queuer_team: int, queuer_kind: int, queuer_connected: bool, queuer_eliminated: bool) -> Cancel; static func cancel_allowed(c: Cancel) -> bool
-static func cancel_reason(c: Cancel) -> StringName
-class_name TileInfo extends RefCounted   # plain data for one tile
-var id: StringName; var def: int; var is_unit: bool; var state: DrawerMath.State; var cost: Vector2i; var short: Vector2i; var queued: int; var progress01: float; var replenish: int
-var lock_left_ore: int; var need: StringName; var count: int; var limit: int
-class_name DrawerContext extends RefCounted   # plain data filled by app from player_state / team_state (ui may not name those views, deps.json)
-var player: int; var team: int; var doctrine: StringName; var commander_rights: bool; var eliminated: bool; var ore: int; var ice: int; var unit_cap: int; var structure_cap: int; var unit_count: int; var lock_left_ore: int
-func set_player(slot: int, p_team: int, kind: int, connected: bool, p_eliminated: bool) -> void; func has_player(slot: int) -> bool; func player_team(slot: int) -> int; func player_kind(slot: int) -> int; func player_connected(slot: int) -> bool; func player_eliminated(slot: int) -> bool; func stock() -> Vector2i
-class_name DrawerModel extends RefCounted   # reads SimView only: tiles, factories, queue verdicts
-const FLAG_BUILDING: int; static func sites(view: SimView, team: int, id: StringName) -> PackedInt32Array
-static func disabled_reason(ctx: DrawerContext) -> StringName; static func tile(view: SimView, ctx: DrawerContext, id: StringName) -> TileInfo
-static func tiles(view: SimView, ctx: DrawerContext, units: bool) -> Array[TileInfo]; static func factories(view: SimView, team: int, unit: StringName) -> PackedInt32Array
-static func best_factory(view: SimView, team: int, unit: StringName, focus: Vector3) -> int; static func queue_verdicts(view: SimView, ctx: DrawerContext, factory: int, queuers: PackedInt32Array) -> PackedInt32Array
-class_name DrawerCommands extends RefCounted   # builds Commands; the host submits them through ClientSession
-static func produce_at_best(view: SimView, ctx: DrawerContext, unit: StringName, count: int, focus: Vector3) -> Command
-static func cancel_produce(player: int, factory: int, index: int) -> Command; static func cancel_build(player: int, site: int) -> Command
-static func replenish(view: SimView, ctx: DrawerContext, factory: int, unit: StringName, target: int) -> Command
-class_name DetailSlot extends RefCounted   # one tile-sized button of the long-press detail page
-enum Kind { BACK, BATCH, CANCEL_LAST, REPL_DEC, REPL_VALUE, REPL_INC, QUEUE_ITEM }; var kind: Kind; var index: int; var enabled: bool; var reason: StringName
-class_name DrawerText extends RefCounted   # locale keys and args of the drawer; text is translated only in reason() and slot_label()
-static func reason_key(info: TileInfo) -> StringName; static func reason_args(info: TileInfo) -> Dictionary; static func reason(info: TileInfo) -> String; static func caption_key(info: TileInfo) -> StringName; static func slot_key(slot: DetailSlot) -> StringName; static func slot_label(slot: DetailSlot, info: TileInfo) -> String
-class_name DrawerDetail extends RefCounted   # pure: detail page slots (x5, cancel one, replenish stepper, queue items)
-const FIXED_SLOTS: int; static func slots(info: TileInfo, queue_len: int, verdicts: PackedInt32Array, has_factory: bool = true) -> Array[DetailSlot]
-class_name DrawerTile extends Button   # one 44 / 64 du tile; draws cost, state, badges, progress ring
-signal secondary(tile: DrawerTile); var info: TileInfo; var profile: UiScale.Profile; func set_info(i: TileInfo) -> void; func set_plain(text_value: String, enabled: bool) -> void; var plain_text: String; var plain_on: bool; var long_fired: bool
-class_name ProductionDrawer extends Control   # scenes/ui/production_drawer.tscn; BUILD / UNITS tabs, 18 tile buttons, detail page, queue strip; emits Commands
-signal command_ready(cmd: Command); signal build_armed(def_id: StringName); var profile: UiScale.Profile; var units_tab: bool
-func refresh(view: SimView, ctx: DrawerContext, focus: Vector3) -> void; func set_profile(p: UiScale.Profile) -> void; func tile_nodes() -> Array[DrawerTile]; func focus_first() -> void; func open_detail(id: StringName) -> void
-func close_detail() -> void
 ```
 
 ## Invariants
@@ -243,8 +162,6 @@ func close_detail() -> void
 - U8: bomb sight and lead pip use thresholds from `hud.json` (`bomb_*`, `lead_iterations`); impact within 2 m of a 1/30 s reference, pip matches a straight-flying slug (test-enforced); the HUD calls no sim physics, `app` injects `step`/`ground`.
 - U9: landing gauges switch at hud.json `gauge_*` (vert 8/15 m/s, horiz 15/25 m/s, nose 25/45 deg; strictly above a limit is the next band, equal to the sim's `flight_common`, test-enforced); the guide shows within 1,500 m of a friendly pad and below 400 m AGL or fuel < 25 %; the grade stamp decodes LANDING `extra` = [grade, q, flags (bit0 manual, bit1 hot, bit2 dead stick), v_vert, v_horiz] and takes points / hot x / dead-stick bonus from scoring.json `landing_grade` (UX-18).
 - U5: thresholds and clamps live in `godot/content/ui/ui_scale.json`, not in code.
-- U10: pick radii 22 / 10 / 28 du (touch / pointer / gamepad), paint circle 30 -> 240 du over 1.2 s, 10 control groups, all in `rts.json`. The resolver follows the 06 s7.2 table per selected id, then filters every kind through `order_rules.json` (`OrderClassRules.allows`): the sim rejects a whole ORDER if any id's class disallows the kind, so a unit whose kind is not allowed gets no command, and an output the sim would reject never leaves the resolver (test-enforced for every target x shipped class). Where 06 s7.2 and order_rules.json differ (Harvester return/guard, Bomber escort) order_rules.json wins. Relay Station: haul CAPTURE if the class hauls, else guard if allowed. Enemy: attack for attack-capable classes when the selection has any, else move. Ground tap: SET_RALLY for rts.json `rally_classes`, else move if allowed. ORDER chunks at 32 ids per (kind, haul mode) (UX-20).
-- U11: production drawer (UX-22, 06 s7.5): BUILD lists every `buildable` structure and tower (16), UNITS every ship / ground def with `produced_at` (7), derived from ContentDB, never from a class list; 3 x 6 tiles of 44 du (COMPACT) / 64 du (REGULAR), gap 4, all 18 visible without scrolling at 800x360 and 1280x720. Tile state priority LOCKED (a `requires` structure missing, or no finished factory) > CAP_REACHED (unit cap, every factory queue full, `max_per_player`, structure cap) > UNAFFORDABLE > SPEND_LOCKED (`early_spend_left_ore` >= 0 and Ore cost > left) > AVAILABLE, the sim's check order for PRODUCE; test-enforced to agree with `CommandValidator` / `Build.can_place` on a real SimWorld. Costs are doctrine-resolved. Tap on a unit queues 1 at the factory with the shortest queue (tie: nearest the focus); long-press / RMB / pad X opens the detail page (x5 clipped to the free slots, cancel one, replenish stepper 0-12, queue items). Cancel is enabled for the queuer, or any teammate of a queuer who is disconnected, eliminated, a bot or an open slot (`PlayerTable.cancel_delegable`, test-pinned), else disabled with `ui.prod.cancel.not_owner`. An eliminated or rights-less player sees the drawer disabled with `ui.prod.disabled.eliminated`. The drawer only emits `Command`s, and for an eliminated or rights-less player nothing can open, emit or arm: one guard (`_locked`) sits in `_emit`, `_arm`, `open_detail`, `_on_tile`, `_run_slot`, `_on_secondary`, a disabled `DrawerTile` ignores RMB / pad X, and `refresh` closes an open detail page (test_drawer_eliminated.gd).
 
 ## Data owned
 
@@ -264,8 +181,6 @@ Layout runs on boot and window resize only; no per-frame cost.
 - `godot/test/unit/ui/test_ui_tokens.gd` (U4)
 - `godot/test/unit/ui/test_bomb_sight.gd` (U8: impact vs reference, horizon/ground edges, lead vs analytic and stepped slug)
 - `godot/test/unit/ui/test_landing_hud.gd` (U9: gauge bands, guide rule, every grade stamp, shield timer, cooldown rings, SimView read)
-- `godot/test/unit/ui/test_rts_orders.gd` (U10 resolver table), `test_rts_selection.gd` (U10 picking, groups, rally)
-- `godot/test/unit/ui/test_drawer_layout.gd`, `test_drawer_math.gd`, `test_drawer_catalog.gd`, `test_drawer_model.gd` (mocked SimView), `test_drawer_sim_agreement.gd` (real SimWorld), `test_drawer_scene.gd` (U11)
 - `godot/test/unit/ui/test_hud_math.gd` (U6: pitch, ladder, bank, limb dip, heading wrap, bands, uplink)
 
 - `godot/test/unit/ui/test_fmt.gd` (en/fi formats), `test_locale_select.gd` (U7); Python: `tools/tests/test_locale.py`
@@ -275,6 +190,10 @@ Layout runs on boot and window resize only; no per-frame cost.
 New colour token: add it to `tools/blender/palette.json`, regenerate `ui_tokens.gd` (one `const NAME: Color = Color("#hex")`
 per key, upper-case, prefix `RELATION_`/`WORLD_` for those groups), extend `UiTokens` here, run `test_ui_tokens.gd`.
 
+## Sub-modules
+
+`godot/src/ui/rts/` (selection, orders, production drawer, build placement) has its own `MODULE.md` (A-21 split): API, invariants U10-U12, tests and open items for those files live there.
+
 ## Open items
 
 ART-21 generates `theme_pw.tres` from the palette and fonts; a `tools/art` generator for `ui_tokens.gd` (needs art lane).
@@ -282,7 +201,5 @@ UX-06, UX-16, UX-22 and UX-37 build on `HudRoot`.
 
 needs sim: `boost_cooldown01` (SimView has only the 3-state `boost_state`, so the boost ring has no fraction); waiting-for-Ice/Ore is fed from the WAITING_FOR_* ALERT events by the caller (`LandingHudData.waiting`).
 
-needs app (UX-22): fill `DrawerContext` from `SimView.player_state` / `team_state` at 4 Hz (reference: `test/unit/ui/drawer_context_kit.gd`) and submit `command_ready` through ClientSession.
 
-needs sim (UX-22): `LocalSimView.player_state` leaves `early_spend_left_ore` at -1 and `team_state` never sets `SPEND_LOCK_ACTIVE`, so the lock display stays dark offline until they are filled; `SimView.production_queuer(factory, i)` so cancel rights show per item (until then verdict UNKNOWN is enabled and the sim answers); a construction-progress read for sites (the tile ring uses the site `hp01`).
 
