@@ -73,7 +73,7 @@ func _draw() -> void:
 	var c: Vector2 = size * 0.5
 	var ring: float = HudMath.param("threat_ring_du")
 	var arrow: float = HudMath.param("threat_arrow_du")
-	draw_arc(c, ring, 0.0, TAU, 48, Color(UiTokens.UI_TEXT_DIM, 0.6), 1.0)
+	draw_arc(c, ring, 0.0, TAU, 48, UiTokens.UI_LINE, HudMath.param("line_du"))
 	for a: ThreatArrow in _threats.arrows:
 		_draw_arrow(c + ThreatMath.ring_pos(a.angle, ring), a, arrow)
 	var y: float = c.y + ring + float(fs) * 2.0
