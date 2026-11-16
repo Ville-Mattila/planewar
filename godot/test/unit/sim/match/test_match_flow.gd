@@ -110,8 +110,8 @@ func test_a_dead_team_is_a_spectator_and_commands_after_the_end_are_refused_by_p
 func _surrender_after(mode: StringName, per_team: int, min_s: int) -> void:
 	var w: SimWorld = K.world(mode, per_team)
 	var _a: Array[SimEvent] = K.run_to(w, min_s - 2)
-	for p: int in per_team:                                          # applied at tick min_s - 1: too early, ignored
-		assert_int(K.surrender(w, per_team + p).code).is_equal(CommandResult.Code.ACCEPTED)
+	for p: int in per_team:                                          # would apply at tick min_s - 1: refused at intake (04 V-TEAM)
+		assert_int(K.surrender(w, per_team + p).code).is_equal(CommandResult.Code.REJECTED_PHASE)
 	var early: Array[SimEvent] = K.run_to(w, min_s - 1)
 	assert_int(K.of_kind(early, SimEvent.Kind.MATCH_END).size()).is_equal(0)
 	assert_int(K.surrender(w, per_team).code).is_equal(CommandResult.Code.ACCEPTED)   # one of the team
@@ -125,6 +125,30 @@ func _surrender_after(mode: StringName, per_team: int, min_s: int) -> void:
 	assert_int(ends[0].a).is_equal(0)
 	assert_int(ends[0].extra[0]).is_equal(MatchJudge.EndReason.SURRENDER)
 	assert_int(w.view().match_phase()).is_equal(MatchRules.Phase.ENDED)
+
+
+# The voters are the connected human members of the team (02 s12.1): an eliminated teammate still votes, a disconnected one
+# is refused and not waited for, a bot is refused.
+func test_an_eliminated_teammate_is_still_a_voter() -> void:
+	var w: SimWorld = K.world(&"pvp_team", 2)
+	K.kill_core(w, 2)                                                 # slot 2: eliminated, team 1 still has slot 3's Core
+	var min_s: int = int(WorldTestKit.content().match_rules.surrender_min_s)
+	var _a: Array[SimEvent] = K.run_to(w, min_s)
+	assert_bool(w.view().player_state(2).eliminated).is_true()
+	assert_int(K.surrender(w, 3).code).is_equal(CommandResult.Code.ACCEPTED)
+	assert_int(K.of_kind(K.run_to(w, min_s + 1), SimEvent.Kind.MATCH_END).size()).is_equal(0)   # slot 2 has not voted
+	assert_int(K.surrender(w, 2).code).is_equal(CommandResult.Code.ACCEPTED)
+	assert_int(K.of_kind(K.run_to(w, min_s + 2), SimEvent.Kind.MATCH_END).size()).is_equal(1)
+
+
+func test_a_disconnected_teammate_is_refused_and_not_waited_for() -> void:
+	var w: SimWorld = K.world(&"pvp_team", 2)
+	var min_s: int = int(WorldTestKit.content().match_rules.surrender_min_s)
+	w.remove_player(3)
+	var _a: Array[SimEvent] = K.run_to(w, min_s)
+	assert_int(K.surrender(w, 3).code).is_equal(CommandResult.Code.REJECTED_NO_RIGHTS)
+	assert_int(K.surrender(w, 2).code).is_equal(CommandResult.Code.ACCEPTED)
+	assert_int(K.of_kind(K.run_to(w, min_s + 1), SimEvent.Kind.MATCH_END).size()).is_equal(1)
 
 
 func test_surrender_while_playing_needs_the_minimum_clock_and_every_human() -> void:
@@ -236,3 +260,17 @@ func test_a_hit_that_empties_the_hull_reports_cause_killed() -> void:
 	assert_int(deaths.size()).is_equal(1)
 	assert_int(deaths[0].a).is_equal(tgt)
 	assert_int(deaths[0].extra[0]).is_equal(SimEvent.DeathCause.KILLED)
+
+
+# A real hit goes Combat -> DamageSink -> the judge: the team that dealt it wins the tie at the hard end.
+func test_a_real_hit_on_an_enemy_structure_feeds_the_tie_break() -> void:
+	var w: SimWorld = K.world(&"pvp_1v1", 1)
+	var shooter: int = WorldTestKit.spawn(w, &"dart", 0, 0, WorldTestKit.at(300.0, 900.0))
+	var victim: int = w.store().id_of(K.structure(w, 1, &"refinery"))
+	assert_float(w.judge().structure_damage(0)).is_equal(0.0)
+	var sink: DamageSink = w._combat._sink
+	assert_bool(sink.damage(EntityId.slot(victim), 25.0, shooter, w.tick())).is_true()
+	assert_float(w.judge().structure_damage(0)).is_equal(25.0)
+	assert_float(w.judge().structure_damage(1)).is_equal(0.0)
+	assert_bool(sink.damage(EntityId.slot(shooter), 5.0, victim, w.tick())).is_true()    # a hit on a ship is not structure damage
+	assert_float(w.judge().structure_damage(1)).is_equal(0.0)

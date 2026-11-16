@@ -37,7 +37,7 @@ class_name ContactMath extends RefCounted                                     # 
 static func classify_terrain(hit_normal_speed: float, common: FlightCommonDef) -> int;  static func landing_band(v_vert: float, v_hor: float, tilt_deg: float, common: FlightCommonDef) -> int
 static func sweep_sphere(a: Vector3, b: Vector3, c: Vector3, r: float) -> float
 class_name CommandValidator extends RefCounted                               # S10 rate + state rules, S12
-const RATE_PER_S: int; const BURST: int; const QUEUE_MAX: int;  var order_rules: OrderRules
+const RATE_PER_S: int; const BURST: int; const QUEUE_MAX: int;  var order_rules: OrderRules;  var judge: MatchJudge;  var apply_tick: int   # GD-20: SURRENDER -> judge.check_vote(player, apply_tick); apply_tick = intake tick + 1 (step 1 sets its own)
 var build: Build; var production: Production; var last_reject: int   # (TA-19) set by EconomyHub: BUILD -> can_place (REJECTED_PLACEMENT + reject), PRODUCE -> team factory, queue room, REJECTED_LOCKED, S12 by queuer
 func validate(cmd: Command, tick: int, ended: bool, queued: int) -> CommandResult   # rate (bucket charged), phase, then check()
 func validate_system(cmd: Command, ended: bool, queued: int) -> CommandResult        # (TA-59) system ORDER (target SYSTEM): phase, queue bound, active issuer slot, no token; check() then allows RETURN on own-team units only

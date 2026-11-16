@@ -20,7 +20,8 @@ contract change: contract tests first, same PR (ADR-11); `tools/gen_module_api.p
 class_name MatchJudge extends RefCounted                                     # one per SimWorld; steps 1 (vote), 9 (self-destruct) and 10 (the rest)
 enum EndReason { CORES_DESTROYED, HARD_END_VALUE, SURRENDER }                # MATCH_END extra[0]; same ordinals as Protocol.MatchEndReason 0-2
 func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: MatchRules, events: SimEvents, applier: CommandApplier, control: ControlMachine, score: ScoreKeeper, state: MatchState) -> void
-func vote(player: int, tick: int) -> void                                    # step 1: SURRENDER from `player`; ignored before the minimum clock, from a bot, an eliminated player or a defeated team
+func vote(player: int, tick: int) -> void                                    # step 1: counts a SURRENDER from `player` exactly when check_vote accepts it
+func check_vote(player: int, tick: int) -> int                              # CommandResult.Code of a SURRENDER applied at `tick`: REJECTED_PHASE before the minimum clock / after the end, REJECTED_NO_RIGHTS unless a connected human of a team still in
 func step_selfdestruct(tick: int) -> void                                    # step 9, before the score pass: due structures are killed with SELF_DESTRUCT
 func step(tick: int) -> void                                                 # step 10: Exposure event, elimination, team defeat, surrender, hard end, MATCH_END
 func structure_value(team: int) -> float                                     # 02 s12.1: sum((cost_ore + cost_ice) * hp01) over finished structures, the Core `core_value * hp01`
@@ -42,9 +43,11 @@ func selfdestruct_tick(player: int) -> int                                   # t
 - M3 (team defeat): a team whose members own no Core is defeated: `ControlMachine.release_team(team)` (C16, A-61), its
   members eliminated. When at most one team with active players is left the match ends at once: MATCH_END (a = winner
   team, or -1 when none is left) with reason CORES_DESTROYED (0). No Core was ever seen: no defeat (test worlds).
-- M4 (surrender): a vote counts from `surrender_min_s` of match clock (`surrender_min_s_1v1` when exactly two teams of one
-  active player each); unanimous among the team's connected, non-eliminated human members (bots never vote; the validator
-  answers a bot SURRENDER with `REJECTED_NO_RIGHTS`) defeats the team as in M3 with reason SURRENDER (2). Votes survive S4.
+- M4 (surrender; 02 s12.1, 04 V-TEAM): the validator refuses at intake what the judge would not count, via
+  `check_vote(player, intake tick + 1)`: `REJECTED_PHASE` before `surrender_min_s` of match clock (`surrender_min_s_1v1`
+  when exactly two teams of one active player each) or after the end; `REJECTED_NO_RIGHTS` for a bot, a disconnected
+  human or a member of a defeated team. The voters of a team are its connected human members (an eliminated teammate
+  still votes); unanimity of them defeats the team as in M3 with reason SURRENDER (2). No accepted vote is dropped. Votes survive S4.
 - M5 (Exposure): `CORE_EXPOSURE` fires once at `core_exposure_s` (the first tick the phase is not PLAYING).
 - M6 (hard end): at `hard_end_s` the surviving team with the higher `structure_value` wins; equal: the higher
   `structure_damage`; equal: draw (-1). Reason HARD_END_VALUE (1). Every possession is released (C16, reason MATCH).

@@ -31,8 +31,10 @@ func test_structure_value_is_cost_times_hp01_and_the_core_counts_core_value() ->
 
 
 func test_a_bot_cannot_surrender() -> void:
-	var w: SimWorld = WorldTestKit.world()                           # slot 2 is a bot on team 0
-	assert_int(K.surrender(w, 2).code).is_equal(CommandResult.Code.REJECTED_NO_RIGHTS)
+	var w: SimWorld = K.world(&"pvp_team", 2)
+	w._players.kind[3] = PlayerTable.KIND_BOT                          # slot 3 is a bot on team 1
+	var _a: Array[SimEvent] = K.run_to(w, int(WorldTestKit.content().match_rules.surrender_min_s))
+	assert_int(K.surrender(w, 3).code).is_equal(CommandResult.Code.REJECTED_NO_RIGHTS)
 
 
 func test_the_elimination_deadline_survives_the_save() -> void:
