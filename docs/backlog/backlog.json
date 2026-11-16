@@ -3373,7 +3373,10 @@
       "06 s6.5",
       " 06 UX-19"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 165,
+    "merged": "2026-11-16",
+    "notes": "Created godot/src/ui/hud/MODULE.md (A-143). Screenshot taken locally (shown to owner, not committed: outside lane). needs sim: Command.handover builder (HandoverToast.accept builds the Command by hand); ids_near HOSTILE mask. needs app: refresh rates, SimEvents feed, camera projection of badges, submit accept via ClientSession, roster names. needs presentation: world marker for beacons (BeaconTracker.positions). needs locale: Finnish strings for the new hud keys. Nits: hint test skips 150/400 limit_m; POSSESSED = 2 unpinned copy of a sim value; threat ring shows ships only; draw test is a smoke test. Architect: Command.handover builder, named control-state constant, ui access to ids_near masks."
   },
   {
     "id": "UX-20",
