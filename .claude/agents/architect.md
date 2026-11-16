@@ -1,7 +1,7 @@
 ---
 name: architect
 description: Fable-tier architect for PLANEWAR. Use ONLY for PM-01/PM-02/PM-03, ADR amendments, cross-lane MODULE.md contract changes, re-tiering/re-sizing the backlog after spikes, or a contradiction between two planning docs. Never for implementation or ordinary PR review.
-model: fable
+model: claude-fable-5-2
 tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 
