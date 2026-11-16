@@ -133,7 +133,14 @@ static func wait(s: int, _tick: int, st: AiState, prm: GroundParams, out: PilotI
 
 ## Books the buttons driven this tick into the unbroken BRAKE run of slot `s` (call once per tick after every drive).
 static func book_brake(s: int, buttons: int, st: AiState) -> void:
-	st.ground.brake_run[s] = mini(st.ground.brake_run[s] + 1, 255) if (buttons & PilotInput.BRAKE) != 0 else 0
+	st.ground.brake_run[s] = mini(st.ground.brake_run[s] + 1, AiGround.RUN_UNKNOWN) if (buttons & PilotInput.BRAKE) != 0 else 0
+
+
+## Slot `s` was not driven by the AI this tick (the sim refused the drive: a pilot holds it, or LINK_BRIDGE): the run the
+## sim counts is unknown, so it is booked as at the hold. Whatever the AI drives next (wait or ground SAFETY) then starts
+## with one tick without BRAKE, which ends any run the pilot left (thrust 0 alone holds a ground unit still).
+static func lose_brake(s: int, st: AiState) -> void:
+	st.ground.brake_run[s] = AiGround.RUN_UNKNOWN
 
 
 ## Stand still (no BRAKE: a held BRAKE would reverse the unit).

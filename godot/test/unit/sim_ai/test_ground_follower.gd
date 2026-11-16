@@ -188,6 +188,22 @@ func test_waiting_brakes_for_at_most_the_brake_ticks_then_stands() -> void:
 	assert_int(_out.buttons).is_equal(0)
 
 
+func test_a_run_the_ai_did_not_drive_is_unknown_and_the_next_wait_tick_breaks_it() -> void:
+	_st.ground.brake_run[S] = 3
+	GroundFollower.lose_brake(S, _st)                                       # a pilot drove this tick (refused drive)
+	assert_int(_st.ground.brake_run[S]).is_equal(AiGround.RUN_UNKNOWN)
+	GroundFollower.wait(S, 0, _st, _prm, _out)
+	assert_int(_out.buttons).is_equal(0)                                    # first AI tick: no BRAKE, the pilot's run ends
+	assert_float(_out.thrust).is_equal(0.0)                                 # and no creep
+	GroundFollower.book_brake(S, _out.buttons, _st)
+	assert_int(_st.ground.brake_run[S]).is_equal(0)
+	GroundFollower.wait(S, 1, _st, _prm, _out)
+	assert_int(_out.buttons).is_equal(PilotInput.BRAKE)                     # then the wait brakes as usual
+	_st.ground.brake_run[S] = AiGround.RUN_UNKNOWN
+	GroundFollower.book_brake(S, PilotInput.BRAKE, _st)
+	assert_int(_st.ground.brake_run[S]).is_equal(AiGround.RUN_UNKNOWN)      # saturates
+
+
 func test_stuck_is_less_than_5_m_of_progress_in_the_window() -> void:
 	var w: int = _prm.stuck_window_ticks
 	GroundFollower.restart_window(S, _pt(0.0), 1000, _st)

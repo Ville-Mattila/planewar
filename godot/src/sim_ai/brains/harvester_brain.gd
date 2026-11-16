@@ -83,8 +83,9 @@ func _act(id: int, s: int, view: SimView, st: AiState, sink: CommandSink, tick: 
 				st.bflags[s] |= B_ARRIVED
 		else:
 			GroundFollower.wait(s, tick, st, prm.ground, _inp)
-	var _ok: bool = sink.drive(id, _inp)
-	if _ok and st.overlay[s] == Overlays.NONE:   # an overlay overrides this drive and books its own; a refused one is the pilot's
+	if not sink.drive(id, _inp):
+		GroundFollower.lose_brake(s, st)        # refused: the pilot drives, its BRAKE run is unknown to the AI
+	elif st.overlay[s] == Overlays.NONE:        # an overlay overrides this drive and books its own
 		GroundFollower.book_brake(s, _inp.buttons, st)
 
 

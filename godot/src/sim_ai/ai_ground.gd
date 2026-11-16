@@ -6,6 +6,7 @@ class_name AiGround extends RefCounted
 ## Preallocated, no allocation per tick.
 
 const RECORD_BYTES: int = 35         ## 5 x i32, 3 x u8, 1 Vector3 (3 x f32)
+const RUN_UNKNOWN: int = 255         ## `brake_run` when someone else drove the unit (a pilot): treated as a run at the hold
 
 var idx: PackedInt32Array = PackedInt32Array()          ## index of the route point the unit has reached (GroundFollower.drive)
 var req: PackedInt32Array = PackedInt32Array()          ## tick the current ticket (or the last refused request) was made
@@ -14,7 +15,7 @@ var stuck_tick: PackedInt32Array = PackedInt32Array()   ## start tick of the cur
 var threat: PackedInt32Array = PackedInt32Array()       ## last tick the brain saw a threat (HIT or an armed enemy in range); 0 = never
 var faces: PackedByteArray = PackedByteArray()          ## bit f: the route crosses path-grid face f
 var strikes: PackedByteArray = PackedByteArray()        ## stuck strikes on the current destination (05 s5.7)
-var brake_run: PackedByteArray = PackedByteArray()      ## consecutive ticks BRAKE was driven by the AI (overlay or brain), saturating: the sim reverses at its hold
+var brake_run: PackedByteArray = PackedByteArray()      ## consecutive ticks BRAKE was driven (overlay or brain), saturating; RUN_UNKNOWN while not the AI's
 var stuck_pos: PackedVector3Array = PackedVector3Array() ## position at the start of the stuck window
 
 

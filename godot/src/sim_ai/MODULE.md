@@ -182,8 +182,9 @@ func write(b: StreamPeerBuffer, s: int) -> void;  func read(b: StreamPeerBuffer,
 ```
 
 ```gdscript
-class_name AiGround extends RefCounted             # AI-16 (brake_run: unbroken BRAKE ticks driven by the AI, booked by the brain and the ground overlay): the ground follower's state by slot (in AiState FORMAT 8); the route itself is AiState.path / path_ticket / goal / guidance_point (the cached aim)
+class_name AiGround extends RefCounted             # AI-16 (brake_run: unbroken BRAKE ticks driven by the AI, booked by the brain and the ground overlay; RUN_UNKNOWN while a pilot drives): the ground follower's state by slot (in AiState FORMAT 8); the route itself is AiState.path / path_ticket / goal / guidance_point (the cached aim)
 const RECORD_BYTES: int                            # 35: five i32, three u8, a Vector3
+const RUN_UNKNOWN: int                             # 255: brake_run after a tick the AI did not drive (refused drive, ground SAFETY enter)
 var idx: PackedInt32Array; var req: PackedInt32Array; var ver: PackedInt32Array; var stuck_tick: PackedInt32Array; var threat: PackedInt32Array   # route progress; tick of the ticket / last refused request; path-grid face stamp; stuck window start; last threat tick
 var faces: PackedByteArray; var strikes: PackedByteArray; var brake_run: PackedByteArray; var stuck_pos: PackedVector3Array   # faces the route crosses (bit per face); stuck strikes (05 s5.7); position at the window start
 func resize(slots: int) -> void;  func clear(s: int) -> void;  func write(b: StreamPeerBuffer, s: int) -> void;  func read(b: StreamPeerBuffer, s: int) -> void
@@ -201,7 +202,7 @@ static func poll(s: int, st: AiState, sink: CommandSink, view: SimView) -> Poll 
 static func stamp(mask: int, view: SimView) -> int;  static func changed(s: int, st: AiState, view: SimView) -> bool   # a face the route crosses changed (structure, wreck): repath, no strike
 static func off_route(s: int, p: Vector3, st: AiState, prm: GroundParams) -> bool
 static func stuck(s: int, p: Vector3, tick: int, st: AiState, prm: GroundParams) -> bool;  static func restart_window(s: int, p: Vector3, tick: int, st: AiState) -> void   # < stuck_progress_m in the window
-static func wait(s: int, tick: int, st: AiState, prm: GroundParams, out: PilotInput) -> void;  static func book_brake(s: int, buttons: int, st: AiState) -> void;  static func stop(out: PilotInput) -> void   # wait: BRAKE only while the unbroken run (brake_run) < brake_ticks, then a BRAKE-free tick; stop = thrust 0, no BRAKE
+static func wait(s: int, tick: int, st: AiState, prm: GroundParams, out: PilotInput) -> void;  static func book_brake(s: int, buttons: int, st: AiState) -> void;  static func lose_brake(s: int, st: AiState) -> void;  static func stop(out: PilotInput) -> void   # wait: BRAKE only while the unbroken run (brake_run) < brake_ticks, then a BRAKE-free tick; lose_brake = the run is unknown (a pilot drove: the next AI tick has no BRAKE); stop = thrust 0, no BRAKE
 static func drive(s: int, p: Vector3, fwd: Vector3, tick: int, st: AiState, prm: GroundParams, out: PilotInput) -> Drive   # pure pursuit; aim rescanned every aim_every_ticks, cached in guidance_point
 ```
 

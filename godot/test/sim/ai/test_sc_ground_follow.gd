@@ -72,8 +72,9 @@ func test_sc48_ground_brake_reverse() -> void:
 	assert_int(_w.view().ai_tag(h)).is_equal(AiTag.Tag.TO_FIELD)
 
 
-# A pilot drives the Harvester off its route and lets go: ground SAFETY brakes, then the brain waits for a new route. The two
-# BRAKE stretches must not add up to the sim's reverse hold (15 ticks): no tick reverses.
+# A pilot drives the Harvester well off its route (beyond `deviate_m`) and lets go: ground SAFETY brakes, then the brain
+# re-requests and waits for the new route. The two BRAKE stretches must not add up to the sim's reverse hold (15 ticks):
+# no tick reverses. Guards both the overlay and the wait (the brain must really re-request and wait here).
 func test_brake_runs_across_the_overlay_and_the_wait_never_reach_the_reverse_hold() -> void:
 	_w = Ai16Kit.world(5)
 	var _r: int = Ai16Kit.put(_w, &"refinery", 0, 0.0)
@@ -81,26 +82,81 @@ func test_brake_runs_across_the_overlay_and_the_wait_never_reach_the_reverse_hol
 	var h: int = Ai16Kit.put(_w, &"harvester", 0, 60.0)
 	_d = Ai16Kit.driver(_w)
 	Ai16Kit.step(_w, 6 * HZ)
+	var s: int = EntityId.slot(h)
+	assert_bool(_d.state.path.has(s)).is_true()
 	OverlayKit.ok(_w, Command.possess(0, h))
-	for _k: int in 5 * HZ:
-		var inp: PilotInput = PilotInput.new()
-		inp.thrust = 1.0
-		inp.yaw = 1.0
-		OverlayKit.ok(_w, Command.pilot(0, _w.tick() + 1, inp))
-		_tick()
+	var east: Vector3 = DartKit.heading(_w.view().pos(h), Ai16Kit.dir_at(2000.0) * Ai16Kit.R)
+	var turned: int = 0
+	while _turn(h, east) and turned < 10 * HZ:                                # turn away from the route (east) ...
+		turned += 1
+	for _k: int in 15 * HZ:                                                   # ... and drive straight for 15 s
+		_drive(0.0)
+	var prm: GroundParams = Ai16Kit.brain().prm.ground
+	assert_bool(GroundFollower.off_route(s, _w.view().pos(h), _d.state, prm)).is_true()
+	var requests0: int = _w._pathing.requests
 	OverlayKit.ok(_w, Command.release(0))
 	var hold: int = ceili(Ai16Kit.content().ground_common.ground_reverse_hold_s * float(HZ))
 	var run: int = 0
 	var longest: int = 0
 	var worst: float = 0.0
-	var s: int = EntityId.slot(h)
+	var waited: int = 0
 	for _k: int in 3 * HZ:
 		_tick()
-		run = run + 1 if (_w._inputs.e_buttons[s] & PilotInput.BRAKE) != 0 else 0
+		var b: bool = (_w._inputs.e_buttons[s] & PilotInput.BRAKE) != 0
+		run = run + 1 if b else 0
 		longest = maxi(longest, run)
 		worst = minf(worst, _along(h))
+		waited += 1 if _d.state.overlay[s] == Overlays.NONE and not _d.state.path.has(s) else 0
+	assert_int(_w._pathing.requests - requests0).is_greater(0)               # the brain re-requested (off route)
+	assert_int(waited).is_greater(0)                                          # and waited for the route
 	assert_int(longest).is_less(hold)
 	assert_float(worst).is_greater_equal(-0.001)
+
+
+# A pilot holds BRAKE for N ticks (short, just under the reverse hold, and long enough to reverse) and lets go: nothing
+# the AI drives after the release reverses the unit, and it does not creep while ground SAFETY holds it.
+func test_a_pilot_brake_before_the_release_is_never_extended_into_a_reverse() -> void:
+	for n: int in [1, 14, 40]:
+		_w = Ai16Kit.world(5)
+		var _r: int = Ai16Kit.put(_w, &"refinery", 0, 0.0)
+		var _f: int = Ai16Kit.field(_w, 900.0)
+		var h: int = Ai16Kit.put(_w, &"harvester", 0, 60.0)
+		_d = Ai16Kit.driver(_w)
+		Ai16Kit.step(_w, 6 * HZ)
+		OverlayKit.ok(_w, Command.possess(0, h))
+		for _k: int in 2 * HZ:
+			_drive(0.0)
+		for _k: int in n:
+			_pilot(PilotInput.BRAKE, 0.0)
+			_tick()
+		OverlayKit.ok(_w, Command.release(0))
+		var s: int = EntityId.slot(h)
+		var reversed: int = 0
+		var p0: Vector3 = _w.view().pos(h)
+		for k: int in 3 * HZ:
+			_tick()
+			reversed += 1 if _along(h) < -0.001 else 0
+			if _d.state.overlay[s] != Overlays.NONE:
+				assert_float(_w.view().pos(h).distance_to(p0)).override_failure_message(
+					"N=%d crept %.3f m at tick %d" % [n, _w.view().pos(h).distance_to(p0), k]).is_less(0.01)
+		assert_int(reversed).override_failure_message("N=%d: %d reverse ticks after the release" % [n, reversed]).is_equal(0)
+		assert_float(_along(h)).override_failure_message("N=%d: the AI drives on" % n).is_greater(0.0)
+
+
+func _drive(yaw: float) -> void:
+	var inp: PilotInput = PilotInput.new()
+	inp.thrust = 1.0
+	inp.yaw = yaw
+	OverlayKit.ok(_w, Command.pilot(0, _w.tick() + 1, inp))
+	_tick()
+
+
+# One pilot tick turning `h` left; false once its heading is at least 90 degrees off `away`.
+func _turn(h: int, away: Vector3) -> bool:
+	if (-_w.view().basis(h).z).dot(away) <= 0.0:
+		return false
+	_drive(1.0)
+	return true
 
 
 # SC-51 path_ticket_flow: 20 Harvesters re-path in one tick on `tiny_test` -> every unit brakes while its ticket is pending, none

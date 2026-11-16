@@ -32,7 +32,9 @@ static func enter(id: int, v: SimView, st: AiState, p: OverlayParams, tick: int)
 	st.ov_flags[s] = 0
 	st.guidance_vel[s] = v.vel(id)
 	st.integ[s] = Vector2.ZERO
-	if not p.ground:
+	if p.ground:
+		GroundFollower.lose_brake(s, st)   # the pilot drove until now: its BRAKE run is unknown, the first tick ends it
+	else:
 		st.integ[s] = Vector2(Assist.trim_lead(v.vel(id), pos.normalized(), p.bridge), 0.0)
 
 
@@ -104,8 +106,9 @@ static func run_ground_safety(id: int, st: AiState, p: OverlayParams, sink: Comm
 		out: PilotInput) -> bool:
 	var s: int = EntityId.slot(id)
 	Assist.link_bridge_ground(out)
-	# BRAKE for the hold less its last tick: the sim starts to reverse on the tick an unbroken BRAKE run reaches
-	# `ground_reverse_hold_s` (15 ticks = the 0.5 s min hold), so the last tick stands without BRAKE (AI-16 round 2)
+	# BRAKE while the unbroken run stays under the hold less one: the sim starts to reverse on the tick an unbroken BRAKE
+	# run reaches `ground_reverse_hold_s` (15 ticks = the 0.5 s min hold). `enter` books the pilot's run as unknown, so
+	# the first tick has no BRAKE and ends any run the pilot left before the release (AI-16 round 3)
 	out.buttons = PilotInput.BRAKE if st.ground.brake_run[s] + 1 < p.min_hold_ticks else 0
 	var _d: bool = sink.drive(id, out)
 	GroundFollower.book_brake(s, out.buttons, st)
