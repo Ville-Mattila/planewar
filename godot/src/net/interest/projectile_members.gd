@@ -47,12 +47,16 @@ func add(s: int) -> void:
 func sweep(it: Interest, t: int, vt: int, rgen: PackedInt32Array, last_tier: PackedInt32Array, hold: PackedInt32Array,
 		c_set: PackedInt32Array, out_s: PackedInt32Array, out_reason: PackedInt32Array) -> void:
 	var m: int = 0
+	var stamp: PackedInt32Array = it.stamp          # hoisted: one property read each, not three per member (NET-60)
+	var gens: PackedInt32Array = it.gen
+	var vmask: PackedInt32Array = it.vmask
+	var vbit: int = vt % Interest.TEAM_MAX if vt >= 0 else 0
 	for i: int in count:
 		var s: int = _mem[i]
 		var reason: int = NONE
-		if it.stamp[s] != t or it.gen[s] != rgen[s]:
+		if stamp[s] != t or gens[s] != rgen[s]:
 			reason = Protocol.RosterRemoveReason.DEATH
-		elif not it.visible(s, vt):
+		elif vt >= 0 and ((vmask[s] >> vbit) & 1) == 0:     # Interest.visible with present(s) already true
 			reason = Protocol.RosterRemoveReason.OUT_OF_VISION
 		elif t - last_tier[s] >= InterestClient.GHOST_TICKS:
 			reason = Protocol.RosterRemoveReason.LEFT_INTEREST

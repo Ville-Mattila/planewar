@@ -151,14 +151,14 @@ var n_full: int;  var n_delta: int;  var n_blip: int;  var n_pos_small: int;  va
 var c_tick: PackedInt32Array;  var c_pos: PackedInt64Array;  var c_ori: PackedInt64Array;  var c_coarse: PackedInt32Array;  var c_vel: PackedInt32Array;  var c_fine: PackedInt64Array
 var c_hp: PackedByteArray;  var c_flags: PackedByteArray;  var c_ai: PackedByteArray;  var c_team: PackedByteArray;  var c_grav: PackedByteArray;  var c_blip: PackedInt32Array;  var c_vmask: PackedInt32Array;  var c_gen: PackedInt32Array   # c_vmask: V bits, projectile = own team | shooter's | target's (A-112); a projectile index's new generation is sent FULL
 func _init(gravity_mps2: float, tick_hz: int) -> void;  func prepare_tick(frame: SnapshotFrame) -> void   # once per tick, before any encode
-func coarse_of(s: int) -> int;  func blip_of(s: int) -> int;  func team_visible(team: int) -> PackedInt32Array   # lazy per tick; C candidates
+func ensure_full(s: int) -> void;  func coarse_of(s: int) -> int;  func blip_of(s: int) -> int;  func team_visible(team: int) -> PackedInt32Array   # NET-60: ensure_full = a projectile row quantises c_ori / c_fine on first use (call before reading them); coarse/blip/team_visible lazy per tick
 func encode(store: BaselineStore, tick: int, a: PackedInt32Array, b: PackedInt32Array, c: PackedInt32Array, pilot: PilotBlock, out: Array[PackedByteArray], refresh: PackedInt32Array = PackedInt32Array()) -> int   # refresh: FULLs in C (04 s4.3)
-static func pos_mask(res: Vector3i) -> int;  static func wire_residual(mask: int, res: Vector3i) -> Vector3i;  static func applied_residual(mask: int, res: Vector3i) -> Vector3i
-static func delta_body_bytes(mask: int, tier_b: bool, own: bool) -> int
+static func pos_mask(res: Vector3i) -> int;  static func wire_residual(mask: int, res: Vector3i) -> Vector3i;  static func applied_residual(mask: int, res: Vector3i) -> Vector3i;  static func delta_body_bytes(mask: int, tier_b: bool, own: bool) -> int
+class_name SnapshotMasks extends RefCounted         # net/snapshot_masks.gd: DELTA mask consts + pos_mask / wire_residual / applied_residual / delta_body_bytes statics (SnapshotCodec forwards them; NET-60 line-cap split)
+static func pos_mask(res: Vector3i) -> int;  static func wire_residual(mask: int, res: Vector3i) -> Vector3i;  static func applied_residual(mask: int, res: Vector3i) -> Vector3i;  static func delta_body_bytes(mask: int, tier_b: bool, own: bool) -> int
 class_name SnapshotWriter extends RefCounted          # net/snapshot_writer.gd: packet assembly for encode()
 var packets: int;  func start(tick: int, base_tick: int, pilot: PilotBlock, out: Array[PackedByteArray], limit: int) -> void
-func place(s: int, tier: int, body: int) -> bool;  func finish() -> int;  func put_u24(v: int) -> void
-func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int) -> void;  func put_full_words(w0: int, w1: int, w2: int, own: bool) -> void
+func place(s: int, tier: int, body: int) -> bool;  func finish() -> int;  func put_u24(v: int) -> void;  func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int) -> void;  func put_full_words(w0: int, w1: int, w2: int, own: bool) -> void
 func put_delta(mask: int, res: Vector3i, ori: int, tier_b: bool, vel: int, hp: int, flags: int, ai_tag: int) -> void
 class_name SnapshotByteCache extends RefCounted       # net/snapshot_byte_cache.gd: client-independent FULL / C-BLIP bytes per tick (A-40)
 const CAPACITY: int;  var w0: PackedInt64Array;  var w1: PackedInt64Array;  var w2: PackedInt32Array;  var oc: PackedInt32Array;  func full(s: int, tick: int, pos_q: int, ori_bits: int, vel_bits: int, hp_flags_ai: int) -> void;  func blip_pos(s: int, tick: int, pos_q: int, blip: int) -> int
