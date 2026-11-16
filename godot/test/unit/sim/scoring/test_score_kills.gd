@@ -82,6 +82,7 @@ func test_core_destroyed_is_flat() -> void:
 	var killer: int = ScoringTestKit.spawn(_w, &"dart", 0, 0)
 	assert_bool(DockingTestKit.possess(_w, killer, 0)).is_true()
 	var core: int = ScoringTestKit.spawn(_w, &"core", 1, 1)
+	var _spare: int = ScoringTestKit.spawn(_w, &"core", 1, 1)                 # a second Core keeps the match running (GD-20: the last Core ends it)
 	var dealt: float = ScoringTestKit.hp(_w, core) + 1.0
 	ScoringTestKit.kill(_w, core, killer)
 	assert_object(ScoringTestKit.score(_w, 0)).is_equal(Vector2i(floori(float(_d.core_destroyed) + dealt * _d.structure_damage_points_per_hp), 0))

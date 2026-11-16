@@ -4,11 +4,12 @@ class_name CommandApplier extends RefCounted
 ## intake go to 05's `ControlMachine` (`sim/control/`, AI-02); SET_ADJUTANT and the DEBUG kinds are applied here.
 ## Also the spawn path and the deferred death list of step 9 (C15 release through `ControlMachine.on_death`).
 ## BUILD, CANCEL_BUILD, PRODUCE, CANCEL_PRODUCE, SET_RALLY and TOGGLE_AUTO_REPLENISH are routed to `EconomyHub` by
-## `CommandIntake` (TA-19, GD-17); SURRENDER is validated and then left to its owner (Economy GD-20).
+## `CommandIntake` (TA-19, GD-17); SURRENDER is validated and then counted by `MatchJudge` (GD-20, `sim/match/`).
 
 const DEATH_CAUSE_DEBUG: int = 0
 
 var dying: PackedInt32Array = PackedInt32Array()   ## deferred frees of this tick (03 s4.1 rule 6), drained in step 9
+var dying_cause: PackedInt32Array = PackedInt32Array()   ## `SimEvent.DeathCause` of dying[i] (GD-20)
 
 var _store: EntityStore
 var _orders: OrderQueue
@@ -78,24 +79,32 @@ func order_move(s: int, issuer: int, point: Vector3, tick: int) -> void:
 
 ## Marks `s` for the deferred free at the end of step 9 (03 s4.1 rule 6); idempotent within a tick.
 func kill(s: int) -> void:
+	kill_for(s, DEATH_CAUSE_DEBUG)
+
+
+## `kill` with a named `SimEvent.DeathCause` (the first cause of a slot in a tick stands).
+func kill_for(s: int, cause: int) -> void:
 	if not dying.has(s):
 		var _a: bool = dying.push_back(s)
+		var _b: bool = dying_cause.push_back(cause)
 
 
 ## End of step 9: every dying entity is released (C15), freed into quarantine (S2) and reported by DEATH.
 func resolve_deaths(tick: int) -> void:
-	for s: int in dying:
+	for i: int in dying.size():
+		var s: int = dying[i]
 		if (_store.flags[s] & EntityStore.F_ALIVE) == 0:
 			continue
 		var id: int = _store.id_of(s)
 		_control.on_death(s)
 		var _e: SimEvent = _events.emit(SimEvent.Kind.DEATH, id, _store.attacker[s], _store.pos[s], 0.0, _store.team[s],
-			DEATH_CAUSE_DEBUG)
+			dying_cause[i])
 		if s < InputSlots.ENTITY_SLOTS:
 			_orders.clear_slot(s)
 			_inputs.clear_entity(s)
 		var _f: bool = _store.free_slot(s, tick)
 	var _r: int = dying.resize(0)
+	var _c: int = dying_cause.resize(0)
 
 
 ## 05 C1-C3, C7 through `ControlOrders.order` (issuer and tick stamped here).

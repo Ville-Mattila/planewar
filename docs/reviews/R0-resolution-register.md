@@ -297,7 +297,7 @@ All three v1 maps are 8-slot maps; player counts use slot subsets (Part B.6). `g
 
 **Protocol message ids added by this register** (04 s2.3): 0x0D `DOCTRINE_PICK` (ch0; doctrine u8, lock u8), 0x92 `TEAM_DETAIL` (ch3, 2 Hz), 0x93 `LOBBY_STATE` (ch0; per slot lock flag, countdown ticks). `KEYFRAME.scope` loses TIER_C_ONLY (rolling refresh inside SNAPSHOT). `PROTOCOL_VERSION` stays 1 until first code.
 
-**`SimEvent.DeathCause`** (`sim/sim_event.gd`; the `cause` of `DEATH` (1) and of 04 s3.6 row 1 `cause u8`; B.20 A-106, 2026-10-21): 0 DEBUG (`DEBUG_SET` / test kills), 1 EXPIRED (a wreck freed at `wreck_lifetime_s`). GD-20 appends its causes from 2; growth = `sim/MODULE.md` "Enumerations" append.
+**`SimEvent.DeathCause`** (`sim/sim_event.gd`; the `cause` of `DEATH` (1) and of 04 s3.6 row 1 `cause u8`; B.20 A-106, 2026-10-21): 0 DEBUG (`DEBUG_SET` / test kills), 1 EXPIRED (a wreck freed at `wreck_lifetime_s`). GD-20 (2026-11-16) appends 2 KILLED (HP to 0 through `DamageSink`) and 3 SELF_DESTRUCT (an eliminated player's structure); growth = `sim/MODULE.md` "Enumerations" append.
 
 ### B.4 Module dependency table (01 s9.2 as amended)
 

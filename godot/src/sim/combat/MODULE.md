@@ -24,7 +24,7 @@ class_name Combat extends RefCounted                                         # s
 var fire: WeaponFire                                                         # GD-36; GD-18 writes fire.unsupplied
 var shields: ShieldDomes                                                     # GD-10; SimWorld calls shields.absorb before step and shields.step in step 10
 func step(tick: int, dice: Rng) -> void                                      # fire, then HIT / GROUND / RAM contacts in contact order, then fuses
-func forget(s: int) -> void;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # every death of the tick; S4 bytes (fire state, then the shield domes)
+func bind_judge(judge: MatchJudge) -> void;  func forget(s: int) -> void;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # every death of the tick; S4 bytes (fire state, then the shield domes)
 func detonate_bomb(pos: Vector3, owner_team: int, w: WeaponDef, p: ProjectileDef, attacker: int, tick: int, dice: Rng) -> void   # rules 2-3, as a fuse would fire it
 static func roll_gun_damage(w: WeaponDef, target_kind: int, dice: Rng, extra_mult: float = 1.0) -> int   # rule 1; target_kind is EntityStore.K_*
 class_name WeaponFire extends RefCounted                                     # GD-36 fire pipeline, run first in Combat.step
@@ -72,6 +72,7 @@ func shell(pos: Vector3, owner_team: int, attacker: int, w: WeaponDef, p: Projec
 func hangar_docked(s: int) -> bool;  func bomb_mult(s: int, tick: int) -> float;  func edge_distance(pos: Vector3, s: int) -> float
 static func rect_distance(rel: Vector3, fwd: Vector3, up: Vector3, hw: float, hh: float) -> float
 class_name DamageSink extends RefCounted                                     # the one place HP changes
+var judge: MatchJudge                                                         # GD-20: finished enemy structures report the damage dealt per team (hard-end tie-break)
 func standing(s: int) -> bool;  func damage(s: int, amount: float, attacker: int, tick: int) -> bool;  func destroy(s: int, attacker: int, tick: int) -> bool
 ```
 
