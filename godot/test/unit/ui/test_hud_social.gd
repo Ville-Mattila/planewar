@@ -3,7 +3,7 @@ extends GdUnitTestSuite
 ## SimEvents (docs/06 s6.1, s7.6; ui/hud/piloted_badges.gd, pending_line.gd, handover_toast.gd, beacon_tracker.gd).
 
 const EPS: float = 0.0001
-const R: float = 6000.0
+const R: float = Sphere.PLANET_RADIUS
 const POSSESSED: int = 2   # SimView.control_state ordinal, sim/MODULE.md
 
 var _v: HudScenarioView

@@ -73,6 +73,7 @@ func _draw() -> void:
 	var c: Vector2 = size * 0.5
 	var ring: float = HudMath.param("threat_ring_du")
 	var arrow: float = HudMath.param("threat_arrow_du")
+	draw_arc(c, ring, 0.0, TAU, 48, Color(UiTokens.UI_TEXT_DIM, 0.6), 1.0)
 	for a: ThreatArrow in _threats.arrows:
 		_draw_arrow(c + ThreatMath.ring_pos(a.angle, ring), a, arrow)
 	var y: float = c.y + ring + float(fs) * 2.0
@@ -92,8 +93,8 @@ func _draw_arrow(at: Vector2, a: ThreatArrow, r: float) -> void:
 	var perp: Vector2 = Vector2(-dir.y, dir.x)
 	var col: Color = UiTokens.RELATION_ENEMY
 	col.a = 0.35 + 0.65 * a.intensity if a.ahead else 0.2 + 0.4 * a.intensity
-	var pts: PackedVector2Array = PackedVector2Array([at + dir * r * 0.5, at - dir * r * 0.5 + perp * r * 0.4,
-			at - dir * r * 0.5 - perp * r * 0.4])
+	var pts: PackedVector2Array = PackedVector2Array([at + dir * r, at - dir * r * 0.6 + perp * r * 0.7,
+			at - dir * r * 0.6 - perp * r * 0.7])
 	draw_colored_polygon(pts, col)
 
 

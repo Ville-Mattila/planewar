@@ -3,7 +3,7 @@ extends GdUnitTestSuite
 
 const EPS: float = 0.0001
 const SHIP: int = 1
-const R: float = 6000.0
+const R: float = Sphere.PLANET_RADIUS
 
 var _v: HudScenarioView
 

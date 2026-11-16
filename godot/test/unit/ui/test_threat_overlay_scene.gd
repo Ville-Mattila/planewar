@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 ## UX-19 overlay scene: instantiates headless, takes the widget data and reports what it shows (scenes/ui/threat_overlay.tscn).
 
 const SCENE: String = "res://scenes/ui/threat_overlay.tscn"
-const R: float = 6000.0
+const R: float = Sphere.PLANET_RADIUS
 
 
 func _make() -> ThreatOverlayView:
@@ -52,4 +52,42 @@ func test_font_never_below_the_9_du_floor() -> void:
 	var o: ThreatOverlayView = _make()
 	o.profile = UiScale.Profile.COMPACT
 	assert_int(o.font_size()).is_greater_equal(int(HudMath.param("font_du_min")))
+	o.free()
+
+
+func test_draw_runs_with_every_widget_visible() -> void:
+	var r: Result = ContentDB.load_all()
+	assert_bool(r.ok).is_true()
+	var o: ThreatOverlayView = _make()
+	var v: HudScenarioView = HudScenarioView.new()
+	v.add(1, &"dart", 0, Vector3(0.0, R + 300.0, 0.0), 2, 0)
+	v.add(2, &"dart", 1, Vector3(500.0, R + 400.0, -300.0))
+	v.add(4, &"bomber", 0, Vector3(50.0, R + 100.0, 0.0), 2, 1)
+	v.add(20, &"flak_battery", 1, Vector3(0.0, R, -800.0))
+	v.rockets_at[1] = 1
+	var names: Dictionary = {0: "Ville", 1: "Aino"}
+	o.set_threats(ThreatData.from_view(v, 1, 0))
+	o.set_hints(TowerHint.from_view(v, 1, 0, 300.0))
+	var spec: OrderSpec = OrderSpec.make(OrderSpec.Kind.HOLD)
+	spec.issuer = 1
+	v.pending[1] = spec
+	o.set_pending(PendingLine.from_view(v, 1, names, Callable()))
+	var toast: HandoverToast = HandoverToast.new()
+	var e: SimEvent = SimEvent.new()
+	e.kind = SimEvent.Kind.POSSESS_REQUESTED
+	e.a = 1
+	e.b = 1
+	var _opened: bool = toast.on_event(e, v, 0, names)
+	o.set_toast(toast)
+	var bp: BeaconPip = BeaconPip.new()
+	bp.x = 20.0
+	o.set_beacons([bp] as Array[BeaconPip])
+	o.set_badges(PilotedBadges.from_view(v, 0, 0, names), PackedVector2Array([Vector2(300.0, 200.0)]))
+	var drawn: Array[int] = [0]
+	o.draw.connect(func() -> void: drawn[0] += 1)
+	o.queue_redraw()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_int(drawn[0]).is_greater(0)
+	assert_int(o.lines().size()).is_equal(4)
 	o.free()
