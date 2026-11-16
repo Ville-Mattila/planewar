@@ -277,6 +277,48 @@ msgstr "Uplink lost above 2,000 m. Autopilot is descending."
 msgid "hud.vs"
 msgstr "VS"
 
+msgid "ui.place.reject.cap"
+msgstr "Cap reached"
+
+msgid "ui.place.reject.eliminated"
+msgstr "Commander eliminated"
+
+msgid "ui.place.reject.enemy_radius"
+msgstr "Inside enemy build range"
+
+msgid "ui.place.reject.funds"
+msgstr "Not enough Ore or Ice"
+
+msgid "ui.place.reject.generic"
+msgstr "Cannot place here"
+
+msgid "ui.place.reject.no_presence"
+msgstr "Move a unit within {m} m"
+
+msgid "ui.place.reject.no_radius"
+msgstr "Outside build radius"
+
+msgid "ui.place.reject.node"
+msgstr "On a resource node"
+
+msgid "ui.place.reject.not_visible"
+msgstr "Not in team vision"
+
+msgid "ui.place.reject.occupied"
+msgstr "Blocked"
+
+msgid "ui.place.reject.prereq"
+msgstr "Requires {need}"
+
+msgid "ui.place.reject.slope"
+msgstr "Slope over {max} deg"
+
+msgid "ui.place.reject.spacing"
+msgstr "Too close to another base"
+
+msgid "ui.place.reject.spend_locked"
+msgstr "Share locked until {time}"
+
 msgid "ui.prod.auto"
 msgstr "AUTO {n}"
 

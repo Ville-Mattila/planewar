@@ -102,7 +102,7 @@ const NO_RADIUS: int; const NO_PRESENCE: int; const SPACING: int; const FUNDS: i
 static func order() -> PackedInt32Array; static func rank(reject: int) -> int; static func top(rejects: PackedInt32Array) -> int
 static func key(reject: int) -> StringName; static func args(reject: int, facts: Dictionary) -> Dictionary; static func reason(reject: int, facts: Dictionary) -> String
 static func from_result(code: CommandResult.Code, reject: int) -> int; static func client_rejects(ctx: DrawerContext, def: StringName) -> PackedInt32Array
-static func tint(reject: int) -> Color; static func arm_alt_m() -> float; static func haptic_ms() -> int
+static func tint(reject: int) -> Color; static func arm_alt_m() -> float; static func haptic_ms() -> int; static func rotations() -> int
 class_name PlacementMachine extends RefCounted   # pure state machine, the 06 s7.3 diagram
 enum State { IDLE, ARMED, POSITIONING, SENT }
 var state: State; var def_id: StringName; var cell: int; var rotation: int; var repeat: bool
@@ -119,7 +119,7 @@ signal command_ready(cmd: Command); signal toast(key: StringName, args: Dictiona
 var machine: PlacementMachine; var reject: int
 func setup(player: int, validator: Callable) -> void   # validator(def_index: int, cell: int, rotation: int) -> int (a Build.Reject ordinal)
 func arm(id: StringName, ctx: DrawerContext) -> void; func set_camera(alt_m: float, focus_cell: int) -> void; func move_to(cell: int) -> void; func rotate_by(dir: int) -> void
-func set_repeat(on: bool) -> void; func confirm() -> bool; func cancel() -> void; func on_result(r: CommandResult) -> void; func revalidate(ctx: DrawerContext) -> void
+func set_repeat(on: bool) -> void; func set_facts(facts: Dictionary) -> void; func confirm() -> bool; func cancel() -> void; func on_result(r: CommandResult) -> void; func revalidate(ctx: DrawerContext) -> void
 func is_valid() -> bool; func show_pending() -> bool; func reason_key() -> StringName; func reason_args(facts: Dictionary) -> Dictionary
 ```
 
