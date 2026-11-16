@@ -123,12 +123,22 @@ func test_handover_never_replays_a_input() -> void:
 	assert_int(ev[0].a).is_equal(spare)                                # q's own possession released first
 	assert_int(ev[0].extra[0]).is_equal(RR.PLAYER)
 	assert_int(ev[1].extra[0]).is_equal(RR.HANDOVER)
+	# The decisive check: A's input must not be copied into any player slot. The bridge overwrites the entity slot each
+	# tick, so the entity slot cannot show a replay; the player slots can (A cleared, B silent until B's own input).
+	assert_float(io.p_thrust[0]).is_equal(0.0)
+	assert_float(io.p_pitch[0]).is_equal(0.0)
+	assert_int(io.p_buttons[0]).is_equal(0)
+	assert_float(io.p_thrust[ControlTestKit.MATE]).is_equal(0.0)
+	assert_float(io.p_pitch[ControlTestKit.MATE]).is_equal(0.0)
+	assert_int(io.p_buttons[ControlTestKit.MATE]).is_equal(0)
 	for k: int in 2 * ControlMachine.DECAY_TICKS:
 		# AI-19: the dart now has a real BridgeParams, so LINK_BRIDGE writes its own hold law (05 s2.4). The
 		# claim under test: A's input is never replayed, so no A thrust, pitch or buttons reach the slot.
 		assert_bool(io.e_thrust[s] != 0.123456).override_failure_message("tick %d thrust %f" % [k, io.e_thrust[s]]).is_true()
 		assert_bool(io.e_pitch[s] != 0.654321).override_failure_message("tick %d pitch %f" % [k, io.e_pitch[s]]).is_true()
 		assert_bool((io.e_buttons[s] & (PilotInput.FIRE1 | PilotInput.BOOST)) == 0).override_failure_message("tick %d buttons %d" % [k, io.e_buttons[s]]).is_true()
+		assert_float(io.p_thrust[ControlTestKit.MATE]).override_failure_message("tick %d MATE slot" % k).is_equal(0.0)
+		assert_int(io.p_buttons[ControlTestKit.MATE]).override_failure_message("tick %d MATE buttons" % k).is_equal(0)
 		assert_int(ControlTestKit.overlay(w, id)).is_equal(O.LINK_BRIDGE)
 		assert_int(ControlTestKit.pilot(w, 0, 0.123456, 0.654321, PilotInput.FIRE1)).is_equal(C.ACCEPTED)   # A keeps sending: ignored
 		assert_int(ControlTestKit.step(w).size()).is_equal(0)                       # no LINK_WEAK for a hand-over bridge
