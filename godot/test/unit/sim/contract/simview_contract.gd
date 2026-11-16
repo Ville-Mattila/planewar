@@ -194,12 +194,12 @@ func _team_and_match() -> void:
 	var ts: TeamStateView = _v.team_state(0)
 	_t(&"team_state", ts != null and ts.team == 0 and ts.ore == eco.start_ore * 2 and ts.ice == eco.start_ice * 2
 			and ts.ore_cap == cap.x and ts.ice_cap == cap.y and _near(ts.power_supply, power.x, &"team_state") and _near(ts.power_demand, power.y, &"team_state")
-			and _sorted(ts.members) == [0, 2] and ts.flags == TeamStateView.CORE_SHIELD_UP and _v.team_state(1).flags == 0
+			and _sorted(ts.members) == [0, 2] and ts.flags == (TeamStateView.CORE_SHIELD_UP | TeamStateView.SPEND_LOCK_ACTIVE) and _v.team_state(1).flags == 0
 			and _v.team_state(9) == null)
 	var p0: PlayerStateView = _v.player_state(0)
 	var p1: PlayerStateView = _v.player_state(1)
 	_t(&"player_state", p0 != null and p1 != null and p0.team == 0 and p1.team == 1 and p0.unit_count == 2
-			and p0.structure_count == 4 and p1.doctrine == &"vanguard" and p1.connected
+			and p0.structure_count == 4 and p0.early_spend_left_ore == eco.early_share_ore and p1.early_spend_left_ore == -1 and p1.doctrine == &"vanguard" and p1.connected
 			and _v.player_state(2).kind == PlayerTable.KIND_BOT and _v.player_state(9) == null)
 	_t(&"match_arc", _v.match_arc() == MatchArc.Arc.OPEN)
 	_t(&"match_phase", _v.match_phase() == MatchRules.Phase.PLAYING)

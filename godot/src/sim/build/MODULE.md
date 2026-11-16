@@ -24,6 +24,7 @@ func place(player: int, def_id: int, cell: int, rotation: int) -> int        # s
 func stamp(player: int, def_id: int, cell: int, rotation: int, finished: bool) -> int   # unvalidated `place` (finished: the start kit); 0 when the store is full
 func release_site(s: int) -> void                                            # frees the footprint of structure slot `s` (death / cancelled site)
 func lock_blocks(player: int, cost_ore: int) -> bool                         # early share lock (02 s6.4, C3-08): the one definition, used by can_place and Economy.try_pay
+func lock_applies(player: int) -> bool;  func early_spend_left(player: int) -> int                  # GD-47: lock window open and 2+ active teammates; left = max(0, early_share_ore + delivered - spent), -1 when not applying (SimView reads)
 func footprint_cells(def_id: int, cell: int, rotation: int) -> PackedInt32Array      # (03) crosses cube edges via neighbour_cell
 func _init(defs: WorldDefs, store: EntityStore, players: PlayerTable, terrain: Terrain, rules: MatchRules, grid_n: int = Sphere.GRID_BUILD)
 func set_clock(tick: int) -> void                                            # early share lock reads it
