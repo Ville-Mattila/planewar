@@ -7,11 +7,12 @@ extends GdUnitTestSuite
 
 const HZ: int = 30
 const SAVE_TICKS: int = 20 * HZ
+const SAVE_TEN_MIN: int = 600 * HZ   ## SC-47's "save at 10:00"
 const AFTER_TICKS: int = 300
 const FOE: int = DartKit.FOE
 
 
-func _skirmish(seed_value: int) -> Array:
+func _skirmish(seed_value: int, ticks: int = SAVE_TICKS) -> Array:
 	var w: SimWorld = Ai14Kit.world(seed_value)
 	var d: AiDriver = Ai14Kit.driver(w)
 	var _core0: int = Ai14Kit.core(w, Vector3(1, 0, 0), 0)
@@ -25,9 +26,23 @@ func _skirmish(seed_value: int) -> Array:
 			var p: Vector3 = DartKit.above(w, dir, 300.0)
 			var h: Vector3 = DartKit.heading(p, Vector3(0, 1, 0)).rotated(p.normalized(), rng.range_f(0.0, TAU))
 			var _id: int = DartKit.spawn(w, def, team, p, h * 100.0, h)
-	for _k: int in SAVE_TICKS:
-		var _ev: Array[SimEvent] = Ai14Kit.step(w)
-	return [w, d]
+	var deaths: int = 0
+	for _k: int in ticks:
+		for e: SimEvent in Ai14Kit.step(w):
+			deaths += 1 if e.kind == SimEvent.Kind.DEATH else 0
+	return [w, d, deaths]
+
+
+## Slots whose AI state is not default: landing phase or aux id set, a target held, a mode entered after the spawn.
+func _nondefault(d: AiDriver) -> Dictionary:
+	var n: Dictionary = {"land": 0, "aux": 0, "target": 0}
+	for s: int in d.state.cls.size():
+		if d.state.cls[s] == AiState.NO_CLASS:
+			continue
+		n["land"] += 1 if d.state.land_phase[s] != 0 else 0
+		n["aux"] += 1 if d.state.aux_id[s] != 0 else 0
+		n["target"] += 1 if d.state.target[s] != 0 else 0
+	return n
 
 
 func _restore(bytes: PackedByteArray, src: SimWorld) -> Array:
@@ -39,19 +54,32 @@ func _restore(bytes: PackedByteArray, src: SimWorld) -> Array:
 
 
 func _same_modes_targets(a: AiDriver, b: AiDriver) -> bool:
-	return a.state.mode == b.state.mode and a.state.target == b.state.target and a.state.cls == b.state.cls
+	return a.state.mode == b.state.mode and a.state.target == b.state.target and a.state.aux_id == b.state.aux_id and a.state.land_phase == b.state.land_phase and a.state.cls == b.state.cls
 
 
 func test_sc47_save_load_ai_state() -> void:
-	for seed_value: int in [1, 2, 3]:
-		var r: Array = _skirmish(seed_value)
+	for save_ticks: int in [SAVE_TICKS, SAVE_TEN_MIN]:
+		for seed_value: int in [1, 2, 3]:
+			_check_skirmish(seed_value, save_ticks)
+
+
+func _check_skirmish(seed_value: int, save_ticks: int) -> void:
+	if true:
+		var r: Array = _skirmish(seed_value, save_ticks)
 		var wa: SimWorld = r[0]
 		var da: AiDriver = r[1]
 		var bytes: PackedByteArray = wa.serialize()
 		var regs: int = 0
 		for s: int in da.state.cls.size():
 			regs += 1 if da.state.cls[s] != AiState.NO_CLASS else 0
-		assert_int(regs).is_greater(8)
+		assert_int(regs).is_greater(2)
+		# The save point must hold non-default AI state, else a field left out of the bytes would go unseen.
+		var nd: Dictionary = _nondefault(da)
+		var held: int = int(nd["aux"]) + int(nd["land"])
+		assert_int(held).override_failure_message("seed %d @%d: no aux_id / land_phase set at the save" % [seed_value, save_ticks]).is_greater(0)
+		if save_ticks == SAVE_TEN_MIN:
+			assert_int(int(r[2])).override_failure_message("seed %d: no unit died by 10:00" % seed_value).is_greater(0)
+			assert_int(int(nd["aux"]) + int(nd["land"])).override_failure_message("seed %d: too little state at 10:00" % seed_value).is_greater(1)
 		var r2: Array = _restore(bytes, wa)
 		var w2: SimWorld = r2[0]
 		var d2: AiDriver = r2[1]
@@ -68,7 +96,8 @@ func test_sc47_save_load_ai_state() -> void:
 				assert_bool(w2.serialize() == wa.serialize()).override_failure_message("seed %d: S4 bytes diverge at +%d" % [seed_value, k]).is_true()
 			for s: int in da.state.cls.size():
 				engaged += 1 if da.state.cls[s] != AiState.NO_CLASS and da.state.target[s] != 0 else 0
-		assert_int(engaged).override_failure_message("seed %d: no target was ever held, the run proves nothing" % seed_value).is_greater(0)
+		if save_ticks == SAVE_TICKS:   # by 10:00 the fights are over: the state held there is aux_id / land_phase (asserted above)
+			assert_int(engaged).override_failure_message("seed %d: no target was ever held, the run proves nothing" % seed_value).is_greater(0)
 		assert_bool(w2.serialize() == wa.serialize()).is_true()
 
 
@@ -96,6 +125,10 @@ func test_sc47_economy_save_points() -> void:
 		assert_object(w2).is_not_null()
 		d2.set_terrain(w2.terrain())
 		b2.bind_fields(w2.economy().harvest.fields)
+		var cycling: int = 0
+		for sl: int in d.state.cls.size():
+			cycling += 1 if d.state.cls[sl] != AiState.NO_CLASS and d.state.aux_id[sl] != 0 and d.state.path_ticket.size() > sl else 0
+		assert_int(cycling).override_failure_message("save at %d: no Harvester has a field chosen" % save_at).is_greater(0)
 		assert_bool(d2.serialize() == d.serialize()).override_failure_message("save at %d: AI bytes do not round-trip" % save_at).is_true()
 		for k: int in AFTER_TICKS:
 			w.step()
