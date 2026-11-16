@@ -1,17 +1,17 @@
 # sim/harvest - MODULE.md
 
-Contract for `godot/src/sim/harvest/**`: Ore Fields and the Harvester cycle of tick-order step 10 (GD-12; 02 s8.2, 05 s6.6;
-A-21 split of `sim/MODULE.md`). A change to "Public API" or "Invariants" is a contract change: contract tests first,
+Contract for `godot/src/sim/harvest/**`: Ore Fields and the Harvester cycle of tick-order step 10 (GD-12; 02 s8.2, 05 s6.6),
+Cold Traps, Ice Extractor buffers, the Refinery pipe and Hauler transfer (GD-14; 02 s8.3); A-21 split of `sim/MODULE.md`. A change to "Public API" or "Invariants" is a contract change: contract tests first,
 same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines (ADR-14).
 
 | Field | Value |
 |---|---|
-| Responsibility | The Ore Fields of a match (capacity, regen, radius, `max_miners`, Ore left), regen that stops at Core Exposure, mining while a Harvester stands still in a field with a free miner slot, and unloading at a friendly finished Refinery's docks over `unload_time_s`, credited through `Economy.credit`. Not here: driving (the autopilot writes the input slot, `GroundMotion` moves the unit), choosing a field (`sim_ai` `HarvestPicker`), the dock queue wait beyond "WAITING until a dock is free" and Ice extraction / Haulers. `SimWorld.load_map` loads the fields (`OreFields.load_map_dir`). |
+| Responsibility | The Ore Fields of a match (capacity, regen, radius, `max_miners`, Ore left), regen that stops at Core Exposure, mining while a Harvester stands still in a field with a free miner slot, and unloading at a friendly finished Refinery's docks over `unload_time_s`, credited through `Economy.credit`. Not here: driving (the autopilot writes the input slot, `GroundMotion` moves the unit), choosing a field (`sim_ai` `HarvestPicker`), the dock queue wait beyond "WAITING until a dock is free". `SimWorld.load_map` loads the fields (`OreFields.load_map_dir`). **Ice (GD-14):** the Cold Traps of a match (`IceNodes`: capacity, `rate_per_s`, `radius_m`, Ice left, no regen), a finished Ice Extractor on one filling its `buffer_ice` at the node rate, a friendly finished Refinery within its `pipe_radius_m` piping that buffer into the stockpile continuously, and a Hauler moving `hauler_transfer_per_s` Ice per second from an Extractor buffer into its hold and from its hold into the stockpile at a friendly Refinery. Not here: choosing a trap or a trip (`sim_ai` Hauler brain, 05), Relay capture (GD-23; the Relay Station pad services the holder through `sim/docking/` unchanged, test I8), any `SimView` read of a node (the buffer is `SimView.cargo(extractor)`). |
 | Lane owner tier | Sonnet against this file (Opus review) |
 | May depend on | `core`, `content`, `sim` (incl. `sim/world/`: `WorldDefs`, `StateIO`, `InputSlots`; `sim/economy/` `Economy`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads, RNG |
 | Autoloads used | None |
-| Status | implemented (GD-12, 2026-11-05); `EconomyHub.harvest.step` runs in step 10 after docking service; `SimSerialize.FORMAT` 15 |
+| Status | implemented (GD-12, 2026-11-05); `EconomyHub.harvest.step` runs in step 10 after docking service; `SimSerialize.FORMAT` 15. GD-14 (2026-11-16): `EconomyHub.ice.step` runs right after it; `SimSerialize.FORMAT` 16 |
 
 ## Public API
 
@@ -36,6 +36,22 @@ var fields: OreFields
 func _init(store: EntityStore, defs: WorldDefs, rules: MatchRules, economy: Economy)
 func step(t: int, dt: float) -> void                                         # regen (PLAYING only), then every Harvester in ascending slot order
 static func state_of(link: int) -> State;  static func index_of(link: int) -> int;  static func pack(state: State, index: int) -> int
+
+class_name IceNodes extends RefCounted                                       # GD-14; one table per world: `EconomyHub.ice.nodes`
+var dirs: PackedVector3Array;  var capacity: PackedInt32Array;  var amount: PackedFloat32Array   # per node index (map file order)
+var rate_per_s: PackedFloat32Array;  var radius_m: PackedFloat32Array
+func add(dir: Vector3, cap: int, rate: float, radius: float) -> int          # a full node; its index
+func load_map_dir(map_dir: String) -> int                                    # clears, then loads `<dir>/features.json` `cold_trap` nodes (SimWorld.load_map calls it; -1 when unreadable)
+func clear() -> void;  func load_nodes(nodes: Array) -> int                  # the `cold_trap` nodes in file order; count added
+func count() -> int;  func remaining(i: int) -> int;  func capacity_of(i: int) -> int;  func rate_of(i: int) -> float;  func radius_of(i: int) -> float;  func dir_of(i: int) -> Vector3
+func node_at(dir: Vector3) -> int                                            # nearest node whose radius contains `dir`, else -1
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # S4: the whole table (self-describing)
+
+class_name IceExtract extends RefCounted                                     # GD-14; EconomyHub.ice, step 10 after Harvest
+var nodes: IceNodes;  var ship_scans: int                                    # ship_scans: diagnostic hard counter, not state
+func _init(store: EntityStore, defs: WorldDefs, economy: Economy, score: ScoreKeeper)   # score may be null (no result counters)
+func step(dt: float) -> void                                                 # Extractors in ascending slot order, then Haulers in ascending slot order
+func refinery_for(extractor: int) -> int                                     # slot of the friendly finished Refinery piping this Extractor, -1 for none
 # Reads: `SimView.field_remaining(node)` = `OreFields.remaining(node)` (0 out of range); `SimView.link(id)` of a Harvester = `pack(state, index)`
 ```
 
@@ -77,9 +93,39 @@ dock count from `structures.json` `docks`; the delivery reach is `economy.json` 
 - H9 Cost. `step` returns at once with no ground unit and no field. Otherwise one pass over the ground units (twice) and the fields;
   the Refinery list is rebuilt only when `Economy.structure_epoch` or the structure count moves. No Dictionary, no per-unit allocation.
 
+- I1 Nodes (02 s8.3, s9). A node index is the order of the map's `cold_trap` nodes in features.json; `amount` starts at `capacity`,
+  stays within [0, capacity], and never regenerates ("Ice does not regenerate"); the only writers are `IceExtract.step` and `read_state`.
+  `SimWorld.load_map` of a map id calls `nodes.load_map_dir` (the flat datum has none). Test: `test_ice_nodes.gd`.
+- I2 Extractor. A finished (`F_BUILDING` clear), living structure whose def has `buffer_ice` > 0 and whose centre direction lies in a
+  node (`node_at`) takes `min(rate_per_s x dt, amount, buffer_ice - cargo)` from the node into its own `cargo` every tick
+  (`cargo_kind` ICE (2) while `cargo` > 0); the buffer never passes `buffer_ice` (400). An Extractor in no node, or on an empty one, takes nothing.
+  The buffer is `SimView.cargo(extractor)`; a dying Extractor loses it.
+- I3 Pipe (02 s8.3). An Extractor with a friendly finished living structure whose def has `docks` > 0 (the Refinery) within that def's
+  `pipe_radius_m` (centre distance) is piped: each tick the whole Ice in its buffer, `floor(cargo)`, goes to the stockpile through
+  `Economy.credit(team, 0, n, owner)`, at most the room under the Ice cap (nothing is lost: a full stockpile leaves the Ice in the buffer, which
+  then fills to `buffer_ice` and stops the node). A piped Extractor therefore credits the node rate: 0.8 Ice/s at the Home Cold Trap
+  (100 s -> 80 Ice, +-1). An enemy Refinery, a site and a dead one do not pipe; beyond the radius the buffer fills and Haulers carry it (I4).
+- I4 Hauler load. A ship whose resolved def has `cargo_ice` > 0 (the Hauler), within `radius(extractor) + salvage_deliver_m` (centre
+  distance, the reach of GD-12 / W8) of a friendly finished Extractor with Ice in its buffer, and not in the reach of a friendly
+  Refinery while it holds Ice (I5 wins), takes `min(hauler_transfer_per_s x dt, buffer, cargo_ice - cargo)` from the buffer into its own `cargo` (`cargo_kind`
+  ICE). One Extractor per Hauler per tick (the first in ascending slot order). 40 Ice/s: 400 Ice in 10 s.
+- I5 Hauler unload. The same ship with `cargo` > 0 within `radius(refinery) + salvage_deliver_m` of a friendly finished living
+  structure with `docks` > 0 moves `min(hauler_transfer_per_s x dt, cargo, Ice room)` into the stockpile: the credit is `roundi(before) - roundi(after)`
+  of the hold (whole Ice, sums to `roundi(load)`), `Economy.credit(team, 0, n, owner)`, `ScoreKeeper.ice_delivered(owner, n, possessed)` (a
+  possessed Hauler scores the Pilot side). `cargo_kind` goes to 0 when the hold is empty. A full stockpile leaves the hold as it is.
+  A Hauler towing a wreck is unaffected (a wreck's Ore is `cargo` of the wreck, Salvage).
+- I6 Teams. Only the Hauler's own team's Extractors and Refineries count in I3-I5.
+- I7 State (S4). `IceNodes.amount` with its table is the only state outside `EntityStore` (written after the Ore Fields in the economy
+  section, `SimSerialize.FORMAT` 16); buffers and holds are `cargo` / `cargo_kind`; the Extractor, Refinery and node lookups are derived
+  each pass (the Refinery and Extractor lists are rebuilt when `Economy.structure_epoch` or the structure count moves).
+- I8 Relay pad service (02 s5.3, s2.3). The Relay Station def is a service pad (`pads` 1, `pad_radius_m` 12); a ship docked on one held by its
+  own team is served at the normal costs, a ship of another team is not. The capture that sets the holder is GD-23. Test: `test_relay_pad_service.gd`.
+- I9 Cost. `step` returns at once with no Extractor and no ship carrying Ice (a count of Ice holds, re-counted when the ship count changes; `IceExtract.ship_scans` counts the ship passes run). Otherwise one pass over the Extractors and one over the ships;
+  no Dictionary, no per-entity allocation. Test: `test_ice_perf.gd` (PerfGate).
+
 ## Data owned
 
-`OreFields` (the field table and Ore left; saved), the derived Refinery list and dock counts (not saved).
+`OreFields` (the field table and Ore left; saved), `IceNodes` (the Cold Trap table and Ice left; saved), the derived Refinery / Extractor lists and dock counts (not saved).
 
 ## Events emitted / consumed
 
@@ -94,10 +140,11 @@ None. Consumes nothing.
 
 `godot/test/unit/sim/harvest/test_ore_fields.gd` (H1, H2, H8: table, load_nodes, field_at, regen, Exposure stop, state bytes, `field_remaining`),
 `test_harvest_cycle.gd` (H3-H8: trip time at 450 / 600 m, `max_miners`, slot freeing, depletion, docks, enemy Refinery, Exposure leaves mining, S4 mid-cycle),
-`test_harvest_map.gd` (H1a), `test_harvest_perf.gd` (H9). Fixtures: `harvest_test_kit.gd` (flat-datum world, field / Refinery / Harvester by metres of arc, a straight-line stand-in driver).
+`test_harvest_map.gd` (H1a), `test_harvest_perf.gd` (H9). GD-14: `test_ice_nodes.gd` (I1, I7), `test_ice_extract.gd` (I2-I7), `test_relay_pad_service.gd` (I8), `test_ice_perf.gd` (I9); fixtures `ice_test_kit.gd`. Fixtures: `harvest_test_kit.gd` (flat-datum world, field / Refinery / Harvester by metres of arc, a straight-line stand-in driver).
 
 ## How to add X (recipes for the cheapest tier)
 
 - **A field from a map:** add an `ore_field` node to the recipe's features.json; `SimWorld.load_map` loads it (table cleared first,
   so a second load or a restore never doubles it; `deserialize` then replaces it with the saved table, H8). Test: `test_harvest_map.gd`.
+- **A Cold Trap from a map:** add a `cold_trap` node (`capacity`, `rate_per_s`, `radius_m`) to features.json; `load_map` loads it. Test: `test_ice_nodes.gd`.
 - **A second Refinery-like structure:** give its def `docks` > 0 in `structures.json`; nothing else.
