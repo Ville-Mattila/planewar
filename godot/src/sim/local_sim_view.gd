@@ -26,6 +26,7 @@ var vision: Vision = null             ## set by SimWorld (TA-63): `visible_enemy
 var score: ScoreKeeper = null          ## set by SimWorld (GD-27): player_score
 var fields: OreFields = null           ## set by SimWorld (GD-12): field_remaining
 var docking: Docking = null           ## set by SimWorld (GD-15): service progress, pad queues, landing grades
+var build: Build = null               ## set by SimWorld (GD-47): the early share lock reads (early_spend_left_ore, SPEND_LOCK_ACTIVE)
 
 
 func _init(store: EntityStore, projectiles: ProjectileStore, spatial: Spatial, terrain: Terrain, players: PlayerTable,
@@ -283,6 +284,10 @@ func team_state(_team: int) -> TeamStateView:
 	TeamStats.fill_team(_teams[_team], _team, _store, _defs, _players, _rules, _state)
 	if shields != null and shields.core_up(_team):
 		_teams[_team].flags |= TeamStateView.CORE_SHIELD_UP
+	if build != null:
+		var m: PackedInt32Array = _teams[_team].members
+		if not m.is_empty() and build.lock_applies(m[0]):
+			_teams[_team].flags |= TeamStateView.SPEND_LOCK_ACTIVE
 	return _teams[_team]
 
 
@@ -293,6 +298,7 @@ func player_state(slot: int) -> PlayerStateView:
 	TeamStats.fill_player(v, _players, slot)
 	v.unit_count = unit_count(slot)
 	v.structure_count = TeamStats.count_owned(_store, slot, _store.structures)
+	v.early_spend_left_ore = build.early_spend_left(slot) if build != null and v.team >= 0 and _players.is_active(slot) else -1
 	return v
 
 

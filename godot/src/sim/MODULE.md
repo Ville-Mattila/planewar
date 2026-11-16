@@ -155,7 +155,7 @@ var power_supply: float; var power_demand: float
 var unit_cap: int; var structure_cap: int                                    # per player, from MatchRules.caps
 var members: PackedInt32Array                                                # player slots on the team; per-player counts via player_state(slot)
 var eliminated: bool; var flags: int                                         # eliminated = no Core left on the team
-const CORE_EXPOSURE := 1; const LOW_POWER := 2; const CORE_SHIELD_UP := 4; const SPEND_LOCK_ACTIVE := 8   # flags bits, 04 0x85 order
+const CORE_EXPOSURE := 1; const LOW_POWER := 2; const CORE_SHIELD_UP := 4; const SPEND_LOCK_ACTIVE := 8   # flags bits, 04 0x85 order; LOCK = Build.lock_applies for a member (GD-47)
 class_name PlayerStateView extends RefCounted                                # sim/player_state_view.gd (R0 B.8 A-8): read-only view of 03 s3.2 `PlayerState`
 var slot: int; var team: int; var kind: int; var unknown: bool              # kind = PlayerKind; unknown as above (TEAM_DETAIL players / PLAYER_STATUS not received)
 var doctrine: StringName; var possessed: int                                 # possessed = EntityId or 0
@@ -163,7 +163,7 @@ var commander_rights: bool; var eliminated: bool                             # e
 var connected: bool; var disconnect_tick: int                                # disconnect_tick -1 while connected; bots are always connected
 var adjutant_profile: int; var adjutant_toggles: int                         # profile -1 off, else SET_ADJUTANT profile (0 assist, 1 caretaker, 2 economy); toggles bit0..3
 var unit_count: int; var structure_count: int                                # counted against unit_cap / structure_cap
-var early_spend_left_ore: int                                                # -1 = lock over or not own team (economy.early_share_ore, 04 s3.7)
+var early_spend_left_ore: int                                                # -1 = lock over / alone on the team (NetSimView also: not own team); else max(0, early_share_ore + delivered - spent) (LocalSimView: GD-47, Build.early_spend_left)
 
 class_name SimEvent extends RefCounted
 enum Kind { SPAWN, DEATH, HIT, BOMB_IMPACT, DOCKED, SERVICED, LAUNCHED, ORDER_DONE, ORDER_FAILED, POSSESSED, RELEASED,

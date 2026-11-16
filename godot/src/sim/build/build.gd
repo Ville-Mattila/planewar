@@ -235,9 +235,9 @@ func _check_funds(player: int, team: int, sd: StructureDef) -> Reject:
 	return Reject.SPEND_LOCKED if lock_blocks(player, sd.cost_ore) else Reject.OK
 
 
-## True while the early share lock (02 s6.4, R0 C3-08) forbids `player` to spend `cost_ore` more: a team of two or more,
-## before `early_share_lock_s`, spent + cost over `early_share_ore` + the Ore this player delivered.
-func lock_blocks(player: int, cost_ore: int) -> bool:
+## True while the early share lock (02 s6.4, R0 C3-08) applies to `player` at all: a team of two or more active players,
+## before `early_share_lock_s`.
+func lock_applies(player: int) -> bool:
 	var hz: int = _rules.tick_hz
 	var econ: EconomyDef = _defs.economy
 	if econ == null or hz <= 0 or float(_tick) >= econ.early_share_lock_s * float(hz):
@@ -247,4 +247,16 @@ func lock_blocks(player: int, cost_ore: int) -> bool:
 	for q: int in PlayerTable.SLOTS:
 		if _players.is_active(q) and _players.team[q] == team:
 			mates += 1
-	return mates >= 2 and spent_ore[player] + cost_ore > econ.early_share_ore + delivered_ore[player]
+	return mates >= 2
+
+
+## Ore `player` may still spend under the lock: `early_share_ore` + delivered - spent, floored at 0; -1 when it does not apply.
+func early_spend_left(player: int) -> int:
+	if not lock_applies(player):
+		return -1
+	return maxi(0, _defs.economy.early_share_ore + delivered_ore[player] - spent_ore[player])
+
+
+## True while the early share lock forbids `player` to spend `cost_ore` more: spent + cost over the allowance.
+func lock_blocks(player: int, cost_ore: int) -> bool:
+	return lock_applies(player) and spent_ore[player] + cost_ore > _defs.economy.early_share_ore + delivered_ore[player]
