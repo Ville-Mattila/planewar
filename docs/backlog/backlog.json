@@ -3401,7 +3401,10 @@
       " R0 C2-12",
       " 06 UX-21"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 157,
+    "merged": "2026-11-16",
+    "notes": "Split ui/MODULE.md: new godot/src/ui/rts/MODULE.md (A-143). needs app: wire ProductionDrawer.build_armed to PlacementController.arm, inject Build.can_place, feed camera altitude/focus cell, submit command_ready, call on_result, play the haptic. needs presentation: ghost, footprint tint (PlacementRules.tint, Build.footprint_cells), rings, pending outline. Nits: slope text lacks measured degrees (needs a terrain read via set_facts); NO_RIGHTS wording; one vacuous assertion. Architect: PlacementRules mirrors the 14 Build.Reject ordinals (pinned by a test) - add Build read-only to ui named types and delete the copy?; 06 priority order cannot fully apply because can_place returns only its first failure."
   },
   {
     "id": "UX-22",
