@@ -154,12 +154,26 @@ func test_without_a_route_it_drives_straight_at_the_goal() -> void:
 	assert_float(_out.thrust).is_equal(1.0)
 
 
+func test_a_wait_after_braking_counts_the_whole_unbroken_run() -> void:
+	for before: int in [0, 5, 10, 14, 20]:                                  # an overlay / earlier wait already braked `before` ticks
+		_st.ground.brake_run[S] = before
+		var run: int = before
+		var longest: int = before
+		for t: int in 40:
+			GroundFollower.wait(S, t, _st, _prm, _out)
+			GroundFollower.book_brake(S, _out.buttons, _st)
+			run = run + 1 if (_out.buttons & PilotInput.BRAKE) != 0 else 0
+			longest = maxi(longest, run)
+		assert_int(longest).override_failure_message("run before the wait %d" % before).is_less_equal(maxi(_prm.brake_ticks, before))
+
+
 func test_waiting_brakes_for_at_most_the_brake_ticks_then_stands() -> void:
 	_st.ground.req[S] = 100
 	var run: int = 0
 	var longest: int = 0
 	for t: int in range(100, 140):
 		GroundFollower.wait(S, t, _st, _prm, _out)
+		GroundFollower.book_brake(S, _out.buttons, _st)
 		assert_float(_out.thrust).is_equal(0.0)
 		run = run + 1 if (_out.buttons & PilotInput.BRAKE) != 0 else 0
 		longest = maxi(longest, run)
@@ -168,6 +182,8 @@ func test_waiting_brakes_for_at_most_the_brake_ticks_then_stands() -> void:
 	assert_int(longest).is_equal(_prm.brake_ticks)
 	var hold: int = ceili(Ai16Kit.content().ground_common.ground_reverse_hold_s * float(Ai16Kit.content().rules.tick_hz))
 	assert_int(longest).is_less(hold)                                      # never the sim's reverse hold
+	# at the cap the wait lets go for a tick (that resets the sim's hold) and then brakes again
+	_st.ground.brake_run[S] = _prm.brake_ticks
 	GroundFollower.wait(S, 139, _st, _prm, _out)
 	assert_int(_out.buttons).is_equal(0)
 

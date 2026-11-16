@@ -104,8 +104,11 @@ static func run_ground_safety(id: int, st: AiState, p: OverlayParams, sink: Comm
 		out: PilotInput) -> bool:
 	var s: int = EntityId.slot(id)
 	Assist.link_bridge_ground(out)
-	out.buttons = PilotInput.BRAKE
+	# BRAKE for the hold less its last tick: the sim starts to reverse on the tick an unbroken BRAKE run reaches
+	# `ground_reverse_hold_s` (15 ticks = the 0.5 s min hold), so the last tick stands without BRAKE (AI-16 round 2)
+	out.buttons = PilotInput.BRAKE if st.ground.brake_run[s] + 1 < p.min_hold_ticks else 0
 	var _d: bool = sink.drive(id, out)
+	GroundFollower.book_brake(s, out.buttons, st)
 	if tick - st.overlay_since[s] + 1 >= p.min_hold_ticks:
 		clear(st, s)
 		return true

@@ -23,6 +23,7 @@ func test_ai_state_format8_round_trips_the_ground_block_and_refuses_format7() ->
 	g.threat[5] = 456
 	g.faces[5] = 0b101
 	g.strikes[5] = 2
+	g.brake_run[5] = 9
 	g.stuck_pos[5] = Vector3(1.5, -2.5, 3.5)
 	st.path[5] = PackedVector3Array([Vector3(1, 2, 3), Vector3(4, 5, 6)])
 	var bytes: PackedByteArray = st.serialize()
@@ -35,6 +36,7 @@ func test_ai_state_format8_round_trips_the_ground_block_and_refuses_format7() ->
 	assert_int(r.ground.threat[5]).is_equal(456)
 	assert_int(r.ground.faces[5]).is_equal(5)
 	assert_int(r.ground.strikes[5]).is_equal(2)
+	assert_int(r.ground.brake_run[5]).is_equal(9)
 	assert_object(r.ground.stuck_pos[5]).is_equal(Vector3(1.5, -2.5, 3.5))
 	assert_int((r.path[5] as PackedVector3Array).size()).is_equal(2)         # the route follows the ground block
 	assert_bool(r.serialize() == bytes).is_true()

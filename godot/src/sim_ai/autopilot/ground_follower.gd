@@ -122,11 +122,18 @@ static func restart_window(s: int, p: Vector3, tick: int, st: AiState) -> void:
 	st.ground.stuck_tick[s] = tick
 
 
-## No route yet: BRAKE while the wait is younger than `brake_ticks` (counted from the request), then thrust 0.
-static func wait(s: int, tick: int, st: AiState, prm: GroundParams, out: PilotInput) -> void:
+## No route yet: BRAKE only while the unbroken BRAKE run (`ground.brake_run`, whoever drove it) is under `brake_ticks`, then
+## thrust 0: the sim counts its reverse hold from the first tick of an unbroken run, so a wait after an overlay's BRAKE
+## must not extend it. `tick` is unused (kept for the callers' shape).
+static func wait(s: int, _tick: int, st: AiState, prm: GroundParams, out: PilotInput) -> void:
 	out.thrust = 0.0
 	out.yaw = 0.0
-	out.buttons = PilotInput.BRAKE if tick - st.ground.req[s] < prm.brake_ticks else 0
+	out.buttons = PilotInput.BRAKE if st.ground.brake_run[s] < prm.brake_ticks else 0
+
+
+## Books the buttons driven this tick into the unbroken BRAKE run of slot `s` (call once per tick after every drive).
+static func book_brake(s: int, buttons: int, st: AiState) -> void:
+	st.ground.brake_run[s] = mini(st.ground.brake_run[s] + 1, 255) if (buttons & PilotInput.BRAKE) != 0 else 0
 
 
 ## Stand still (no BRAKE: a held BRAKE would reverse the unit).

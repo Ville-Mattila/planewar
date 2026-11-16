@@ -199,6 +199,22 @@ func test_a_flee_order_never_overrides_hold() -> void:
 	assert_int(_tag(h)).is_equal(AiTag.Tag.HOLD)                              # an ordered unit stays where it is told
 
 
+func test_a_hit_in_the_think_that_rebases_the_window_still_flees() -> void:
+	var h: int = _world()
+	var sink: CommandSink = CommandSink.new()
+	var inner: GroundFollowerPathSink = GroundFollowerPathSink.new()
+	inner.pa = Pathing.new(120)
+	sink.bind(inner)
+	var st: AiState = AiState.new()
+	var s: int = EntityId.slot(h)
+	_b.think_one(h, _w.view(), st, sink, 5)                                    # the window starts: hp_mark = 1.0 at tick 5
+	_w.store().hp[s] *= 0.8
+	var window: int = _b.prm.hit_ticks
+	_b.think_one(h, _w.view(), st, sink, 5 + window + 3)                       # the first think after the window ended sees the loss
+	assert_int(st.mode[s]).is_equal(AiTag.Tag.FLEE)
+	assert_int(_b.stats_flees).is_equal(1)
+
+
 # --- route health -------------------------------------------------------------------------------------------------------
 
 func test_the_stuck_ladder_repaths_then_picks_another_field_then_gives_up() -> void:

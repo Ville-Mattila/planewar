@@ -84,6 +84,8 @@ func _act(id: int, s: int, view: SimView, st: AiState, sink: CommandSink, tick: 
 		else:
 			GroundFollower.wait(s, tick, st, prm.ground, _inp)
 	var _ok: bool = sink.drive(id, _inp)
+	if _ok and st.overlay[s] == Overlays.NONE:   # an overlay overrides this drive and books its own; a refused one is the pilot's
+		GroundFollower.book_brake(s, _inp.buttons, st)
 
 
 # --- think -----------------------------------------------------------------------------------------------------------
@@ -157,11 +159,11 @@ func _start(s: int, p: Vector3, goal: Vector3, st: AiState, sink: CommandSink, t
 func _threat(id: int, s: int, p: Vector3, view: SimView, st: AiState, tick: int) -> bool:
 	var hp: float = view.hp01(id)
 	var hit: bool = false
+	hit = hp < st.hp_mark[s] - HP_EPS   # compare first: a loss in the think that re-bases the window still counts
 	if tick - st.mark_tick[s] >= prm.hit_ticks:
 		st.mark_tick[s] = tick
 		st.hp_mark[s] = hp
 	else:
-		hit = hp < st.hp_mark[s] - HP_EPS
 		st.hp_mark[s] = maxf(st.hp_mark[s], hp)
 	var armed: bool = _armed(id, p, view, tick) != 0
 	if hit or armed:

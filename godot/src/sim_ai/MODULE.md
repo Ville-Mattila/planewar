@@ -41,7 +41,7 @@ const OV_PULL_UP: int; const OV_RTB_SENT: int; const OV_POSSESSED: int      # ov
 # AI-13 (FORMAT 5): sub / passes / prev_mode / wp / bflags (u8) after land_flags, seen_tick / mark_tick / burst_tick / order_tick (i32) after form_order, home / goal (Vector3) after sep_push, hp_mark / clear_m / aim_err (f32) after lift
 # AI-14 (FORMAT 6): lock_tick (i32) after order_tick: the start tick of the Lancer's current rocket lock hold (0 = none); FORMAT 5 bytes are refused
 # AI-17 (FORMAT 7): the AiHitLog record (21 bytes: tick i32, victim i32, team u8, pos 3 x f32) per slot after rtb_floor, before the path; FORMAT 6 bytes are refused
-# AI-16 (FORMAT 8): the AiGround record (34 bytes) per slot after the hit record, before the path; FORMAT 7 bytes are refused
+# AI-16 (FORMAT 8): the AiGround record (35 bytes) per slot after the hit record, before the path; FORMAT 7 bytes are refused
 var ground: AiGround                               # AI-16: the ground follower's state by slot (route progress, stuck window, strikes, threat tick)
 var tower_target_count: PackedByteArray; var counted_class: int   # AI-17 (derived, not in the bytes): target_count for registered entities of `counted_class` only; `AiDriver.set_brain` sets it for a brain whose `counts_targets()` is true (before registration and before deserialize, like the brains)
 var hits: AiHitLog                                 # AI-17: the last HIT each registered entity landed, by attacker slot (written by AiDriver.on_event(HIT), read by the tower choice point)
@@ -182,10 +182,10 @@ func write(b: StreamPeerBuffer, s: int) -> void;  func read(b: StreamPeerBuffer,
 ```
 
 ```gdscript
-class_name AiGround extends RefCounted             # AI-16: the ground follower's state by slot (in AiState FORMAT 8); the route itself is AiState.path / path_ticket / goal / guidance_point (the cached aim)
-const RECORD_BYTES: int                            # 34: five i32, two u8, a Vector3
+class_name AiGround extends RefCounted             # AI-16 (brake_run: unbroken BRAKE ticks driven by the AI, booked by the brain and the ground overlay): the ground follower's state by slot (in AiState FORMAT 8); the route itself is AiState.path / path_ticket / goal / guidance_point (the cached aim)
+const RECORD_BYTES: int                            # 35: five i32, three u8, a Vector3
 var idx: PackedInt32Array; var req: PackedInt32Array; var ver: PackedInt32Array; var stuck_tick: PackedInt32Array; var threat: PackedInt32Array   # route progress; tick of the ticket / last refused request; path-grid face stamp; stuck window start; last threat tick
-var faces: PackedByteArray; var strikes: PackedByteArray; var stuck_pos: PackedVector3Array   # faces the route crosses (bit per face); stuck strikes (05 s5.7); position at the window start
+var faces: PackedByteArray; var strikes: PackedByteArray; var brake_run: PackedByteArray; var stuck_pos: PackedVector3Array   # faces the route crosses (bit per face); stuck strikes (05 s5.7); position at the window start
 func resize(slots: int) -> void;  func clear(s: int) -> void;  func write(b: StreamPeerBuffer, s: int) -> void;  func read(b: StreamPeerBuffer, s: int) -> void
 class_name GroundParams extends RefCounted         # AI-16: the `follow` block of an autopilot def + the BRAKE hold of ground_common (05 s5.7, R0 C2-09); no defaults
 const KEYS: PackedStringArray                      # lookahead_m 40, kp_yaw 2.0, thrust_turn 0.4, turn_slow_deg 45, pivot_m, arrive_m, path_wait_ticks 30, stuck_progress_m 5, stuck_window_s 10, deviate_m, aim_every_ticks
@@ -201,7 +201,7 @@ static func poll(s: int, st: AiState, sink: CommandSink, view: SimView) -> Poll 
 static func stamp(mask: int, view: SimView) -> int;  static func changed(s: int, st: AiState, view: SimView) -> bool   # a face the route crosses changed (structure, wreck): repath, no strike
 static func off_route(s: int, p: Vector3, st: AiState, prm: GroundParams) -> bool
 static func stuck(s: int, p: Vector3, tick: int, st: AiState, prm: GroundParams) -> bool;  static func restart_window(s: int, p: Vector3, tick: int, st: AiState) -> void   # < stuck_progress_m in the window
-static func wait(s: int, tick: int, st: AiState, prm: GroundParams, out: PilotInput) -> void;  static func stop(out: PilotInput) -> void   # no route: BRAKE for brake_ticks from the request, then still; stop = thrust 0, no BRAKE
+static func wait(s: int, tick: int, st: AiState, prm: GroundParams, out: PilotInput) -> void;  static func book_brake(s: int, buttons: int, st: AiState) -> void;  static func stop(out: PilotInput) -> void   # wait: BRAKE only while the unbroken run (brake_run) < brake_ticks, then a BRAKE-free tick; stop = thrust 0, no BRAKE
 static func drive(s: int, p: Vector3, fwd: Vector3, tick: int, st: AiState, prm: GroundParams, out: PilotInput) -> Drive   # pure pursuit; aim rescanned every aim_every_ticks, cached in guidance_point
 ```
 

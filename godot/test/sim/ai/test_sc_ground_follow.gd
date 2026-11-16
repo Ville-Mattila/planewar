@@ -72,6 +72,37 @@ func test_sc48_ground_brake_reverse() -> void:
 	assert_int(_w.view().ai_tag(h)).is_equal(AiTag.Tag.TO_FIELD)
 
 
+# A pilot drives the Harvester off its route and lets go: ground SAFETY brakes, then the brain waits for a new route. The two
+# BRAKE stretches must not add up to the sim's reverse hold (15 ticks): no tick reverses.
+func test_brake_runs_across_the_overlay_and_the_wait_never_reach_the_reverse_hold() -> void:
+	_w = Ai16Kit.world(5)
+	var _r: int = Ai16Kit.put(_w, &"refinery", 0, 0.0)
+	var _f: int = Ai16Kit.field(_w, 900.0)
+	var h: int = Ai16Kit.put(_w, &"harvester", 0, 60.0)
+	_d = Ai16Kit.driver(_w)
+	Ai16Kit.step(_w, 6 * HZ)
+	OverlayKit.ok(_w, Command.possess(0, h))
+	for _k: int in 5 * HZ:
+		var inp: PilotInput = PilotInput.new()
+		inp.thrust = 1.0
+		inp.yaw = 1.0
+		OverlayKit.ok(_w, Command.pilot(0, _w.tick() + 1, inp))
+		_tick()
+	OverlayKit.ok(_w, Command.release(0))
+	var hold: int = ceili(Ai16Kit.content().ground_common.ground_reverse_hold_s * float(HZ))
+	var run: int = 0
+	var longest: int = 0
+	var worst: float = 0.0
+	var s: int = EntityId.slot(h)
+	for _k: int in 3 * HZ:
+		_tick()
+		run = run + 1 if (_w._inputs.e_buttons[s] & PilotInput.BRAKE) != 0 else 0
+		longest = maxi(longest, run)
+		worst = minf(worst, _along(h))
+	assert_int(longest).is_less(hold)
+	assert_float(worst).is_greater_equal(-0.001)
+
+
 # SC-51 path_ticket_flow: 20 Harvesters re-path in one tick on `tiny_test` -> every unit brakes while its ticket is pending, none
 # ever reverses (BRAKE is never held up to the sim's reverse hold), and every route has arrived within 30 ticks.
 func test_sc51_path_ticket_flow() -> void:
