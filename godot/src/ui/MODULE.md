@@ -107,7 +107,6 @@ func total_points() -> int
 func label_key() -> StringName
 func color() -> Color
 class_name StatusMath extends RefCounted   # pure statics (UX-18): Core shield timer, cooldown rings, consumables
-const CORE_SHIELD_UP: int
 enum Boost { READY, ACTIVE, COOLING }
 static func shield_remaining_s(until_s: float, clock_s: float) -> float; static func shield_ring01(until_s: float, clock_s: float) -> float
 static func shield_visible(team_flags: int, until_s: float, clock_s: float) -> bool; static func ring_fill(cooldown01: float) -> float; static func ring_ready(cooldown01: float) -> bool

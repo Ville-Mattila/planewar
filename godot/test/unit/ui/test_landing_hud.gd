@@ -221,12 +221,12 @@ func test_stamp_decodes_speeds() -> void:
 func test_shield_timer() -> void:
 	assert_float(StatusMath.shield_remaining_s(480.0, 100.0)).is_equal_approx(380.0, EPS)
 	assert_float(StatusMath.shield_remaining_s(480.0, 500.0)).is_equal_approx(0.0, EPS)
-	assert_int(StatusMath.CORE_SHIELD_UP).is_equal(TeamStateView.CORE_SHIELD_UP)
 	assert_float(StatusMath.shield_ring01(480.0, 0.0)).is_equal_approx(1.0, EPS)
 	assert_float(StatusMath.shield_ring01(480.0, 240.0)).is_equal_approx(0.5, EPS)
 	assert_bool(StatusMath.shield_visible(TeamStateView.CORE_SHIELD_UP, 480.0, 100.0)).is_true()
 	assert_bool(StatusMath.shield_visible(TeamStateView.LOW_POWER, 480.0, 100.0)).is_false()
 	assert_bool(StatusMath.shield_visible(TeamStateView.CORE_SHIELD_UP, 480.0, 480.0)).is_false()
+	assert_bool(StatusMath.shield_visible(0, 480.0, 100.0)).is_false()
 
 
 func test_cooldown_rings_and_shares() -> void:
