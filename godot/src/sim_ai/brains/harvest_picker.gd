@@ -26,3 +26,25 @@ static func pick(from_dir: Vector3, dirs: PackedVector3Array, remaining01: Packe
 			best = i
 			best_u = u
 	return best
+
+
+## `pick` with the 05 s6.6 stickiness: the `last` field (the one the Harvester just unloaded from; -1 for none) is kept
+## unless it is gone (no Ore left, no free miner slot, or `avoid`) or its utility has fallen more than `drop` (0.3) below
+## the best field's. Same tie rule as `pick`.
+static func pick_sticky(from_dir: Vector3, dirs: PackedVector3Array, remaining01: PackedFloat32Array,
+		free_slots: PackedInt32Array, assigned: PackedInt32Array, assigned_weight: float, avoid: int, last: int,
+		drop: float) -> int:
+	var best: int = pick(from_dir, dirs, remaining01, free_slots, assigned, assigned_weight, avoid)
+	if best < 0 or last < 0 or last == best or last >= dirs.size() or last == avoid:
+		return best
+	if remaining01[last] <= 0.0 or free_slots[last] <= 0:
+		return best
+	var u_best: float = _u(from_dir, dirs, remaining01, assigned, assigned_weight, best)
+	var u_last: float = _u(from_dir, dirs, remaining01, assigned, assigned_weight, last)
+	return last if u_last >= (1.0 - drop) * u_best else best
+
+
+static func _u(from_dir: Vector3, dirs: PackedVector3Array, remaining01: PackedFloat32Array, assigned: PackedInt32Array,
+		assigned_weight: float, i: int) -> float:
+	var arc: float = acos(clampf(from_dir.dot(dirs[i]), -1.0, 1.0)) * Sphere.PLANET_RADIUS
+	return utility(remaining01[i], arc, assigned[i], 0.0, assigned_weight)

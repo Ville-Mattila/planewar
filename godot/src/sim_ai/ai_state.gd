@@ -1,23 +1,22 @@
 class_name AiState extends RefCounted
 ## AI state proper, structure of arrays indexed by entity slot (05 s4.3; the entity store holds only `ai_tag`, R0 C2-07).
 ## Beyond the 05 s4.3 fields: the driver's scheduling data (`cls`, `eid`, `stagger`, ...), the landing (AI-09), overlay
-## (AI-08), escort (AI-11) and brain fields (AI-13 FORMAT 5), `lock_tick` (AI-14, FORMAT 6) and the last HIT each entity
-## landed (AI-17, FORMAT 7: `hits`); the derived `tower_target_count` is not in the bytes.
+## (AI-08), escort (AI-11) and brain fields (AI-13 FORMAT 5), `lock_tick` (AI-14, FORMAT 6), the last HIT each entity
+## landed (AI-17, FORMAT 7: `hits`) and the ground follower's state (AI-16, FORMAT 8: `ground`); `tower_target_count` is derived.
 ## `serialize` writes only registered slots (`cls != NO_CLASS`), ascending, so bytes are a function of state.
 
 const NO_CLASS: int = 255
-const FORMAT: int = 7
+const FORMAT: int = 8
 const WAKE_NEVER: int = -1000000
 const LAND_BUSY: int = 1                ## land_flags: the pad is occupied, queued or claimed by another ship
 const LAND_THREAT: int = 2              ## land_flags: an enemy projectile is inbound to the pad
 const LAND_FOREIGN: int = 4             ## land_flags: the pad is no longer this ship's team's
-const RECORD_MIN: int = 258             ## slot u32, 17 u8, 15 i32, 27 f32 (9 Vector3), 11 f32, the hit record (AiHitLog), path count i32
+const RECORD_MIN: int = 292             ## slot u32, 17 u8, 15 i32, 27 f32 (9 Vector3), 11 f32, AiHitLog 21, AiGround 34, path count i32
 const ROSTER_WIDTH: int = 8             ## form_roster entries per escortee (class slots are at most this many)
 const NO_SLOT: int = 255                ## form_slot: no formation slot assigned
-## `ov_flags` bits (AI-08): PULL_UP running, system RETURN already requested, POSSESSED at the last check.
-const OV_PULL_UP: int = 1
-const OV_RTB_SENT: int = 2
-const OV_POSSESSED: int = 4
+const OV_PULL_UP: int = 1               ## `ov_flags` bits (AI-08): PULL_UP running,
+const OV_RTB_SENT: int = 2              ## system RETURN already requested,
+const OV_POSSESSED: int = 4             ## POSSESSED at the last check
 
 var mode: PackedInt32Array = PackedInt32Array()           ## brain-specific enum value
 var mode_since: PackedInt32Array = PackedInt32Array()     ## tick
@@ -73,6 +72,7 @@ var target_count: PackedByteArray = PackedByteArray()     ## AI-13: by slot, reg
 var ground_h: PackedFloat32Array = PackedFloat32Array()   ## terrain height under the ship at the last think (m)
 var lift: PackedFloat32Array = PackedFloat32Array()       ## TerrainProbe lift of the last think (m/s)
 var pad_claim: PackedInt32Array = PackedInt32Array()      ## by pad slot: EntityId of the ship landing on it, or 0
+var ground: AiGround = AiGround.new()                     ## AI-16: the ground follower's state by slot (route progress, stuck window, threat tick)
 var hits: AiHitLog = AiHitLog.new()                       ## AI-17: the last HIT each entity landed (tower scoring), by attacker slot
 var tower_target_count: PackedByteArray = PackedByteArray()  ## AI-17: like `target_count`, for registered entities of `counted_class` only (the 05 s6.8 crowd term counts towers)
 var counted_class: int = NO_CLASS                         ## AI-17: session config, set by `AiDriver.set_brain` for a brain with `counts_targets`; NO_CLASS: none
@@ -101,6 +101,7 @@ func ensure_capacity(slots: int) -> void:
 		hp_mark.resize(slots), clear_m.resize(slots), home.resize(slots), goal.resize(slots), aim_err.resize(slots),
 		target_count.resize(slots), tower_target_count.resize(slots), rtb_floor.resize(slots), lock_tick.resize(slots)]
 	hits.resize(slots)
+	ground.resize(slots)
 	capacity = slots
 	for s: int in range(old, slots):
 		clear_slot(s)
@@ -167,24 +168,25 @@ func _clear_brain(s: int) -> void:
 	aim_err[s] = Vector2.ZERO
 	rtb_floor[s] = 0.0
 	hits.clear(s)
+	ground.clear(s)
 
 
 ## AI-13: the one writer of `target`: keeps `target_count` (the focus-fire count of 05 s6.2) equal to the number of
 ## registered slots targeting each slot, in a continuous run and after `deserialize` alike (S4).
 func set_target(s: int, t: int) -> void:
-	var old: int = target[s]
-	if old == t:
+	if target[s] == t:
 		return
 	var tw: bool = counted_class != NO_CLASS and cls[s] == counted_class
-	var o: int = EntityId.slot(old)
-	if old != 0 and o < capacity:
-		target_count[o] = maxi(target_count[o] - 1, 0)
-		tower_target_count[o] = maxi(tower_target_count[o] - 1, 0) if tw else tower_target_count[o]
+	_count(target[s], -1, tw)
+	_count(t, 1, tw)
+	target[s] = t
+
+
+func _count(t: int, d: int, tw: bool) -> void:
 	var n: int = EntityId.slot(t)
 	if t != 0 and n < capacity:
-		target_count[n] = mini(target_count[n] + 1, 255)
-		tower_target_count[n] = mini(tower_target_count[n] + 1, 255) if tw else tower_target_count[n]
-	target[s] = t
+		target_count[n] = clampi(target_count[n] + d, 0, 255)
+		tower_target_count[n] = clampi(tower_target_count[n] + d, 0, 255) if tw else tower_target_count[n]
 
 
 ## Sets the mode of entity `id`; `mode_since` moves only on a change.
@@ -244,18 +246,11 @@ func _write_slot(b: StreamPeerBuffer, s: int) -> void:
 		b.put_float(p.x)
 		b.put_float(p.y)
 		b.put_float(p.z)
-	b.put_float(tti[s])
-	b.put_float(timer[s])
-	b.put_float(integ[s].x)
-	b.put_float(integ[s].y)
-	b.put_float(ground_h[s])
-	b.put_float(lift[s])
-	b.put_float(hp_mark[s])
-	b.put_float(clear_m[s])
-	b.put_float(aim_err[s].x)
-	b.put_float(aim_err[s].y)
-	b.put_float(rtb_floor[s])
+	for f: float in [tti[s], timer[s], integ[s].x, integ[s].y, ground_h[s], lift[s], hp_mark[s], clear_m[s], aim_err[s].x,
+			aim_err[s].y, rtb_floor[s]]:
+		b.put_float(f)
 	hits.write(b, s)
+	ground.write(b, s)
 	var pts: PackedVector3Array = path.get(s, PackedVector3Array())
 	b.put_32(pts.size())
 	for p: Vector3 in pts:
@@ -318,8 +313,7 @@ func _rebuild_roster() -> void:
 func _fail() -> bool:
 	for s: int in capacity:
 		clear_slot(s)
-	target_count.fill(0)
-	tower_target_count.fill(0)
+	_rebuild_targets()
 	return false
 
 
@@ -382,6 +376,7 @@ func _read_slot(b: StreamPeerBuffer) -> bool:
 	aim_err[s] = Vector2(ex, b.get_float())
 	rtb_floor[s] = b.get_float()
 	hits.read(b, s)
+	ground.read(b, s)
 	var m: int = b.get_32()
 	if m < 0 or m * 12 > b.get_available_bytes():
 		return false
