@@ -572,6 +572,7 @@ def fmt_t(t: float) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))   # survives `python -I`, which drops the script dir
     import econ_compare
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--match", choices=("1v1", "4v4", "all"), default="all")

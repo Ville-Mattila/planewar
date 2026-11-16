@@ -2,6 +2,8 @@
 
 Positive: the closed-form tables (8.2, 8.3, 8.6) and the 0-5 minute rows and checkpoints of 8.7 agree with the defs.
 Negative: a doc value changed in a copy of the text is flagged; a book step that can never run fails loudly; --check exits 1.
+NOTE: these tests pin live doc values. The 02 revision that fixes the 8.7 ledger (Dart #2 at ~0:50) must update
+`test_checkpoints_within_5_s_except_the_known_doc_ledger_gap` and the "-- checkpoint: 24/25" assertion.
 The later rows are reported discrepancies (see the PR), not asserted here: this test pins that they are *reported*.
 """
 
