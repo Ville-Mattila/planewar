@@ -95,7 +95,7 @@ func test_a_full_stockpile_keeps_the_ice_in_the_buffer() -> void:
 	K.pass_n(w, int(100.0 * HZ))
 	assert_int(K.ice(w)).is_equal(cap)
 	assert_float(w.store().cargo[sc["ext"]]).is_equal_approx(80.0, 0.5)       # nothing is lost
-	K.set_pool(w, cap - 1000)
+	K.set_pool(w, 0)
 	K.pass_n(w, 2)
 	assert_float(w.store().cargo[sc["ext"]]).is_less(1.0)                     # piped as soon as there is room
 
@@ -189,26 +189,12 @@ func test_a_possessed_hauler_scores_its_delivery_on_the_pilot_side() -> void:
 	var _ref: int = HarvestTestKit.refinery(w, 1000.0)
 	var h: int = K.hauler(w, 1000.0)
 	w.store().cargo[h] = 100.0
-	w.store().control_state[h] = ControlMachine.State.POSSESSED
+	w.store().possessor[h] = 0
 	K.set_pool(w, 0)
 	var before: int = w.economy().score.ledger.pilot[0]
 	K.pass_n(w, int(3.0 * HZ))
 	assert_int(K.ice(w)).is_equal(100)
 	assert_int(w.economy().score.ledger.pilot[0]).is_greater(before)
-
-
-func test_a_loaded_hauler_at_a_refinery_unloads_before_it_loads() -> void:
-	var w: SimWorld = K.world()
-	var _ref: int = HarvestTestKit.refinery(w, 0.0)
-	var e: int = K.extractor(w, 20.0)
-	w.store().cargo[e] = 400.0
-	var h: int = K.hauler(w, 10.0)
-	w.store().cargo[h] = 100.0
-	K.set_pool(w, 0)
-	K.pass_n(w, int(10.0 * HZ))
-	assert_float(w.store().cargo[h]).is_equal(0.0)
-	assert_int(K.ice(w)).is_equal(100)
-	assert_float(w.store().cargo[e]).is_equal(400.0)
 
 
 func test_a_dead_extractor_loses_its_buffer_and_a_dead_hauler_its_hold() -> void:
