@@ -2338,7 +2338,10 @@
       " R0 C3-01",
       " 02 GD-21"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 166,
+    "merged": "2026-11-16",
+    "notes": "tools/econ_model.py + econ_compare.py (--check not in CI). Confirmed 02 doc errors (1) 8.7 ledger drops 6 s trickle, Dart #2 affordable ~0:50 not 0:56; (2) 8.4 power rows (10-12 = 66, +Reactor 40 = 106 not 123; 24:00 likewise); (3) 8.3 T_h 498.7 vs 498. Fix in GD-48. Model/book gaps (not doc errors): minute-row lumps, Ice income, 4v4 window, late windows (books after ~10 min are reconstructions). Not modelled: repair, salvage, early share lock, max_miners."
   },
   {
     "id": "GD-22",
@@ -8324,6 +8327,24 @@
     "docs": [
       "docs/reviews/R0-amendments-23.md",
       "godot/src/sim_ai/brains/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "GD-48",
+    "title": "docs: 02 s8 revision for the three GD-21 confirmed economy-table errors",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "GD-21"
+    ],
+    "milestone": "M3",
+    "acceptance": "02 s8.7 opening ledger includes the 6 s Core trickle (Dart #2 affordable ~0:50, later ledger rows recomputed); 02 s8.4 power rows at 15:00 and 24:00 recomputed from the defs; 02 s8.3 Midnight Pole T_h shown as 498.7 (or rounded consistently with its neighbours); tools/econ_model.py --check reports these rows in tolerance; tools/tests/test_econ_model.py updated (test_checkpoints_within_5_s_except_the_known_doc_ledger_gap and the 24/25 assertion); tools unittests green; no other 02 rows changed",
+    "docs": [
+      "docs/02 s8.3-8.7",
+      "tools/econ_model.py"
     ],
     "status": "todo",
     "merged": null
