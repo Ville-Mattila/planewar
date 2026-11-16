@@ -8195,7 +8195,10 @@
       "docs/04-networking-and-backend.md",
       "godot/src/net/MODULE.md"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 167,
+    "merged": "2026-11-16",
+    "notes": "Lazy projectile quantisation (SnapshotCodec.ensure_full), SnapshotMasks split; local p50 prepare delta ~400-500 -> 275-310 us, Interest 210-235 -> 150-190 us; hosted p95 428 us. NOT met: pinned-runner 400 us clause (pending TA-42 / HUM-04). Projectile-scene SHA pinned in test_projectile_lazy_bytes.gd. Further cut would need cached quantisation."
   },
   {
     "id": "AI-46",
