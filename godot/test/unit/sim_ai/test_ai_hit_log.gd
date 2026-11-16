@@ -38,8 +38,8 @@ func test_a_team_outside_u8_is_not_recorded_as_a_team() -> void:
 	assert_int(log.team[1]).is_equal(AiHitLog.NO_TEAM)
 
 
-func test_ai_state_format7_round_trips_the_hit_record_and_refuses_format6() -> void:
-	assert_int(AiState.FORMAT).is_equal(7)
+func test_ai_state_round_trips_the_hit_record_and_refuses_the_previous_format() -> void:
+	assert_int(AiState.FORMAT).is_equal(8)   # AI-16: FORMAT 8 (+ the ground block); the hit record is unchanged
 	var st: AiState = AiState.new(32)
 	st.cls[5] = 1
 	st.eid[5] = _id(5)
@@ -56,7 +56,7 @@ func test_ai_state_format7_round_trips_the_hit_record_and_refuses_format6() -> v
 	assert_int(r.hits.tick[5]).is_equal(0)
 	assert_int(r.hits.team[5]).is_equal(AiHitLog.NO_TEAM)
 	var old: PackedByteArray = bytes.duplicate()
-	old[0] = 6   # a FORMAT 6 blob (AI-14) is refused, state cleared
+	old[0] = 7   # a FORMAT 7 blob (AI-17) is refused, state cleared
 	assert_bool(r.deserialize(old)).is_false()
 	assert_int(r.registered_count()).is_equal(0)
 	assert_int(r.hits.tick[5]).is_equal(0)

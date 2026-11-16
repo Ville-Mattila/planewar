@@ -315,7 +315,7 @@ func test_six_escorts_overflow_outside_the_roster_and_restore_identically_after_
 
 
 func test_previous_format_bytes_are_refused() -> void:
-	assert_int(AiState.FORMAT).is_equal(7)   # AI-17: FORMAT 7 (hit record); the bytes of the previous format are refused
+	assert_int(AiState.FORMAT).is_equal(8)   # AI-16: FORMAT 8 (ground block); the bytes of the previous format are refused
 	var r: Rig = Rig.new(1)
 	r.order(r.darts[0])
 	var _o: EscortPilot.Outcome = r.think(0)
