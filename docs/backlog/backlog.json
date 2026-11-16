@@ -2190,7 +2190,10 @@
       "02 s8.3",
       " 02 GD-14"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 160,
+    "merged": "2026-11-16",
+    "notes": "Perf: 179 us per pass at 24 Extractors + 40 Haulers; idle 0.49 us (A/B -0.25 %). Nits: I9 should state IceExtract is the only sim writer of ship cargo (a future writer must reset the hold count); dead Extractor/Hauler test does not check buffer/hold; pipe Refinery looked up per Extractor per tick. Architect: reach reuses salvage_deliver_m (name the reuse in an A-row or add a key); SimView.ice_remaining(node) with the Hauler brain task; ore_mined score seam never called (GD-12 gap, needs a follow-up); may a docked Hauler transfer?"
   },
   {
     "id": "GD-15",
