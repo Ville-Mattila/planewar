@@ -12,21 +12,21 @@ const MAX_PACKETS_PER_TICK: int = 4         # upper bound for `max_packets`
 const SECTION_MAX: int = 255                # section count is u8
 const TEAM_MAX: int = 8
 const CAPACITY: int = Roster.CAPACITY
-const MASK_POS_SMALL: int = 0x01            # 3 x i8 residual at 4 quanta
-const MASK_POS_LARGE: int = 0x02            # 3 x i16 residual at 1 quantum
-const MASK_ORI: int = 0x04
-const MASK_VEL: int = 0x08
-const MASK_HP: int = 0x10
-const MASK_FLAGS: int = 0x20                # A: flags (+ ai_tag own team); B: AI_TAG (own team)
+const MASK_POS_SMALL: int = SnapshotMasks.MASK_POS_SMALL
+const MASK_POS_LARGE: int = SnapshotMasks.MASK_POS_LARGE
+const MASK_ORI: int = SnapshotMasks.MASK_ORI
+const MASK_VEL: int = SnapshotMasks.MASK_VEL
+const MASK_HP: int = SnapshotMasks.MASK_HP
+const MASK_FLAGS: int = SnapshotMasks.MASK_FLAGS
 const MASK_CELL_CHANGED: int = 0x40         # never set in a DELTA (a cell change is a FULL record)
 const MASK_FULL: int = 0xFF
 const GAP_MAX: int = 254
 const GAP_ESCAPE: int = 0xFF
-const SMALL_SHIFT: int = 2
-const SMALL_MAX: int = 127
+const SMALL_SHIFT: int = SnapshotMasks.SMALL_SHIFT
+const SMALL_MAX: int = SnapshotMasks.SMALL_MAX
 ## Residuals under one POS_SMALL step (4 quanta per axis) are not sent: smaller ones chatter on the +-2 quanta it leaves.
-const POS_SEND_MIN: int = 1 << SMALL_SHIFT
-const LARGE_MAX: int = 32767
+const POS_SEND_MIN: int = SnapshotMasks.POS_SEND_MIN
+const LARGE_MAX: int = SnapshotMasks.LARGE_MAX
 const FULL_BODY_BYTES: int = 1 + Codec.POS_BYTES + Codec.QUAT_BYTES + Codec.VEL_BYTES + 2   # mask .. flags = 18
 enum Tier { A, B, C }
 enum Kind { NONE, FULL, DELTA, BLIP }
@@ -62,6 +62,8 @@ var c_vmask: PackedInt32Array = PackedInt32Array()       # team bits incl. own; 
 var c_gen: PackedInt32Array = PackedInt32Array()         # generation last seen per index (SnapshotFrame.gen; 0 unknown)
 var _born: PackedInt32Array = PackedInt32Array()         # projectile block: first tick of the current generation
 var _prow: PackedInt32Array = PackedInt32Array()         # projectile rows of this frame (second prepare pass)
+var _lazy: PackedInt32Array = PackedInt32Array()         # == cache_tick: c_ori / c_fine not yet quantised (projectile rows)
+var _pidx: PackedInt32Array = PackedInt32Array()         # their roster indices (parallel to _prow)
 var _coarse_tick: PackedInt32Array = PackedInt32Array()
 var _blip_tick: PackedInt32Array = PackedInt32Array()
 var _row: PackedInt32Array = PackedInt32Array()          # entity row in _frame
@@ -89,13 +91,14 @@ func _init(gravity_mps2: float, tick_hz: int) -> void:
 	var e: int = c_tick.resize(n) | c_coarse.resize(n) | c_vel.resize(n) | c_blip.resize(n) | c_fine.resize(n)
 	e |= _coarse_tick.resize(n) | _blip_tick.resize(n) | _row.resize(n) | _force.resize(n) | c_pos.resize(n) | c_ori.resize(n)
 	e |= c_hp.resize(n) | c_flags.resize(n) | c_ai.resize(n) | c_team.resize(n) | c_grav.resize(n) | c_vmask.resize(n)
-	e |= c_gen.resize(n) | _born.resize(n) | _prow.resize(n)
+	e |= c_gen.resize(n) | _born.resize(n) | _prow.resize(n) | _pidx.resize(n) | _lazy.resize(n)
 	assert(e == OK)
 	_force.fill(0)
 	_coarse_tick.fill(-1)
 	_blip_tick.fill(-1)
 	c_tick.fill(-1)
 	c_gen.fill(-1)
+	_lazy.fill(-1)
 
 
 ## Quantises every entity of `frame` once (R0 C1-02): rows whose slot no roster holds, and projectiles of kinds that never
@@ -107,42 +110,63 @@ func prepare_tick(frame: SnapshotFrame) -> void:
 	_vis.clear()
 	var has_gen: bool = frame.gen.size() >= frame.count
 	var np: int = 0
+	var pmin: int = Roster.PROJECTILE_INDEX_MIN
+	var slots: PackedInt32Array = frame.slot
+	var teams: PackedByteArray = frame.team
+	var vis: PackedInt32Array = frame.visible_mask
 	for i: int in frame.count:
-		var s: int = frame.slot[i]
+		var s: int = slots[i]
 		if s < 0 or s >= Roster.ENTITY_SLOTS:               # the projectile block (or no roster index)
 			s = frame.index_of_row(i)
 			if s < 0:
 				continue
-		_cache_entity(frame, i, s)
+		_cache_entity(frame, i, s, s < pmin)
 		var g: int = frame.gen[i] if has_gen else 0
-		if s >= Roster.PROJECTILE_INDEX_MIN:
+		var vm: int = vis[i] | (1 << (teams[i] % TEAM_MAX))
+		c_vmask[s] = vm
+		if s >= pmin:
 			if g != c_gen[s]:
 				_born[s] = cache_tick
 			_prow[np] = i
+			_pidx[np] = s
 			np += 1
+		else:
+			_vis.add(s, vm)
 		c_gen[s] = g
-		c_vmask[s] = frame.visible_mask[i] | (1 << (frame.team[i] % TEAM_MAX))
-		if s < Roster.PROJECTILE_INDEX_MIN:
-			_vis.add(s, c_vmask[s])
 	for k: int in np:                       # projectiles after every entity: shooter / target bits are final (A-112)
 		var i: int = _prow[k]
-		var s: int = frame.index_of_row(i)
+		var s: int = _pidx[k]
 		var m: int = VisibleSets.entity_mask(frame.shooter[i], cache_tick, c_tick, c_gen, c_vmask)
-		c_vmask[s] |= m | VisibleSets.entity_mask(frame.target[i], cache_tick, c_tick, c_gen, c_vmask)
-		_vis.add(s, c_vmask[s])
+		var vm: int = c_vmask[s] | m | VisibleSets.entity_mask(frame.target[i], cache_tick, c_tick, c_gen, c_vmask)
+		c_vmask[s] = vm
+		_vis.add(s, vm)
 
 
-func _cache_entity(frame: SnapshotFrame, i: int, s: int) -> void:
+## Quantises c_ori / c_fine of a projectile row on first use this tick (NET-60: tier-C blips and untiered projectiles never
+## need them); entities fill them in prepare_tick. Call before reading either for index `s`.
+func ensure_full(s: int) -> void:
+	if _lazy[s] == cache_tick:
+		_lazy[s] = -1
+		var i: int = _row[s]
+		var r4: Vector4 = _frame.rot[i]
+		c_ori[s] = Codec.quantize_quat(Quaternion(r4.x, r4.y, r4.z, r4.w))
+		c_fine[s] = DeadReckon.fine_from_bits(c_vel[s])
+
+
+func _cache_entity(frame: SnapshotFrame, i: int, s: int, full: bool) -> void:
 	var p: Vector3 = frame.pos[i]
 	var q: int = Codec.quantize_pos(p)
-	var r4: Vector4 = frame.rot[i]
 	var vb: int = Codec.quantize_vel(frame.vel[i], q & 0xFFFF)
 	_row[s] = i
 	c_tick[s] = cache_tick
 	c_pos[s] = q
-	c_ori[s] = Codec.quantize_quat(Quaternion(r4.x, r4.y, r4.z, r4.w))
 	c_vel[s] = vb
-	c_fine[s] = DeadReckon.fine_from_bits(vb)
+	if full:
+		var r4: Vector4 = frame.rot[i]
+		c_ori[s] = Codec.quantize_quat(Quaternion(r4.x, r4.y, r4.z, r4.w))
+		c_fine[s] = DeadReckon.fine_from_bits(vb)
+	else:
+		_lazy[s] = cache_tick
 	c_hp[s] = Codec.quantize_hp(frame.hp01[i])
 	c_flags[s] = frame.flags[i]
 	c_ai[s] = frame.ai_tag[i]
@@ -250,6 +274,7 @@ func _plan(s: int, tier: int, base: BaselineFrame, own: bool) -> bool:
 
 
 func _plan_full(s: int, own: bool) -> bool:
+	ensure_full(s)
 	_k_kind = Kind.FULL
 	_k_mask = MASK_FULL
 	_k_body = FULL_BODY_BYTES + (Codec.AI_TAG_BYTES if own else 0)
@@ -259,6 +284,7 @@ func _plan_full(s: int, own: bool) -> bool:
 
 
 func _plan_delta(s: int, tier: int, base: BaselineFrame, own: bool) -> bool:
+	ensure_full(s)
 	var bq: int = base.pos[s]
 	var cq: int = c_pos[s]
 	var dtk: int = _tick - base.etick[s]
@@ -358,43 +384,17 @@ func _write_body(s: int, tier: int, own: bool) -> void:
 				c_ai[s] if own else -1)
 
 
-## POS mask bits for residual `res` (levels): 0 when every axis is under POS_SEND_MIN, POS_SMALL, POS_LARGE,
-## or -1 when even i16 cannot carry it (FULL).
 static func pos_mask(res: Vector3i) -> int:
-	if absi(res.x) < POS_SEND_MIN and absi(res.y) < POS_SEND_MIN and absi(res.z) < POS_SEND_MIN:
-		return 0
-	var rs: Vector3i = Vector3i(res.x + 2, res.y + 2, res.z + 2)
-	rs = Vector3i(rs.x >> SMALL_SHIFT, rs.y >> SMALL_SHIFT, rs.z >> SMALL_SHIFT)
-	if absi(rs.x) <= SMALL_MAX and absi(rs.y) <= SMALL_MAX and absi(rs.z) <= SMALL_MAX:
-		return MASK_POS_SMALL
-	if absi(res.x) <= LARGE_MAX and absi(res.y) <= LARGE_MAX and absi(res.z) <= LARGE_MAX:
-		return MASK_POS_LARGE
-	return -1
+	return SnapshotMasks.pos_mask(res)
 
 
-## The residual as written on the wire for `mask` (POS_SMALL in 4-quanta steps).
 static func wire_residual(mask: int, res: Vector3i) -> Vector3i:
-	if mask & MASK_POS_SMALL:
-		return Vector3i((res.x + 2) >> SMALL_SHIFT, (res.y + 2) >> SMALL_SHIFT, (res.z + 2) >> SMALL_SHIFT)
-	return res if mask & MASK_POS_LARGE else Vector3i.ZERO
+	return SnapshotMasks.wire_residual(mask, res)
 
 
-## Levels added to the dead-reckoned position by a record with `mask` and level residual `res`.
 static func applied_residual(mask: int, res: Vector3i) -> Vector3i:
-	if mask & MASK_POS_SMALL:
-		return wire_residual(mask, res) * (1 << SMALL_SHIFT)
-	return res if mask & MASK_POS_LARGE else Vector3i.ZERO
+	return SnapshotMasks.applied_residual(mask, res)
 
 
-## Body bytes (mask .. last group) of an A- or B-DELTA record.
 static func delta_body_bytes(mask: int, tier_b: bool, own: bool) -> int:
-	var n: int = 1
-	n += 3 if mask & MASK_POS_SMALL else 0
-	n += 6 if mask & MASK_POS_LARGE else 0
-	if mask & MASK_ORI:
-		n += Codec.QUAT_COARSE_BYTES if tier_b else Codec.QUAT_BYTES
-	n += Codec.VEL_BYTES if mask & MASK_VEL else 0
-	n += Codec.HP_BYTES if mask & MASK_HP else 0
-	if mask & MASK_FLAGS:
-		n += Codec.AI_TAG_BYTES if tier_b else Codec.FLAGS_BYTES + (Codec.AI_TAG_BYTES if own else 0)
-	return n
+	return SnapshotMasks.delta_body_bytes(mask, tier_b, own)

@@ -97,6 +97,7 @@ func encode(codec: SnapshotCodec, store: BaselineStore, at_tick: int, keyframe_s
 		prev = s
 		_idx[n] = s
 		_pos[n] = codec.c_pos[s]
+		codec.ensure_full(s)
 		_ori[n] = codec.c_ori[s]
 		_vel[n] = codec.c_vel[s]
 		_hp[n] = codec.c_hp[s]
