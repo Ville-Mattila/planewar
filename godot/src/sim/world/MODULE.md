@@ -21,7 +21,7 @@ lane-internal by decision (TA-18 / TA-43 follow-up): clients and `sim_ai` call `
 
 ```gdscript
 class_name CommandIntake extends RefCounted                                  # the pending queue (<= 256 / tick) + the one entry of apply_command and SimSink.submit
-var pending: Array[Command];  var economy: EconomyHub                        # (TA-19) BUILD / CANCEL_BUILD / PRODUCE / CANCEL_PRODUCE are routed to it in step 1
+var pending: Array[Command];  var economy: EconomyHub;  var judge: MatchJudge                        # (TA-19) BUILD / CANCEL_BUILD / PRODUCE / CANCEL_PRODUCE are routed to it in step 1
 func submit(cmd: Command) -> CommandResult;  func apply_all(tick: int) -> void
 func submit_system(cmd: Command) -> CommandResult                           # (TA-59) SimSink's path for ORDER + FLAG_PREPEND: queued with target SYSTEM (-1), player kept, issuer -1; survives S4
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
@@ -44,7 +44,8 @@ func validate_system(cmd: Command, ended: bool, queued: int) -> CommandResult   
 func check(cmd: Command) -> int                                              # pure state rules; CommandResult.Code; re-run in step 1
 func begin_tick() -> void;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name CommandApplier extends RefCounted                                 # step 1: control kinds and ORDER to ControlMachine, the rest here
-const DEATH_CAUSE_DEBUG: int;  var dying: PackedInt32Array
+const DEATH_CAUSE_DEBUG: int;  var dying: PackedInt32Array;  var dying_cause: PackedInt32Array   # dying_cause[i] = SimEvent.DeathCause of dying[i] (GD-20)
+func kill_for(s: int, cause: int) -> void                                    # kill() with a named DeathCause; kill() stays DEBUG
 func store_pilot(cmd: Command) -> void;  func apply(cmd: Command, tick: int) -> void   # store_pilot also flags the input fresh (05 C13)
 func order_move(s: int, issuer: int, point: Vector3, tick: int) -> void       # (GD-17) rally: a standing MOVE for entity slot `s` through ControlOrders
 func kill(s: int) -> void;  func resolve_deaths(tick: int) -> void          # resolve_deaths: ControlMachine.on_death (C15), then DEATH
@@ -84,7 +85,8 @@ func set_entity(slot: int, input: PilotInput) -> void;  func read_entity(slot: i
 func set_player(player: int, input: PilotInput) -> void;  func clear_player(player: int) -> void;  func copy_player_to_entity(player: int, slot: int) -> void
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name MatchState extends RefCounted                                     # tick, exposure / end ticks, winner; shared by world, intake, view
-var tick: int; var exposure_tick: int; var ended_tick: int; var winner_team: int
+var tick: int; var exposure_tick: int; var ended_tick: int; var winner_team: int   # GD-20 (format 17) adds the MatchJudge state below, serialized with the clock
+var had_core: PackedByteArray; var selfdestruct: PackedInt32Array; var votes: PackedByteArray; var defeated: PackedByteArray; var structure_damage: PackedFloat32Array; var end_reason: int
 func ended() -> bool;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name SimEvents extends RefCounted                                      # the event array; emit stamps `tick` (S5); drain(keep) queues the batch for the hook (`pending`, A-71); forward(hook) delivers it once at step 3; write_pending / read_pending (saved, format 9)
 var list: Array[SimEvent]; var pending: Array[SimEvent]; var tick: int
