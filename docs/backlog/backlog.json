@@ -2546,13 +2546,14 @@
       "AI-16"
     ],
     "milestone": "M3",
-    "acceptance": "Attacks from 1,000-1,150 m on tiny_test; relocates after a near bomb; NO_AMMO after 20 shells",
+    "acceptance": "Attacks from 1,000-1,150 m on tiny_test; relocates after a near bomb; NO_AMMO after 20 shells; R0 B.29 A-145: ap_crawler carries a required follow block (the 11 keys of $defs.follow) in the schema, the shipped def and the canonical fixture, with one negative case in test_validate_content.py, all in this PR flagged 'Contract impact: change (R0 B.29 A-145)'; any other new ap_crawler key is optional with a default or a contract question",
     "docs": [
       "05 s6.9",
       " R0 O-4",
       " 05 AI-18"
     ],
-    "status": "todo"
+    "status": "todo",
+    "notes": "AI-18 edits tools/schemas/autopilots.schema.json and autopilots.json for the follow block only, under A-145 (10 s4.3: Architect for required fields; defs: fields its task adds). Orchestrator: launch at Opus (brain; CLAUDE.md tier guidance) despite Haiku tier here."
   },
   {
     "id": "AI-19",
@@ -8276,13 +8277,14 @@
       "AI-19"
     ],
     "milestone": "M3",
-    "acceptance": "The ap_harvester keys listed in brains/MODULE.md note HV5 (fixture godot/test/sim/ai/ai16_autopilots.json) are in godot/content/defs/autopilots.json with _doc citations and in tools/schemas/autopilots.schema.json; the AI-16 tests load the shipped def instead of the fixture (or the fixture is kept only for negative cases); validate_content and the sim_ai suites green",
+    "acceptance": "The ap_harvester keys listed in brains/MODULE.md note HV5 (fixture godot/test/sim/ai/ai16_autopilots.json) are in godot/content/defs/autopilots.json with _doc citations and in tools/schemas/autopilots.schema.json; the AI-16 tests load the shipped def instead of the fixture (or the fixture is kept only for negative cases); validate_content and the sim_ai suites green; R0 B.29 A-144: the four ap_harvester keys are required (a Change, not an append); the schema $comment says so, the ap_harvester _doc cites brains/MODULE.md HV5 instead of the fixture, and test_validate_content.py has a negative case (ap_harvester without follow fails)",
     "docs": [
       "05 s6.7",
       "godot/src/sim_ai/brains/MODULE.md"
     ],
     "status": "todo",
-    "merged": null
+    "merged": null,
+    "notes": "Ruling R0-amendments-23 (B.29 A-144, A-145): required confirmed; no commit split; fixture removal is AI-48."
   },
   {
     "id": "AI-33b",
@@ -8304,6 +8306,24 @@
     "docs": [
       "05 SC-47",
       "godot/src/sim_ai/MODULE.md SV1"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "AI-48",
+    "title": "sim_ai: delete the dead fixture ai16_autopilots.json and its MODULE.md references (R0 B.29 A-144)",
+    "lane": "sim_ai",
+    "tier": "Haiku",
+    "size_days": 0.1,
+    "depends_on": [
+      "AI-47"
+    ],
+    "milestone": "M3",
+    "acceptance": "godot/test/sim/ai/ai16_autopilots.json deleted; godot/src/sim_ai/brains/MODULE.md (status row, HV5, test entry points) and godot/src/sim_ai/MODULE.md no longer name it; HV5 reads as a description of the shipped ap_harvester keys (required, R0 B.29 A-144) and no longer as a content note for AI-19; ai16_kit.gd has no AUTOPILOTS const or comment naming the fixture; grep finds no ai16_autopilots under godot/ or tools/; check_deps (D10), gen_module_api --check, validate_content and the sim_ai unit and sim suites green; no Public API or behaviour change",
+    "docs": [
+      "docs/reviews/R0-amendments-23.md",
+      "godot/src/sim_ai/brains/MODULE.md"
     ],
     "status": "todo",
     "merged": null
