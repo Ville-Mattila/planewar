@@ -228,6 +228,42 @@
               "type": "number",
               "minimum": 1,
               "maximum": 5
+            },
+            "hold_fuel_reserve_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3600,
+              "description": "AI-09 rtb (ai09_params.json; 05 s5.5)"
+            },
+            "pad_eta_scale_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3600,
+              "description": "AI-09 rtb (ai09_params.json; 05 s5.5)"
+            },
+            "pad_queue_s": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 3600,
+              "description": "AI-09 rtb (ai09_params.json; 05 s5.5)"
+            },
+            "pad_w_one_queued": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "AI-09 rtb (ai09_params.json; 05 s5.5)"
+            },
+            "pad_w_more_queued": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "AI-09 rtb (ai09_params.json; 05 s5.5)"
+            },
+            "threat_radius_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10000,
+              "description": "AI-09 rtb (ai09_params.json; 05 s5.5)"
             }
           }
         },
@@ -301,6 +337,12 @@
               "type": "integer",
               "minimum": 0,
               "maximum": 10
+            },
+            "aoa_comp_max_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 45,
+              "description": "R0 B.17 A-93 (AI-13 anchors, ai13_autopilots.json): AoA compensation (ENGAGE)"
             }
           }
         },
@@ -339,6 +381,12 @@
               "exclusiveMinimum": 0,
               "maximum": 3600,
               "$comment": "times > 0"
+            },
+            "heading_change_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 180,
+              "description": "R0 B.17 A-93 (AI-13 anchors, ai13_autopilots.json): EVADE 90-degree-class turn"
             }
           }
         },
@@ -402,7 +450,21 @@
               "maximum": 5000
             }
           },
-          "$comment": "05 s5.4 ring + look-ahead (R0 B.14 A-84); keys become required on every ship ap_* in AI-19 (A-86)"
+          "$comment": "05 s5.4 ring + look-ahead (R0 B.14 A-84); keys become required on every ship ap_* in AI-19 (A-86)",
+          "required": [
+            "radius_m",
+            "gain",
+            "push_mps",
+            "lookahead_s",
+            "lookahead_miss_m",
+            "lookahead_lag_s",
+            "lookahead_eff",
+            "lookahead_min_s",
+            "lookahead_max_mps",
+            "lookahead_brake",
+            "query_radius_m"
+          ],
+          "description": "R0 B.14 A-86: separation block, all 11 keys required when present"
         },
         "flight": {
           "type": "object",
@@ -612,6 +674,167 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 10
+            },
+            "abort_horiz_agl_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "abort_tti_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3600
+            },
+            "abort_vz_agl_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "approach_capture_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90
+            },
+            "approach_lookahead_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "approach_min_speed_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "bearing_clear_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "bearing_count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "bearing_samples": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            },
+            "bearing_terrain_weight": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "cruise_alt_agl_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2000
+            },
+            "flare_tilt_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90
+            },
+            "floor_tilt_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90
+            },
+            "glide_tol_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "goaround_agl_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "goaround_extend_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "hold_agl_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1000
+            },
+            "hold_radius_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "hold_speed_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "kp_alt": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10
+            },
+            "kp_floor": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10
+            },
+            "sink_gain": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "sink_max_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 50
+            },
+            "sink_min_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 50
+            },
+            "transition_exit_dist_m": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5000
+            },
+            "transition_exit_hspeed_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "transition_max_tilt_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90
+            },
+            "transition_nose_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 90
+            },
+            "transition_speed_cap_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "turn_cmd_max_deg": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 180
+            },
+            "vz_max_mps": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 500
+            },
+            "auto_launch_fuel01": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "A-119 / R0-amendments-18: 02 s2.3 AUTO ship waits until fuel >= 50 %"
             }
           }
         },
@@ -687,7 +910,386 @@
               "minimum": 0,
               "maximum": 100
             }
-          }
+          },
+          "required": [
+            "class_slots_m",
+            "k_form",
+            "speed_cap_mult",
+            "rejoin_radius_m",
+            "break_utility",
+            "max_break_frac",
+            "slot_scan_m",
+            "min_heading_speed_mps"
+          ],
+          "description": "R0 B.14 A-86: formation block, all 8 keys required when present; required on ap_dart / ap_lancer (see anyOf)"
+        },
+        "recover_ceiling_gamma_deg": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 0,
+          "description": "AI-08 (ai08_autopilots.json; 05 s2.4 table)"
+        },
+        "recover_ceiling_exit_alt_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 2000,
+          "description": "AI-08 (ai08_autopilots.json; 05 s2.4 table)"
+        },
+        "guard_cluster_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10000,
+          "description": "AI-14 Lancer (ai14_autopilots.json)"
+        },
+        "rocket": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "AI-14 Lancer rocket block (ai14_autopilots.json ap_lancer; 05 s6.4)",
+          "properties": {
+            "lock_range_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "bomber_reserve": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "bomber_known_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "breakaway_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            }
+          },
+          "required": [
+            "lock_range_m",
+            "bomber_reserve",
+            "bomber_known_m",
+            "breakaway_m"
+          ]
+        },
+        "search": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "AI-14 Scout search block (ai14_autopilots.json ap_scout; 05 s6.4)",
+          "properties": {
+            "agl_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 2000
+            },
+            "flee_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3600
+            },
+            "flee_clear_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            }
+          },
+          "required": [
+            "agl_m",
+            "flee_s",
+            "flee_clear_m"
+          ]
+        },
+        "guidance": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "R0 B.17 A-93 (AI-13 anchors, ai13_autopilots.json): guidance block, 8 keys, required on ap_dart, all keys required when present",
+          "properties": {
+            "kp_alt": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10
+            },
+            "vz_max_mps": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 500
+            },
+            "waypoint_radius_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 5000
+            },
+            "pull_up_check_ticks": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "pull_up_sample_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3600
+            },
+            "pull_up_min_hold_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3
+            },
+            "launch_tilt_deg": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 90
+            },
+            "deck_speed_mps": {
+              "type": "number",
+              "minimum": 60,
+              "maximum": 400
+            }
+          },
+          "required": [
+            "kp_alt",
+            "vz_max_mps",
+            "waypoint_radius_m",
+            "pull_up_check_ticks",
+            "pull_up_sample_s",
+            "pull_up_min_hold_s",
+            "launch_tilt_deg",
+            "deck_speed_mps"
+          ]
+        },
+        "intercept": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "R0 B.17 A-93 (AI-13 anchors, ai13_autopilots.json): intercept block, 12 keys (05 s6.2 numbers + standoff_m, break_ttc_s), required on ap_dart",
+          "properties": {
+            "boost_close_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "lost_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3600
+            },
+            "engage_extra_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "engage_speed_margin_mps": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 100
+            },
+            "overshoot_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "extend_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3600
+            },
+            "choice_period_thinks": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "patrol_points": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16
+            },
+            "patrol_switch_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "hp_window_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3600
+            },
+            "standoff_m": {
+              "type": "number",
+              "minimum": 50,
+              "maximum": 600
+            },
+            "break_ttc_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 5
+            }
+          },
+          "required": [
+            "boost_close_m",
+            "lost_s",
+            "engage_extra_m",
+            "engage_speed_margin_mps",
+            "overshoot_m",
+            "extend_s",
+            "choice_period_thinks",
+            "patrol_points",
+            "patrol_switch_m",
+            "hp_window_s",
+            "standoff_m",
+            "break_ttc_s"
+          ]
+        },
+        "attack_run": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "R0 B.17 A-93 (AI-13 anchors, ai13_autopilots.json): attack_run block (05 s6.3 numbers + AI-13 anchors), 12 keys, required on ap_dart",
+          "properties": {
+            "ip_dist_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "ip_arrive_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 10000
+            },
+            "band_low_agl_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 2000
+            },
+            "band_high_agl_m": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 2000
+            },
+            "continue_deg": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 180
+            },
+            "egress_turn_deg": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 180
+            },
+            "egress_s": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 3600
+            },
+            "abort_hp01": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 1
+            },
+            "max_passes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            "predict_dt_ticks": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            },
+            "predict_max_steps": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            },
+            "dive_release_frac": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            }
+          },
+          "required": [
+            "ip_dist_m",
+            "ip_arrive_m",
+            "band_low_agl_m",
+            "band_high_agl_m",
+            "continue_deg",
+            "egress_turn_deg",
+            "egress_s",
+            "abort_hp01",
+            "max_passes",
+            "predict_dt_ticks",
+            "predict_max_steps",
+            "dive_release_frac"
+          ]
+        },
+        "fire_cone_k": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "AI-17 ap_tower (ai17_autopilots.json); = ap_dart gun.fire_cone_k"
+        },
+        "tower_switch_margin": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "AI-17 ap_tower; 05 s6.8 hysteresis"
+        },
+        "tower_attacking_mult": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "AI-17 ap_tower; 05 s6.8"
+        },
+        "tower_attack_radius_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10000,
+          "description": "AI-17 ap_tower; 05 s6.8"
+        },
+        "attacked_window_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 3600,
+          "description": "AI-17 ap_tower; 05 s6.8"
+        },
+        "tower_hp_gain": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "AI-17 ap_tower; 05 s6.8"
+        },
+        "tower_crowd_mult": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "AI-17 ap_tower; 05 s6.8"
+        },
+        "tower_crowd_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16,
+          "description": "AI-17 ap_tower; 05 s6.8"
+        },
+        "guard_mult": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "AI-17 ap_tower; 05 s6.8 GUARD x2"
+        },
+        "tower_rank_weights": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "minItems": 1,
+          "maxItems": 16,
+          "description": "AI-17 ap_tower; R0 C2-15 rank weights"
+        },
+        "max_candidates": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "description": "AI-17 ap_tower; 05 s6.8"
         }
       },
       "required": [
@@ -696,7 +1298,110 @@
         "tags",
         "think_period_ticks"
       ],
-      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional."
+      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional.",
+      "anyOf": [
+        {
+          "properties": {
+            "id": {
+              "const": "ap_dart"
+            },
+            "gun": {
+              "required": [
+                "aoa_comp_max_deg"
+              ]
+            },
+            "evade": {
+              "required": [
+                "heading_change_deg"
+              ]
+            }
+          },
+          "required": [
+            "separation",
+            "formation",
+            "guidance",
+            "intercept",
+            "attack_run",
+            "gun",
+            "evade"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "ap_lancer"
+            }
+          },
+          "required": [
+            "separation",
+            "formation"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "ap_bomber"
+            }
+          },
+          "required": [
+            "separation"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "ap_scout"
+            }
+          },
+          "required": [
+            "separation"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "ap_hauler"
+            }
+          },
+          "required": [
+            "separation"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "ap_harvester"
+            }
+          },
+          "required": [
+            "separation"
+          ]
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "ap_crawler"
+            }
+          },
+          "required": []
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "ap_tower"
+            }
+          },
+          "required": []
+        },
+        {
+          "properties": {
+            "id": {
+              "pattern": "^(?!(ap_dart|ap_lancer|ap_bomber|ap_scout|ap_hauler|ap_harvester|ap_crawler|ap_tower)$)"
+            }
+          }
+        }
+      ],
+      "description": "R0 B.14 A-86: required per id: separation on every ship ap_* (dart, lancer, bomber, scout, hauler, harvester); formation on dart and lancer; guidance / intercept / attack_run / gun / evade with gun.aoa_comp_max_deg and evade.heading_change_deg on ap_dart (A-93)"
     }
   }
 }

@@ -80,6 +80,12 @@
     {"name": "promise_audience_key_wrong_prefix", "file": "godot/content/defs/bot_promises.json", "op": "set", "path": ["bot_promises", 0, "audience_key"], "value": "bot.easy.audience", "expect": "does not match"},
     {"name": "promise_human_target_key_wrong_id", "file": "godot/content/defs/bot_promises.json", "op": "set", "path": ["bot_promises", 1, "human_target_key"], "value": "promise.hard.human_target", "expect": "must be 'promise.normal.human_target' (R0 B.9 A-18)", "sole": true},
     {"name": "structure_launch_pad_with_service_pads", "file": "godot/content/defs/structures.json", "op": "set", "path": ["structures", 9, "pads"], "value": 1, "expect": "a launch_pad structure has no service pads; pads 1 must be 0 (R0 B.9 A-19)", "sole": true},
-    {"name": "structure_launch_pad_not_bool", "file": "godot/content/defs/structures.json", "op": "set", "path": ["structures", 9, "launch_pad"], "value": "yes", "expect": "expected boolean, got \"yes\"", "sole": true}
+    {"name": "structure_launch_pad_not_bool", "file": "godot/content/defs/structures.json", "op": "set", "path": ["structures", 9, "launch_pad"], "value": "yes", "expect": "expected boolean, got \"yes\"", "sole": true},
+    {"name": "ap_dart_missing_guidance", "file": "godot/content/defs/autopilots.json", "op": "del", "path": ["autopilots", 0, "guidance"], "expect": "missing required key 'guidance'", "sole": true},
+    {"name": "ap_dart_missing_aoa_comp", "file": "godot/content/defs/autopilots.json", "op": "del", "path": ["autopilots", 0, "gun", "aoa_comp_max_deg"], "expect": "missing required key 'aoa_comp_max_deg'", "sole": true},
+    {"name": "ap_lancer_missing_formation", "file": "godot/content/defs/autopilots.json", "op": "del", "path": ["autopilots", 1, "formation"], "expect": "missing required key 'formation'", "sole": true},
+    {"name": "ap_harvester_missing_separation", "file": "godot/content/defs/autopilots.json", "op": "del", "path": ["autopilots", 5, "separation"], "expect": "missing required key 'separation'", "sole": true},
+    {"name": "ap_dart_kp_path_over_max", "file": "godot/content/defs/autopilots.json", "op": "set", "path": ["autopilots", 0, "flight", "kp_path"], "value": 50, "expect": "50 > maximum 10", "sole": true},
+    {"name": "ap_dart_standoff_over_range", "file": "godot/content/defs/autopilots.json", "op": "set", "path": ["autopilots", 0, "intercept", "standoff_m"], "value": 700, "expect": "700 > maximum 600", "sole": true}
   ]
 }
