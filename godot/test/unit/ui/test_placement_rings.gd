@@ -40,7 +40,7 @@ func test_outpost_shows_presence_and_friendly_spacing_not_build_radius() -> void
 	assert_float(pres[0].radius_m).is_equal(ContentDB.economy.outpost_presence_radius_m)
 	assert_bool(pres[0].follows_ghost).is_true()
 	var sp: Array[PlacementRing] = _of(rs, K.SPACING_FRIENDLY)
-	assert_int(sp.size()).is_equal(2)                                    # the Core and the finished Outpost; not the site, not the pad
+	assert_int(sp.size()).is_equal(3)                                    # the Core, the finished Outpost and the Outpost site (the sim counts sites); not the pad
 	for r: PlacementRing in sp:
 		assert_float(r.radius_m).is_equal(ContentDB.economy.outpost_spacing_friendly_m)
 		assert_bool(r.follows_ghost).is_false()
@@ -84,3 +84,54 @@ func test_visible_enemy_build_radius_is_red_and_hidden_enemy_is_not_drawn() -> v
 func test_unknown_def_or_null_view_gives_no_rings() -> void:
 	assert_int(PlacementRings.rings(null, 0, &"relay_pylon").size()).is_equal(0)
 	assert_int(PlacementRings.rings(_v, 0, &"nope").size()).is_equal(0)
+
+
+# --- agreement with Build.can_place on a real SimWorld (construction sites count for SPACING) ---
+
+const EK := preload("res://test/unit/sim/economy_test_kit.gd")
+
+
+func _world_with_unit_at(metres: float) -> SimWorld:
+	var w: SimWorld = EK.solo_world()
+	var s: int = -1
+	for l: PackedInt32Array in [w.store().ships, w.store().ground]:
+		if s < 0 and not l.is_empty():
+			s = l[0]
+	assert_int(s).is_greater(-1)
+	w.store().pos[s] = Sphere.cell_center_dir(EK.cell_west(metres), Sphere.GRID_BUILD) * (Sphere.PLANET_RADIUS + 50.0)
+	w.store().flags[s] &= ~EntityStore.F_DOCKED
+	return w
+
+
+func _rings_of(w: SimWorld, kind: PlacementRing.Kind, source: int) -> int:
+	var n: int = 0
+	for r: PlacementRing in PlacementRings.rings(w.view(), 0, &"outpost"):
+		if r.kind == kind and r.source == source:
+			n += 1
+	return n
+
+
+func test_friendly_outpost_site_spacing_ring_agrees_with_can_place() -> void:
+	var w: SimWorld = _world_with_unit_at(1000.0)
+	var b: Build = w.economy().build
+	var o: int = EK.def(&"outpost")
+	assert_int(b.can_place(0, o, EK.cell_west(1000.0), 0)).is_equal(Build.Reject.OK)
+	var site: int = b.stamp(0, o, EK.cell_west(1500.0), 0, false)       # an unfinished Outpost 500 m from the ghost
+	assert_int(site).is_greater(0)
+	assert_int(b.can_place(0, o, EK.cell_west(1000.0), 0)).is_equal(Build.Reject.SPACING)
+	assert_int(_rings_of(w, PlacementRing.Kind.SPACING_FRIENDLY, site)).is_equal(1)
+	assert_int(_rings_of(w, PlacementRing.Kind.BUILD, site)).is_equal(0)   # sites give no build radius
+
+
+func test_enemy_outpost_site_spacing_ring_agrees_with_can_place() -> void:
+	var w: SimWorld = _world_with_unit_at(1000.0)
+	var b: Build = w.economy().build
+	var o: int = EK.def(&"outpost")
+	var site: int = b.stamp(1, o, EK.cell_west(1900.0), 0, false)       # an enemy site 900 m away, inside Core sensor range
+	assert_int(site).is_greater(0)
+	assert_int(b.can_place(0, o, EK.cell_west(1000.0), 0)).is_equal(Build.Reject.SPACING)
+	var id: int = site
+	assert_int(_rings_of(w, PlacementRing.Kind.SPACING_ENEMY, id)).is_equal(0)      # fog: not visible, no ring (the sim still says SPACING)
+	w.store().visible_mask[EntityId.slot(id)] |= 1                                   # team 0 sees it
+	assert_bool(w.view().visible_to(0, id)).is_true()
+	assert_int(_rings_of(w, PlacementRing.Kind.SPACING_ENEMY, id)).is_equal(1)
