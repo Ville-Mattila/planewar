@@ -2297,8 +2297,11 @@
       " R0 C3-19",
       " 02 GD-20"
     ],
-    "status": "todo",
-    "acceptance_append": "; calls ControlMachine.release_team when a team loses its last Core (C16, R0 B.11 A-61); R0 B.20 A-106: DEATH causes are appended to SimEvent.DeathCause from ordinal 2 (0 DEBUG and 1 EXPIRED are frozen) in sim/sim_event.gd, sim/MODULE.md Enumerations and R0 B.3 in the same PR; never inserted, renamed or reordered"
+    "status": "done",
+    "acceptance_append": "; calls ControlMachine.release_team when a team loses its last Core (C16, R0 B.11 A-61); R0 B.20 A-106: DEATH causes are appended to SimEvent.DeathCause from ordinal 2 (0 DEBUG and 1 EXPIRED are frozen) in sim/sim_event.gd, sim/MODULE.md Enumerations and R0 B.3 in the same PR; never inserted, renamed or reordered",
+    "pr": 169,
+    "merged": "2026-11-16",
+    "notes": "MatchJudge (sim/match/), DeathCause 2 KILLED / 3 SELF_DESTRUCT, MATCH_END extra[0] = EndReason, SimSerialize FORMAT 17. Surrender refused at intake (REJECTED_PHASE / REJECTED_NO_RIGHTS). Follow-ups in GD-49. Architect: defeated-team surrender refusal (3+ teams, not in 04); 60 s vote window. needs net: the 0x8E MATCH_END writer must map EndReason 0-2 to Protocol.MatchEndReason and take the judge structure value. Nits: tabs in a broken line match_judge.gd:62; two tests reach private fields."
   },
   {
     "id": "GD-23",
@@ -8349,6 +8352,24 @@
     "docs": [
       "docs/02 s8.3-8.7",
       "tools/econ_model.py"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "GD-49",
+    "title": "sim: GD-20 follow-ups - one structure-value formula, PLAYER_ELIMINATED killer team, tie-break keeps damage from dead shooters",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-20"
+    ],
+    "milestone": "M3",
+    "acceptance": "MatchResult.structure_value uses the same 02 s12.1 formula as MatchJudge (hp01, core_value), pinned by a test comparing both; PLAYER_ELIMINATED b carries the team whose damage destroyed the last Core (not -1) when known; the hard-end damage tie-break counts damage whose shooter died before the end (ScoreKeeper split if needed for its 400-line cap); sim/MODULE.md and sim/match/MODULE.md current; must land before the server 0x8E MATCH_END writer",
+    "docs": [
+      "02 s12.1",
+      "godot/src/sim/match/MODULE.md"
     ],
     "status": "todo",
     "merged": null
