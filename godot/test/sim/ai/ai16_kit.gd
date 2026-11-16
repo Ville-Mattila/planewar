@@ -1,10 +1,9 @@
 class_name Ai16Kit extends RefCounted
-## AI-16 fixtures: the shipped defs plus the AI-14 autopilot fixture with its `ap_harvester` replaced by
-## `ai16_autopilots.json` (needs content AI-19), a SimWorld on them (players 0 and 2 on team 0, 1 on team 1; flat datum or a
+## AI-16 fixtures: the shipped defs (AI-47: `ap_harvester` carries the AI-16 follow and harvest keys in
+## `content/defs/autopilots.json`), a SimWorld on them (players 0 and 2 on team 0, 1 on team 1; flat datum or a
 ## map), an AiDriver whose Harvester class runs `HarvesterBrain` with the ground SAFETY overlay, and placement helpers by
 ## metres of arc along +Y from +X (the HarvestTestKit convention). The sim runs the real Pathing, GroundMotion and Harvest.
 
-const AUTOPILOTS: String = "res://test/sim/ai/ai16_autopilots.json"
 const R: float = Sphere.PLANET_RADIUS
 
 static var _content: ContentSet = null
@@ -16,14 +15,6 @@ static func content() -> ContentSet:
 		for f: String in DirAccess.get_files_at(FlightTestKit.REAL_DEFS_DIR):
 			if f.ends_with(".json"):
 				texts[f] = FileAccess.get_file_as_string(FlightTestKit.REAL_DEFS_DIR + f)
-		var base: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(Ai14Kit.AUTOPILOTS))
-		var extra: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(AUTOPILOTS))
-		var list: Array = base["autopilots"]
-		for i: int in list.size():
-			var ap: Dictionary = list[i]
-			if ap["id"] == "ap_harvester":
-				list[i] = (extra["autopilots"] as Array)[0]
-		texts["autopilots.json"] = JSON.stringify(base)
 		_content = ContentLoader.build(texts, {})
 		assert(_content.ok(), "defs + AI-16 autopilots must load: %s" % str(_content.errors))
 	return _content
@@ -46,7 +37,7 @@ static func cls() -> int:
 
 static func brain() -> HarvesterBrain:
 	var b: HarvesterBrain = HarvesterBrain.create(content(), ap(), ground_def())
-	assert(b != null, "ai16_autopilots.json must build the Harvester brain")
+	assert(b != null, "autopilots.json ap_harvester must build the Harvester brain")
 	return b
 
 

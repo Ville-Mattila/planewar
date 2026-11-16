@@ -852,6 +852,31 @@
         "lookahead_max_mps": 60,
         "lookahead_brake": 1.0,
         "query_radius_m": 180
+      },
+      "follow": {
+        "lookahead_m": 40,
+        "kp_yaw": 2.0,
+        "thrust_turn": 0.4,
+        "turn_slow_deg": 45,
+        "pivot_m": 20,
+        "arrive_m": 3,
+        "path_wait_ticks": 30,
+        "stuck_progress_m": 5,
+        "stuck_window_s": 10,
+        "deviate_m": 120,
+        "aim_every_ticks": 4
+      },
+      "harvest": {
+        "hit_window_s": 3,
+        "assigned_weight": 0.5,
+        "sticky_drop": 0.3,
+        "queue_s": 20,
+        "claim_wait_s": 5,
+        "unload_wait_s": 5,
+        "count_margin_m": 30,
+        "spot_frac": 0.5,
+        "dock_frac": 0.5,
+        "refinery_scan_s": 5
       }
     },
     {
