@@ -45,5 +45,15 @@
   "shield_ring_du": 14,
   "service_bar_width_du": 120,
   "drift_arrow_du": 24,
+  "threat_range_m": 2000,
+  "threat_ring_du": 140,
+  "threat_arrow_du": 12,
+  "threat_max_arrows": 8,
+  "threat_mask": 2,
+  "tower_mask": 1,
+  "tower_hint_max": 2,
+  "toast_s": 8,
+  "beacon_pip_du": 6,
+  "_doc_threat": "docs/06 s6.1 (UX-19): threat ring (hostiles within threat_range_m on a ring of threat_ring_du, at most threat_max_arrows, rocket lock when incoming_rockets > 0), tower hints, hand-over toast (toast_s, 01 s4.4) and canister beacon pip. threat_mask / tower_mask are spatial kind bitmasks (1 << EntityStore.kind: ships, structures) for ids_near; refresh rates 10 Hz threat, 4 Hz hints and badges belong to the host.",
   "_doc_landing": "docs/06 s6.4 (UX-18): the gauge safe / damage values mirror flight_common landing_safe_* / landing_damage_* (R0 B.5); the guide shows within landing_guide_range_m of a friendly pad and below landing_guide_agl_m or fuel < landing_guide_fuel01; the flare cue within flare_range_m and above flare_min_agl_m."
 }
