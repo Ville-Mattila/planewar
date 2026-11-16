@@ -10,6 +10,8 @@ const _CARGO_ICE: int = 2                  ## `cargo_kind` ICE (03 s3.4)
 
 var nodes: IceNodes = IceNodes.new()
 
+var ship_scans: int = 0                    ## diagnostic hard counter (not state): ship passes run so far
+
 var _store: EntityStore
 var _defs: WorldDefs
 var _economy: Economy
@@ -47,6 +49,7 @@ func step(dt: float) -> void:
 		_extract(_ext[i], _ext_node[i], dt)
 		if _store.cargo[_ext[i]] > 0.0:
 			_loaded += 1
+	ship_scans += 1
 	for s: int in _store.ships:
 		_haul(s, dt)
 

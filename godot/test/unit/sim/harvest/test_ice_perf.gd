@@ -40,11 +40,38 @@ func test_the_ice_pass_at_full_load_is_cheap() -> void:
 	assert_bool(PerfGate.check("ice_step_24_extractors_40_haulers", us, BOUND_US, CITE)).is_true()
 
 
-func test_an_idle_pass_costs_next_to_nothing() -> void:
+func _idle_world() -> SimWorld:
 	var w: SimWorld = K.world()
+	var _r: int = HarvestTestKit.refinery(w, 0.0)          # every match has a Refinery
+	for k: int in 30:
+		var _h: int = K.hauler(w, 2000.0 + 100.0 * float(k))   # Haulers with empty holds; no Extractor, no Ice anywhere
+	return w
+
+
+func test_an_idle_pass_in_a_realistic_world_scans_no_ship() -> void:
+	var w: SimWorld = _idle_world()
+	K.pass_n(w, 100)
+	assert_int(w.economy().ice.ship_scans).is_equal(0)         # I9: no Extractor and no Ice in a hold: no ship pass
 	var ice: IceExtract = w.economy().ice
 	var t0: int = Time.get_ticks_usec()
 	for _i: int in 10000:
 		ice.step(K.DT)
 	var us: float = float(Time.get_ticks_usec() - t0) / 10000.0
-	assert_bool(PerfGate.check("ice_step_idle", us, IDLE_US, CITE)).is_true()
+	assert_bool(PerfGate.check("ice_step_idle_realistic", us, IDLE_US, CITE)).is_true()
+
+
+func test_a_hold_with_ice_wakes_the_pass_and_an_emptied_one_sleeps_again() -> void:
+	var w: SimWorld = _idle_world()
+	K.pass_n(w, 5)
+	assert_int(w.economy().ice.ship_scans).is_equal(0)
+	var h: int = w.store().ships[0]
+	w.store().cargo[h] = 100.0
+	w.store().cargo_kind[h] = 2
+	w.store().pos[h] = w.store().pos[w.store().structures[0]]
+	K.pass_n(w, 5)                                              # the ship count did not change: the count is stale, rescan on change
+	var _extra: int = K.hauler(w, 9000.0)                       # a spawn re-counts the holds
+	K.pass_n(w, 200)
+	assert_float(w.store().cargo[h]).is_equal(0.0)              # unloaded at the Refinery (100 Ice at 40/s)
+	var scans: int = w.economy().ice.ship_scans
+	K.pass_n(w, 50)
+	assert_int(w.economy().ice.ship_scans).is_equal(scans)      # empty again: asleep
