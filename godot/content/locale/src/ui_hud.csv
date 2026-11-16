@@ -33,3 +33,32 @@ hud.ai_tag.relocate,RELOCATE,SIIRTYY,10,"AiTag.Tag 30 RELOCATE HUD label (flight
 hud.ai_tag.track,TRACK,SEURAA,10,"AiTag.Tag 31 TRACK HUD label (flight and unit tags, UX-43)","Short label, 10 characters at most. Finnish is a Haiku draft for owner review (06 s11)."
 hud.ai_tag.offline,OFFLINE,POIS,10,"AiTag.Tag 32 OFFLINE HUD label (flight and unit tags, UX-43)","Short label, 10 characters at most. Finnish is a Haiku draft for owner review (06 s11)."
 hud.ai_tag.idle,IDLE,VAPAA,10,"AiTag.Tag 33 IDLE HUD label (flight and unit tags, UX-43)","Short label, 10 characters at most. Finnish is a Haiku draft for owner review (06 s11)."
+hud.land.vert,V-SPD,V-NOP,,"Landing guide: vertical speed gauge label (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.land.horiz,H-SPD,H-NOP,,"Landing guide: horizontal speed gauge label (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.land.nose,NOSE FROM VERT,NOKKA PYSTYSTÄ,,"Landing guide: nose angle from vertical, shown above the gauge (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.land.flare,"Pitch up, hold thrust","Nosta nokkaa, pidä työntö",,"Landing guide: flare cue, shown within flare range of a pad (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.land.hover,Hover and settle,Leiju ja laskeudu,,"Landing guide: hover descent cue (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.land.occupied,Pad occupied,Laituri varattu,,"Landing guide: pad already has an occupant (UX-18, 06 s6.4). Pad is the glossary term (01 s10).",Haiku draft for owner review (06 s11).
+hud.service.fuel,FUEL,POLTTO,6,"Service panel: fuel refill row (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11). max_len raised above the 1.4 x en default for Finnish length; owner to check the HUD width.
+hud.service.ammo,AMMO,AMMUS,,"Service panel: ammo rearm row (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.service.repair,REPAIR,KORJAUS,,"Service panel: repair row (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.service.wait_ice,Waiting for Ice,Odotetaan jäätä,,"Service panel: waiting for Ice from the Stockpile (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.service.wait_ore,Waiting for Ore,Odotetaan malmia,,"Service panel: waiting for Ore from the Stockpile (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.service.launch,Thrust to launch,Anna työntöä lähtöön,,"Service panel: thrust to launch from the pad (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.grade.crash,CRASH,SYÖKSY,,"Grade stamp: LandingGrade.CRASH (UX-18, 02 s17.1)",Haiku draft for owner review (06 s11).
+hud.grade.bent,BENT,KOLHU,,"Grade stamp: LandingGrade.BENT (UX-18, 02 s17.1)",Haiku draft for owner review (06 s11).
+hud.grade.hard,HARD,KOVA,,"Grade stamp: LandingGrade.HARD (UX-18, 02 s17.1)",Haiku draft for owner review (06 s11).
+hud.grade.fair,FAIR,KELPO,,"Grade stamp: LandingGrade.FAIR (UX-18, 02 s17.1)",Haiku draft for owner review (06 s11).
+hud.grade.clean,CLEAN,PUHDAS,,"Grade stamp: LandingGrade.CLEAN (UX-18, 02 s17.1)",Haiku draft for owner review (06 s11).
+hud.grade.ace,ACE,ÄSSÄ,,"Grade stamp: LandingGrade.ACE (UX-18, 02 s17.1). Matches barks.landing_grade.1 (Ässälasku).",Haiku draft for owner review (06 s11).
+hud.grade.auto,AUTO,AUTO,,"Grade stamp: LandingGrade.AUTO, assisted landing (UX-18, 02 s17.1)",Haiku draft for owner review (06 s11).
+hud.grade.pts,pts,pist,,"Grade stamp: points suffix after the landing score (UX-18, 02 s17.1)",Haiku draft for owner review (06 s11).
+hud.grade.hot,HOT,KUUMA,5,"Grade stamp: hot landing x1.5 marker (UX-18, 02 s17.1)",Haiku draft for owner review (06 s11). max_len raised above the 1.4 x en default for Finnish length; owner to check the HUD width.
+hud.grade.dead_stick,DEAD STICK,LIUKULENTO,,"Grade stamp: landing flagged dead stick, engine off glide (UX-18, R0 B.24 A-121)",Haiku draft for owner review (06 s11).
+hud.cons.fuel,FUEL,POLTTO,6,"Consumables: fuel count (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11). max_len raised above the 1.4 x en default for Finnish length; owner to check the HUD width.
+hud.cons.ammo,AMMO,AMMUS,,"Consumables: ammo count (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.cons.bombs,BOMBS,POMMIT,,"Consumables: bomb count (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.cons.rockets,ROCKETS,RAKETIT,,"Consumables: rocket count (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.cd.flip,FLIP,VOLTTI,6,"Cooldown ring: flip ready timer (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11). max_len raised above the 1.4 x en default for Finnish length; owner to check the HUD width.
+hud.cd.boost,BOOST,VAUHTI,,"Cooldown ring: boost ready timer (UX-18, 06 s6.4)",Haiku draft for owner review (06 s11).
+hud.shield,SHIELD,SUOJA,,"Core shield timer label (UX-18, GD-38 TeamStateView.CORE_SHIELD_UP)",Haiku draft for owner review (06 s11).
