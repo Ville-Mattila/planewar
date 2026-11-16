@@ -1,0 +1,126 @@
+{
+  "_doc": "02 s8.8 / s8.9 4v4 Normal-bot book, one team (slots 0-3): P0 and P3 are the Frontier players, P1 and P2 the Interior players, all drawing on one team pool. Frontier and Interior steps are the 02 s8.8 books table; the Interior contested field is 5,000 Ore at d = 250 m with half the contested regen (two interior players share it). Losses: Frontier starts 2 minutes earlier than 1v1 (first Dart 3:30, Harvester 5:30, then every 70 s from 8:00); Interior at 0.6x the 1v1 rate (every 117 s from 10:00).",
+  "match": "4v4",
+  "duration_s": 1440,
+  "launch_delay_s": 3.0,
+  "hauler_min_load": 40.0,
+  "service": {
+    "dart": {"ice": 35, "ore": 4, "period_s": 255},
+    "lancer": {"ice": 55, "ore": 8, "period_s": 315},
+    "bomber": {"ice": 100, "ore": 10, "period_s": 420}
+  },
+  "loss_cycle": ["dart", "harvester", "dart", "lancer", "dart", "bomber"],
+  "templates": {
+    "frontier": {
+      "fields": [
+        {"name": "A", "node": "home_field_a_s0", "d": 450, "refinery": "{p}.refinery_0"},
+        {"name": "B", "node": "home_field_b_s0", "d": 600, "refinery": "{p}.refinery2"}
+      ],
+      "steps": [
+        {"do": "build", "id": "solar_array", "as": "solar1", "not_before_s": 3},
+        {"do": "produce", "id": "harvester", "as": "h2", "field": "A", "not_before_s": 4},
+        {"do": "produce", "id": "dart", "as": "dart1", "not_before_s": 5},
+        {"do": "build", "id": "autocannon_turret", "as": "ac1", "not_before_s": 6},
+        {"do": "produce", "id": "dart", "as": "dart2", "not_before_s": 56},
+        {"do": "produce", "id": "harvester", "as": "h3", "field": "A", "not_before_s": 70},
+        {"do": "build", "id": "flak_battery", "as": "flak1", "not_before_s": 170},
+        {"do": "build", "id": "solar_array", "as": "solar2"},
+        {"do": "build", "id": "outpost", "as": "outpost1", "not_before_s": 259},
+        {"do": "build", "id": "ice_extractor", "as": "ext1", "node": "home_trap_s0", "haul_d": 1700},
+        {"do": "produce", "id": "hauler", "as": "hauler1"},
+        {"do": "build", "id": "autocannon_turret", "as": "ac2"},
+        {"do": "build", "id": "refinery", "as": "refinery2"},
+        {"do": "produce", "id": "harvester", "as": "h4", "field": "B"},
+        {"do": "build", "id": "pad", "as": "pad1"},
+        {"do": "produce", "id": "harvester", "as": "h5", "field": "B"},
+        {"do": "build", "id": "sensor_mast", "as": "sensor1"}
+      ],
+      "tail": {
+        "ceiling_div": 8,
+        "cycle": [
+          {"do": "produce", "id": "harvester", "field": "B", "max_alive": 8},
+          {"do": "produce", "id": "dart", "ceiling": true},
+          {"do": "produce", "id": "lancer", "ceiling": true},
+          {"do": "produce", "id": "dart", "ceiling": true},
+          {"do": "build", "id": "hangar", "max_alive": 1},
+          {"do": "produce", "id": "bomber", "ceiling": true},
+          {"do": "build", "id": "missile_tower", "max_alive": 6},
+          {"do": "build", "id": "flak_battery", "max_alive": 6},
+          {"do": "build", "id": "reactor", "max_alive": 2},
+          {"do": "build", "id": "pad", "max_alive": 4},
+          {"do": "build", "id": "autocannon_turret", "max_alive": 6},
+          {"do": "build", "id": "outpost", "max_alive": 3},
+          {"do": "build", "id": "refinery", "max_alive": 4},
+          {"do": "build", "id": "shield_projector", "max_alive": 2},
+          {"do": "build", "id": "sensor_mast", "max_alive": 3}
+        ]
+      }
+    },
+    "interior": {
+      "fields": [
+        {"name": "A", "node": "home_field_a_s0", "d": 450, "refinery": "{p}.refinery_0"},
+        {"name": "C", "node": "contested_r0", "d": 250, "refinery": "{p}.refinery2", "capacity": 5000, "regen_per_s": 1.5}
+      ],
+      "steps": [
+        {"do": "build", "id": "solar_array", "as": "solar1", "not_before_s": 3},
+        {"do": "produce", "id": "harvester", "as": "h2", "field": "A", "not_before_s": 4},
+        {"do": "produce", "id": "dart", "as": "dart1", "not_before_s": 5},
+        {"do": "produce", "id": "harvester", "as": "h3", "field": "A", "not_before_s": 40},
+        {"do": "build", "id": "outpost", "as": "outpost1", "not_before_s": 150},
+        {"do": "build", "id": "refinery", "as": "refinery2", "not_before_s": 195},
+        {"do": "produce", "id": "harvester", "as": "h4", "field": "C"},
+        {"do": "produce", "id": "harvester", "as": "h5", "field": "C"},
+        {"do": "build", "id": "solar_array", "as": "solar2"},
+        {"do": "build", "id": "ice_extractor", "as": "ext1", "node": "home_trap_s0", "haul_d": 1700},
+        {"do": "produce", "id": "hauler", "as": "hauler1"},
+        {"do": "build", "id": "pad", "as": "pad1"},
+        {"do": "build", "id": "sensor_mast", "as": "sensor1"}
+      ],
+      "tail": {
+        "ceiling_div": 8,
+        "cycle": [
+          {"do": "produce", "id": "harvester", "field": "C", "max_alive": 8},
+          {"do": "produce", "id": "dart", "ceiling": true},
+          {"do": "produce", "id": "lancer", "ceiling": true},
+          {"do": "produce", "id": "dart", "ceiling": true},
+          {"do": "build", "id": "hangar", "max_alive": 1},
+          {"do": "produce", "id": "bomber", "ceiling": true},
+          {"do": "build", "id": "missile_tower", "max_alive": 6},
+          {"do": "build", "id": "flak_battery", "max_alive": 6},
+          {"do": "build", "id": "reactor", "max_alive": 2},
+          {"do": "build", "id": "pad", "max_alive": 4},
+          {"do": "build", "id": "autocannon_turret", "max_alive": 6},
+          {"do": "build", "id": "outpost", "max_alive": 3},
+          {"do": "build", "id": "refinery", "max_alive": 4},
+          {"do": "build", "id": "shield_projector", "max_alive": 2},
+          {"do": "build", "id": "sensor_mast", "max_alive": 3}
+        ]
+      }
+    }
+  },
+  "players": [
+    {"name": "P0", "template": "frontier", "loss_script": [[210, "dart"], [330, "harvester"]],
+     "loss_every": {"from_s": 480, "every_s": 70}},
+    {"name": "P1", "template": "interior", "loss_script": [[330, "dart"], [450, "harvester"]],
+     "loss_every": {"from_s": 600, "every_s": 117}},
+    {"name": "P2", "template": "interior", "loss_script": [[330, "dart"], [450, "harvester"]],
+     "loss_every": {"from_s": 600, "every_s": 117}},
+    {"name": "P3", "template": "frontier", "loss_script": [[210, "dart"], [330, "harvester"]],
+     "loss_every": {"from_s": 480, "every_s": 70},
+     "step_overrides": {"outpost1": {"not_before_s": 271}}}
+  ],
+  "checkpoints": [
+    {"name": "P0 Dart #1 airborne (01 by 0:45)", "doc": "0:28", "event": "P0.dart1.airborne"},
+    {"name": "P1 Dart #1 airborne", "doc": "0:28", "event": "P1.dart1.airborne"},
+    {"name": "P2 Dart #1 airborne", "doc": "0:28", "event": "P2.dart1.airborne"},
+    {"name": "P3 Dart #1 airborne", "doc": "0:28", "event": "P3.dart1.airborne"},
+    {"name": "P1 H3 starts", "doc": "0:40", "event": "P1.h3.queued"},
+    {"name": "P1 Outpost placed", "doc": "2:30", "event": "P1.outpost1.placed"},
+    {"name": "P1 Outpost done", "doc": "3:15", "event": "P1.outpost1.done"},
+    {"name": "P2 Outpost done", "doc": "3:15", "event": "P2.outpost1.done"},
+    {"name": "P0 Outpost placed", "doc": "4:19", "event": "P0.outpost1.placed"},
+    {"name": "P3 Outpost placed", "doc": "4:31", "event": "P3.outpost1.placed"},
+    {"name": "P0 Outpost done", "doc": "5:04", "event": "P0.outpost1.done"},
+    {"name": "P3 Outpost done", "doc": "5:16", "event": "P3.outpost1.done"}
+  ]
+}
