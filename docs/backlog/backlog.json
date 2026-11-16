@@ -2507,8 +2507,11 @@
       " R0 C1-05",
       " 05 AI-16"
     ],
-    "status": "todo",
-    "acceptance_append": "; Harvester tags are AiTag.Tag PICK_FIELD..UNLOAD (23-28) and FLEE (16) (R0 B.17 A-94)"
+    "status": "done",
+    "acceptance_append": "; Harvester tags are AiTag.Tag PICK_FIELD..UNLOAD (23-28) and FLEE (16) (R0 B.17 A-94)",
+    "pr": 162,
+    "merged": "2026-11-16",
+    "notes": "Three rounds; round 3 escalated Sonnet -> Opus (BRAKE run carried into the reverse hold: wait, SAFETY overlay, then pilot BRAKE before release; fixed with GroundFollower.lose_brake / AiGround.RUN_UNKNOWN). AiState FORMAT 8 (35-byte ground record). Perf at 100 Harvesters: think 11.7 us, act 3.3 us per unit (fleet mean, accepted). ap_harvester keys live in fixture godot/test/sim/ai/ai16_autopilots.json -> AI-47 moves them into autopilots.json. needs sim: CommandSinkBase has no complete/fail order API so ORDER_FAILED(STUCK)/UNREACHABLE are not reported; placed structures write no path weights (SC-34 uses Pathing.set_weight). No session wiring for brains yet (Ai16Kit.driver is the recipe). Worktrees need git lfs checkout godot/content/maps for map scenarios."
   },
   {
     "id": "AI-17",
