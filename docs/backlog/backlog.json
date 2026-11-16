@@ -8218,9 +8218,9 @@
       "godot/src/ui/MODULE.md",
       "06 s6.4"
     ],
-    "status": null,
-    "pr": null,
-    "merged": null,
+    "status": "done",
+    "pr": 159,
+    "merged": "2026-11-16",
     "notes": null
   },
   {
