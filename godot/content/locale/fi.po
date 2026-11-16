@@ -173,52 +173,52 @@ msgid "hud.bomb.tti"
 msgstr ""
 
 msgid "hud.cd.boost"
-msgstr ""
+msgstr "VAUHTI"
 
 msgid "hud.cd.flip"
-msgstr ""
+msgstr "VOLTTI"
 
 msgid "hud.cons.ammo"
-msgstr ""
+msgstr "AMMUS"
 
 msgid "hud.cons.bombs"
-msgstr ""
+msgstr "POMMIT"
 
 msgid "hud.cons.fuel"
-msgstr ""
+msgstr "POLTTO"
 
 msgid "hud.cons.rockets"
-msgstr ""
+msgstr "RAKETIT"
 
 msgid "hud.grade.ace"
-msgstr ""
+msgstr "ÄSSÄ"
 
 msgid "hud.grade.auto"
-msgstr ""
+msgstr "AUTO"
 
 msgid "hud.grade.bent"
-msgstr ""
+msgstr "KOLHU"
 
 msgid "hud.grade.clean"
-msgstr ""
+msgstr "PUHDAS"
 
 msgid "hud.grade.crash"
-msgstr ""
+msgstr "SYÖKSY"
 
 msgid "hud.grade.dead_stick"
-msgstr ""
+msgstr "LIUKULENTO"
 
 msgid "hud.grade.fair"
-msgstr ""
+msgstr "KELPO"
 
 msgid "hud.grade.hard"
-msgstr ""
+msgstr "KOVA"
 
 msgid "hud.grade.hot"
-msgstr ""
+msgstr "KUUMA"
 
 msgid "hud.grade.pts"
-msgstr ""
+msgstr "pist"
 
 msgid "hud.heading.north"
 msgstr ""
@@ -227,43 +227,43 @@ msgid "hud.heading.pole"
 msgstr ""
 
 msgid "hud.land.flare"
-msgstr ""
+msgstr "Nosta nokkaa, pidä työntö"
 
 msgid "hud.land.horiz"
-msgstr ""
+msgstr "H-NOP"
 
 msgid "hud.land.hover"
-msgstr ""
+msgstr "Leiju ja laskeudu"
 
 msgid "hud.land.nose"
-msgstr ""
+msgstr "NOKKA PYSTYSTÄ"
 
 msgid "hud.land.occupied"
-msgstr ""
+msgstr "Laituri varattu"
 
 msgid "hud.land.vert"
-msgstr ""
+msgstr "V-NOP"
 
 msgid "hud.service.ammo"
-msgstr ""
+msgstr "AMMUS"
 
 msgid "hud.service.fuel"
-msgstr ""
+msgstr "POLTTO"
 
 msgid "hud.service.launch"
-msgstr ""
+msgstr "Anna työntöä lähtöön"
 
 msgid "hud.service.repair"
-msgstr ""
+msgstr "KORJAUS"
 
 msgid "hud.service.wait_ice"
-msgstr ""
+msgstr "Odotetaan jäätä"
 
 msgid "hud.service.wait_ore"
-msgstr ""
+msgstr "Odotetaan malmia"
 
 msgid "hud.shield"
-msgstr ""
+msgstr "SUOJA"
 
 msgid "hud.speed"
 msgstr ""
