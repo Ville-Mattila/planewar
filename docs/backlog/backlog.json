@@ -2921,7 +2921,10 @@
       " 04 s11",
       " 04 NET-14"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 156,
+    "merged": "2026-11-16",
+    "notes": "Creates server/MODULE.md v0.1 (NET-38 extends it). For NET-15: the 5 s clock enforces \"accepted within 5 s\" not \"HELLO arrived within 5 s\" (test_hello_before_timeout_stops_the_hello_clock calls accept); wrong-hash LOADED counted as malformed and stays LOADING (maybe REFUSE); control-queue overflow returns DROPPED_RATE; strikes_recent allocates per call. Architect: wrong-map-hash REFUSE reason?; server-only limits as server_limits.json def before NET-38?"
   },
   {
     "id": "NET-15",
