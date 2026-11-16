@@ -253,9 +253,11 @@ func test_ground_safety_brakes_for_min_hold() -> void:
 		if Overlays.run(_id(), v, _st, g, _flat, _sink, t, _probe, _out):
 			ended = t
 			break
-		assert_int(_rec.last.buttons).is_equal(PilotInput.BRAKE)
+		# AI-16: the first tick has no BRAKE (it ends any BRAKE run the pilot left at the release), then BRAKE
+		assert_int(_rec.last.buttons).is_equal(0 if t == 0 else PilotInput.BRAKE)
 		assert_float(_rec.last.thrust).is_equal(0.0)
 	assert_int(ended).is_equal(g.min_hold_ticks - 1)
+	assert_int(_st.ground.brake_run[5]).is_less(g.min_hold_ticks)   # the run it hands the brain stays under the hold
 
 
 func test_driver_runs_the_overlay_on_the_release_edge_and_skips_thinks() -> void:
