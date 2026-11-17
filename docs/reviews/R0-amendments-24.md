@@ -72,7 +72,7 @@ Two consequences, stated so nobody reports them as bugs: a capturer cannot land 
 
 ## A-150 The other questions
 
-- **PR question (2), no Relay Station on any map.** Follow-up GD-50; until it lands the capture is reachable only in tests.
+- **PR question (2), no Relay Station on any map.** Follow-up GD-51; until it lands the capture is reachable only in tests.
 - **PR question (3), a `SimView` read of the progress.** `SimView.link(relay)` gives the capturer (A-149), `SimView.team(relay)` the holder, the two ALERTs the edges. A progress read is a new `SimView` function with a 04 s3.7 row for `NetSimView`; no task needs it yet. The first `ui` task that draws the bar raises it as a contract question; do not add an accessor on `RelayCapture` for other lanes.
 - **Review nit, `load_plateaus` ignores `radius_m`.** Correct as built (R9). The rule radius is `economy.json` `solar_plateau_radius_m` 1,000 (02 s8.4, 02:449); the feature's `radius_m` is the recipe's terrain shape (`poles.noon_plateau_radius_m`, 600 on `s_world1_r6000`), not an economy input.
 
@@ -115,7 +115,7 @@ No commit split is required (squash merge, the B.29 A-144 precedent); the tests 
 ```json
 {
   "new": [
-    {"id": "GD-50", "title": "sim: SimWorld.load_map spawns the map's Relay Stations (features.json relay_station entries, 02 s9.1) as finished neutral structures (R0 B.30 A-150)", "lane": "sim", "tier": "Sonnet", "size_days": 0.5, "depends_on": ["GD-23"], "milestone": "M3", "acceptance": "load_map of a map id spawns one finished structure (F_BUILDING clear, team 255, owner 255, up = the surface normal) per relay_station entry the baked features.json carries (neutral_structures entries and the 02 s9.1 relay_station resource features; the PR names the exact keys it reads and files 'needs maps:' for any map whose bake has none); a fixture map dir with one entry yields one capturable Relay Station that a Hauler lands on and captures in a SimWorld-driven test; a map with none spawns none; spawn order is the file order (deterministic), S4 round trip byte-exact; no def or schema change; sim/relay/MODULE.md responsibility row and sim/world/MODULE.md updated; perf note (load time only)", "docs": ["docs/reviews/R0-amendments-24.md", "02 s5.3", "02 s9.1", "03 s8.1"]},
+    {"id": "GD-51", "title": "sim: SimWorld.load_map spawns the map's Relay Stations (features.json relay_station entries, 02 s9.1) as finished neutral structures (R0 B.30 A-150)", "lane": "sim", "tier": "Sonnet", "size_days": 0.5, "depends_on": ["GD-23"], "milestone": "M3", "acceptance": "load_map of a map id spawns one finished structure (F_BUILDING clear, team 255, owner 255, up = the surface normal) per relay_station entry the baked features.json carries (neutral_structures entries and the 02 s9.1 relay_station resource features; the PR names the exact keys it reads and files 'needs maps:' for any map whose bake has none); a fixture map dir with one entry yields one capturable Relay Station that a Hauler lands on and captures in a SimWorld-driven test; a map with none spawns none; spawn order is the file order (deterministic), S4 round trip byte-exact; no def or schema change; sim/relay/MODULE.md responsibility row and sim/world/MODULE.md updated; perf note (load time only)", "docs": ["docs/reviews/R0-amendments-24.md", "02 s5.3", "02 s9.1", "03 s8.1"]},
     {"id": "CONTENT-4", "title": "content+sim: typed StructureDef.capture_s / contest_radius_m and ShipDef.captures; WorldDefs reads them (R0 B.30 A-148)", "lane": "content+sim", "tier": "Haiku", "size_days": 0.2, "depends_on": ["GD-23"], "milestone": "M3", "acceptance": "StructureDef gains var capture_s: float = 0.0 and contest_radius_m: float = 0.0 (not req), ShipDef gains var captures: bool = false (not req); def unit tests assert relay_station 20 / 300, hauler true and that an absent key reads 0.0 / false; WorldDefs reads the typed fields and grep of src/sim/** finds no raw.get and no 'needs content' comment for the three keys; relay, collision and docking suites unchanged and green (no behaviour change); validate_content green", "docs": ["docs/reviews/R0-amendments-24.md", "R0 B.1"]}
   ],
   "acceptance_append": {
@@ -131,7 +131,7 @@ No commit split is required (squash merge, the B.29 A-144 precedent); the tests 
 
 ## Not ruled here
 
-- Where a map's Relay Station stands (02 s5.3 and 02:726 say the Noon Pole; the 03 s8.1 recipe example shows a ring feature at latitude 0). C2-20 gives 02 the Relay Station; GD-50 spawns what the bake emits and the maps lane authors it.
+- Where a map's Relay Station stands (02 s5.3 and 02:726 say the Noon Pole; the 03 s8.1 recipe example shows a ring feature at latitude 0). C2-20 gives 02 the Relay Station; GD-51 spawns what the bake emits and the maps lane authors it.
 - Whether a second neutral objective ever exists. A-148 makes it a def, not code.
 
 ## Decisions for the owner
@@ -140,4 +140,4 @@ No commit split is required (squash merge, the B.29 A-144 precedent); the tests 
 2. A-147: a pad serves its own team only (D14). Recommendation: approve. Default: applied.
 3. A-148: `capture_s` / `contest_radius_m` on `structures.json` per def, required as a pair; `captures` on `ships.json`. Alternative: keep them in `scoring.json` `relay` and the `cargo_ice` proxy. Recommendation: structures and the flag. Default: structures and the flag.
 4. A-149: follow 03 s3.2 row 33 (`timer_b` progress, `link` capturer id, `timer_a` contested). Alternative: amend rows 31-33 to the PR's layout. Recommendation: row 33. Default: row 33.
-5. GD-50 (sim, Sonnet, 0.5 d, M3) and CONTENT-4 (content+sim, Haiku, 0.2 d, M3). Alternative for CONTENT-4: a content task and a sim task (the CONTENT-3 / GD-44 pair). Recommendation: as written. Default: as written.
+5. GD-51 (sim, Sonnet, 0.5 d, M3) and CONTENT-4 (content+sim, Haiku, 0.2 d, M3). Alternative for CONTENT-4: a content task and a sim task (the CONTENT-3 / GD-44 pair). Recommendation: as written. Default: as written.
