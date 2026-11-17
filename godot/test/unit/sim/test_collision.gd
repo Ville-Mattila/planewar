@@ -349,6 +349,62 @@ func test_pad_free_structure_still_rams_a_friendly_ship_above_its_deck() -> void
 	var _sh: int = _kit.entity(EntityStore.K_SHIP, _at(20.0, 30.0), 6.0, 0)
 	_kit.detect(1)
 	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
+
+
+# A-146 (R0 B.30): a capturer, and nobody else, gets the A-109 shape on an open pad it does not hold.
+func _open_pad_and_ship(pad_team: int, ship_team: int, ship_def: int) -> Vector2i:
+	var pad: int = _kit.entity(EntityStore.K_STRUCTURE, _at(0.0, 0.0), 26.0, pad_team, CollisionTestKit.OPEN_DEF)
+	var ship: int = _kit.entity(EntityStore.K_SHIP, _at(6.0, 0.0), 6.0, ship_team, ship_def)
+	return Vector2i(pad, ship)
+
+
+func test_a_capturer_above_an_open_pad_deck_is_not_rammed() -> void:
+	for pad_team: int in [EntityStore.NONE_U8, 1]:                     # neutral, then held by another team
+		var ps: Vector2i = _open_pad_and_ship(pad_team, 0, CollisionTestKit.CAPTURER_DEF)
+		_kit.store.pos[ps.y] = _at(20.0, _kit.pad_radius + 8.0)          # hover height, outside pad_radius_m, inside the 26 m sphere
+		_kit.detect(1)
+		assert_int(_kit.count(Collision.C_RAM)).is_equal(0)
+		assert_int(_kit.count(Collision.C_PAD)).is_equal(0)
+		var _f1: bool = _kit.store.free_slot(ps.x, 0)
+		var _f2: bool = _kit.store.free_slot(ps.y, 0)
+
+
+func test_a_capturer_inside_an_open_pad_volume_gets_a_pad_contact() -> void:
+	for pad_team: int in [EntityStore.NONE_U8, 1]:
+		var ps: Vector2i = _open_pad_and_ship(pad_team, 0, CollisionTestKit.CAPTURER_DEF)
+		_kit.detect(1)
+		assert_int(_kit.count(Collision.C_PAD)).is_equal(1)
+		assert_int(_kit.count(Collision.C_RAM)).is_equal(0)
+		var _f1: bool = _kit.store.free_slot(ps.x, 0)
+		var _f2: bool = _kit.store.free_slot(ps.y, 0)
+
+
+func test_a_non_capturer_is_rammed_by_an_open_pad_of_another_team_at_every_altitude() -> void:
+	for pad_team: int in [EntityStore.NONE_U8, 1]:
+		var ps: Vector2i = _open_pad_and_ship(pad_team, 0, CollisionTestKit.PLAIN_DEF)
+		for alt: float in [6.0, 20.0, -3.0]:                              # in the volume, above the deck, inside the body
+			_kit.store.pos[ps.y] = _at(alt, 3.0)
+			_kit.detect(1)
+			assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
+			assert_int(_kit.count(Collision.C_PAD)).is_equal(0)
+		var _f1: bool = _kit.store.free_slot(ps.x, 0)
+		var _f2: bool = _kit.store.free_slot(ps.y, 0)
+
+
+func test_a_capturer_below_an_open_pad_deck_plane_is_rammed() -> void:
+	var ps: Vector2i = _open_pad_and_ship(EntityStore.NONE_U8, 0, CollisionTestKit.CAPTURER_DEF)
+	_kit.store.pos[ps.y] = _at(-7.0, 3.0)                              # below -(radius + 0.5)
+	_kit.detect(1)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
+
+
+func test_a_capturer_is_rammed_by_an_enemy_pad_that_is_not_open() -> void:
+	var pad: int = _kit.entity(EntityStore.K_STRUCTURE, _at(0.0, 0.0), 26.0, 1, CollisionTestKit.PAD_DEF)
+	var ship: int = _kit.entity(EntityStore.K_SHIP, _at(20.0, 3.0), 6.0, 0, CollisionTestKit.CAPTURER_DEF)
+	_kit.detect(1)
+	assert_int(_kit.count(Collision.C_RAM)).is_equal(1)
+	assert_int(_kit.count(Collision.C_PAD)).is_equal(0)
+	assert_int(pad + ship).is_greater(0)
 # endregion
 
 

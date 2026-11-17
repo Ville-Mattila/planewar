@@ -282,3 +282,77 @@ func test_service_progress_reads_the_three_fills() -> void:
 	var parked: int = DockingTestKit.ship_over(_w, &"dart", 0, 0, yard, DockingTestKit.HIGH)
 	DockingTestKit.dock(_w, parked, yard)                                       # a launch pad never services
 	assert_vector(_w.view().service_progress(parked)).is_equal(Vector3.ZERO)
+
+
+# --- D14 team gate (R0 B.30 A-147; 02 s5.3): a pad serves ships of its own team only --------------------------------
+
+const RELAY_EAST: float = 700.0     ## the Relay Station of these cases stands apart from `_pad`
+
+
+# A Relay Station of `team` / `owner` (255 = neutral) with a Hauler of player 0 (team 0) DOCKED on it, fuel 0, Ice in the pool.
+func _hauler_on_relay(team: int, owner: int) -> Vector2i:
+	var relay: int = DockingTestKit.pad(_w, &"relay_station", owner, team, RELAY_EAST)
+	var id: int = DockingTestKit.direct(_w, &"hauler", 0, 0, DockingTestKit.far(_w))
+	DockingTestKit.dock(_w, id, relay)
+	_w.store().fuel[_slot(id)] = 0.0
+	_w.economy().economy.credit(0, 0, 1000)
+	return Vector2i(relay, id)
+
+
+func test_a_ship_on_a_pad_of_another_team_is_not_served_and_spends_nothing() -> void:
+	for holder: int in [EntityStore.NONE_U8, 1]:                      # neutral, then held by the enemy team
+		var ri: Vector2i = _hauler_on_relay(holder, holder)
+		var ice0: int = DockingTestKit.pool(_w, 0)[1]
+		var ore0: int = DockingTestKit.pool(_w, 0)[0]
+		var _d: Array[SimEvent] = _w.drain_events()
+		var events: Array[SimEvent] = []
+		for _t: int in 15 * _hz:
+			_w.step()
+			events.append_array(_w.drain_events())
+		assert_float(_w.store().fuel[_slot(ri.y)]).is_equal(0.0)
+		assert_int(DockingTestKit.pool(_w, 0)[1]).is_equal(ice0)
+		assert_int(DockingTestKit.pool(_w, 0)[0]).is_equal(ore0)
+		assert_int(DockingTestKit.of_kind(events, SimEvent.Kind.SERVICED).size()).is_equal(0)
+		assert_int(DockingTestKit.of_kind(events, SimEvent.Kind.ALERT).size()).is_equal(0)   # no WAITING_FOR_ICE / ORE either
+		assert_bool((_w.store().flags[_slot(ri.y)] & EntityStore.F_DOCKED) != 0).is_true()
+		DockingTestKit.clear(_w, ri.y)
+		_w.store().team[_slot(ri.x)] = EntityStore.NONE_U8
+		_w.store().flags[_slot(ri.x)] &= ~EntityStore.F_ALIVE
+
+
+func test_service_starts_when_the_pad_becomes_the_ships_team() -> void:
+	var ri: Vector2i = _hauler_on_relay(EntityStore.NONE_U8, EntityStore.NONE_U8)
+	var hd: ShipDef = DockingTestKit.ship_def(&"hauler")
+	for _t: int in 5 * _hz:
+		_w.step()
+	assert_float(_w.store().fuel[_slot(ri.y)]).is_equal(0.0)
+	_w.store().team[_slot(ri.x)] = 0                                  # the capture completed
+	_w.store().owner[_slot(ri.x)] = 0
+	var served: bool = false
+	for _t: int in int((hd.refuel_time_s + 2.0) * float(_hz)):
+		_w.step()
+		served = served or not DockingTestKit.of_kind(_w.drain_events(), SimEvent.Kind.SERVICED).is_empty()
+	assert_bool(served).is_true()
+	assert_float(_w.store().fuel[_slot(ri.y)]).is_greater_equal(hd.fuel_s - 0.01)
+
+
+func test_a_teammates_pad_serves() -> void:
+	var ri: Vector2i = _hauler_on_relay(0, 2)                         # held by player 2, a teammate of player 0 (team 0)
+	var hd: ShipDef = DockingTestKit.ship_def(&"hauler")
+	var served: bool = false
+	for _t: int in int((hd.refuel_time_s + 2.0) * float(_hz)):
+		_w.step()
+		served = served or not DockingTestKit.of_kind(_w.drain_events(), SimEvent.Kind.SERVICED).is_empty()
+	assert_bool(served).is_true()
+	assert_float(_w.store().fuel[_slot(ri.y)]).is_greater_equal(hd.fuel_s - 0.01)
+
+
+func test_service_progress_is_zero_on_a_pad_of_another_team() -> void:
+	var ri: Vector2i = _hauler_on_relay(1, 1)
+	for _t: int in 3 * _hz:
+		_w.step()
+	assert_vector(_w.view().service_progress(ri.y)).is_equal(Vector3.ZERO)
+	_w.store().team[_slot(ri.x)] = 0
+	for _t: int in 3 * _hz:
+		_w.step()
+	assert_float(_w.view().service_progress(ri.y).x).is_greater(0.0)   # own team now: the fuel fill reads

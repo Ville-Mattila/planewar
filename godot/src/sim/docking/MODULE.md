@@ -70,7 +70,7 @@ Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collisi
 
 - D1 Landing (03 s6.4, A-31). Every tick, each PAD contact of step 8 (contact order = ascending ship slot) whose ship is
   standing (not killed in step 9) and not DOCKED is judged. The pad must be a live, finished (`F_BUILDING` clear) service
-  pad (`pad_radius_m` > 0 with `pads` > 0; never a `launch_pad` structure) with no ship docked on it and either no queue
+  pad (`pad_radius_m` > 0 with `pads` > 0; never a `launch_pad` structure) of the ship's team, or an open pad for a capturer (Collision emits no other PAD contact, A-146), with no ship docked on it and either no queue
   or this ship at its head; otherwise the ship holds and nothing happens, unless its band is DESTROY (then it crashes:
   the band is physics, not permission). Two arrivals on one free pad in one tick: the first in contact order lands.
 - D2 Grade inputs from the contact: v_vert = max(post-move descent, the tick's terrain hit_normal_speed) (Collision, GD-15:
@@ -97,7 +97,7 @@ Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collisi
   (A-127). Entries keep their arrival order while they still wait for the same
   pad; new waiters are appended in ascending ship slot, at most `PER_PAD` per pad; a ship that docks, dies, loses the wish
   or leaves the radius drops out. Updated once per step 10; read by `Touchdown` (head) and `SimView.pad_queue`.
-- D7 Service (02 s2.3) runs in step 10 for every DOCKED ship whose `link` is a live finished service pad; three
+- D7 Service (02 s2.3) runs in step 10 for every DOCKED ship whose `link` is a live finished service pad of its own team (D14); three
   independent timers (refuel, rearm, repair; PadService header for the laws). Whole-refuel cost `ceil(refuel_ice x
   fuel_missing01)` Ice, whole-repair cost `ceil(hp_missing x repair_ore_per_hp)` Ore (E7's telescoping rule), rearm
   `rearm_ice` per secondary round (gun rounds free). Time scales with what is missing; a full service from empty takes
@@ -130,6 +130,7 @@ Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collisi
   just launched is not re-landed), exactly 0 lands as before. S4: the hold is `timer_b` (already saved), FORMAT stays 13
   (`test_launch::test_save_mid_hold_reloads_exact_and_launches_on_the_same_tick`). The two def fields are the typed
   `FlightCommonDef.launch_thrust_min` / `launch_hold_s` (required; GD-44).
+- D14 Team gate (R0 B.30 A-147; 02 s5.3). Step 10 serves a DOCKED ship only while `team[pad] == team[ship]`, tested every tick. On a pad of another team (only a capturer on an open pad gets there, A-146) the stay opened at landing stands still: no timer advances, nothing is spent, no WAITING_FOR_ICE / WAITING_FOR_ORE, no SERVICED, and `service_progress` is ZERO. The launch hold (D13) is not gated. When the pad's team becomes the ship's (the capture completes after `Docking` in the same step 10) service starts on the next tick under D7-D9, D8's bonus included. A ship never queues for a pad of another team (D6 unchanged), and D1's queue-head and occupied-pad rules apply to a capturer as written. Tests: `test_service.gd`, `test_launch.gd`, `test_touchdown.gd`.
 
 ## Data owned
 
@@ -152,7 +153,7 @@ the `perf_tick.gd --full` delta in the GD-15 PR perf note. D13 adds one thrust c
 ## Test entry points
 
 `godot/test/unit/sim/docking/test_touchdown.gd` (D1-D5), `test_pad_queue.gd` (D6), `test_service.gd` (D7-D10, the
-02 s2.3 table for every ship), `test_docking_s4.gd` (D11 against the original run, format 13 refusal), `test_launch.gd` (D13), `test_docking_perf.gd` (D12, row 10 / 9),
+02 s2.3 table for every ship), `test_docking_s4.gd` (D11 against the original run, format 13 refusal), `test_launch.gd` (D13, D14 launch), D14 in `test_service.gd` and `test_touchdown.gd`, `test_docking_perf.gd` (D12, row 10 / 9),
 helper `docking_test_kit.gd`; the SimView contract (`godot/test/unit/sim/contract/`) pins `service_progress`, `pad_queue`
 and `landing_grade_last`; `godot/test/unit/sim/test_collision.gd` (D2 impact speed).
 

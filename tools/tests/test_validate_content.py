@@ -486,3 +486,36 @@ class Ap18Crawler(Tree):
         self.assertEqual(code, 1, out)
         self.assertIn("1 violations", out)
         self.assertIn("missing required key 'follow'", out)
+
+
+class B30Capture(Tree):
+    """GD-23 (R0 B.30 A-148): capture_s / contest_radius_m come as a pair on a structure with a pad; each negative trips exactly one rule."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        shutil.copy(REPO / "godot" / "content" / "defs" / "structures.json", self.root / "godot" / "content" / "defs")
+
+    def _edit_relay(self, mutate: Any) -> None:
+        f = self.root / "godot" / "content" / "defs" / "structures.json"
+        data = json.loads(f.read_text(encoding="utf-8"))
+        mutate([x for x in data["structures"] if x["id"] == "relay_station"][0])
+        f.write_text(json.dumps(data), encoding="utf-8")
+
+    def test_the_shipped_relay_station_passes(self) -> None:
+        code, out = run(self.root)
+        self.assertEqual(code, 0, out)
+
+    def test_capture_s_without_contest_radius_fails(self) -> None:
+        self._edit_relay(lambda s: s.pop("contest_radius_m"))
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+        self.assertIn("required as a pair", out)
+
+    def test_a_capturable_structure_without_a_pad_fails(self) -> None:
+        self._edit_relay(lambda s: s.update({"pads": 0}))
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+        self.assertIn("needs pads >= 1", out)
+

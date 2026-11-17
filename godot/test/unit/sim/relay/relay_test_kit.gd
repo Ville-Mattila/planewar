@@ -1,5 +1,5 @@
 class_name RelayTestKit extends RefCounted
-## Fixtures for the GD-23 tests (sim/relay/MODULE.md R1-R9): a WorldTestKit world (players 0 and 2 on team 0, 1 on team 1),
+## Fixtures for the GD-23 tests (sim/relay/MODULE.md R1-R11): a WorldTestKit world (players 0 and 2 on team 0, 1 on team 1),
 ## a neutral Relay Station on the datum, Haulers docked on it, and enemy units hovering `east` metres from it. The relay
 ## pass is run alone (`pass_n`), so hovering units do not fall; the end-to-end tests step the world.
 
@@ -13,7 +13,11 @@ static func world() -> SimWorld:
 	return w
 
 
+## A number of the Relay Station def (`capture_s`, `contest_radius_m`; structures.json, R0 B.30 A-148) or of scoring.json `relay`.
 static func rule(key: String) -> float:
+	var sd: StructureDef = WorldTestKit.content().structures[WorldTestKit.def_id(&"relay_station") - DefRanges.STRUCTURE_BASE]
+	if sd.raw.has(key):
+		return Def.num(sd.raw[key])
 	return Def.num(WorldTestKit.content().scoring.relay.get(key, 0.0))
 
 
@@ -51,8 +55,19 @@ static func team_of(w: SimWorld, id: int) -> int:
 	return w.store().team[EntityId.slot(id)]
 
 
+## Capture progress in seconds: the relay's `timer_b` (A-149).
 static func progress(w: SimWorld, id: int) -> float:
-	return capture(w).progress_s(EntityId.slot(id))
+	return w.store().timer_b[EntityId.slot(id)]
+
+
+## The pause flag: the relay's `timer_a` (A-149).
+static func contested(w: SimWorld, id: int) -> bool:
+	return w.store().timer_a[EntityId.slot(id)] > 0.0
+
+
+## The capturer whose capture runs: the relay's `link` (A-149), 0 for none.
+static func capturer(w: SimWorld, id: int) -> int:
+	return w.store().link[EntityId.slot(id)]
 
 
 static func of_kind(events: Array[SimEvent], kind: SimEvent.Kind, alert: int = -1) -> Array[SimEvent]:

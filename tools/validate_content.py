@@ -186,6 +186,13 @@ def check_amendments_02(rep: Report, defs: dict[str, Any]) -> None:
             if s.get("launch_pad") is True and s.get("pads", 0) != 0:
                 rep.add(f"godot/content/defs/{stem}.json:/{stem}/{n}/pads",
                         f"a launch_pad structure has no service pads; pads {s.get('pads')} must be 0 (R0 B.9 A-19)")
+            has_cap = "capture_s" in s or "contest_radius_m" in s
+            if has_cap and not ("capture_s" in s and "contest_radius_m" in s):
+                rep.add(f"godot/content/defs/{stem}.json:/{stem}/{n}",
+                        "capture_s and contest_radius_m are required as a pair (R0 B.30 A-148)")
+            elif has_cap and not (s.get("pads", 0) >= 1 and s.get("pad_radius_m", 0) > 0):
+                rep.add(f"godot/content/defs/{stem}.json:/{stem}/{n}/pads",
+                        "a capturable structure needs pads >= 1 and pad_radius_m > 0 (R0 B.30 A-148)")
 
 
 def check_landing_grade(rep: Report, defs: dict[str, Any]) -> None:

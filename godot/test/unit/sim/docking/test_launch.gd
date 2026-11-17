@@ -232,3 +232,18 @@ func test_save_mid_hold_reloads_exact_and_launches_on_the_same_tick() -> void:
 		if not DockingTestKit.of_kind(b, SimEvent.Kind.LAUNCHED).is_empty() and launched_at == 0:
 			launched_at = k + 1
 	assert_int(launched_at).is_equal(_hold_ticks() - 4)
+
+
+# D13 / D14 (R0 B.30 A-147): the launch hold is not gated by the pad's team; a capturer leaves a pad it does not hold.
+func test_a_ship_launches_from_a_pad_of_another_team() -> void:
+	var relay: int = DockingTestKit.pad(_w, &"relay_station", EntityStore.NONE_U8, EntityStore.NONE_U8, 700.0)
+	var id: int = DockingTestKit.ship_over(_w, &"hauler", 0, 0, relay, DockingTestKit.HIGH)
+	DockingTestKit.dock(_w, id, relay)
+	_w.set_ai_hook(_hook(id, func(_t: int) -> float: return 1.0))
+	var _d: Array[SimEvent] = _w.drain_events()
+	var events: Array[SimEvent] = []
+	assert_int(_run(_w, id, _hold_ticks() - 1, events)).is_equal(0)
+	assert_bool(_docked_flag(_w, id)).is_true()
+	assert_int(_run(_w, id, 1, events)).is_equal(1)                  # the same tick as from an own pad
+	assert_bool(_docked_flag(_w, id)).is_false()
+	assert_int(DockingTestKit.of_kind(events, SimEvent.Kind.SERVICED).size()).is_equal(0)

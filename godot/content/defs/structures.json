@@ -242,7 +242,7 @@
       "status": "core",
       "tags": ["structure", "neutral"],
       "presentation": {},
-      "_doc": "02 s5.3 Relay Station (neutral, pre-placed): indestructible, hp 1, no cost, no build time, power 0, sensor 3500 with deck reveal 1200, pad 12 m (R0 B.1, 02 s5.1 row); buildable false",
+      "_doc": "02 s5.3 Relay Station (neutral, pre-placed): capture_s 20 and contest_radius_m 300 (02 s5.3 writes contest_radius; R0 C2-20, R0 B.30 A-148; the pair makes the def an open pad), indestructible, hp 1, no cost, no build time, power 0, sensor 3500 with deck reveal 1200, pad 12 m (R0 B.1, 02 s5.1 row); buildable false",
       "hp": 1,
       "cost_ore": 0,
       "cost_ice": 0,
@@ -254,6 +254,8 @@
       "deck_reveal_radius": 1200,
       "pads": 1,
       "pad_radius_m": 12,
+      "capture_s": 20,
+      "contest_radius_m": 300,
       "buildable": false,
       "invulnerable": true
     }

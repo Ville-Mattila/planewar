@@ -1,9 +1,9 @@
 extends GdUnitTestSuite
-## GD-23 R10 (sim/relay/MODULE.md; 03 s4.2 row 10): the relay pass with 2 Relay Stations, a Hauler docked on one, and 200 ships
+## GD-23 R11 (sim/relay/MODULE.md; 03 s4.2 row 10): the relay pass with 2 Relay Stations, a Hauler docked on one, and 200 ships
 ## and 200 ground units around. Time goes through PerfGate (report-only unless PLANEWAR_PINNED_RUNNER=1).
 
 const K: GDScript = preload("res://test/unit/sim/relay/relay_test_kit.gd")
-const CITE: String = "03 s4.2 row 10 (economy), GD-23 R10"
+const CITE: String = "03 s4.2 row 10 (economy), GD-23 R11"
 const REPS: int = 300
 const BOUND_US: float = 300.0
 const IDLE_US: float = 20.0

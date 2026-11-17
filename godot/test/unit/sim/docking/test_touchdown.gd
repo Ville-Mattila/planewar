@@ -338,3 +338,50 @@ func test_the_pad_radius_boundary_through_collision() -> void:
 			DockingTestKit.clear(_w, id)
 		else:
 			assert_object(e).is_null()
+
+
+# --- A-146 (R0 B.30): a flown approach through Collision onto an open pad it does not hold -----------------------------
+
+func _open_pad(team: int, owner: int) -> int:
+	return DockingTestKit.pad(_w, &"relay_station", owner, team, 700.0)
+
+
+# A ship `def` of player 0 (team 0) 6 m above the open pad's deck, descending, then one world step.
+func _fly_onto(relay: int, def: StringName) -> Array[SimEvent]:
+	var sd: ShipDef = DockingTestKit.ship_def(def)
+	var up: Vector3 = _w.store().up[_slot(relay)]
+	var id: int = DockingTestKit.ship_over(_w, def, 0, 0, relay, sd.bounding_radius, 0.0, -up * 2.0)
+	var _d: Array[SimEvent] = _w.drain_events()
+	_w.step()
+	_last_ship = id
+	return _w.drain_events()
+
+
+var _last_ship: int = 0
+
+
+func test_a_capturer_lands_on_a_neutral_open_pad_through_collision() -> void:
+	var relay: int = _open_pad(EntityStore.NONE_U8, EntityStore.NONE_U8)
+	var ev: Array[SimEvent] = _fly_onto(relay, &"hauler")
+	assert_int(DockingTestKit.of_kind(ev, SimEvent.Kind.LANDING).size()).is_equal(1)
+	assert_int(DockingTestKit.of_kind(ev, SimEvent.Kind.DOCKED).size()).is_equal(1)
+	assert_int(_w.store().link[_slot(_last_ship)]).is_equal(relay)
+	assert_bool(_w.store().alive(_last_ship)).is_true()
+
+
+func test_a_capturer_lands_on_an_enemy_held_open_pad_through_collision() -> void:
+	var relay: int = _open_pad(1, 1)
+	var ev: Array[SimEvent] = _fly_onto(relay, &"hauler")
+	assert_int(DockingTestKit.of_kind(ev, SimEvent.Kind.DOCKED).size()).is_equal(1)
+	assert_int(_w.store().link[_slot(_last_ship)]).is_equal(relay)
+
+
+func test_a_non_capturer_never_lands_on_an_open_pad_of_another_team() -> void:
+	for team: int in [EntityStore.NONE_U8, 1]:
+		var relay: int = _open_pad(team, team)
+		var ev: Array[SimEvent] = _fly_onto(relay, &"dart")
+		assert_int(DockingTestKit.of_kind(ev, SimEvent.Kind.LANDING).size()).is_equal(0)
+		assert_int(DockingTestKit.of_kind(ev, SimEvent.Kind.DOCKED).size()).is_equal(0)
+		assert_int(_w.store().link[_slot(_last_ship)]).is_equal(0)
+		DockingTestKit.clear(_w, _last_ship)
+		_w.store().flags[_slot(relay)] &= ~EntityStore.F_ALIVE

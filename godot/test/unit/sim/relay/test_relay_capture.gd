@@ -17,8 +17,10 @@ func before_test() -> void:
 func test_the_rule_numbers_come_from_the_defs() -> void:
 	assert_float(K.rule("capture_s")).is_equal(20.0)
 	assert_float(K.rule("contest_radius_m")).is_equal(300.0)
-	assert_float(K.capture(_w).capture_s).is_equal(K.rule("capture_s"))
-	assert_float(K.capture(_w).contest_radius_m).is_equal(K.rule("contest_radius_m"))
+	assert_float(_w._defs.capture_s_by_def[_w.store().def_id[EntityId.slot(_relay)]]).is_equal(20.0)
+	assert_float(_w._defs.contest_radius_by_def[_w.store().def_id[EntityId.slot(_relay)]]).is_equal(300.0)
+	assert_int(_w._defs.capturer_by_def[WorldTestKit.def_id(&"hauler")]).is_equal(1)
+	assert_int(_w._defs.capturer_by_def[WorldTestKit.def_id(&"dart")]).is_equal(0)
 
 
 func test_an_uncontested_capture_completes_at_twenty_seconds() -> void:
@@ -56,7 +58,7 @@ func test_an_enemy_ship_within_the_contest_radius_pauses_the_capture() -> void:
 	K.pass_n(_w, K.seconds(30.0))
 	assert_int(K.team_of(_w, _relay)).is_equal(K.NEUTRAL)
 	assert_float(K.progress(_w, _relay)).is_equal_approx(10.0, 0.1)
-	assert_bool(K.capture(_w).contested(EntityId.slot(_relay))).is_true()
+	assert_bool(K.contested(_w, _relay)).is_true()
 	_w.store().pos[EntityId.slot(foe)] = DockingTestKit.far(_w)   # it flies off: the clock resumes where it stopped
 	K.pass_n(_w, K.seconds(9.0))
 	assert_int(K.team_of(_w, _relay)).is_equal(K.NEUTRAL)
@@ -99,9 +101,13 @@ func test_the_hauler_leaving_resets_the_progress() -> void:
 	var h: int = K.docked(_w, &"hauler", 0, _relay)
 	K.pass_n(_w, K.seconds(15.0))
 	assert_float(K.progress(_w, _relay)).is_greater(14.0)
+	assert_int(K.capturer(_w, _relay)).is_equal(h)                 # A-149: `link` names the capturer ...
+	assert_int(_w.view().link(_relay)).is_equal(h)                 # ... and SimView.link hands it out
 	DockingTestKit.clear(_w, h)
 	K.pass_n(_w, 1)
 	assert_float(K.progress(_w, _relay)).is_equal(0.0)
+	assert_int(K.capturer(_w, _relay)).is_equal(0)
+	assert_bool(K.contested(_w, _relay)).is_false()
 	DockingTestKit.dock(_w, h, _relay)
 	K.pass_n(_w, K.seconds(19.0))
 	assert_int(K.team_of(_w, _relay)).is_equal(K.NEUTRAL)     # a fresh 20 s, not the 5 that were left
