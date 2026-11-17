@@ -644,12 +644,12 @@ The team's per-player income runs ahead of 1v1 (about 1,370 Ore/min per player a
 | 6-8 | 72 | 355 | 5 | 5 | 660 | 650 | 62 | 0 | 61/43 |
 | 8-10 | 82 | 350 | 5 | 6 | 810 | 800 | 40 | 42 | 61/55 |
 | 10-12 | 124 | 395 | 6 | 7 | 810 | 788 | 40 | 18 | 66/62 |
-| 12-14 | 230 | 316 | 6 | 6 | 960 | 900 | 113 | 152 | 123/75 |
-| 14-16 | 288 | 306 | 6 | 8 | 1,260 | 1,225 | 115 | 120 | 123/97 |
-| 16-18 | 306 | 421 | 7 | 12 | 1,410 | 1,400 | 115 | 58 | 123/113 |
+| 12-14 | 230 | 316 | 6 | 6 | 960 | 900 | 113 | 152 | 106/75 |
+| 14-16 | 288 | 306 | 6 | 8 | 1,260 | 1,225 | 115 | 120 | 106/97 |
+| 16-18 | 306 | 421 | 7 | 12 | 1,410 | 1,400 | 115 | 58 | 151/113 |
 | 18-20 | 558 | 461 | 8 | 19 | 1,410 | 1,275 | 115 | 95 | 135/129 |
 | 20-22 | 6 | 261 | 8 | 19 | 1,661 | 1,925 | 115 | 215 | 171/160 |
-| 22-24 | 52 | 431 | 8 | 20 | 1,410 | 1,375 | 230 | 145 | 195/212 |
+| 22-24 | 52 | 431 | 8 | 20 | 1,410 | 1,375 | 230 | 145 | 151/185 |
 
 24-minute totals per player: Ore income 23,240 (mined 21,800 + trickle 1,440); spent on structures 13,780 (the pre-built Shipyard and Vehicle Bay are no longer bought), units 10,100, repair 120; Ice income 1,890 (+300 start), Ice spent on services 910 and builds 850. Milestones: Outpost #2 at 10:16, Hangar 11:04, Reactor 13:41, first Bomber airborne 14:29, Shield 14:52. Peak Ore stock 558 against a cap of >= 6,250: storage never binds in the Normal model (BAL-18).
 
