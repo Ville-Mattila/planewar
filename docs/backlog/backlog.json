@@ -2558,10 +2558,10 @@
       " R0 O-4",
       " 05 AI-18"
     ],
-    "status": "done",
+    "status": "review",
     "notes": "AI-18 edits tools/schemas/autopilots.schema.json and autopilots.json for the follow block only, under A-145 (10 s4.3: Architect for required fields; defs: fields its task adds). Orchestrator: launch at Opus (brain; CLAUDE.md tier guidance) despite Haiku tier here. PARTIAL: approved with the clause \"shells reach the target from 1,000-1,150 m\" DEFERRED to GD-50 (sim barrel elevation) + AI-18b (wiring). Until then the AI Crawler fires 150-216 m ahead (possibly onto own units): land GD-50/AI-18b before M3 playtests. siege block (8 optional keys) read with 05 s6.7 defaults, schema property pending Architect (AI-49). Solver tuning (0.02 rad, +-pi/4, 6 iterations) hard-coded. Nit: restore test never saves with a near-bomb relocation pending.",
     "pr": 176,
-    "merged": "2026-11-17"
+    "merged": null
   },
   {
     "id": "AI-19",
