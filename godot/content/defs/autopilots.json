@@ -883,8 +883,21 @@
       "id": "ap_crawler",
       "status": "core",
       "tags": [],
-      "_doc": "R0 B.1 required keys only (05 s4.4 lists ap_crawler without values; 02 s3 minimum range is not an autopilot key). AI-19 (six damping_only flight gains from godot/test/tuning/recommended_gains.json, set named by A-68, auto_launch_fuel01 per A-119).",
-      "think_period_ticks": 10
+      "_doc": "R0 B.1 required keys only (05 s4.4 lists ap_crawler without values; 02 s3 minimum range is not an autopilot key). AI-19 (six damping_only flight gains from godot/test/tuning/recommended_gains.json, set named by A-68, auto_launch_fuel01 per A-119). AI-18 (R0 B.29 A-145, brains/MODULE.md CR5): follow is required on ap_crawler; the 05 s5.7 ground follower block, starting values ap_harvester's, kept unchanged by AI-18 (SC-AI18 scenarios on tiny_test).",
+      "think_period_ticks": 10,
+      "follow": {
+        "lookahead_m": 40,
+        "kp_yaw": 2.0,
+        "thrust_turn": 0.4,
+        "turn_slow_deg": 45,
+        "pivot_m": 20,
+        "arrive_m": 3,
+        "path_wait_ticks": 30,
+        "stuck_progress_m": 5,
+        "stuck_window_s": 10,
+        "deviate_m": 120,
+        "aim_every_ticks": 4
+      }
     },
     {
       "id": "ap_tower",

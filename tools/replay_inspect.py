@@ -2,7 +2,7 @@
 """replay_inspect: a Python decoder for PLANEWAR `.pwr` replays (NET-25; 04 s13.1, ADR-10).
 
 Mirrors godot/src/net/replay/*.gd and the SNAPSHOT codec (04 s3.4) for what a replay contains: A-tier FULL and
-DELTA records against the previous written frame, ENTITY_META / ROSTER_REMOVE, EVENTS, CHAT and INPUT_SUMMARY frames.
+DELTA records against the previous written frame, ENTITY_META / ROSTER_REMOVE, EVENTS, CHAT, INPUT_SUMMARY and PROJECTILES (PROJECTILE_BATCH, NET-51) frames.
 Positions stay as quantised levels (cell, e, n, u); it does not need the moon's cell geometry. Used by moderators
 (CHAT text, NET-43) and perf scripts. Standard library only.
 
@@ -27,9 +27,10 @@ END_MAGIC = b"PWRE"
 PROTOCOL_VERSION = 1
 FRAME_HEADER = 9
 FOOTER = 44
-KEYFRAME, DELTA, EVENTS, CHAT, INPUT_SUMMARY = 1, 2, 3, 4, 5
-FRAME_NAMES = {1: "KEYFRAME", 2: "DELTA", 3: "EVENTS", 4: "CHAT", 5: "INPUT_SUMMARY"}
-ID_SNAPSHOT, ID_EVENTS, ID_ENTITY_META, ID_ROSTER_REMOVE = 0x84, 0x87, 0x88, 0x90
+KEYFRAME, DELTA, EVENTS, CHAT, INPUT_SUMMARY, PROJECTILES = 1, 2, 3, 4, 5, 6
+FRAME_NAMES = {1: "KEYFRAME", 2: "DELTA", 3: "EVENTS", 4: "CHAT", 5: "INPUT_SUMMARY", 6: "PROJECTILES"}
+ID_SNAPSHOT, ID_EVENTS, ID_ENTITY_META, ID_ROSTER_REMOVE, ID_PROJECTILE_BATCH = 0x84, 0x87, 0x88, 0x90, 0x8F
+PROJ_HAS_FUSE = 0x80
 POS_EN_HALF = 1280.0
 POS_U_MIN = -768.0
 POS_EN_QUANTUM = 2.0 * POS_EN_HALF / 65536
@@ -248,7 +249,7 @@ def _scan(rp: Replay) -> None:
     while at + FRAME_HEADER <= size:
         t = raw[at]
         n = struct.unpack_from("<I", raw, at + 5)[0]
-        if t < 1 or t > 5 or at + FRAME_HEADER + n > size:
+        if t < 1 or t > 6 or at + FRAME_HEADER + n > size:
             break
         tick = struct.unpack_from("<I", raw, at + 1)[0]
         if t == KEYFRAME:
@@ -264,7 +265,7 @@ def iter_frames(rp: Replay):
     while at + FRAME_HEADER <= rp.frames_end:
         t = rp.raw[at]
         tick, n = struct.unpack_from("<II", rp.raw, at + 1)
-        if t < 1 or t > 5 or at + FRAME_HEADER + n > rp.frames_end:
+        if t < 1 or t > 6 or at + FRAME_HEADER + n > rp.frames_end:
             raise ReplayError(f"bad frame at {at}")
         yield t, tick, rp.raw[at + FRAME_HEADER:at + FRAME_HEADER + n]
         at += FRAME_HEADER + n
@@ -409,6 +410,27 @@ def decode_events(p: bytes) -> list[dict]:
     return out
 
 
+def decode_shots(p: bytes, frame_tick: int) -> list[dict]:
+    """PROJECTILE_BATCH (0x8F): id, tick u32, count u8, items x (shooter u16, weapon_slot u8 | HAS_FUSE, seed u8, yaw i8,
+    pitch i8, [fuse u8]); the whole packet must be consumed and carry the frame's tick."""
+    tick, count = struct.unpack_from("<IB", p, 1)
+    if count == 0 or tick != frame_tick:
+        raise ReplayError("bad projectile batch")
+    at, out = 6, []
+    for _ in range(count):
+        shooter, slot, seed, yaw, pitch = struct.unpack_from("<HBBbb", p, at)
+        at += 6
+        fuse = -1
+        if slot & PROJ_HAS_FUSE:
+            fuse = p[at]
+            at += 1
+        out.append({"tick": tick, "shooter": shooter, "weapon_slot": slot & 0x7F, "seed": seed, "yaw": yaw,
+                    "pitch": pitch, "fuse": fuse})
+    if at != len(p):
+        raise ReplayError("projectile batch length")
+    return out
+
+
 def decode_chat(body: bytes) -> dict:
     msg_id, sender, scope, tlen = struct.unpack_from("<QBBH", body, 0)
     return {"msg_id": msg_id, "sender": sender, "scope": scope, "text": body[12:12 + tlen].decode("utf-8", "replace")}
@@ -422,6 +444,7 @@ def decode_all(rp: Replay, gravity: float = 6.0, hz: int = 30, gravity_defs: set
     events: list[dict] = []
     chat: list[dict] = []
     inputs = 0
+    shots = 0
     last = 0
     for t, tick, body in iter_frames(rp):
         if stop_tick is not None and tick > stop_tick:
@@ -444,13 +467,15 @@ def decode_all(rp: Replay, gravity: float = 6.0, hz: int = 30, gravity_defs: set
                     st.apply_snapshot(p, tick)
                 elif p[0] == ID_EVENTS and t == EVENTS:
                     events.extend(decode_events(p))
+                elif p[0] == ID_PROJECTILE_BATCH and t == PROJECTILES:
+                    shots += len(decode_shots(p, tick))
                 else:
                     raise ReplayError(f"unexpected packet {p[0]:#x}")
     return {"map_id": rp.header.map_id, "tick_rate": rp.header.tick_rate, "seed": rp.header.seed,
             "players": [pl["name"] for pl in rp.header.players], "frames": counts,
             "keyframe_ticks": [t for t, _ in rp.index], "ended_tick": rp.ended_tick, "last_tick": last,
             "roster_count": len(st.roster), "events": len(events), "chat": [c["text"] for c in chat],
-            "input_players": inputs, "state": st.snapshot()}
+            "input_players": inputs, "shots": shots, "state": st.snapshot()}
 
 
 def redact(raw: bytes, rp: Replay) -> bytes:

@@ -162,7 +162,7 @@ func set_class_table(table: PackedByteArray) -> void:
 
 
 ## Feeds one drained sim event: SPAWN of an AI-driven def registers it in that def's class (A-71, AI-37); HIT on an AI
-## entity wakes it; DEATH unregisters the dead and wakes whoever targeted it;
+## entity wakes it; DEATH unregisters the dead and wakes whoever targeted it; BOMB_IMPACT goes to `on_impact` (AI-18);
 ## POSSESSED marks the entity for the per-tick release check (AI-08) and drops a running overlay.
 func on_event(ev: SimEvent) -> void:
 	if ev.kind == SimEvent.Kind.SPAWN:
@@ -179,6 +179,12 @@ func on_event(ev: SimEvent) -> void:
 		if s > 0 and s < state.capacity and state.cls[s] != AiState.NO_CLASS and state.eid[s] == ev.a:
 			Overlays.clear(state, s)
 			state.ov_flags[s] = state.ov_flags[s] | AiState.OV_POSSESSED
+	elif ev.kind == SimEvent.Kind.BOMB_IMPACT:   # AI-18: to every class whose brain hears impacts (rare events)
+		for c: int in MAX_CLASSES:
+			if _brains[c] != null and _brains[c].hears_impacts():
+				for id: int in _batches[c].ids:
+					if _brains[c].on_impact(id, ev, state):
+						var _w3: bool = wake(id, ev.tick)
 	elif ev.kind == SimEvent.Kind.DEATH:
 		var _u: bool = unregister(ev.a)
 		for b: AiBatch in _batches:

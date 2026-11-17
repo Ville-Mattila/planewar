@@ -34,3 +34,14 @@ func bind_intel(_intel: TeamIntel) -> void:
 ## term). `AiDriver.set_brain` declares the class on `AiState.counted_class`.
 func counts_targets() -> bool:
 	return false
+
+
+## AI-18: true when the driver should hand this class's entities the BOMB_IMPACT events (`on_impact`).
+func hears_impacts() -> bool:
+	return false
+
+
+## AI-18: one drained BOMB_IMPACT (`ev.pos`, `ev.team` = the bomb's team) for registered entity `id` of this class,
+## before the tick's thinks; true = wake `id` (the driver's rate-limited wake). Per-entity effects go to AiState only.
+func on_impact(_id: int, _ev: SimEvent, _st: AiState) -> bool:
+	return false
