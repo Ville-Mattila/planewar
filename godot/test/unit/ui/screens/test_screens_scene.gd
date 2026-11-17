@@ -65,13 +65,13 @@ func test_pause_screen_focus_order_and_disabled_reasons() -> void:
 
 func test_results_screen_binds_outcome_and_vote() -> void:
 	var s: ResultsScreen = _make("results.tscn") as ResultsScreen
-	var order: PackedStringArray = PackedStringArray(["feather_touch"])
+	var order: Array = ["feather_touch"]
 	s.enter({
 		"result": {"winner_team": 0, "end_reason": 1, "tick": 10, "structure_value": [5, 3],
 				"players": [{"slot": 0, "team": 0, "name": "Ville", "medals": [1], "pilot_time_s": [5, 0, 0, 0, 0]},
 				{"slot": 2, "team": 1, "name": "Aino"}]},
 		"local_team": 0, "local_slot": 0, "medal_order": order, "rematch_allowed": true,
-		"eligible": PackedInt32Array([0, 2]),
+		"eligible": [0, 2],
 	})
 	assert_int(s.outcome()).is_equal(ResultsMath.Outcome.TIME_LIMIT)
 	assert_str(String(s.outcome_key())).is_equal("ui.results.time_limit_win")
@@ -96,6 +96,8 @@ func test_loading_and_eliminated_overlay_text() -> void:
 	assert_str(String(l.state_key())).is_equal("ui.loading.timeout")
 	assert_object(l.initial_focus()).is_not_null()
 	l.free()
+	var _n: int = LocaleSelect.register_translations("res://content/locale")
+	var _l: String = LocaleSelect.apply("en")
 	var e: EliminatedOverlay = _make("eliminated.tscn") as EliminatedOverlay
 	assert_bool(e.visible).is_false()
 	e.show_for(45.0)

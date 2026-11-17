@@ -358,6 +358,102 @@ msgstr ""
 msgid "hud.vs"
 msgstr ""
 
+msgid "ui.common.leave"
+msgstr ""
+
+msgid "ui.eliminated.countdown"
+msgstr ""
+
+msgid "ui.eliminated.hint"
+msgstr ""
+
+msgid "ui.eliminated.title"
+msgstr ""
+
+msgid "ui.loading.downloading"
+msgstr ""
+
+msgid "ui.loading.prewarming"
+msgstr ""
+
+msgid "ui.loading.ready"
+msgstr ""
+
+msgid "ui.loading.timeout"
+msgstr ""
+
+msgid "ui.loading.title"
+msgstr ""
+
+msgid "ui.loading.waiting"
+msgstr ""
+
+msgid "ui.medal.feather_touch"
+msgstr ""
+
+msgid "ui.medal.iron_wall"
+msgstr ""
+
+msgid "ui.medal.last_light"
+msgstr ""
+
+msgid "ui.medal.lock_breaker"
+msgstr ""
+
+msgid "ui.medal.many_hands"
+msgstr ""
+
+msgid "ui.medal.night_shift"
+msgstr ""
+
+msgid "ui.medal.salvage_baron"
+msgstr ""
+
+msgid "ui.medal.two_speeds"
+msgstr ""
+
+msgid "ui.medal.under_the_floor"
+msgstr ""
+
+msgid "ui.medal.uplink"
+msgstr ""
+
+msgid "ui.pause.item.chat"
+msgstr ""
+
+msgid "ui.pause.item.leave"
+msgstr ""
+
+msgid "ui.pause.item.load"
+msgstr ""
+
+msgid "ui.pause.item.players"
+msgstr ""
+
+msgid "ui.pause.item.resume"
+msgstr ""
+
+msgid "ui.pause.item.save"
+msgstr ""
+
+msgid "ui.pause.item.settings"
+msgstr ""
+
+msgid "ui.pause.item.surrender"
+msgstr ""
+
+msgid "ui.pause.reason.no_save"
+msgstr ""
+
+msgid "ui.pause.reason.offline"
+msgstr ""
+
+msgid "ui.pause.reason.too_early"
+msgstr ""
+
+msgid "ui.pause.title"
+msgstr ""
+
 msgid "ui.place.reject.cap"
 msgstr ""
 
@@ -542,4 +638,118 @@ msgid "ui.prod.tile.cap"
 msgstr ""
 
 msgid "ui.prod.tile.lock"
+msgstr ""
+
+msgid "ui.reconnect.offer"
+msgstr ""
+
+msgid "ui.reconnect.rejoin"
+msgstr ""
+
+msgid "ui.reconnect.resyncing"
+msgstr ""
+
+msgid "ui.reconnect.retrying"
+msgstr ""
+
+msgid "ui.reconnect.title"
+msgstr ""
+
+msgid "ui.results.class.bomber"
+msgstr ""
+
+msgid "ui.results.class.dart"
+msgstr ""
+
+msgid "ui.results.class.hauler"
+msgstr ""
+
+msgid "ui.results.class.lancer"
+msgstr ""
+
+msgid "ui.results.class.scout"
+msgstr ""
+
+msgid "ui.results.col.ice_delivered"
+msgstr ""
+
+msgid "ui.results.col.kills"
+msgstr ""
+
+msgid "ui.results.col.manual_landings"
+msgstr ""
+
+msgid "ui.results.col.name"
+msgstr ""
+
+msgid "ui.results.col.ore_mined"
+msgstr ""
+
+msgid "ui.results.col.ore_spent"
+msgstr ""
+
+msgid "ui.results.col.score_commander"
+msgstr ""
+
+msgid "ui.results.col.score_pilot"
+msgstr ""
+
+msgid "ui.results.col.sorties"
+msgstr ""
+
+msgid "ui.results.col.structures_destroyed"
+msgstr ""
+
+msgid "ui.results.defeat"
+msgstr ""
+
+msgid "ui.results.lobby"
+msgstr ""
+
+msgid "ui.results.menu"
+msgstr ""
+
+msgid "ui.results.reason.abandoned"
+msgstr ""
+
+msgid "ui.results.reason.admin"
+msgstr ""
+
+msgid "ui.results.reason.cores"
+msgstr ""
+
+msgid "ui.results.reason.hard_end"
+msgstr ""
+
+msgid "ui.results.reason.surrender"
+msgstr ""
+
+msgid "ui.results.rematch_no"
+msgstr ""
+
+msgid "ui.results.rematch_yes"
+msgstr ""
+
+msgid "ui.results.report"
+msgstr ""
+
+msgid "ui.results.structure_value"
+msgstr ""
+
+msgid "ui.results.time_limit_loss"
+msgstr ""
+
+msgid "ui.results.time_limit_win"
+msgstr ""
+
+msgid "ui.results.victory"
+msgstr ""
+
+msgid "ui.results.vote"
+msgstr ""
+
+msgid "ui.results.vote_failed"
+msgstr ""
+
+msgid "ui.results.vote_passed"
 msgstr ""

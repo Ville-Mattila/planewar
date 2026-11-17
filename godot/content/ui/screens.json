@@ -1,0 +1,17 @@
+{
+  "_doc": "docs/06 s8 match overlays (UX-27): Reconnecting window = match_rules reconnect_grace_s (04 s9 120 s ticket) and loading timeout = load_timeout_s (both test-enforced), resync drop 60 s (06 s9.1 Stall detection), REMATCH_VOTE 20 s, loading timeout. Fonts in du, never below hud.json font_du_min.",
+  "reconnect_window_s": 120,
+  "reconnect_retry_s": 3,
+  "resync_drop_s": 60,
+  "rematch_vote_s": 20,
+  "loading_timeout_s": 60,
+  "loading_map_weight": 0.4,
+  "loading_prewarm_weight": 0.3,
+  "loading_ready_weight": 0.3,
+  "font_du": 14,
+  "title_font_du": 28,
+  "button_h_du": 44,
+  "dim_alpha": 0.72,
+  "name_col_du": 110,
+  "num_col_du": 70
+}
