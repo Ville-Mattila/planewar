@@ -358,6 +358,102 @@ msgstr "Uplink lost above 2,000 m. Autopilot is descending."
 msgid "hud.vs"
 msgstr "VS"
 
+msgid "ui.common.leave"
+msgstr "Leave"
+
+msgid "ui.eliminated.countdown"
+msgstr "You are eliminated. Your structures self-destruct in {t}."
+
+msgid "ui.eliminated.hint"
+msgstr "You are eliminated. Teammates order your units."
+
+msgid "ui.eliminated.title"
+msgstr "CORE LOST"
+
+msgid "ui.loading.downloading"
+msgstr "Downloading map..."
+
+msgid "ui.loading.prewarming"
+msgstr "Preparing graphics..."
+
+msgid "ui.loading.ready"
+msgstr "Ready"
+
+msgid "ui.loading.timeout"
+msgstr "Loading took too long."
+
+msgid "ui.loading.title"
+msgstr "LOADING"
+
+msgid "ui.loading.waiting"
+msgstr "Waiting for players..."
+
+msgid "ui.medal.feather_touch"
+msgstr "Feather Touch"
+
+msgid "ui.medal.iron_wall"
+msgstr "Iron Wall"
+
+msgid "ui.medal.last_light"
+msgstr "Last Light"
+
+msgid "ui.medal.lock_breaker"
+msgstr "Lock Breaker"
+
+msgid "ui.medal.many_hands"
+msgstr "Many Hands"
+
+msgid "ui.medal.night_shift"
+msgstr "Night Shift"
+
+msgid "ui.medal.salvage_baron"
+msgstr "Salvage Baron"
+
+msgid "ui.medal.two_speeds"
+msgstr "Two Speeds"
+
+msgid "ui.medal.under_the_floor"
+msgstr "Under the Floor"
+
+msgid "ui.medal.uplink"
+msgstr "Uplink"
+
+msgid "ui.pause.item.chat"
+msgstr "Chat"
+
+msgid "ui.pause.item.leave"
+msgstr "Leave"
+
+msgid "ui.pause.item.load"
+msgstr "Load"
+
+msgid "ui.pause.item.players"
+msgstr "Players"
+
+msgid "ui.pause.item.resume"
+msgstr "Resume"
+
+msgid "ui.pause.item.save"
+msgstr "Save"
+
+msgid "ui.pause.item.settings"
+msgstr "Settings"
+
+msgid "ui.pause.item.surrender"
+msgstr "Surrender"
+
+msgid "ui.pause.reason.no_save"
+msgstr "not in this mode"
+
+msgid "ui.pause.reason.offline"
+msgstr "online only"
+
+msgid "ui.pause.reason.too_early"
+msgstr "not yet"
+
+msgid "ui.pause.title"
+msgstr "PAUSED"
+
 msgid "ui.place.reject.cap"
 msgstr "Cap reached"
 
@@ -543,3 +639,117 @@ msgstr "CAP"
 
 msgid "ui.prod.tile.lock"
 msgstr "LOCK"
+
+msgid "ui.reconnect.offer"
+msgstr "Connection lost. Your Adjutant holds your slot."
+
+msgid "ui.reconnect.rejoin"
+msgstr "Rejoin"
+
+msgid "ui.reconnect.resyncing"
+msgstr "Resyncing..."
+
+msgid "ui.reconnect.retrying"
+msgstr "Trying again. Your slot is held for {s} s (attempt {n})."
+
+msgid "ui.reconnect.title"
+msgstr "Reconnecting..."
+
+msgid "ui.results.class.bomber"
+msgstr "Bomber"
+
+msgid "ui.results.class.dart"
+msgstr "Dart"
+
+msgid "ui.results.class.hauler"
+msgstr "Hauler"
+
+msgid "ui.results.class.lancer"
+msgstr "Lancer"
+
+msgid "ui.results.class.scout"
+msgstr "Scout"
+
+msgid "ui.results.col.ice_delivered"
+msgstr "ICE"
+
+msgid "ui.results.col.kills"
+msgstr "KILLS"
+
+msgid "ui.results.col.manual_landings"
+msgstr "LAND"
+
+msgid "ui.results.col.name"
+msgstr "PLAYER"
+
+msgid "ui.results.col.ore_mined"
+msgstr "MINED"
+
+msgid "ui.results.col.ore_spent"
+msgstr "SPENT"
+
+msgid "ui.results.col.score_commander"
+msgstr "CMDR"
+
+msgid "ui.results.col.score_pilot"
+msgstr "PILOT"
+
+msgid "ui.results.col.sorties"
+msgstr "SORTIES"
+
+msgid "ui.results.col.structures_destroyed"
+msgstr "STRUCT"
+
+msgid "ui.results.defeat"
+msgstr "DEFEAT"
+
+msgid "ui.results.lobby"
+msgstr "Lobby"
+
+msgid "ui.results.menu"
+msgstr "Menu"
+
+msgid "ui.results.reason.abandoned"
+msgstr "The match was abandoned."
+
+msgid "ui.results.reason.admin"
+msgstr "The match was ended by an admin."
+
+msgid "ui.results.reason.cores"
+msgstr "All enemy Cores destroyed."
+
+msgid "ui.results.reason.hard_end"
+msgstr "Decided by structure value at the time limit."
+
+msgid "ui.results.reason.surrender"
+msgstr "A team surrendered."
+
+msgid "ui.results.rematch_no"
+msgstr "No rematch"
+
+msgid "ui.results.rematch_yes"
+msgstr "Rematch"
+
+msgid "ui.results.report"
+msgstr "Report"
+
+msgid "ui.results.structure_value"
+msgstr "Team {t} structure value {v}"
+
+msgid "ui.results.time_limit_loss"
+msgstr "TIME LIMIT - YOU LOSE"
+
+msgid "ui.results.time_limit_win"
+msgstr "TIME LIMIT - YOU WIN"
+
+msgid "ui.results.victory"
+msgstr "VICTORY"
+
+msgid "ui.results.vote"
+msgstr "Rematch vote: {y} of {n} ({s} s)"
+
+msgid "ui.results.vote_failed"
+msgstr "No rematch."
+
+msgid "ui.results.vote_passed"
+msgstr "Rematch accepted."
