@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## NET-25: the committed fixture godot/test/fixtures/replay/net25_small.pwr (20 entities incl. 2 falling bombs, 150
-## ticks, events, chat, one input summary) decodes to the summary pinned in net25_small.json. The same JSON is
+## ticks, events, chat, one input summary, 4 gunfire ticks = 8 PROJECTILE_BATCH items) decodes to the summary pinned in net25_small.json. The same JSON is
 ## checked by tools/tests/test_replay_inspect.py against tools/replay_inspect.py, so the GDScript and Python decoders
 ## agree on every quantised field. Regenerate with PW_UPDATE_FIXTURES=1 (then commit both files).
 
@@ -16,17 +16,24 @@ func _build() -> ReplayRig:
 	var evs: Array[SimEvent] = [EventRig.ev(SimEvent.Kind.DEATH, EntityId.make(3, 1), EntityId.make(4, 1), 0.0, -1,
 			PackedByteArray([2]))]
 	rig.add_events(40, evs)
+	for t: int in [20, 61, 100, 101]:                                  # gunfire incl. a flak item (fuse byte)
+		var sb: ShotBuffer = ShotBuffer.new()
+		sb.clear(t)
+		sb.add_q(EntityId.make(3, 1), 0, t, 5, -3)
+		sb.add_q(EntityId.make(4, 1), 1, t + 1, -9, 2, 40)
+		rig.add_shots(t, sb)
 	rig.run(TICKS, 30, 60, 90)
 	return rig
 
 
 ## Summary of a whole read, in the shape tools/replay_inspect.py decode_all() returns.
 func summarize(r: ReplayReader) -> Dictionary:
-	var counts: Dictionary = {"KEYFRAME": 0, "DELTA": 0, "EVENTS": 0, "CHAT": 0, "INPUT_SUMMARY": 0}
-	var names: Array = ["", "KEYFRAME", "DELTA", "EVENTS", "CHAT", "INPUT_SUMMARY"]
+	var counts: Dictionary = {"KEYFRAME": 0, "DELTA": 0, "EVENTS": 0, "CHAT": 0, "INPUT_SUMMARY": 0, "PROJECTILES": 0}
+	var names: Array = ["", "KEYFRAME", "DELTA", "EVENTS", "CHAT", "INPUT_SUMMARY", "PROJECTILES"]
 	var events: int = 0
 	var chat: Array[String] = []
 	var inputs: int = 0
+	var shots: int = 0
 	var last: int = 0
 	while not r.at_end():
 		var type: int = r.next_frame()
@@ -36,6 +43,7 @@ func summarize(r: ReplayReader) -> Dictionary:
 		events += r.events.size()
 		chat.append_array(r.chat_text)
 		inputs += r.input_slot.size()
+		shots += r.shots.count
 		last = r.tick
 	var state: Array = []
 	var f: BaselineFrame = r.current()
@@ -48,7 +56,7 @@ func summarize(r: ReplayReader) -> Dictionary:
 		keys.append(t)
 	return {"map_id": r.header.map_id, "tick_rate": r.header.tick_rate, "seed": r.header.seed_value,
 		"players": Array(r.header.player_name), "frames": counts, "keyframe_ticks": keys, "ended_tick": r.ended_tick,
-		"last_tick": last, "roster_count": r.roster.count(), "events": events, "chat": chat, "input_players": inputs,
+		"last_tick": last, "roster_count": r.roster.count(), "events": events, "chat": chat, "input_players": inputs, "shots": shots,
 		"state": state}
 
 
@@ -62,7 +70,7 @@ func test_fixture_matches_pinned_summary() -> void:
 	var got: Dictionary = summarize(r)
 	var want: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(JSON_PATH))
 	for key: String in ["map_id", "tick_rate", "seed", "keyframe_ticks", "ended_tick", "last_tick", "roster_count",
-			"events", "input_players", "frames", "players", "chat"]:
+			"events", "input_players", "shots", "frames", "players", "chat"]:
 		assert_str(JSON.stringify(_norm(got[key]), "", true)).is_equal(JSON.stringify(_norm(want[key]), "", true))
 	var gs: Array = got["state"]
 	var ws: Array = want["state"]

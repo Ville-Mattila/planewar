@@ -2558,8 +2558,10 @@
       " R0 O-4",
       " 05 AI-18"
     ],
-    "status": "todo",
-    "notes": "AI-18 edits tools/schemas/autopilots.schema.json and autopilots.json for the follow block only, under A-145 (10 s4.3: Architect for required fields; defs: fields its task adds). Orchestrator: launch at Opus (brain; CLAUDE.md tier guidance) despite Haiku tier here."
+    "status": "review",
+    "notes": "AI-18 edits tools/schemas/autopilots.schema.json and autopilots.json for the follow block only, under A-145 (10 s4.3: Architect for required fields; defs: fields its task adds). Orchestrator: launch at Opus (brain; CLAUDE.md tier guidance) despite Haiku tier here. PARTIAL: approved with the clause \"shells reach the target from 1,000-1,150 m\" DEFERRED to GD-50 (sim barrel elevation) + AI-18b (wiring). Until then the AI Crawler fires 150-216 m ahead (possibly onto own units): land GD-50/AI-18b before M3 playtests. siege block (8 optional keys) read with 05 s6.7 defaults, schema property pending Architect (AI-49). Solver tuning (0.02 rad, +-pi/4, 6 iterations) hard-coded. Nit: restore test never saves with a near-bomb relocation pending.",
+    "pr": 176,
+    "merged": null
   },
   {
     "id": "AI-19",
@@ -2968,7 +2970,8 @@
       " 04 NET-15"
     ],
     "status": "todo",
-    "acceptance_append": "; R0 B.19 A-101: on join and on every KeyframePolicy trigger the ServerSession sends ENTITY_META for every record's index on channel 3 before the KEYFRAME, then TEAM_DETAIL(FULL) for scope ALL only; a LocalTransport test asserts the channel-3 order META -> KEYFRAME -> TEAM_DETAIL(FULL) and that the client decodes the KEYFRAME without a MISSING_ROSTER hold"
+    "acceptance_append": "; R0 B.19 A-101: on join and on every KeyframePolicy trigger the ServerSession sends ENTITY_META for every record's index on channel 3 before the KEYFRAME, then TEAM_DETAIL(FULL) for scope ALL only; a LocalTransport test asserts the channel-3 order META -> KEYFRAME -> TEAM_DETAIL(FULL) and that the client decodes the KEYFRAME without a MISSING_ROSTER hold",
+    "notes": "NET-51: ServerSession must pass the tick ShotBuffer to ReplayWriter.record_tick(..., shots) so recordings contain FrameType.PROJECTILES."
   },
   {
     "id": "NET-17",
@@ -7155,7 +7158,10 @@
       "04 s13.1",
       "04 s2.3"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 174,
+    "merged": "2026-11-17",
+    "notes": "FrameType.PROJECTILES = 6; ReplayWriter.record_tick(..., shots) optional; ReplayReader.shots. needs server: NET-15 must pass its ShotBuffer or real recordings have no shots. Architect: confirm A-77 covers the optional shots parameter. Nits: ShotRouter allocates per firing tick; replay_inspect.py may raise bare struct.error instead of ReplayError; stray NET-60 .uid."
   },
   {
     "id": "NET-52",
@@ -8335,8 +8341,10 @@
       "docs/reviews/R0-amendments-23.md",
       "godot/src/sim_ai/brains/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-17",
+    "pr": 172,
+    "notes": "Nits: HV5 ranges line looser than the schema; one stale assert message in ai16_kit."
   },
   {
     "id": "GD-48",
@@ -8353,8 +8361,10 @@
       "docs/02 s8.3-8.7",
       "tools/econ_model.py"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-17",
+    "pr": 171,
+    "notes": "Also fixed copies in 8.9 (supply 106/106/151, 22-24 151/185); the 16-18 supply 151 is model-derived (slightly beyond the three findings). 8.8 4v4 Dart #2 0:56 is a scripted not_before_s, not the trickle error. T_h shown as 499 (integer rounding like neighbours)."
   },
   {
     "id": "GD-49",
@@ -8370,6 +8380,60 @@
     "docs": [
       "02 s12.1",
       "godot/src/sim/match/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "GD-50",
+    "title": "sim: barrel elevation for ground-mounted weapons driven by PilotInput pitch (06 s3.2), so the Siege Crawler gun can loft",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 1.0,
+    "depends_on": [
+      "AI-18"
+    ],
+    "milestone": "M3",
+    "acceptance": "A ground unit's mounted weapon fires along heading pitched by a barrel elevation taken from PilotInput pitch (06 s3.2), slewed at a def rate within def limits; Ballistics.predict_impact agrees with the simulated impact within loft_tol_m for lofted Crawler shots at 1,000-1,150 m; constants in defs with schema and _doc; possessed and AUTO paths both; save/restore byte-equal; sim/MODULE.md (or nested) current; Architect confirms whether an R0 row is needed",
+    "docs": [
+      "06 s3.2",
+      "05 s6.7"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "AI-18b",
+    "title": "sim_ai: Crawler brain drives the barrel to the computed elevation; shells land on target; ORDER_FAILED once fail_order exists",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-18",
+      "GD-50"
+    ],
+    "milestone": "M3",
+    "acceptance": "CrawlerBrain sets the barrel elevation from SiegeAim; test_attacks_from_1000_to_1150_m asserts impacts within loft_tol_m of the target; ORDER_FAILED(NO_AMMO / UNREACHABLE) raised when the sink gains fail_order (else documented); restore test covers a pending near-bomb relocation",
+    "docs": [
+      "05 s6.7"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "AI-49",
+    "title": "content: ratified siege block for ap_crawler (8 keys + solver tuning) in the autopilots schema and def",
+    "lane": "content",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "AI-18"
+    ],
+    "milestone": "M3",
+    "acceptance": "After the Architect rules on the siege block: tools/schemas/autopilots.schema.json gains the siege property (optional/required as ruled) incl. the solver tuning numbers now hard-coded in siege_aim.gd; autopilots.json ap_crawler carries it with _doc (05 s6.7); negative test; CrawlerBrain/SiegeAim read the def instead of literals",
+    "docs": [
+      "05 s6.7",
+      "docs/reviews/R0-amendments-23.md"
     ],
     "status": "todo",
     "merged": null

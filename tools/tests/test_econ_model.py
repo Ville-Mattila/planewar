@@ -2,8 +2,8 @@
 
 Positive: the closed-form tables (8.2, 8.3, 8.6) and the 0-5 minute rows and checkpoints of 8.7 agree with the defs.
 Negative: a doc value changed in a copy of the text is flagged; a book step that can never run fails loudly; --check exits 1.
-NOTE: these tests pin live doc values. The 02 revision that fixes the 8.7 ledger (Dart #2 at ~0:50) must update
-`test_checkpoints_within_5_s_except_the_known_doc_ledger_gap` and the "-- checkpoint: 24/25" assertion.
+NOTE: these tests pin live doc values. GD-48 (02 s8 revision) moved Dart #2 to 0:50 (6 s Core trickle in the 8.7
+ledger); the checkpoint test and the "-- checkpoint: 25/25" assertion pin that revision.
 The later rows are reported discrepancies (see the PR), not asserted here: this test pins that they are *reported*.
 """
 
@@ -81,13 +81,13 @@ class Opening1v1(unittest.TestCase):
         self.assertGreater(len(mins), 40)
         self.assertEqual([r["name"] for r in mins if not r["ok"]], [])
 
-    def test_checkpoints_within_5_s_except_the_known_doc_ledger_gap(self) -> None:
+    def test_checkpoints_within_5_s(self) -> None:
         cps = [r for r in self.rows if r["kind"] == "checkpoint"]
         self.assertGreaterEqual(len(cps), 25)
         miss = [r["name"] for r in cps if not r["ok"]]
-        # 02 s8.7 books Ore after the 0:06 Autocannon as 100; the stockpile also holds six seconds of Core trickle
-        # (106), so Dart #2 becomes affordable at 0:50, not 0:56. Reported as a doc finding, never tuned away.
-        self.assertEqual(miss, ["Dart #2 starts"])
+        # GD-48: 02 s8.7 credits the first six seconds of Core trickle (Ore after 0:06 = 106), so Dart #2 is
+        # affordable at 0:50, not 0:56. All 25 checkpoints now sit inside +-5 s.
+        self.assertEqual(miss, [])
 
     def test_dart_airborne_checkpoint(self) -> None:
         self.assertAlmostEqual(self.sim.event_time("P0.dart1.airborne"), 28.0, delta=1.0)
@@ -103,7 +103,7 @@ class Opening1v1(unittest.TestCase):
     def test_rows_outside_tolerance_are_reported(self) -> None:
         out = cmp.render("1v1", self.sim, self.rows, False, False)
         self.assertIn("MISS", out)
-        self.assertIn("-- checkpoint: 24/25", out)
+        self.assertIn("-- checkpoint: 25/25", out)
 
 
 class Books(unittest.TestCase):

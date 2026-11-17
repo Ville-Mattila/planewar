@@ -13,6 +13,7 @@ var file: PackedByteArray = PackedByteArray()
 var written_bytes: int = 0
 var last_tick: int = 0
 var _events_at: Dictionary = {}
+var _shots_at: Dictionary = {}
 
 
 ## n entities in the 04 s4.5 tier proportions scaled to `sizes` / `movers`.
@@ -34,6 +35,11 @@ func add_events(tick: int, list: Array[SimEvent]) -> void:
 	_events_at[tick] = list
 
 
+## ShotBuffer to feed at `tick` (NET-51; shooters are EntityIds).
+func add_shots(tick: int, shots: ShotBuffer) -> void:
+	_shots_at[tick] = shots
+
+
 ## Runs `ticks` sim ticks; every tick whose number % save_every == 1 is remembered (written ticks are 1, 4, 7 ...).
 func run(ticks: int, save_every: int = 30, chat_at: int = -1, inputs_at: int = -1) -> void:
 	var _e: int = writer.open_memory(header)
@@ -41,7 +47,7 @@ func run(ticks: int, save_every: int = 30, chat_at: int = -1, inputs_at: int = -
 	for _t: int in ticks:
 		snap.step()
 		var ev: Array[SimEvent] = _events_at.get(snap.tick, none)
-		writer.record_tick(snap.codec, snap.tick, slots, snap.roster, ev)
+		writer.record_tick(snap.codec, snap.tick, slots, snap.roster, ev, _shots_at.get(snap.tick, null))
 		if snap.tick % save_every == 1:
 			var _a: bool = saved_ticks.push_back(snap.tick)
 			saved_pos.append(snap.frame.pos.duplicate())
