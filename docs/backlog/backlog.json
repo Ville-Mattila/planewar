@@ -3503,7 +3503,10 @@
       " R0 C2-17",
       " 06 UX-27"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 173,
+    "merged": "2026-11-17",
+    "notes": "New godot/src/ui/screens/MODULE.md and ScreenBase. needs app: ScreenFlow casts as FlowScreen (screen_flow.gd:40), so these screens cannot be hosted until FlowScreen extends ScreenBase or ScreenFlow is retyped; feed Results the decoded MATCH_END dict; drive retry_due into ClientSession. needs net: ClientSession decodes only the MATCH_END head (no per-player tail, no rematch-vote messages). Architect: one screen protocol (ScreenBase vs FlowScreen); ui naming Protocol.MatchEndReason vs B.4 (ui may use only ClientSession from net); unanimous rematch rule not in 02/04/06. Nits: timers fall back to 0 without ContentDB; test restores the def only at its end. Screenshot of Results shown to owner (not committed)."
   },
   {
     "id": "UX-28",
