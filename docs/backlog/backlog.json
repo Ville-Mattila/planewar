@@ -8355,8 +8355,10 @@
       "docs/02 s8.3-8.7",
       "tools/econ_model.py"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-17",
+    "pr": 171,
+    "notes": "Also fixed copies in 8.9 (supply 106/106/151, 22-24 151/185); the 16-18 supply 151 is model-derived (slightly beyond the three findings). 8.8 4v4 Dart #2 0:56 is a scripted not_before_s, not the trickle error. T_h shown as 499 (integer rounding like neighbours)."
   },
   {
     "id": "GD-49",
