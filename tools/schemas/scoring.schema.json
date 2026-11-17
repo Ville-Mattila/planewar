@@ -472,11 +472,25 @@
           "minimum": 0,
           "maximum": 1000,
           "$comment": "02 s17.1 relay_hold_min 10 per minute held"
+        },
+        "capture_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 600,
+          "$comment": "02 s5.3 capture_s 20: seconds a Hauler stays DOCKED on the Relay Station pad, uncontested (GD-23)"
+        },
+        "contest_radius_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 5000,
+          "$comment": "02 s5.3 contest_radius 300 m (R0 C2-20): an enemy ship or ground unit this close pauses the capture (GD-23)"
         }
       },
       "required": [
         "capture",
-        "hold_per_min"
+        "hold_per_min",
+        "capture_s",
+        "contest_radius_m"
       ],
       "$comment": "02 s17.1 relay events"
     },

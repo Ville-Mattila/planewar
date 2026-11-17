@@ -1,5 +1,5 @@
 {
-  "_doc": "02 s17.1 score events table and landing-grade formula (scoring.json); R0 B.1 scoring.json (ScoringDef, 02 with the 08 SL-1 landing block); R0 C3-13 landing grades. Points are integers; ratios are per unit as the 02 event column states. Singleton file: one file-level _doc, the per-value citations are the 02 s17.1 event rows named by each key.",
+  "_doc": "02 s17.1 score events table and landing-grade formula (scoring.json); R0 B.1 scoring.json (ScoringDef, 02 with the 08 SL-1 landing block); R0 C3-13 landing grades; relay.capture_s / relay.contest_radius_m are the Relay Station capture rule of 02 s5.3 (R0 C2-20, GD-23). Points are integers; ratios are per unit as the 02 event column states. Singleton file: one file-level _doc, the per-value citations are the 02 s17.1 event rows named by each key.",
   "kill_points": {
     "scout": 50,
     "dart": 100,
@@ -64,7 +64,9 @@
   "ice_possessed_points_per_ice": 0.1,
   "relay": {
     "capture": 300,
-    "hold_per_min": 10
+    "hold_per_min": 10,
+    "capture_s": 20,
+    "contest_radius_m": 300
   },
   "commander_points_per_ore_spent": 0.04,
   "commander_auto_kill_share": 0.5,

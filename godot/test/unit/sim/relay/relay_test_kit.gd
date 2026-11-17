@@ -1,0 +1,63 @@
+class_name RelayTestKit extends RefCounted
+## Fixtures for the GD-23 tests (sim/relay/MODULE.md R1-R9): a WorldTestKit world (players 0 and 2 on team 0, 1 on team 1),
+## a neutral Relay Station on the datum, Haulers docked on it, and enemy units hovering `east` metres from it. The relay
+## pass is run alone (`pass_n`), so hovering units do not fall; the end-to-end tests step the world.
+
+const DT: float = 1.0 / 30.0
+const NEUTRAL: int = 255
+
+
+static func world() -> SimWorld:
+	var w: SimWorld = WorldTestKit.world()
+	var _e: Array[SimEvent] = w.drain_events()
+	return w
+
+
+static func rule(key: String) -> float:
+	return Def.num(WorldTestKit.content().scoring.relay.get(key, 0.0))
+
+
+## A neutral Relay Station (owner and team 255) at the datum point of `east` metres.
+static func relay(w: SimWorld, east: float = 0.0) -> int:
+	return DockingTestKit.direct(w, &"relay_station", NEUTRAL, NEUTRAL, WorldTestKit.at(0.0, east))
+
+
+static func capture(w: SimWorld) -> RelayCapture:
+	return w.economy().relay
+
+
+## A ship `def` of `owner` DOCKED on `pad` (the flags and the link a landing sets).
+static func docked(w: SimWorld, def: StringName, owner: int, pad: int) -> int:
+	var id: int = DockingTestKit.direct(w, def, owner, w._players.team[owner], DockingTestKit.far(w))
+	DockingTestKit.dock(w, id, pad)
+	return id
+
+
+## A unit `def` of `owner` 20 m above the datum `east` metres along +Y (a ship hovers; the world is not stepped).
+static func unit(w: SimWorld, def: StringName, owner: int, east: float) -> int:
+	return DockingTestKit.direct(w, def, owner, w._players.team[owner], WorldTestKit.at(20.0, east))
+
+
+static func pass_n(w: SimWorld, n: int) -> void:
+	for _i: int in n:
+		capture(w).step(DT)
+
+
+static func seconds(s: float) -> int:
+	return roundi(s / DT)
+
+
+static func team_of(w: SimWorld, id: int) -> int:
+	return w.store().team[EntityId.slot(id)]
+
+
+static func progress(w: SimWorld, id: int) -> float:
+	return capture(w).progress_s(EntityId.slot(id))
+
+
+static func of_kind(events: Array[SimEvent], kind: SimEvent.Kind, alert: int = -1) -> Array[SimEvent]:
+	var out: Array[SimEvent] = []
+	for e: SimEvent in events:
+		if e.kind == kind and (alert < 0 or e.a == alert):
+			out.append(e)
+	return out
