@@ -49,6 +49,7 @@ func is_supplied(slot: int) -> bool                                          # u
 class_name SunPath extends RefCounted                                        # GD-13; GD-33 adds phase and the terminator crossing
 static func dir_at(period_s: float, t_s: float) -> Vector3                   # +Z when period_s <= 0, else turning about X once per period from +Z
 static func on_plateau(up: Vector3, centres: PackedVector3Array, radius_m: float) -> bool   # arc distance on the datum sphere
+static func load_plateaus(map_dir: String) -> PackedVector3Array         # GD-23: unit centres of the `plateau` named_features of `<dir>/features.json`; SimWorld.load_map feeds Economy.set_plateaus
 ```
 
 Constants come from `economy.json` (`core_trickle_ore_per_s`, `solar_band_deg`, `solar_plateau_mult`, `early_share_*`, ...).

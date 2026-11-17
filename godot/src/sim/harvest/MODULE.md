@@ -119,7 +119,7 @@ dock count from `structures.json` `docks`; the delivery reach is `economy.json` 
   section, `SimSerialize.FORMAT` 16); buffers and holds are `cargo` / `cargo_kind`; the Extractor, Refinery and node lookups are derived
   each pass (the Refinery and Extractor lists are rebuilt when `Economy.structure_epoch` or the structure count moves).
 - I8 Relay pad service (02 s5.3, s2.3). The Relay Station def is a service pad (`pads` 1, `pad_radius_m` 12); a ship docked on one held by its
-  own team is served at the normal costs, a ship of another team is not. The capture that sets the holder is GD-23. Test: `test_relay_pad_service.gd`.
+  own team is served at the normal costs, a ship of another team is not. The capture that sets the holder is GD-23 (`sim/relay/`); a capturer may land on a pad it does not hold (R0 B.30 A-146) and `Docking` serves only ships of the pad's team (docking D14, A-147). Test: `test_relay_pad_service.gd`.
 - I9 Cost. `step` returns at once with no Extractor and no ship carrying Ice (a count of Ice holds, re-counted when the ship count changes; `IceExtract.ship_scans` counts the ship passes run). Otherwise one pass over the Extractors and one over the ships;
   no Dictionary, no per-entity allocation. Test: `test_ice_perf.gd` (PerfGate).
 

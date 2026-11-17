@@ -19,3 +19,29 @@ static func on_plateau(up: Vector3, centres: PackedVector3Array, radius_m: float
 		if up.dot(c) >= min_cos:
 			return true
 	return false
+
+
+## Unit centres of the `plateau` named_features of `<map_dir>/features.json` (02 s8.4, GD-23); empty when unreadable.
+static func load_plateaus(map_dir: String) -> PackedVector3Array:
+	var out: PackedVector3Array = PackedVector3Array()
+	var f: FileAccess = FileAccess.open(map_dir + "/features.json", FileAccess.READ)
+	if f == null:
+		return out
+	var parsed: Variant = JSON.parse_string(f.get_as_text())
+	if not (parsed is Dictionary):
+		return out
+	var d: Dictionary = parsed
+	var named: Variant = d.get("named_features", [])
+	if not (named is Array):
+		return out
+	var list: Array = named
+	for item: Variant in list:
+		if item is Dictionary:
+			var e: Dictionary = item
+			var dir: Variant = e.get("dir", null)
+			if e.get("type", "") == "plateau" and dir is Array:
+				var a: Array = dir
+				if a.size() == 3:
+					var _err: bool = out.append(Vector3(Def.num(a[0]), Def.num(a[1]), Def.num(a[2])).normalized())
+	return out
+

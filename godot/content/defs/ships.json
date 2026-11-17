@@ -215,7 +215,7 @@
       "id": "hauler",
       "status": "core",
       "tags": ["ship"],
-      "_doc": "02 s2.1 Hauler (ice ferry, wreck tug, Relay capture), 02 s2.2 flight (a_thrust 15 and loaded cruise 35 per R0 OQ-R0-7 and 02 s2.4), 02 s2.3 loadout; R0 B.1 canonical ship table",
+      "_doc": "02 s2.1 Hauler (ice ferry, wreck tug, Relay capture; captures true: the only capturer, R0 B.30 A-146), 02 s2.2 flight (a_thrust 15 and loaded cruise 35 per R0 OQ-R0-7 and 02 s2.4), 02 s2.3 loadout; R0 B.1 canonical ship table",
       "presentation": {
         "mesh": "res://assets/models/ships/ship_hauler.glb"
       },
@@ -252,6 +252,7 @@
       "rearm_time_s": 0,
       "repair_time_s": 15,
       "cargo_ice": 400,
+      "captures": true,
       "tow_slots": 1,
       "possessable": true,
       "autopilot": "ap_hauler"

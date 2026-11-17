@@ -338,6 +338,10 @@
           "minimum": 0,
           "maximum": 5000
         },
+        "captures": {
+          "type": "boolean",
+          "$comment": "optional, default false. true = the ship captures open pads (Relay Station) by landing on them (02 s2 line 162: the Hauler only; R0 B.30 A-146)"
+        },
         "tow_slots": {
           "type": "integer",
           "minimum": 0,

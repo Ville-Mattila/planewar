@@ -41,6 +41,8 @@ const _RAM_CAP: int = 64                                 # rams per ship per tic
 ## point, else the ship position. vec: PAD (v_vert, v_hor, tilt_deg; v_vert = max(post-move descent, the tick's terrain
 ## hit_normal_speed), GD-15). cls: TERRAIN class or PAD band.
 var launch_pad: PackedByteArray = PackedByteArray()   ## by EntityStore.def_id: 1 = `launch_pad: true` structure (A-19, A-87); set by SimWorld
+var open_pad: PackedByteArray = PackedByteArray()     ## by EntityStore.def_id: 1 = an open pad (`capture_s` > 0, Relay Station); set by SimWorld (A-146)
+var capturer: PackedByteArray = PackedByteArray()     ## by EntityStore.def_id: 1 = a ship that captures (`captures: true`, Hauler); set by SimWorld (A-146)
 var contact_count: int = 0
 var c_kind: PackedByteArray = PackedByteArray()
 var c_class: PackedByteArray = PackedByteArray()
@@ -251,6 +253,12 @@ func _ship(s: int, tick: int) -> void:
 		_emit(C_RAM, 0, _store.id_of(s), _store.id_of(o), p.distance_to(epos[o]), p, Vector3.ZERO)
 
 
+## A-146: an open pad is shaped like an own-team pad (A-109) for a capturer of any team, and for nobody else.
+func _capturer_on_open_pad(s: int, d: int) -> bool:
+	var sd: int = _store.def_id[s]
+	return d < open_pad.size() and open_pad[d] != 0 and sd < capturer.size() and capturer[sd] != 0
+
+
 func _ship_structure(s: int, o: int, p: Vector3, r: float, docked: bool) -> void:
 	var d: int = _store.def_id[o]
 	if d < launch_pad.size() and launch_pad[d] != 0 and _store.team[o] == _store.team[s]:
@@ -258,7 +266,7 @@ func _ship_structure(s: int, o: int, p: Vector3, r: float, docked: bool) -> void
 	var in_pad: bool = false
 	var in_col: bool = false
 	var pad_r: float = _pad_radius[d] if d < _pad_radius.size() else 0.0
-	if pad_r > 0.0 and _store.team[o] == _store.team[s]:
+	if pad_r > 0.0 and (_store.team[o] == _store.team[s] or _capturer_on_open_pad(s, d)):
 		if docked:
 			in_pad = _store.link[s] == _store.id_of(o)
 		else:

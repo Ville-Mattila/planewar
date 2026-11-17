@@ -8,6 +8,8 @@ const DEFS_DIR: String = "../tools/tests/fixtures/content/canonical/godot/conten
 const PAD_DEF: int = 1
 const PLAIN_DEF: int = 2
 const LAUNCH_DEF: int = 3     ## a `launch_pad: true` structure (A-19, A-87)
+const OPEN_DEF: int = 4       ## an open pad (`capture_s` > 0, the Relay Station; A-146), with the fixture pad radius
+const CAPTURER_DEF: int = 0   ## a ship def with `captures: true` (the Hauler; A-146); every other ship def is not one
 
 var store: EntityStore
 var proj: ProjectileStore
@@ -39,9 +41,11 @@ func _init(map_dir: String = "") -> void:
 		var _a: bool = p_ids.push_back(str(d["id"]))
 		var _b: bool = radii.push_back(float(d.get("radius_m", 0.0)))
 	pad_radius = _fixture_pad_radius()
-	var pads: PackedFloat32Array = PackedFloat32Array([0.0, pad_radius, 0.0])
+	var pads: PackedFloat32Array = PackedFloat32Array([0.0, pad_radius, 0.0, 0.0, pad_radius])
 	collision.configure(radii, pads, common, rules.tick_hz)
 	collision.launch_pad = PackedByteArray([0, 0, 0, 1])
+	collision.open_pad = PackedByteArray([0, 0, 0, 0, 1])
+	collision.capturer = PackedByteArray([1, 0, 0, 0, 0])
 
 
 static func load_json(file: String) -> Dictionary:

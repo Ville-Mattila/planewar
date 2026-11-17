@@ -16,6 +16,7 @@ var docking: Docking                     ## GD-15: landing grade, pad queues, re
 var score: ScoreKeeper                   ## GD-27: score events and the match result counters (02 s17.1)
 var harvest: Harvest                     ## GD-12: Ore Fields, mining and Refinery docks (02 s8.2)
 var ice: IceExtract                      ## GD-14: Cold Traps, Extractor buffers, the pipe and Hauler transfer (02 s8.3)
+var relay: RelayCapture                  ## GD-23: Relay Station capture and hold (02 s5.3)
 
 var _store: EntityStore
 var _players: PlayerTable
@@ -47,6 +48,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	score = ScoreKeeper.new(store, players, defs, events, rules.tick_hz)
 	harvest = Harvest.new(store, defs, rules, economy)
 	ice = IceExtract.new(store, defs, economy, score)
+	relay = RelayCapture.new(store, defs, score, events)
 	validator.build = build
 	validator.production = production
 
@@ -94,6 +96,7 @@ func step(t: int, dt: float) -> void:
 	construction.step(t, dt)
 	production.step(t, dt)
 	docking.step(t, dt)
+	relay.step(dt)
 	harvest.step(t, dt)
 	ice.step(dt)
 	salvage.step(t)

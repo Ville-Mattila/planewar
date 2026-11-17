@@ -71,8 +71,11 @@ func load_map(map: MapDef, _seed: int, rules: MatchRules) -> Result:
 			return Result.failure(err, "SimWorld: path grid of %s failed to load" % _map_id)
 		var _fields: int = _econ.harvest.fields.load_map_dir(_MAPS_ROOT + String(_map_id))   # GD-12: the recipe's Ore Fields
 		var _traps: int = _econ.ice.nodes.load_map_dir(_MAPS_ROOT + String(_map_id))         # GD-14: its Cold Traps
+		_econ.economy.set_plateaus(SunPath.load_plateaus(_MAPS_ROOT + String(_map_id)))   # GD-23: the Solar Plateau centres
 	collision.configure(_defs.projectile_radius, _defs.pad_radius_by_def, _defs.common, rules.tick_hz)
 	collision.launch_pad = _defs.launch_pad_by_def
+	collision.open_pad = _defs.open_pad_by_def   # GD-23: an open pad (capture_s > 0) ...
+	collision.capturer = _defs.capturer_by_def   # ... takes a capturer of any team (R0 B.30 A-146)
 	_match_seed = _seed
 	rng = Rng.new(_seed)
 	return Result.success()
