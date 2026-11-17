@@ -37,13 +37,18 @@ func tick(dt: float) -> void:
 
 
 func state() -> State:
-	if waited_s >= ScreenParams.param("loading_timeout_s"):
+	if waited_s >= _timeout_s():
 		return State.TIMEOUT
 	if map01 < 1.0:
 		return State.DOWNLOADING_MAP
 	if prewarm01 < 1.0:
 		return State.PREWARMING
 	return State.WAITING_PLAYERS
+
+
+## `match_rules.json` `load_timeout_s`, read from ContentDB (0 when content is not loaded).
+func _timeout_s() -> float:
+	return ContentDB.match_rules.load_timeout_s if ContentDB.match_rules != null else 0.0
 
 
 func ready_fraction() -> float:

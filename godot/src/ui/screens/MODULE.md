@@ -160,7 +160,7 @@ func refresh() -> void
 
 ## Invariants
 
-- U17: Reconnecting auto-retries (`retry_due` every `reconnect_retry_s`) until `reconnect_window_s` after `begin`, equal to `match_rules.json` `reconnect_grace_s` (120, test-enforced); then `REJOIN_OFFERED` and no more automatic attempts until `rejoin()`. A stall starts RESYNCING and becomes RETRYING after `resync_drop_s` (60, 06 s9.1).
+- U17: Reconnecting auto-retries (`retry_due` every `reconnect_retry_s`) until `ContentDB.match_rules.reconnect_grace_s` (120) after `begin`, read directly, never mirrored; `LoadingModel` times out at `load_timeout_s` the same way; then `REJOIN_OFFERED` and no more automatic attempts until `rejoin()`. A stall starts RESYNCING and becomes RETRYING after `resync_drop_s` (60, 06 s9.1).
 - U18: Results bind every `MATCH_END` field of 06 s8 / R0 C2-17 (winner, `end_reason`, tick, `structure_value` per team; per player `score_pilot`, `score_commander`, medals in `medals.json` order, `structures_destroyed`, `sorties`, `ore_mined`, `ore_spent`, `ice_delivered`, `pilot_time_s[5]`, kills, manual landings). TIME_LIMIT iff `end_reason` is `Protocol.MatchEndReason.HARD_END_VALUE`; a `medals[i]` byte != 0 means earned.
 - U19: REMATCH_VOTE lasts `rematch_vote_s` (20); unanimity of the eligible slots passes, any no or the timeout fails.
 - U20: Pause items are the eight of 06 s8; Save/Load only offline with `pause_save` and not `listen_host`; `pauses_sim` is true offline and for the Co-op listen host only. Unavailable items stay focusable-by-order but disabled, with a reason key.

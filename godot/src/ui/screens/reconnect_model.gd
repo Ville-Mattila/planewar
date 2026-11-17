@@ -2,7 +2,7 @@ class_name ReconnectModel extends RefCounted
 ## Reconnecting overlay state (06 s8, s9.1 Stall detection, 04 s9 120 s ticket; UX-27). Pure: the host feeds `tick(dt)` and,
 ## when it returns true, makes one reconnect attempt. A hidden-tab stall starts RESYNCING ("Resyncing...", keyframe
 ## requested); past `resync_drop_s` or on a transport loss it is RETRYING, auto-retrying every `reconnect_retry_s` until
-## `reconnect_window_s` after `begin` (the commander window), then REJOIN_OFFERED (the Adjutant holds the slot).
+## `match_rules` `reconnect_grace_s` (ContentDB) after `begin` (the commander window), then REJOIN_OFFERED (the Adjutant holds the slot).
 
 enum State { IDLE, RESYNCING, RETRYING, REJOIN_OFFERED, RECOVERED }
 
@@ -57,7 +57,7 @@ func rejoin() -> bool:
 
 
 func window_s() -> float:
-	return ScreenParams.param("reconnect_window_s")
+	return ContentDB.match_rules.reconnect_grace_s if ContentDB.match_rules != null else 0.0
 
 
 func remaining_s() -> float:

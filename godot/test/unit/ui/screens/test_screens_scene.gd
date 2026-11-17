@@ -4,6 +4,10 @@ extends GdUnitTestSuite
 const DIR: String = "res://scenes/ui/screens/"
 
 
+func before() -> void:
+	assert_bool(ContentDB.load_all().ok).is_true()
+
+
 func _make(file: String) -> Control:
 	var s: Control = (load(DIR + file) as PackedScene).instantiate() as Control
 	add_child(s)

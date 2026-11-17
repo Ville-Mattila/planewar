@@ -2,11 +2,27 @@ extends GdUnitTestSuite
 ## UX-27 Reconnecting: auto-retries until the 120 s window, then offers Rejoin (06 s8, s9.1).
 
 
-func test_window_matches_the_server_grace_and_loading_timeout() -> void:
-	var r: Result = ContentDB.load_all()
-	assert_bool(r.ok).is_true()
-	assert_float(ScreenParams.param("reconnect_window_s")).is_equal(ContentDB.match_rules.reconnect_grace_s)
-	assert_float(ScreenParams.param("loading_timeout_s")).is_equal(ContentDB.match_rules.load_timeout_s)
+func before() -> void:
+	assert_bool(ContentDB.load_all().ok).is_true()
+
+
+func test_window_and_timeout_follow_the_match_rules_def() -> void:
+	var rules: MatchRulesDef = ContentDB.match_rules
+	var grace: float = rules.reconnect_grace_s
+	var load_s: float = rules.load_timeout_s
+	var m: ReconnectModel = ReconnectModel.new()
+	assert_float(m.window_s()).is_equal(grace)
+	rules.reconnect_grace_s = 30.0
+	rules.load_timeout_s = 10.0
+	m.begin(false)
+	var _t: bool = m.tick(31.0)
+	assert_int(m.state).is_equal(ReconnectModel.State.REJOIN_OFFERED)
+	var l: LoadingModel = LoadingModel.new()
+	l.set_progress(1.0, 1.0)
+	l.tick(11.0)
+	assert_int(l.state()).is_equal(LoadingModel.State.TIMEOUT)
+	rules.reconnect_grace_s = grace
+	rules.load_timeout_s = load_s
 
 
 func test_transport_loss_retries_every_interval_then_offers_rejoin_at_120_s() -> void:

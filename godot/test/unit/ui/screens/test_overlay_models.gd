@@ -2,6 +2,10 @@ extends GdUnitTestSuite
 ## UX-27 pause items, loading states and the Match overlay state (06 s8).
 
 
+func before() -> void:
+	assert_bool(ContentDB.load_all().ok).is_true()
+
+
 func _item(list: Array[PauseItem], id: StringName) -> PauseItem:
 	for i: PauseItem in list:
 		if i.id == id:
