@@ -30,6 +30,25 @@ class ReplayInspectTest(unittest.TestCase):
             self.assertEqual(got[key], val, key)
         self.assertEqual(len(got["state"]), 20)
 
+    def test_projectile_frames_decoded(self) -> None:
+        got = self.decode(self.data)
+        self.assertEqual(got["frames"]["PROJECTILES"], 4)
+        self.assertEqual(got["shots"], 8)
+        rp = ri.open_replay(self.data)
+        items = [it for t, tick, body in ri.iter_frames(rp) if t == ri.PROJECTILES
+                 for p in ri.split_packets(body) for it in ri.decode_shots(p, tick)]
+        self.assertEqual([it["tick"] for it in items], [20, 20, 61, 61, 100, 100, 101, 101])
+        self.assertEqual([it["fuse"] for it in items[:2]], [-1, 40])
+        self.assertEqual((items[0]["shooter"], items[0]["yaw"], items[0]["pitch"]), (3, 5, -3))
+
+    def test_batch_with_wrong_tick_is_rejected(self) -> None:
+        rp = ri.open_replay(self.data)
+        for t, tick, body in ri.iter_frames(rp):
+            if t == ri.PROJECTILES:
+                with self.assertRaises(ri.ReplayError):
+                    ri.decode_shots(ri.split_packets(body)[0], tick + 1)
+                break
+
     def test_footer_and_index(self) -> None:
         rp = ri.open_replay(self.data)
         self.assertTrue(rp.has_footer)

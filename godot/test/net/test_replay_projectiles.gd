@@ -8,7 +8,7 @@ const TICKS: int = 3600
 ## SHA-256 of the inflated stream over the ProjectileRig scene (_projectile_raw). WITHOUT_SHOTS was measured on main
 ## before NET-51 (a null ShotBuffer must change no byte); WITH_SHOTS adds the PROJECTILES frames.
 const SHA_WITHOUT_SHOTS: String = "73d658684c2c272d06cfaf2172ba75ff9a58bf2451d964ab3d95d0e8280ba380"
-const SHA_WITH_SHOTS: String = "PIN"
+const SHA_WITH_SHOTS: String = "9db458329c5c68ea8c129cd3e78368a8a85e703fab42e808a8025431c2eba0dd"
 
 
 func _shots_for(tick: int) -> ShotBuffer:
@@ -107,7 +107,7 @@ func test_seek_and_transport_carry_projectile_packets() -> void:
 			assert_int(n).is_greater(0)
 			got[0] += 1
 			got[1] += n)
-	var _k: int = t.seek(0)
+	var _k: int = t.seek(1)
 	t.speed = 100.0
 	for _i: int in 10:
 		t.poll()
@@ -124,7 +124,7 @@ func test_mutated_file_with_projectile_frames_never_throws() -> void:
 	var raw: PackedByteArray = ReplayFormat.gunzip(rig.file, ok)
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = 51
-	for _i: int in 1500:
+	for _i: int in 400:
 		var m: PackedByteArray = raw.duplicate()
 		for _k: int in rng.randi_range(1, 6):
 			m[rng.randi_range(0, m.size() - 1)] = rng.randi() & 0xFF

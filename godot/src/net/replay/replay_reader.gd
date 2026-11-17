@@ -29,6 +29,8 @@ var chat_text: PackedStringArray = PackedStringArray()
 var input_slot: PackedInt32Array = PackedInt32Array()
 var input_entity: PackedInt32Array = PackedInt32Array()
 var input_bytes: PackedByteArray = PackedByteArray()
+var shots: ShotBuffer = ShotBuffer.new()     # PROJECTILES frame: every item of the tick, `shooter` = roster index
+var _shot_tmp: ShotBuffer = ShotBuffer.new()
 var _raw: PackedByteArray = PackedByteArray()
 var _pos: int = 0
 var _end: int = 0
@@ -106,7 +108,7 @@ func next_frame(apply: bool = true) -> int:
 	var t: int = _raw.decode_u32(_pos + 1)
 	var n: int = _raw.decode_u32(_pos + 5)
 	var at: int = _pos + ReplayFormat.FRAME_HEADER_BYTES
-	if type < ReplayFormat.FrameType.KEYFRAME or type > ReplayFormat.FrameType.INPUT_SUMMARY or at + n > _end:
+	if type < ReplayFormat.FrameType.KEYFRAME or type > ReplayFormat.FrameType.PROJECTILES or at + n > _end:
 		return _bad()
 	var body: PackedByteArray = _raw.slice(at, at + n)
 	var ok: bool = _parse(type, t, body, apply)
@@ -171,6 +173,7 @@ func _clear_frame() -> void:
 	input_slot.clear()
 	input_entity.clear()
 	input_bytes.clear()
+	shots.clear()
 
 
 func _bad() -> int:
@@ -225,9 +228,22 @@ func _apply_packet(type: int, t: int, p: PackedByteArray) -> bool:
 		if p.size() > SnapshotCodec.HEADER_BYTES and (p[9] >> Protocol.SNAP_INDEX_SHIFT) == 0:
 			decoder.forget_tick(t)
 		return decoder.decode(p) == SnapshotDecoder.Status.OK
+	if id == Protocol.PROJECTILE_BATCH:
+		return _apply_shots(t, p) if type == ReplayFormat.FrameType.PROJECTILES else false
 	if id == Protocol.EVENTS:
 		return EventCodec.decode(p, events) >= 0 if type == ReplayFormat.FrameType.EVENTS else false
 	return false
+
+
+## Appends one PROJECTILE_BATCH packet's items to `shots` (the packet's tick must be the frame's).
+func _apply_shots(t: int, p: PackedByteArray) -> bool:
+	if ProjectileBatch.decode(p, _shot_tmp) < 0 or _shot_tmp.tick != t:
+		return false
+	shots.tick = t
+	for i: int in _shot_tmp.count:
+		shots.add_q(_shot_tmp.shooter[i], _shot_tmp.weapon_slot[i], _shot_tmp.seed_byte[i], _shot_tmp.yaw_q[i],
+				_shot_tmp.pitch_q[i], _shot_tmp.fuse[i])
+	return true
 
 
 func _parse_chat(b: PackedByteArray) -> bool:
@@ -293,7 +309,7 @@ func _scan_index() -> void:
 	while at + ReplayFormat.FRAME_HEADER_BYTES <= size:
 		var type: int = _raw[at]
 		var n: int = _raw.decode_u32(at + 5)
-		if type < ReplayFormat.FrameType.KEYFRAME or type > ReplayFormat.FrameType.INPUT_SUMMARY \
+		if type < ReplayFormat.FrameType.KEYFRAME or type > ReplayFormat.FrameType.PROJECTILES \
 				or at + ReplayFormat.FRAME_HEADER_BYTES + n > size:
 			break
 		if type == ReplayFormat.FrameType.KEYFRAME:

@@ -2,7 +2,7 @@ class_name ReplayFormat
 ## `.pwr` constants and byte helpers (04 s13.1, ADR-10). A file is one gzip stream of
 ## HEADER, FRAME*, INDEX, FOOTER. Frame payloads are a packet container (u16 count, then u16 length + the wire
 ## message bytes of 04 s3), so every record format is the live one: ENTITY_META (0x88), ROSTER_REMOVE (0x90),
-## SNAPSHOT (0x84, the Section 3.4 codec, chunked) and EVENTS (0x87). Integers are little-endian.
+## SNAPSHOT (0x84, the Section 3.4 codec, chunked), EVENTS (0x87) and, in PROJECTILES frames, PROJECTILE_BATCH (0x8F). Integers are little-endian.
 
 const MAGIC: PackedByteArray = [0x50, 0x57, 0x52, 0x31]         # "PWR1"
 const END_MAGIC: PackedByteArray = [0x50, 0x57, 0x52, 0x45]     # "PWRE"
@@ -18,7 +18,7 @@ const INPUT_ENTRY_BYTES: int = 5 + INPUT_SUMMARY_TICKS * 8       # slot u8, enti
 const REPLAY_TEAM: int = 15                                      # pseudo-client team: owns nothing, so no ai_tag bytes
 const FILE_CAP: int = 20                                         # offline replays kept in user://replays (R0 C2-25)
 const FLUSH_BYTES: int = 65536
-enum FrameType { KEYFRAME = 1, DELTA = 2, EVENTS = 3, CHAT = 4, INPUT_SUMMARY = 5 }   # append-only
+enum FrameType { KEYFRAME = 1, DELTA = 2, EVENTS = 3, CHAT = 4, INPUT_SUMMARY = 5, PROJECTILES = 6 }   # append-only
 enum Status { OK, RECOVERED, BAD_MAGIC, UNSUPPORTED_VERSION, CORRUPT, IO_ERROR }       # RECOVERED = truncated, frames salvaged
 
 
