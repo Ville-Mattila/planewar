@@ -12,7 +12,7 @@ A change to "Public API", "Wire layout" or "Invariants" is a contract change: co
 | May depend on | `core`, `content`; `net` (`Codec`, `DeadReckon`, `Protocol`, `Roster`, `RosterCodec`, `SnapshotCodec`, `SnapshotDecoder`, `BaselineStore`, `BaselineFrame`, `PilotWire`, `Transport`), `net/events` (`EventRouter`, `EventAudience`, `EventCodec`, `WireEvent`); named `sim` type `SimEvent` |
 | Must never touch | Nodes, `await`, `Thread`, `WorkerThreadPool` (web is single-threaded); `FileAccess.open_compressed` (not gzip: Godot's own container); `server/`, `platform/` (web saves go through 06's `Saves.try_*`, the caller passes the resolved path) |
 | Autoloads used | None |
-| Status | implemented (NET-25, 2026-10-14). Not in the file: PROJECTILE_BATCH shots (see Open items) |
+| Status | implemented (NET-25, 2026-10-14; PROJECTILES frame NET-51) |
 
 ## Public API
 
@@ -21,7 +21,7 @@ class_name ReplayFormat                                          # constants + g
 const MAGIC: PackedByteArray; const END_MAGIC: PackedByteArray; const FRAME_HEADER_BYTES: int; const FOOTER_BYTES: int
 const HASH_BYTES: int; const ID_BYTES: int; const SNAPSHOT_EVERY: int; const KEYFRAME_TICKS: int; const CHUNK_ENTITIES: int
 const INPUT_SUMMARY_TICKS: int; const INPUT_ENTRY_BYTES: int; const REPLAY_TEAM: int; const FILE_CAP: int; const FLUSH_BYTES: int
-enum FrameType { KEYFRAME = 1, DELTA = 2, EVENTS = 3, CHAT = 4, INPUT_SUMMARY = 5 }                       # append-only; PROJECTILES = 6 appended by NET-51 (R0 B.12 A-77)
+enum FrameType { KEYFRAME = 1, DELTA = 2, EVENTS = 3, CHAT = 4, INPUT_SUMMARY = 5, PROJECTILES = 6 }       # append-only (PROJECTILES: NET-51, R0 B.12 A-77)
 enum Status { OK, RECOVERED, BAD_MAGIC, UNSUPPORTED_VERSION, CORRUPT, IO_ERROR }                           # append-only
 static func read_str8(buf: PackedByteArray, at: int, out: PackedStringArray) -> int                       # end offset or -1; text in out[0]
 static func gzip(raw: PackedByteArray) -> PackedByteArray;  static func gunzip(data: PackedByteArray, ok: PackedByteArray) -> PackedByteArray
@@ -40,7 +40,7 @@ var frames_written: int; var keyframes: int; var raw_bytes: int; var bytes_out: 
 var meta_us: int; var encode_us: int; var io_us: int                                                          # cumulative, perf notes
 func open_file(path: String, header: ReplayHeader) -> int       # streams to path + ".part"; Error
 func open_memory(header: ReplayHeader) -> int
-func record_tick(codec: SnapshotCodec, tick: int, slots: PackedInt32Array, roster: Roster, events: Array[SimEvent]) -> void   # after prepare_tick(tick)
+func record_tick(codec: SnapshotCodec, tick: int, slots: PackedInt32Array, roster: Roster, events: Array[SimEvent], shots: ShotBuffer = null) -> void   # after prepare_tick(tick)
 func record_chat(tick: int, msg_id: int, sender: int, scope: int, text: String) -> void
 func record_input_summary(tick: int, player_slots: PackedInt32Array, entities: PackedInt32Array, inputs: PackedByteArray) -> void
 func finish(result_hash: PackedByteArray, ended_tick: int) -> PackedByteArray   # INDEX + FOOTER; file mode renames .part, returns empty
@@ -49,7 +49,7 @@ class_name ReplayReader extends RefCounted                       # open, apply, 
 const NO_FRAME: int
 var header: ReplayHeader; var roster: Roster; var decoder: SnapshotDecoder; var status: int; var tick: int; var frame_type: int
 var result_hash: PackedByteArray; var ended_tick: int; var has_footer: bool; var index_tick: PackedInt32Array; var index_offset: PackedInt32Array
-var packets: Array[PackedByteArray]; var events: Array[WireEvent]; var chat_id: PackedInt64Array; var chat_sender: PackedInt32Array
+var packets: Array[PackedByteArray]; var events: Array[WireEvent]; var shots: ShotBuffer; var chat_id: PackedInt64Array; var chat_sender: PackedInt32Array
 var chat_scope: PackedInt32Array; var chat_text: PackedStringArray; var input_slot: PackedInt32Array; var input_entity: PackedInt32Array; var input_bytes: PackedByteArray
 func _init(gravity_mps2: float = 0.0, tick_hz: int = 30) -> void   # set decoder.gravity_def[def_id] = 1 for gravity-bearing defs
 func open(path: String) -> int;  func open_bytes(file: PackedByteArray) -> int;  func open_raw(raw: PackedByteArray, cut: bool = false) -> int
@@ -86,14 +86,14 @@ frame already begun for the tick, so a frame can hold more than 4 packets), `Sna
 HEADER   "PWR1", protocol_version u16, content_hash 32, map_hash 32, map_id str8, match_id 16, config bytes16 (u16 length),
          seed u64, started_unix u32, tick_rate u8, player_count u8, players[] x (slot, team, kind, doctrine, input_class u8,
          user_id 16, name str8), header_len u32 (whole header incl. this field)
-FRAME    type u8, tick u32, len u32, payload      (KEYFRAME 1, DELTA 2, EVENTS 3, CHAT 4, INPUT_SUMMARY 5)
+FRAME    type u8, tick u32, len u32, payload      (KEYFRAME 1, DELTA 2, EVENTS 3, CHAT 4, INPUT_SUMMARY 5, PROJECTILES 6)
 INDEX    count u32, (tick u32, byte_offset u32) x count     offsets are in the INFLATED stream, of each KEYFRAME frame header
 FOOTER   index_offset u32, result_hash 32, ended_tick u32, "PWRE"
 ```
 
 KEYFRAME / DELTA / EVENTS payload = a packet container: `count u16`, then `len u16 + wire message` per packet. The messages
 are the live ones: ENTITY_META (0x88), ROSTER_REMOVE (0x90), SNAPSHOT (0x84) and EVENTS (0x87), exactly as 04 s3 lays them out.
-CHAT: `msg_id u64, sender u8, scope u8, text str16 (u16 length)`. INPUT_SUMMARY: `count u8`, then `slot u8, entity u32, 30 x 8 B
+CHAT: `msg_id u64, sender u8, scope u8, text str16 (u16 length)`. PROJECTILES (only on ticks with shots): a packet container of that tick's PROJECTILE_BATCH (0x8F) packets, one unfiltered copy (every shooter by roster index, no next-tick re-send, split at 170 items); the reader fills `shots`. INPUT_SUMMARY: `count u8`, then `slot u8, entity u32, 30 x 8 B
 PilotWire` per player (anti-cheat and kill-cam; never replayed into the sim, ADR-10).
 
 Decisions where 04 s13.1 was open: (1) the snapshot is encoded by `SnapshotCodec.encode` for a pseudo-client of team 15
@@ -137,7 +137,7 @@ compressed, <= 20 MB per 30 min, ADR-10). Measured numbers: the NET-25 PR perf n
 
 ## Test entry points
 
-`godot/test/net/test_replay.gd` (R1-R5, ReplayTransport, ReplayStore), `godot/test/net/test_replay_fixture.gd` (R6),
+`godot/test/net/test_replay.gd` (R1-R5, ReplayTransport, ReplayStore), `godot/test/net/test_replay_fixture.gd` (R6), `godot/test/net/test_replay_projectiles.gd` (NET-51: shots at their tick, no-frame-6 files, mutation, replay byte pin over live projectiles),
 `tools/tests/test_replay_inspect.py` (R3, R4, R6 in Python); helper `godot/test/net/replay_rig.gd`; perf
 `godot/test/perf/bench_replay.gd`. Regenerate the fixture with `PW_UPDATE_FIXTURES=1` and commit both files.
 
@@ -153,9 +153,8 @@ compressed, <= 20 MB per 30 min, ADR-10). Measured numbers: the NET-25 PR perf n
 
 ## Open items
 
-- R0 B.12 A-77: `FrameType.PROJECTILES = 6` (that tick's unfiltered PROJECTILE_BATCH messages in the packet container) is
-  **NET-51**; `PROTOCOL_VERSION` stays 1 until the first player-facing wire. Size: the synthetic all-movers scene measured
-  ~34 KB/s gzip, 61 MB per 30 min (ratio 1.3); ADR-10's 20 MB target stands; **NET-52** builds the 04 s13.1 tier-C 5 Hz option
-  (default off) and a `bench_replay` size row; S-SIM-1 (TA-22) records the canonical run's size and PM-01 decides.
+- R0 B.12 A-77 size: the synthetic all-movers scene measured ~34 KB/s gzip, 61 MB per 30 min (ratio 1.3); ADR-10's 20 MB
+  target stands; **NET-52** builds the 04 s13.1 tier-C 5 Hz option (default off) and a `bench_replay` size row; S-SIM-1
+  (TA-22) records the canonical run's size and PM-01 decides. PROJECTILES adds ~6 B per shot (about 1 KB/s at 12 shooters x 10 rounds/s, before gzip).
 - `needs server:` call the writer from `ServerSession` (NET-15); `needs sim:` `SimEvent` convention as in `net/events/MODULE.md`.
 - `needs ClientSession (NET-17):` reset baselines on `keyframe_started`; accept `ReplayTransport` in place of a network transport.

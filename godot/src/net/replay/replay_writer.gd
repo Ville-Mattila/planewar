@@ -21,6 +21,7 @@ var _sent: Roster = Roster.new()
 var _router: EventRouter = EventRouter.new()
 var _aud: EventAudience = EventAudience.new()
 var _auds: Array[EventAudience] = []
+var _shots_in: ShotRouter = ShotRouter.new()
 var _gz: StreamPeerGZIP = StreamPeerGZIP.new()
 var _pending: PackedByteArray = PackedByteArray()
 var _out: PackedByteArray = PackedByteArray()
@@ -74,9 +75,11 @@ func _start(header: ReplayHeader) -> int:
 
 ## Call once per sim tick after SnapshotCodec.prepare_tick(frame) for `tick`. `slots` = every live roster index
 ## (Interest.all_ids), `roster` the authoritative roster (def / owner / team / generation per slot), `events` =
-## SimWorld.drain_events() for the tick (may be empty). Writes an EVENTS frame when events routed, and a snapshot
-## frame on every SNAPSHOT_EVERY-th tick.
-func record_tick(codec: SnapshotCodec, tick: int, slots: PackedInt32Array, roster: Roster, events: Array[SimEvent]) -> void:
+## SimWorld.drain_events() for the tick (may be empty), `shots` = the tick's straight-line shots (shooters are
+## EntityIds; null or empty for none). Writes an EVENTS frame when events routed, a PROJECTILES frame when shots
+## exist (R0 B.12 A-77: one unfiltered copy, no next-tick re-send), and a snapshot frame on every SNAPSHOT_EVERY-th tick.
+func record_tick(codec: SnapshotCodec, tick: int, slots: PackedInt32Array, roster: Roster, events: Array[SimEvent],
+		shots: ShotBuffer = null) -> void:
 	if not _open or tick <= 0:
 		return
 	if not events.is_empty():
@@ -84,6 +87,13 @@ func record_tick(codec: SnapshotCodec, tick: int, slots: PackedInt32Array, roste
 		_router.route(tick, events, _auds)
 		if not _aud.outbox.is_empty():
 			_frame(ReplayFormat.FrameType.EVENTS, tick, _container(_aud.outbox))
+		_aud.clear_out()
+	if shots != null and shots.count > 0:
+		_aud.shots_last.clear()                  # the live re-send would duplicate every item in the file
+		_shots_in.route(tick, shots, _aud)
+		_aud.shots_last.clear()
+		if not _aud.shot_out.is_empty():
+			_frame(ReplayFormat.FrameType.PROJECTILES, tick, _container(_aud.shot_out))
 		_aud.clear_out()
 	if _last_snap < 0 or tick - _last_snap >= ReplayFormat.SNAPSHOT_EVERY:
 		_snapshot(codec, tick, slots, roster)
