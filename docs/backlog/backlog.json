@@ -2968,7 +2968,8 @@
       " 04 NET-15"
     ],
     "status": "todo",
-    "acceptance_append": "; R0 B.19 A-101: on join and on every KeyframePolicy trigger the ServerSession sends ENTITY_META for every record's index on channel 3 before the KEYFRAME, then TEAM_DETAIL(FULL) for scope ALL only; a LocalTransport test asserts the channel-3 order META -> KEYFRAME -> TEAM_DETAIL(FULL) and that the client decodes the KEYFRAME without a MISSING_ROSTER hold"
+    "acceptance_append": "; R0 B.19 A-101: on join and on every KeyframePolicy trigger the ServerSession sends ENTITY_META for every record's index on channel 3 before the KEYFRAME, then TEAM_DETAIL(FULL) for scope ALL only; a LocalTransport test asserts the channel-3 order META -> KEYFRAME -> TEAM_DETAIL(FULL) and that the client decodes the KEYFRAME without a MISSING_ROSTER hold",
+    "notes": "NET-51: ServerSession must pass the tick ShotBuffer to ReplayWriter.record_tick(..., shots) so recordings contain FrameType.PROJECTILES."
   },
   {
     "id": "NET-17",
@@ -7155,7 +7156,10 @@
       "04 s13.1",
       "04 s2.3"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 174,
+    "merged": "2026-11-17",
+    "notes": "FrameType.PROJECTILES = 6; ReplayWriter.record_tick(..., shots) optional; ReplayReader.shots. needs server: NET-15 must pass its ShotBuffer or real recordings have no shots. Architect: confirm A-77 covers the optional shots parameter. Nits: ShotRouter allocates per firing tick; replay_inspect.py may raise bare struct.error instead of ReplayError; stray NET-60 .uid."
   },
   {
     "id": "NET-52",
