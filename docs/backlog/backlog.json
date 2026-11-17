@@ -8335,8 +8335,10 @@
       "docs/reviews/R0-amendments-23.md",
       "godot/src/sim_ai/brains/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-17",
+    "pr": 172,
+    "notes": "Nits: HV5 ranges line looser than the schema; one stale assert message in ai16_kit."
   },
   {
     "id": "GD-48",
