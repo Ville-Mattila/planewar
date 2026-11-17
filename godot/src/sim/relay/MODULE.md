@@ -23,8 +23,7 @@ func _init(store: EntityStore, defs: WorldDefs, score: ScoreKeeper, events: SimE
 func step(dt: float) -> void                                                 # every Relay Station in ascending slot order
 func progress_s(relay: int) -> float                                         # slot: seconds of capture progress, 0 for none
 func contested(relay: int) -> bool                                           # slot: the capture is paused by an enemy this tick
-# SunPath (sim/economy/sun_path.gd) gains:
-static func load_plateaus(map_dir: String) -> PackedVector3Array             # unit centres of the `plateau` named_features of `<dir>/features.json`; empty when unreadable
+# SunPath.load_plateaus(map_dir) -> PackedVector3Array (documented in sim/economy/MODULE.md): the Plateau centres of a map, R9
 ```
 
 Numbers: `scoring.json` `relay` (`capture_s` 20, `contest_radius_m` 300, plus the existing `capture` 300 and `hold_per_min` 10;
@@ -52,7 +51,11 @@ schema `scoring.schema.json`). A Relay Station is any structure of def `relay_st
   structure, all in `EntityStore`; a restored world continues byte for byte. No new saved section.
 - R9 Plateau. `SimWorld.load_map` of a map id feeds `load_plateaus` to `Economy.set_plateaus`; the radius is `economy.json`
   `solar_plateau_radius_m` and the multiplier `solar_plateau_mult` (02 s8.4). The flat datum has none.
-- R10 Cost. `step` returns at once when the store holds no Relay Station def instance; otherwise it scans the (<= 480) structures for the
+- R10 Open pad. A structure that is `invulnerable`, has `pads` > 0 and is not `buildable` (the Relay Station) takes ships of every team
+  as a landing / DOCKED pad (`WorldDefs.open_pad_by_def`, `Collision.open_pad`: no RAM, a C_PAD contact), because a capturer must dock on a
+  pad it does not hold. `Docking` serves a docked ship only when the pad's team equals the ship's (harvest I8: the holder only); an enemy
+  or neutral pad launches and queues nothing special. Tests: `test_relay_effects.gd`.
+- R11 Cost. `step` returns at once when the store holds no Relay Station def instance; otherwise it scans the (<= 480) structures for the
   def, then per relay one pass over the ships for a docked Hauler and, only with one on the pad, the ships and ground units for a contest.
   No Dictionary, no per-entity allocation.
 
@@ -71,7 +74,7 @@ only while a Hauler sits on a pad. Bound in `test_relay_perf.gd` (PerfGate).
 
 ## Test entry points
 
-`godot/test/unit/sim/relay/test_relay_capture.gd` (R1-R6), `test_relay_effects.gd` (R7-R9), `test_relay_perf.gd` (R10); fixtures `relay_test_kit.gd`.
+`godot/test/unit/sim/relay/test_relay_capture.gd` (R1-R6), `test_relay_effects.gd` (R7-R10), `test_relay_perf.gd` (R11); fixtures `relay_test_kit.gd`.
 
 ## How to add X
 

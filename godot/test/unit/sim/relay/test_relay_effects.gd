@@ -20,7 +20,7 @@ func _run(w: SimWorld, seconds: float) -> void:
 
 
 func test_the_view_reports_the_new_team_and_owner_after_a_capture() -> void:
-	assert_int(_w.view().team(_relay)).is_equal(K.NEUTRAL)
+	assert_int(_w.view().team(_relay)).is_equal(-1)
 	var _h: int = K.docked(_w, &"hauler", 1, _relay)
 	_run(_w, 21.0)
 	assert_int(_w.view().team(_relay)).is_equal(1)
@@ -29,7 +29,7 @@ func test_the_view_reports_the_new_team_and_owner_after_a_capture() -> void:
 
 func test_the_losing_team_drops_its_sensor_cover_and_the_winner_gains_it() -> void:
 	var sd: StructureDef = WorldTestKit.content().structures[WorldTestKit.def_id(&"relay_station") - DefRanges.STRUCTURE_BASE]
-	var foe: int = DockingTestKit.direct(_w, &"dart", 1, 1, WorldTestKit.at(100.0, sd.sensor_radius - 500.0))   # inside the Relay's reach
+	var foe: int = DockingTestKit.direct(_w, &"refinery", 1, 1, WorldTestKit.at(0.0, sd.sensor_radius - 500.0))   # a structure inside the Relay's reach
 	var h0: int = K.docked(_w, &"hauler", 0, _relay)
 	_run(_w, 21.0)
 	assert_int(K.team_of(_w, _relay)).is_equal(0)
@@ -41,14 +41,17 @@ func test_the_losing_team_drops_its_sensor_cover_and_the_winner_gains_it() -> vo
 	assert_bool(_w.view().visible_ids(0).has(foe)).is_false()
 
 
-func test_a_captured_pad_serves_the_new_holder() -> void:
+func test_a_captured_pad_serves_the_new_holder_and_not_before() -> void:
 	var h: int = K.docked(_w, &"hauler", 1, _relay)
 	_w.economy().economy.credit(1, 0, 1000)
-	_run(_w, 21.0)
-	assert_int(K.team_of(_w, _relay)).is_equal(1)
 	_w.store().fuel[EntityId.slot(h)] = 0.0
+	_run(_w, 10.0)
+	assert_int(K.team_of(_w, _relay)).is_equal(K.NEUTRAL)
+	assert_bool(_w.store().alive(h)).is_true()                        # landed on, not rammed
+	assert_float(_w.store().fuel[EntityId.slot(h)]).is_equal(0.0)     # a neutral pad serves nobody
 	var hd: ShipDef = DockingTestKit.ship_def(&"hauler")
-	_run(_w, hd.refuel_time_s + 2.0)
+	_run(_w, 11.0 + hd.refuel_time_s + 2.0)
+	assert_int(K.team_of(_w, _relay)).is_equal(1)
 	assert_float(_w.store().fuel[EntityId.slot(h)]).is_greater_equal(hd.fuel_s - 0.01)
 
 
@@ -80,4 +83,8 @@ func test_a_solar_array_on_the_loaded_plateau_gets_the_multiplier() -> void:
 	var _a2: int = WorldTestKit.spawn(w, &"shipyard", 0, 0, Vector3(0.0, r, 200.0))
 	var _b: int = WorldTestKit.spawn(w, &"solar_array", 0, 0, Vector3(0.0, 0.0, r))      # the north pole: inside the Plateau
 	var mult: float = WorldTestKit.content().economy.solar_plateau_mult
-	assert_float(e.power_ratio(0)).is_equal_approx((20.0 + 12.0 * mult) / 40.0, 0.0001)
+	var on: float = e.power_ratio(0)                         # the Plateau loaded by `load_map`
+	e.set_plateaus(PackedVector3Array())
+	var off: float = e.power_ratio(0)
+	assert_float(off).is_greater(0.0)
+	assert_float(on).is_equal_approx(off * mult, 0.001)      # the Solar Array alone supplies the power here

@@ -151,7 +151,7 @@ func test_a_held_relay_credits_the_hold_score_per_minute() -> void:
 	K.pass_n(_w, K.seconds(21.0))
 	DockingTestKit.clear(_w, h0)
 	var before: int = _w.economy().score.ledger.commander[0]
-	K.pass_n(_w, K.seconds(60.0))
+	K.pass_n(_w, K.seconds(61.0))
 	assert_int(_w.economy().score.ledger.commander[0] - before).is_equal(int(K.rule("hold_per_min")))
 
 

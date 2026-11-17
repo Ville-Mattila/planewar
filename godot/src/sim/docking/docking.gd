@@ -190,6 +190,8 @@ func _serve_docked(dt: float) -> void:
 						_launching[n_launch] = s
 						n_launch += 1
 						continue                              # leaving: no service this tick
+			if _store.team[p] != _store.team[s]:
+				continue                                      # GD-23: a neutral or enemy-held Relay pad is landed on, never serves
 			service.serve(s, p, dt)
 			if _cand_mark[p] != _pass:
 				_cand_mark[p] = _pass
@@ -220,7 +222,7 @@ func _launch(s: int) -> void:
 
 func _on_service_pad(s: int) -> bool:
 	var link: int = _store.link[s]
-	return _store.alive(link) and PadQueries.serves(_store, _defs, EntityId.slot(link))
+	return _store.alive(link) and PadQueries.serves(_store, _defs, EntityId.slot(link)) and _store.team[link & EntityId.SLOT_MASK] == _store.team[s]
 
 
 # The queue wishes (D6, R0 B.24 A-125): each wishing ship waits for the busy or queued live pad of its team with the
