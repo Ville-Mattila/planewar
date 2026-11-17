@@ -84,7 +84,7 @@
     {"name": "Dart #1 complete", "doc": "0:25", "event": "P0.dart1.done"},
     {"name": "Autocannon done", "doc": "0:26", "event": "P0.ac1.done"},
     {"name": "Dart #1 airborne (01 by 0:45)", "doc": "0:28", "event": "P0.dart1.airborne"},
-    {"name": "Dart #2 starts", "doc": "0:56", "event": "P0.dart2.queued"},
+    {"name": "Dart #2 starts", "doc": "0:50", "event": "P0.dart2.queued"},
     {"name": "H1 first delivery", "doc": "1:10", "event": "P0.H1.delivery.1"},
     {"name": "H3 starts", "doc": "1:10", "event": "P0.h3.queued"},
     {"name": "H2 delivers", "doc": "2:14", "event": "P0.H2.delivery.1"},

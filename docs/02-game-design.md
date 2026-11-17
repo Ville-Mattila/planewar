@@ -501,7 +501,7 @@ An Ice Extractor fills its 400-Ice buffer at the node rate. If a friendly Refine
 |---|---|---|---|---|---|---|
 | Home Cold Trap | 2,000 | 0.8 | 1,700 m | 106 s | 3.8 Ice/s | one Hauler covers it with time left to tow wrecks |
 | Mid-latitude trap | 6,000 | 1.5 | 5,150 m | 282 s | 1.4 Ice/s | slightly short; an Outpost + Refinery at the trap (pipe) is better |
-| Midnight Pole node (x4) | 5,000 | 0.75 | 9,425 m | 498 s | 0.8 Ice/s | Haulers on long convoys or a forward Outpost + Refinery: contested by design |
+| Midnight Pole node (x4) | 5,000 | 0.75 | 9,425 m | 499 s | 0.8 Ice/s | Haulers on long convoys or a forward Outpost + Refinery: contested by design |
 
 Ice does not regenerate. Home traps last about 42 minutes, so they never run out in a normal match; they are simply too small for a mid-game air force (Section 8.5).
 
@@ -525,8 +525,8 @@ Construction speed is never affected (Section 6.3). `LOW_POWER` fires when the r
 | 0:30 (+ Solar, Autocannon) | 32 | 24 |
 | 5:00 (+ Outpost, Solar #2, Refinery #2) | 49 | 28 |
 | 10:00 (+ Flak, Missile, Sensor Mast, 2 Pads, Extractor) | 61 | 55 |
-| 15:00 (+ Reactor, Shield, 2nd Shipyard) | 123 | 97 |
-| 24:00 | 195 | 212 (ratio 0.92: the bot is behind on power) |
+| 15:00 (+ Reactor, Shield, 2nd Shipyard) | 106 | 90 |
+| 24:00 | 151 | 185 (ratio 0.82: the bot is behind on power) |
 
 ```gdscript
 # src/sim/economy.gd
@@ -568,16 +568,16 @@ Team caps are the sum over the team's structures: Core 3,000 Ore / 800 Ice, Refi
 | 0:03 | Place Solar Array ~100 m north of the Core (construction slot 1) | 700 |
 | 0:04 | Queue Harvester H2 on the Vehicle Bay | 450 |
 | 0:05 | Queue Dart #1 on the Shipyard | 300 |
-| 0:06 | Place Autocannon Turret on the Field A line (slot 2) | 100 |
-| 0:18 | Solar done (power 32 / 20) | 112 |
-| 0:24 | H2 complete, drives to Field A | 118 |
-| **0:25** | Dart #1 complete, **airborne 0:28** (01 checkpoint "by 0:45" met with 17 s to spare); it scouts and overflies the Outpost site. Autocannon done 0:26 (power 32 / 24) | 119 |
-| 0:56 | Dart #2 starts | 0 |
-| 1:10 | H1 first delivery (+300); Harvester H3 starts | 64 |
-| 1:10-2:14 | Trickle only: the **first-sortie window** (~0:30-3:00) when a human flies Dart #1 | 128 |
-| 2:14 | H2 delivers (+300); Solar #2 | 328 |
-| 2:59 | H1 delivers (+300); place **Outpost** 1,350 m south (Dart #2 overhead satisfies the presence rule); Hauler starts | 23 |
-| 3:19 | H3 delivers; place Refinery #2 at the Core's west edge for Field B | 43 |
+| 0:06 | Place Autocannon Turret on the Field A line (slot 2); the Core trickle of the first 6 s (1.0 Ore/s, 6 Ore) is credited here: 300 - 200 + 6 | 106 |
+| 0:18 | Solar done (power 32 / 20) | 118 |
+| 0:24 | H2 complete, drives to Field A | 124 |
+| **0:25** | Dart #1 complete, **airborne 0:28** (01 checkpoint "by 0:45" met with 17 s to spare); it scouts and overflies the Outpost site. Autocannon done 0:26 (power 32 / 24) | 125 |
+| 0:50 | Dart #2 starts (125 + 25 s trickle = 150, the Dart's cost) | 0 |
+| 1:10 | H1 first delivery (+300); Harvester H3 starts | 70 |
+| 1:10-2:14 | Trickle only: the **first-sortie window** (~0:30-3:00) when a human flies Dart #1 | 134 |
+| 2:14 | H2 delivers (+300); Solar #2 | 334 |
+| 2:59 | H1 delivers (+300); place **Outpost** 1,350 m south (Dart #2 overhead satisfies the presence rule); Hauler starts | 29 |
+| 3:19 | H3 delivers; place Refinery #2 at the Core's west edge for Field B | 49 |
 | **3:44** | **Outpost complete** (checkpoint "by 6:00" met with 2:16 to spare): +1 construction slot, a second pad, +5 power | - |
 | 4:45 | Ice Extractor on the home Cold Trap (inside the Outpost radius) | - |
 | 4:48 | Harvester H4 (Field B); Pad | - |
@@ -590,7 +590,7 @@ Team caps are the sum over the team's structures: Core 3,000 Ore / 800 Ice, Refi
 | Min | Ore | Ice | Harvesters | Ore in (incl. trickle) | Ore spent | Ice in / out | Power | Notable |
 |---|---|---|---|---|---|---|---|---|
 | 0 | 800 | 300 | 1 | - | - | - | 20/20 | start kit |
-| 1 | 10 | 300 | 2 | 60 | 850 | 0 / 0 | 32/24 | Dart #1 airborne 0:28; Dart #2 started 0:56 |
+| 1 | 10 | 300 | 2 | 60 | 850 | 0 / 0 | 32/24 | Dart #1 airborne 0:28; Dart #2 started 0:50 |
 | 2 | 120 | 300 | 3 | 360 | 250 | 0 / 0 | 32/24 | 3 Harvesters on Field A |
 | 3 | 30 | 300 | 3 | 660 | 750 | 0 / 0 | 44/24 | Solar #2; Outpost and Hauler 2:59 |
 | 4 | 90 | 300 | 3 | 360 | 300 | 0 / 0 | 49/28 | Outpost done 3:44; Refinery #2 |
