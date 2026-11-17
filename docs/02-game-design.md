@@ -312,7 +312,7 @@ Notes:
 
 ### 5.3 Neutral objectives
 
-- **Relay Station** (Noon Pole, pre-placed, indestructible, no weapons). **Capture:** a Hauler of team T is DOCKED on its pad for `capture_s` 20 with no enemy unit (ship or ground) within `contest_radius` 300 m. Progress pauses while contested and resets if the Hauler leaves. The holder gets the pad (normal service costs), 3,500 m sensors with 1,200 m deck reveal, and +300 score per capture. Recapture uses the same rule. Pillar P3.
+- **Relay Station** (Noon Pole, pre-placed, indestructible, no weapons). **Capture:** a Hauler of team T is DOCKED on its pad for `capture_s` 20 with no enemy unit (ship or ground) within `contest_radius` 300 m. Progress pauses while contested and resets if the Hauler leaves. The holder gets the pad (normal service costs), 3,500 m sensors with 1,200 m deck reveal, and +300 score per capture. Recapture uses the same rule. Def home: `structures.json` `relay_station` `capture_s` / `contest_radius_m`; only a ship whose def has `captures: true` (the Hauler) lands on a Relay pad its team does not hold, and a pad serves its holder's team only (R0 B.30 A-146 .. A-148). Pillar P3.
 - **Solar Plateau**: 1,000 m radius around the Noon Pole; Solar factor 1.5 (01 s5.4). Building there needs an Outpost (Section 6.2).
 - **Midnight Pole cluster**: four Cold Trap nodes (Section 9); Ice Extractors there need an Outpost.
 
