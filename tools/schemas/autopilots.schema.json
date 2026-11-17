@@ -1304,7 +1304,7 @@
         "tags",
         "think_period_ticks"
       ],
-      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional on the base; on the ap_harvester branch flee_radius_m, quiet_s, follow and harvest are required (R0 B.29 A-144, brains/MODULE.md HV5).",
+      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional on the base; on the ap_harvester branch flee_radius_m, quiet_s, follow and harvest are required (R0 B.29 A-144, brains/MODULE.md HV5). On the ap_crawler branch follow is required (R0 B.29 A-145, brains/MODULE.md CR5).",
       "anyOf": [
         {
           "properties": {
@@ -1393,7 +1393,9 @@
               "const": "ap_crawler"
             }
           },
-          "required": []
+          "required": [
+            "follow"
+          ]
         },
         {
           "properties": {
@@ -1411,7 +1413,7 @@
           }
         }
       ],
-      "description": "R0 B.14 A-86: required per id: separation on every ship ap_* (dart, lancer, bomber, scout, hauler, harvester); formation on dart and lancer; guidance / intercept / attack_run / gun / evade with gun.aoa_comp_max_deg and evade.heading_change_deg on ap_dart (A-93)"
+      "description": "R0 B.14 A-86: required per id: separation on every ship ap_* (dart, lancer, bomber, scout, hauler, harvester); formation on dart and lancer; guidance / intercept / attack_run / gun / evade with gun.aoa_comp_max_deg and evade.heading_change_deg on ap_dart (A-93); flee_radius_m / quiet_s / follow / harvest on ap_harvester (B.29 A-144); follow on ap_crawler (B.29 A-145)"
     },
     "follow": {
       "type": "object",

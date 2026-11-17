@@ -468,3 +468,21 @@ class Ap47Harvester(Tree):
         self.assertEqual(code, 1, out)
         self.assertIn("1 violations", out)
         self.assertIn('got "ap_harvester"', out)   # schemalite reports the anyOf branch, not the key
+
+
+class Ap18Crawler(Tree):
+    """AI-18 (R0 B.29 A-145, brains/MODULE.md CR5): ap_crawler requires follow; the negative trips exactly one rule."""
+
+    def _edit_crawler(self, mutate: Any) -> None:
+        f = self.root / "godot" / "content" / "defs" / "autopilots.json"
+        data = json.loads(f.read_text(encoding="utf-8"))
+        ap = [a for a in data["autopilots"] if a["id"] == "ap_crawler"][0]
+        mutate(ap)
+        f.write_text(json.dumps(data), encoding="utf-8")
+
+    def test_crawler_without_follow_fails(self) -> None:
+        self._edit_crawler(lambda ap: ap.pop("follow"))
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+        self.assertIn("missing required key 'follow'", out)
