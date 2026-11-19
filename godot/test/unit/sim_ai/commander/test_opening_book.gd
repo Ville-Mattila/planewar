@@ -9,13 +9,13 @@ const HZ: int = 30
 
 class FakeHost extends BookHost:
 	var calls: Array[String] = []
-	var script: Dictionary = {}   # "build:solar_array" -> Array[int] of outcomes, consumed front first; default DONE
+	var answers: Dictionary = {}   # "build:solar_array" -> Array[int] of outcomes, consumed front first; default DONE
 	var near: bool = false
 	var ks: Array[int] = []
 
 	func _next(key: String) -> int:
 		calls.append(key)
-		var q: Array = script.get(key, [])
+		var q: Array = answers.get(key, [])
 		return int(q.pop_front()) if not q.is_empty() else OpeningBook.Out.DONE
 
 	func presence(_tok: SiteToken, _def_id: int) -> bool:
@@ -58,7 +58,7 @@ func _book(steps: Array, extra: Dictionary = {}) -> OpeningBook:
 
 func _ctx(t_s: float = 0.0) -> BookContext:
 	var c: BookContext = BookContext.new()
-	c.size_defs(Ai23Kit.content().entity_index.size() + 4)
+	c.size_defs(DefRanges.END)
 	c.t_s = t_s
 	c.affordable = true
 	return c
@@ -135,7 +135,7 @@ func test_steps_run_in_order_and_stop_at_a_wait() -> void:
 		{"do": "produce", "def": "harvester", "n": 1}])
 	var r: BookRun = BookRun.new(b)
 	var h: FakeHost = FakeHost.new()
-	h.script["produce:%d:1" % _def(&"dart")] = [OpeningBook.Out.WAIT, OpeningBook.Out.DONE]
+	h.answers["produce:%d:1" % _def(&"dart")] = [OpeningBook.Out.WAIT, OpeningBook.Out.DONE]
 	var n: int = _think(b, r, _ctx(), h, 0)
 	assert_int(n).is_equal(1)   # the solar array went; the Dart waits; the Harvester behind it does not jump the queue
 	assert_int(r.cursor).is_equal(1)
@@ -191,7 +191,7 @@ func test_a_rejected_placement_tries_the_next_candidate_and_three_skip() -> void
 	var r: BookRun = BookRun.new(b)
 	var h: FakeHost = FakeHost.new()
 	var key: String = "build:%d" % _def(&"solar_array")
-	h.script[key] = [OpeningBook.Out.REJECT, OpeningBook.Out.REJECT, OpeningBook.Out.REJECT]
+	h.answers[key] = [OpeningBook.Out.REJECT, OpeningBook.Out.REJECT, OpeningBook.Out.REJECT]
 	assert_int(_think(b, r, _ctx(), h, 0)).is_equal(0)
 	assert_int(_think(b, r, _ctx(), h, 30)).is_equal(0)
 	assert_int(r.cursor).is_equal(0)
@@ -205,7 +205,7 @@ func test_two_rejections_then_success_do_not_skip() -> void:
 	var b: OpeningBook = _book([{"do": "build", "def": "solar_array", "near": "core"}])
 	var r: BookRun = BookRun.new(b)
 	var h: FakeHost = FakeHost.new()
-	h.script["build:%d" % _def(&"solar_array")] = [OpeningBook.Out.REJECT, OpeningBook.Out.REJECT, OpeningBook.Out.DONE]
+	h.answers["build:%d" % _def(&"solar_array")] = [OpeningBook.Out.REJECT, OpeningBook.Out.REJECT, OpeningBook.Out.DONE]
 	for i: int in 3:
 		var _n: int = _think(b, r, _ctx(), h, i * 30)
 	assert_int(r.outcome[0]).is_equal(BookRun.DONE)
@@ -215,7 +215,7 @@ func test_an_unresolvable_step_is_skipped_at_once() -> void:
 	var b: OpeningBook = _book([{"do": "build", "def": "refinery", "near": "ore_field:home_2"}, {"do": "produce", "def": "dart", "n": 1}])
 	var r: BookRun = BookRun.new(b)
 	var h: FakeHost = FakeHost.new()
-	h.script["build:%d" % _def(&"refinery")] = [OpeningBook.Out.FAIL]
+	h.answers["build:%d" % _def(&"refinery")] = [OpeningBook.Out.FAIL]
 	var n: int = _think(b, r, _ctx(), h, 0)
 	assert_int(r.outcome[0]).is_equal(BookRun.SKIPPED_FAIL)
 	assert_int(n).is_equal(1)   # the Dart behind it ran in the same think
@@ -236,7 +236,7 @@ func test_a_step_that_cannot_complete_is_skipped_after_stall_s() -> void:
 	var waits: Array = []
 	for i: int in 60:
 		waits.append(OpeningBook.Out.WAIT)
-	h.script["produce:%d:1" % _def(&"dart")] = waits
+	h.answers["produce:%d:1" % _def(&"dart")] = waits
 	var stall: int = int(Ai23Kit.params().stall_s) * HZ
 	var _a: int = _think(b, r, _ctx(), h, 0)
 	var _b: int = _think(b, r, _ctx(), h, stall - HZ)
@@ -249,7 +249,7 @@ func test_the_stall_clock_starts_when_the_condition_holds() -> void:
 	var b: OpeningBook = _book([{"do": "produce", "def": "dart", "n": 1, "when": "t>=100"}])
 	var r: BookRun = BookRun.new(b)
 	var h: FakeHost = FakeHost.new()
-	h.script["produce:%d:1" % _def(&"dart")] = [OpeningBook.Out.WAIT, OpeningBook.Out.WAIT, OpeningBook.Out.WAIT]
+	h.answers["produce:%d:1" % _def(&"dart")] = [OpeningBook.Out.WAIT, OpeningBook.Out.WAIT, OpeningBook.Out.WAIT]
 	var _a: int = _think(b, r, _ctx(), h, 0)
 	var _b: int = _think(b, r, _ctx(), h, 99 * HZ)   # 99 s on `when` are not a stall (stall_s is 90)
 	assert_int(r.cursor).is_equal(0)
@@ -304,7 +304,7 @@ func test_run_state_round_trips_and_resumes_identically() -> void:
 	var b: OpeningBook = Ai23Kit.book(&"vanguard_standard")
 	var r: BookRun = BookRun.new(b)
 	var h: FakeHost = FakeHost.new()
-	h.script["build:%d" % _def(&"autocannon_turret")] = [OpeningBook.Out.REJECT, OpeningBook.Out.WAIT]
+	h.answers["build:%d" % _def(&"autocannon_turret")] = [OpeningBook.Out.REJECT, OpeningBook.Out.WAIT]
 	for i: int in 4:
 		var _n: int = _think(b, r, _ctx(), h, i * 30, 2)
 	var bytes: PackedByteArray = r.serialize()
@@ -312,7 +312,7 @@ func test_run_state_round_trips_and_resumes_identically() -> void:
 	assert_bool(r2.deserialize(bytes)).is_true()
 	assert_bool(r2.serialize() == bytes).is_true()
 	var h2: FakeHost = FakeHost.new()
-	h2.script = h.script.duplicate(true)
+	h2.answers = h.answers.duplicate(true)
 	h.calls.clear()
 	for i: int in range(4, 12):
 		var _x: int = _think(b, r, _ctx(), h, i * 30, 2)

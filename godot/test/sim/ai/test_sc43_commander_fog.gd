@@ -53,6 +53,7 @@ func test_sc43_real_commander_never_names_an_entity_it_has_not_seen() -> void:
 	intel.track(0, true)
 	intel.track(1, true)
 	d.set_intel(intel)
+	Ai23Kit.add_economy(d, w, true)
 	var cb: CommanderBrain = Ai23Kit.commander(&"cradle", [Ai23Kit.book(&"vanguard_standard")])
 	d.set_brain(15, cb, true)
 	d.schedule_bot(0, 3)

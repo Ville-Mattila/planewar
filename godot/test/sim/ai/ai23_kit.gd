@@ -2,7 +2,7 @@ class_name Ai23Kit extends RefCounted
 ## AI-23 fixtures: the shipped defs plus the AI-14 autopilots (`Ai14Kit`), `ai23_params.json` (the book constants until
 ## bot_profiles.json carries them) and `ai23_books.json` (six books on the R0 B.6 start kit, 3 doctrines x 2 variants,
 ## in the 05 s7.3 grammar; AI-24 ships the real ones), the cradle map's feature list, and a 1v1 world on cradle (slots 0
-## and 2, 90 degrees apart, O-5) with both players' start kits and a Commander driver.
+## and 2, 90 degrees apart, O-5; the cradle's start slots, Ore Fields and Cold Traps on the flat datum) with both players' start kits and a Commander driver.
 
 const PARAMS: String = "res://test/sim/ai/ai23_params.json"
 const BOOKS: String = "res://test/sim/ai/ai23_books.json"
@@ -84,12 +84,14 @@ static func ground(w: SimWorld, d: Vector3) -> Vector3:
 static func world(seed_value: int = 7, map_id: StringName = &"cradle", with_enemy: bool = true, doctrine0: StringName = &"vanguard", doctrine2: StringName = &"vanguard") -> SimWorld:
 	var w: SimWorld = SimWorld.new(content())
 	var map: MapDef = MapDef.new()
-	map.id = map_id
+	map.id = &""   # the flat datum with the map's own geometry: Harvesters stop 340 m short of the start-kit Refinery on cradle's terrain (needs AI-16, see the PR)
 	var res: Result = w.load_map(map, seed_value, DartKit.rules())
 	assert(res.ok, res.message)
 	w.add_player(0, 0, doctrine0, PlayerTable.KIND_BOT)
 	if with_enemy:
 		w.add_player(2, 1, doctrine2, PlayerTable.KIND_BOT)
+	var _fields: int = w.economy().harvest.fields.load_map_dir(MAPS + String(map_id))
+	var _traps: int = w.economy().ice.nodes.load_map_dir(MAPS + String(map_id))
 	var f: Dictionary = features(map_id)
 	for slot: int in ([0, 2] if with_enemy else [0]):
 		var dir: Vector3 = _vec(((f["start_slots"] as Array)[slot] as Dictionary)["dir"])
@@ -111,14 +113,30 @@ static func _vec(a: Variant) -> Vector3:
 	return Vector3(float(l[0]), float(l[1]), float(l[2])).normalized()
 
 
-## The driver: Ai14Kit's brains and intel plus a CommanderBrain for each slot in `slots` at difficulty `tier`.
-static func driver(w: SimWorld, slots: Array[int], tier: int = 1, map_id: StringName = &"cradle", which: Array[StringName] = []) -> AiDriver:
+## The driver: Ai14Kit's ship brains and intel, the Harvester brain (the start kit's Harvester mines, so the bot has income),
+## `cb` as the bot brain and the slots in `slots` scheduled at difficulty `tier`.
+static func driver(w: SimWorld, cb: CommanderBrain, slots: Array[int], tier: int = 1) -> AiDriver:
 	var d: AiDriver = Ai14Kit.driver(w)
-	var cb: CommanderBrain = commander(map_id)
+	add_economy(d, w, true)
 	d.set_brain(15, cb, true)
 	for s: int in slots:
 		d.schedule_bot(s, tier)
 	return d
+
+
+## The Harvester class (AI-16) on `d`, its fields bound from `w`; `register` the start kit's Harvesters (they spawned before
+## the hook existed).
+static func add_economy(d: AiDriver, w: SimWorld, register: bool) -> void:
+	var c: ContentSet = Ai16Kit.content()
+	var hb: HarvesterBrain = Ai16Kit.brain()
+	hb.bind_fields(w.economy().harvest.fields)
+	d.set_brain(Ai16Kit.cls(), hb)
+	d.set_overlay_params(Ai16Kit.cls(), OverlayParams.for_ground(Ai16Kit.ap(), c.rules, c.rules.tick_hz))
+	if register:
+		var hid: int = DartKit.def_id(&"harvester")
+		for s: int in w.store().ground:
+			if w.store().def_id[s] == hid:
+				var _r: bool = d.register(w.store().id_of(s), Ai16Kit.cls())
 
 
 static func commander(map_id: StringName = &"cradle", only: Array[OpeningBook] = []) -> CommanderBrain:

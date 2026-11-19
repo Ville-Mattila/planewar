@@ -41,8 +41,10 @@
       "steps": [
         { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1" },
         { "do": "produce", "def": "harvester", "n": 1 },
-        { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
         { "do": "produce", "def": "dart", "n": 1 },
+        { "do": "order", "kind": "move", "unit": "dart|lancer", "to": "outpost_site:home_trap", "when": "t>=100" },
+        { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
+        { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
         { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2" },
         { "do": "build", "def": "relay_pylon", "near": "toward:cold_trap:home", "n": 2 },
         { "do": "produce", "def": "hauler", "n": 1 },
@@ -52,8 +54,6 @@
         { "do": "produce", "def": "lancer", "n": 1 },
         { "do": "set_replenish", "def": "dart", "n": 2 },
         { "do": "build", "def": "sensor_mast", "near": "approach:nearest_enemy" },
-        { "do": "order", "kind": "move", "unit": "dart|lancer", "to": "outpost_site:home_trap", "when": "t>=150" },
-        { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
         { "do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1" }
       ]
     },

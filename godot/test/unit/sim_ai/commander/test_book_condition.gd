@@ -7,7 +7,7 @@ var _idx: Dictionary = {&"outpost": 3, &"dart": 5, &"solar_array": 7}
 
 func _ctx() -> BookContext:
 	var c: BookContext = BookContext.new()
-	c.size_defs(16)
+	c.size_defs(DefRanges.END)
 	return c
 
 

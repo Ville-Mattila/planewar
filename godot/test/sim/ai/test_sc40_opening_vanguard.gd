@@ -12,9 +12,7 @@ const TOTAL_S: int = 360
 func test_sc40_commander_opening_vanguard() -> void:
 	var w: SimWorld = Ai23Kit.world(40, &"cradle", false)
 	var cb: CommanderBrain = Ai23Kit.commander(&"cradle", [Ai23Kit.book(&"vanguard_standard")])
-	var d: AiDriver = Ai14Kit.driver(w)
-	d.set_brain(15, cb, true)
-	d.schedule_bot(0, 1)
+	var _d: AiDriver = Ai23Kit.driver(w, cb, [0])
 	var dart: int = Ai23Kit.def(&"dart")
 	var outpost: int = Ai23Kit.def(&"outpost")
 	var airborne_tick: int = -1
@@ -47,8 +45,8 @@ func test_sc40_commander_opening_vanguard() -> void:
 		assert_bool(ok).override_failure_message("step %d outcome %d" % [i, run.outcome[i]]).is_true()
 	assert_float(placed_dist).override_failure_message("no Outpost placed").is_greater_equal(800.0)
 	assert_float(presence).override_failure_message("no friendly unit near the Outpost site: %.0f m" % presence).is_less_equal(300.0)
-	assert_int(cb.st_repeat_rejects).is_equal(0)
-	assert_int(cb.st_locked).is_equal(0)
+	assert_int(cb.host.st_repeat_rejects).is_equal(0)
+	assert_int(cb.host.st_locked).is_equal(0)
 	assert_int(cb.st_thinks).is_greater(300)
 
 

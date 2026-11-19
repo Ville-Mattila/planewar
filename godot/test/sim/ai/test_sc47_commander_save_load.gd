@@ -10,21 +10,11 @@ const HZ: int = Ai23Kit.HZ
 const AFTER_TICKS: int = 20 * HZ
 
 
-func _make(w: SimWorld, hooked: bool) -> Array:
-	var d: AiDriver = Ai14Kit.driver(w) if hooked else Ai14Kit.make_driver(w.terrain())
-	var cb: CommanderBrain = Ai23Kit.commander()   # all six books: the pick by doctrine is RNG state
-	d.set_brain(15, cb, true)
-	return [d, cb]
-
-
 func test_sc47_commander_state_round_trips() -> void:
 	for save_s: int in [40, 150]:
 		var w: SimWorld = Ai23Kit.world(47)
-		var a: Array = _make(w, true)
-		var d: AiDriver = a[0]
-		var cb: CommanderBrain = a[1]
-		d.schedule_bot(0, 1)
-		d.schedule_bot(2, 1)
+		var cb: CommanderBrain = Ai23Kit.commander()   # all six books: the pick by doctrine is RNG state
+		var d: AiDriver = Ai23Kit.driver(w, cb, [0, 2])
 		var _e: Array[SimEvent] = Ai23Kit.run(w, save_s * HZ)
 		var run: BookRun = cb.run_of(0)
 		assert_object(run).is_not_null()
@@ -36,6 +26,7 @@ func test_sc47_commander_state_round_trips() -> void:
 		var w2: SimWorld = SimWorld.deserialize(bytes, Ai23Kit.content(), d2)
 		assert_object(w2).is_not_null()
 		d2.set_terrain(w2.terrain())
+		Ai23Kit.add_economy(d2, w2, false)
 		assert_bool(d2.serialize() == d.serialize()).override_failure_message("AI bytes do not round-trip at %d s" % save_s).is_true()
 		assert_bool(w2.serialize() == bytes).is_true()
 		for slot: int in [0, 2]:

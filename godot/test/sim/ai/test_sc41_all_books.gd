@@ -17,10 +17,7 @@ func test_sc41_every_book_completes_and_places_its_first_outpost() -> void:
 func _run_book(book: OpeningBook) -> void:
 	var w: SimWorld = Ai23Kit.world(41, &"cradle", true, book.doctrine, book.doctrine)
 	var cb: CommanderBrain = Ai23Kit.commander(&"cradle", [book])
-	var d: AiDriver = Ai14Kit.driver(w)
-	d.set_brain(15, cb, true)
-	d.schedule_bot(0, 1)
-	d.schedule_bot(2, 1)
+	var _d: AiDriver = Ai23Kit.driver(w, cb, [0, 2])
 	var outpost: int = Ai23Kit.def(&"outpost")
 	var first: Array[int] = [-1, -1]
 	var st: EntityStore = w.store()
@@ -40,6 +37,6 @@ func _run_book(book: OpeningBook) -> void:
 		assert_bool(run.done).override_failure_message("%s slot %d: book not done, cursor %d of %d" % [book.id, slot, run.cursor, book.n_steps]).is_true()
 		assert_int(first[k]).override_failure_message("%s slot %d: no finished Outpost by 6:00" % [book.id, slot]).is_greater_equal(0)
 		assert_int(first[k]).is_less_equal(TOTAL_S * HZ)
-	assert_int(cb.st_locked).override_failure_message("%s: REJECTED_LOCKED" % book.id).is_equal(0)
-	assert_int(cb.st_repeat_rejects).override_failure_message("%s: a site was rejected twice" % book.id).is_equal(0)
-	assert_float(float(cb.st_accepted) / float(maxi(cb.st_cmds, 1))).override_failure_message("%s: accepted %d of %d" % [book.id, cb.st_accepted, cb.st_cmds]).is_greater_equal(0.7)
+	assert_int(cb.host.st_locked).override_failure_message("%s: REJECTED_LOCKED" % book.id).is_equal(0)
+	assert_int(cb.host.st_repeat_rejects).override_failure_message("%s: a site was rejected twice" % book.id).is_equal(0)
+	assert_float(float(cb.host.st_accepted) / float(maxi(cb.host.st_cmds, 1))).override_failure_message("%s: accepted %d of %d" % [book.id, cb.host.st_accepted, cb.host.st_cmds]).is_greater_equal(0.7)

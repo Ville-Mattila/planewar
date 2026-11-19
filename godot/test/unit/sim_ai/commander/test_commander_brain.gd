@@ -19,16 +19,16 @@ func _drive(w: SimWorld, cb: CommanderBrain, tier: int = 1, seed_value: int = 3)
 
 func test_the_book_is_chosen_by_doctrine_with_weights() -> void:
 	var counts: Dictionary = {}
-	for seed_value: int in 60:
-		var w: SimWorld = _world(&"bulwark")
-		var cb: CommanderBrain = Ai23Kit.commander()
-		var _d: AiDriver = _drive(w, cb, 1, seed_value)
-		var _e: Array[SimEvent] = Ai23Kit.run(w, 32)
-		var id: StringName = cb.book_of(0).id
+	var cb: CommanderBrain = Ai23Kit.commander()
+	cb.bind_rng(Rng.new(5))
+	for _i: int in 300:
+		var id: StringName = cb.pick_book(&"bulwark").id
 		counts[id] = int(counts.get(id, 0)) + 1
 	assert_int(counts.size()).is_equal(2)
 	assert_bool(counts.has(&"bulwark_standard") and counts.has(&"bulwark_greedy")).is_true()
-	assert_int(int(counts[&"bulwark_standard"])).is_greater(int(counts[&"bulwark_greedy"]))   # weight 2 : 1
+	var share: float = float(counts[&"bulwark_standard"]) / 300.0
+	assert_float(share).is_between(0.58, 0.75)   # weight 2 : 1
+	assert_object(cb.pick_book(&"nobody")).is_null()
 
 
 func test_the_pick_is_deterministic_for_a_seed() -> void:
@@ -48,7 +48,7 @@ func test_a_doctrine_without_a_book_idles() -> void:
 	var d: AiDriver = _drive(w, cb)
 	var _e: Array[SimEvent] = Ai23Kit.run(w, 120)
 	assert_object(cb.book_of(0)).is_null()
-	assert_int(cb.st_cmds).is_equal(0)
+	assert_int(cb.host.st_cmds).is_equal(0)
 	assert_int(d.stats()["bot_thinks"]).is_greater(0)
 
 
