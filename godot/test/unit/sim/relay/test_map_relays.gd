@@ -61,6 +61,7 @@ func test_load_map_of_a_shipped_map_spawns_no_relay_yet() -> void:
 
 func test_a_hauler_lands_on_a_spawned_relay_station_and_captures_it() -> void:
 	var _n: int = _spawn("one_relay")
+	var _spawned: Array[SimEvent] = _w.drain_events()   # the relay's SPAWN event is not the Hauler's
 	var relay: int = _w.store().id_of(_relays()[0])
 	var sd: ShipDef = DockingTestKit.ship_def(&"hauler")
 	var up: Vector3 = _w.store().up[EntityId.slot(relay)]
@@ -79,3 +80,11 @@ func test_the_spawned_relay_round_trips_byte_exact() -> void:
 	var back: SimWorld = SimWorld.deserialize(bytes, WorldTestKit.content(), null)
 	assert_object(back).is_not_null()
 	assert_array(back.serialize()).is_equal(bytes)
+
+
+func test_the_relay_read_is_a_load_time_cost_only() -> void:
+	var t0: int = Time.get_ticks_usec()
+	for _i: int in 20:
+		var _n: int = MapRelays.spawn("res://content/maps/cradle", _w._defs, _w._terrain, _w.store(), _w._applier, 0)
+	var us: float = float(Time.get_ticks_usec() - t0) / 20.0
+	assert_bool(PerfGate.check("map_relays_load_cradle", us, 20000.0, "GD-51 load time only (not on a tick path)")).is_true()

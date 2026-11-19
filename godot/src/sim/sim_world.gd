@@ -72,6 +72,7 @@ func load_map(map: MapDef, _seed: int, rules: MatchRules) -> Result:
 		var _fields: int = _econ.harvest.fields.load_map_dir(_MAPS_ROOT + String(_map_id))   # GD-12: the recipe's Ore Fields
 		var _traps: int = _econ.ice.nodes.load_map_dir(_MAPS_ROOT + String(_map_id))         # GD-14: its Cold Traps
 		_econ.economy.set_plateaus(SunPath.load_plateaus(_MAPS_ROOT + String(_map_id)))   # GD-23: the Solar Plateau centres
+		var _relays: int = 0 if _restoring else MapRelays.spawn(_MAPS_ROOT + String(_map_id), _defs, _terrain, _store, _applier, _state.tick)   # GD-51: its Relay Stations
 	collision.configure(_defs.projectile_radius, _defs.pad_radius_by_def, _defs.common, rules.tick_hz)
 	collision.launch_pad = _defs.launch_pad_by_def
 	collision.open_pad = _defs.open_pad_by_def   # GD-23: an open pad (capture_s > 0) ...
