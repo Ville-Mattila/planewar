@@ -3,7 +3,7 @@ class_name SimWorld extends RefCounted
 ## `load_map` builds every system for one match. `step()` runs, in order: 1 queued commands (+ disconnect releases),
 ## 2 human inputs into input slots (silent-pilot rule), 3 control check + AI hook, 3b pathing (TA-50), 4 assist
 ## substitution (`AssistStep`: `Assist.link_bridge`, AI-08; auto-dock AI-10; then `Docking.track`), 5 kinematics (ships: DOCKED skipped,
-## A-41, terrain contacts to Collision; ground: GroundMotion, TA-38), 6 projectiles, 7 spatial rebuild, 8 collision,
+## A-41, terrain contacts to Collision; ground: GroundMotion, TA-38, then BarrelSlew, GD-50), 6 projectiles, 7 spatial rebuild, 8 collision,
 ## 9 weapon fire, damage from the contacts and fuses (Combat), landings (`Docking.land`, GD-15), deferred deaths (+ footprints,
 ## sites, queues), 10 Economy, Construction, Production, docking service and the match timers, 11 vision, 12 the
 ## caller drains events. Helpers: `sim/world/`; control transitions: `sim/control/` (05 s2, AI-02).
@@ -38,6 +38,7 @@ var _combat: Combat = null
 var _ships: ShipMotion = null
 var _ground: GroundMotion = null
 var _turrets: TurretSlew = null
+var _barrel: BarrelSlew = null         ## step 5: ground barrels (GD-50); step 9 fires along them
 var _profiler: TickProfiler = TickProfiler.new()
 var _view: LocalSimView = null
 var _sink: SimSink = null
@@ -161,6 +162,7 @@ func step() -> void:
 	_ships.step(t, _dt)                                      # 5 (DOCKED skipped, A-41)
 	_ground.step(t, _dt)                                     # 5: GroundMotion (TA-38)
 	_turrets.step(_dt)                                       # 5: tower slew (GD-09, A-118)
+	_barrel.step(_dt)                                        # 5: ground barrel elevation (GD-50)
 	_profiler.lap(TickProfiler.ROW_KINEMATICS)
 	_motion.step(t, _dt)                                     # 6
 	_profiler.lap(TickProfiler.ROW_PROJECTILES)
@@ -318,11 +320,14 @@ func _wire(rules: MatchRules) -> void:
 	_econ.salvage.paths.pathing = _pathing   # GD-39: a resting wreck blocks its path cell (255)
 	_ground = GroundMotion.new(_store, _inputs, _defs, _terrain, _pathing)
 	_turrets = TurretSlew.new(_store, _inputs, _defs)
+	_barrel = BarrelSlew.new(_store, _inputs, _defs)
+	_combat.fire.barrel = _barrel
 	_view = LocalSimView.new(_store, _proj, spatial, _terrain, _players, _defs, _orders, rules, _state, _pathing)
 	_view.production = _econ.production
 	_view.shields = _combat.shields
 	_view.docking = _econ.docking
 	_view.build = _econ.build
+	_view.barrel = _barrel
 	_judge = MatchJudge.new(_store, _players, _defs, rules, _events, _applier, _control, _econ.score, _state)
 	_combat.bind_judge(_judge)
 	_intake.judge = _judge

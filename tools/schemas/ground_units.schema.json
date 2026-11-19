@@ -229,6 +229,24 @@
           "minimum": 0,
           "maximum": 1000
         },
+        "barrel_slew_dps": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 180,
+          "$comment": "R0 B.31 A-151, GD-50 (06 s3.2 pitch = barrel): elevation rate of the mounted weapon's barrel at full pitch, deg/s; optional, absent = 0 (no barrel unless a limit is set)"
+        },
+        "barrel_min_deg": {
+          "type": "number",
+          "minimum": -30,
+          "maximum": 85,
+          "$comment": "R0 B.31 A-151, GD-50: lowest barrel elevation above the local horizontal, deg; optional, absent = 0; the sim swaps min and max if they are reversed"
+        },
+        "barrel_max_deg": {
+          "type": "number",
+          "minimum": -30,
+          "maximum": 85,
+          "$comment": "R0 B.31 A-151, GD-50: highest barrel elevation above the local horizontal, deg; optional, absent = 0; rest elevation = clamp(0, min, max)"
+        },
         "sensor_radius": {
           "type": "number",
           "minimum": 0,

@@ -7,16 +7,17 @@ R0 B.9 A-21 split of `sim/MODULE.md`, which stays the home of `PilotInput` (grou
 
 | Field | Value |
 |---|---|
-| Responsibility | Input-driven motion of every live `K_GROUND` entity, possessed or AI-driven alike (both write the entity's input slot): heading rate from `yaw`, forward speed from `thrust` x the 02 slope factor, BRAKE stop and delayed reverse, great-circle displacement, path-weight and max-slope blocks, terrain snap. Not: choosing the input (a brain in `sim_ai` follows `Pathing` routes), collisions with other bodies (`Collision`), mining / unloading, vision. |
+| Responsibility | Input-driven motion of every live `K_GROUND` entity, possessed or AI-driven alike (both write the entity's input slot): heading rate from `yaw`, forward speed from `thrust` x the 02 slope factor, BRAKE stop and delayed reverse, great-circle displacement, path-weight and max-slope blocks, terrain snap; the barrel elevation of a ground-mounted weapon from `pitch` (GD-50, `BarrelSlew`). Not: choosing the input (a brain in `sim_ai` follows `Pathing` routes), collisions with other bodies (`Collision`), mining / unloading, vision. |
 | Lane owner tier | Sonnet against this file; Opus reviews (sim lane) |
 | May depend on | `core`, `content`, `sim` (incl. `sim/world/` `WorldDefs`, `InputSlots`; `sim/pathing/` `Pathing`, `PathGrid`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads, RNG, clocks (D2, D3) |
 | Autoloads used | None |
-| Status | implemented (TA-38, 2026-10-14); `SimWorld` step 5 calls it after `ShipMotion` |
+| Status | implemented (TA-38, 2026-10-14); `SimWorld` step 5 calls it after `ShipMotion`; GD-50 (2026-11-19) `BarrelSlew` after `GroundMotion` |
 
 ## Public API
 
-`SimWorld` composes one `GroundMotion`; other lanes see only its effects (`SimView.pos`, `fwd`, `up`, `vel`). Lane-internal otherwise.
+`SimWorld` composes one `GroundMotion` and one `BarrelSlew`; other lanes see only their effects (`SimView.pos`, `fwd`, `up`, `vel`,
+`barrel_elevation`). Lane-internal otherwise; `WeaponFire.barrel` (sim/combat CB15) reads `frame`.
 
 ```gdscript
 class_name GroundMotion extends RefCounted
@@ -24,7 +25,21 @@ func _init(store: EntityStore, inputs: InputSlots, defs: WorldDefs, terrain: Ter
 func step(_t: int, dt: float) -> void                                        # step 5: every live ground unit, ascending slot order
 const RESNAP_TICKS: int                                                      # 8: idle units re-snap this often (power of two)
 static func speed_factor(slope_deg: float, max_slope_deg: float, loss: float) -> float   # max(0, 1 - loss x slope_deg / max_slope_deg); 1 when max_slope_deg <= 0
+class_name BarrelSlew extends RefCounted                                     # GD-50: 06 s3.2 `pitch` = barrel; sim/ground/barrel_slew.gd
+func _init(store: EntityStore, inputs: InputSlots, defs: WorldDefs)
+var elevation: PackedFloat64Array;  var bound: PackedInt32Array             # per main-range slot: radians above the local horizontal, and the EntityId it belongs to (0 none); S4
+var frame_up: Vector3                                                        # frame()'s second result (scratch, not state)
+func step(dt: float) -> void                                                 # step 5 after GroundMotion: every live ground unit with a barrel, ascending slot order
+func has_barrel(def_id: int) -> bool;  func rest(def_id: int) -> float;  func elevation_of(s: int) -> float
+func frame(s: int, p: Vector3, fwd: Vector3, up: Vector3) -> Vector3       # the shot frame: muzzle_dir, frame_up = muzzle_up; no barrel: fwd, up
+static func muzzle_dir(p: Vector3, fwd: Vector3, e: float) -> Vector3;  static func muzzle_up(p: Vector3, fwd: Vector3, e: float) -> Vector3
+func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool   # S4 (FORMAT 18): after the entity store, in the "entities" section
 ```
+
+Barrel defs (GD-50, optional per `ground_units.json` entry, absent = 0; schema `tools/schemas/ground_units.schema.json`):
+`barrel_slew_dps` (elevation rate at full pitch), `barrel_min_deg`, `barrel_max_deg` (elevation limits above the local
+horizontal; reversed limits are swapped). A def has a barrel when any of the three is non-zero. Siege Crawler: 10 deg/s,
+0-45 deg. Read from `GroundUnitDef.raw` of the base defs (doctrines do not touch them; typed fields: `needs content:`).
 
 Constants come from the `ground_common` block of `ground_units.json` (A-63, like `flight_common`: `ground_turn_rate_dps` 40,
 `ground_reverse_speed_mps` 3, `ground_reverse_hold_s` 0.5, `ground_slope_speed_loss` 0.6; `GroundCommonDef`) and `ground_units.json` (`ground_speed`, `ground_speed_loaded`, `max_slope_deg`, `bounding_radius`).
@@ -32,7 +47,8 @@ Constants come from the `ground_common` block of `ground_units.json` (A-63, like
 ## Per-unit state and input meaning
 
 - Input slot: `thrust` 0..1 = fraction of top speed (`ground_speed_loaded` while `cargo > 0` and the def has one); `yaw` -1..1 =
-  heading rate fraction, + = left (counter-clockwise seen from above); `buttons & BRAKE`; the other axes are ignored.
+  heading rate fraction, + = left (counter-clockwise seen from above); `buttons & BRAKE`; `pitch` -1..1 = barrel elevation rate
+  fraction, + = raise (GD-50, only for a def with a barrel; FIRE1 is Combat's); `roll` is ignored.
 - BRAKE = stop at once (no inertia; thrust is ignored). Held for `ground_reverse_hold_s` (the tick on which the held time reaches
   it, within half a tick, and every tick after) the unit reverses at `min(ground_reverse_speed_mps, ground_speed)` x the slope
   factor. Releasing BRAKE resets the hold. The hold is `EntityStore.timer_b` of a ground unit (ship repair / structure capture
@@ -73,9 +89,22 @@ The 02 formula is exact everywhere the unit stands within its limit (`speed_fact
   bytes; identical inputs give identical bytes and a save / restore mid-drive continues identically
   (`test_same_inputs_give_identical_bytes`; `test_ground_state.gd`).
 
+- B1 (GD-50, R0 B.31 A-153, slew law): each step 5 a live ground unit with a barrel goes to `clamp(e + clamp(pitch, -1, 1) x barrel_slew_dps x dt,
+  barrel_min_deg, barrel_max_deg)`; no rate lag; pitch 0 holds (`test_auto_pitch_slews_at_the_def_rate_and_zero_holds`,
+  `test_the_barrel_stops_at_the_def_limits_and_pitch_is_clamped_to_one`, `test_dead_beat_slew_reaches_an_exact_elevation`).
+- B2 (one input, two drivers): the input slot is the only source, so PILOT_INPUT (possessed) and `CommandSinkBase.drive` (AUTO /
+  ORDERED) slew it by the same law; S11 keeps an autopilot off a possessed barrel (`test_possessed_pitch_slews_at_the_def_rate_and_zero_holds`,
+  `test_the_autopilot_cannot_slew_a_possessed_barrel`). A def without a barrel ignores `pitch` and reads 0.
+- B3 (rest): a unit starts at `clamp(0, min, max)` (level for the Crawler, the pre-GD-50 shot); a slot whose `bound` is not its live
+  EntityId reads its def's rest, so a reused slot never inherits a dead unit's barrel (`test_a_reused_slot_starts_at_rest_not_at_the_dead_units_elevation`).
+- B4 (frame): `muzzle_dir = h cos(e) + n sin(e)`, `muzzle_up = n cos(e) - h sin(e)`, n = radial at the unit's position, h = its
+  heading made tangent; step 9 spawns along it (sim/combat CB15), the frame `SiegeAim.loft` solves in (`test_muzzle_dir_and_up_are_an_orthonormal_pair_at_the_elevation`).
+- B5 (S4): `elevation` and `bound` are in the bytes after the entity store (SimSerialize FORMAT 18); a world saved mid-slew with a shell
+  in flight restores byte-equal and steps byte-identically; `read_state` refuses wrong sizes and non-finite elevations (`test_barrel_state.gd`).
+
 ## Data owned
 
-None: all state is in `EntityStore` and `InputSlots`. No allocation per tick or per unit (the four position arrays are taken
+GroundMotion: none, all its state is in `EntityStore` and `InputSlots`. BarrelSlew: `elevation`, `bound` per main-range slot (B5). No allocation per tick or per unit (the four position arrays are taken
 into locals once per tick and assigned back).
 
 ## Events emitted / consumed
@@ -92,6 +121,9 @@ the baseline; total tick mean 52.7 / 52.2 / 43.5 ms). A moving unit costs about 
 
 `godot/test/unit/sim/ground/test_ground_motion.gd` (G1-G6, fixtures: a slope-stub `Terrain`, the cradle map, `Pathing` on cradle),
 `godot/test/unit/sim/ground/test_ground_state.gd` (S4 at world level, flat datum and cradle).
+GD-50: `godot/test/unit/sim/ground/test_barrel_slew.gd` (B1-B4, defs), `godot/test/unit/sim/ground/test_barrel_state.gd` (B5),
+`godot/test/unit/sim/combat/test_barrel_fire.gd` (CB15: lofted shots at 1,000-1,150 m within `loft_tol_m`, possessed and AUTO,
+flat and cradle relief, `Ballistics.predict_impact` agreement); fixtures `barrel_test_kit.gd`.
 
 ## How to add X (recipes for the cheapest tier)
 

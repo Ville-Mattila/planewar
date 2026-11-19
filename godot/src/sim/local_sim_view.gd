@@ -27,6 +27,7 @@ var score: ScoreKeeper = null          ## set by SimWorld (GD-27): player_score
 var fields: OreFields = null           ## set by SimWorld (GD-12): field_remaining
 var docking: Docking = null           ## set by SimWorld (GD-15): service progress, pad queues, landing grades
 var build: Build = null               ## set by SimWorld (GD-47): the early share lock reads (early_spend_left_ore, SPEND_LOCK_ACTIVE)
+var barrel: BarrelSlew = null         ## set by SimWorld (GD-50): barrel_elevation
 
 
 func _init(store: EntityStore, projectiles: ProjectileStore, spatial: Spatial, terrain: Terrain, players: PlayerTable,
@@ -315,6 +316,11 @@ func shield01(id: int) -> float:
 ## Ore left in Ore Field `node` (map `ore_field` node order, GD-12); 0 out of range.
 func field_remaining(node: int) -> int:
 	return fields.remaining(node) if fields != null else 0
+
+
+## GD-50: the ground barrel's elevation (radians, BarrelSlew.elevation_of); 0.0 without a barrel or for a dead id.
+func barrel_elevation(id: int) -> float:
+	return barrel.elevation_of(EntityId.slot(id)) if barrel != null and _store.alive(id) else 0.0
 
 
 ## Remaining Ore of a live wreck (its `hp`, GD-19); 0.0 for any other entity or a dead id.

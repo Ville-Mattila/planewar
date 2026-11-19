@@ -56,6 +56,7 @@
     {"name": "ground_unit_slope_out_of_range", "file": "godot/content/defs/ground_units.json", "op": "set", "path": ["ground_units", 0, "max_slope_deg"], "value": 60, "expect": "60 > maximum 45", "sole": true},
     {"name": "ground_unit_missing_produced_at", "file": "godot/content/defs/ground_units.json", "op": "del", "path": ["ground_units", 0, "produced_at"], "expect": "missing required key 'produced_at'", "sole": true},
     {"name": "ground_unit_name_key", "file": "godot/content/defs/ground_units.json", "op": "set", "path": ["ground_units", 1, "name_key"], "value": "unit.siege_crawler.name", "expect": "unknown key 'name_key'", "sole": true},
+    {"name": "ground_unit_barrel_max_over_range", "file": "godot/content/defs/ground_units.json", "op": "set", "path": ["ground_units", 1, "barrel_max_deg"], "value": 120, "expect": "120 > maximum 85", "sole": true},
     {"name": "ground_unit_weapon_bad_id", "file": "godot/content/defs/ground_units.json", "op": "set", "path": ["ground_units", 1, "weapon"], "value": "Siege Gun", "expect": "does not match"},
     {"name": "weapon_spread_out_of_range", "file": "godot/content/defs/weapons.json", "op": "set", "path": ["weapons", 0, "spread_deg"], "value": 45, "expect": "45 > maximum 30", "sole": true},
     {"name": "weapon_name_key", "file": "godot/content/defs/weapons.json", "op": "set", "path": ["weapons", 0, "name_key"], "value": "weapon.gun_dart.name", "expect": "unknown key 'name_key'", "sole": true},
