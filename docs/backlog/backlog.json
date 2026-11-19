@@ -8467,8 +8467,10 @@
       "02 s9.1",
       "03 s8.1"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-19",
+    "pr": 181,
+    "notes": "needs maps: no shipped bake (cradle, tiny_test, s_world1_r6000) has a relay_station entry yet; bake-side duplicate check between nodes[] and neutral_structures[]. Static test seam SimWorld._features_dir_override (reset in after_test). Nits: note the seam in world MODULE.md; assert default empty."
   },
   {
     "id": "CONTENT-4",
