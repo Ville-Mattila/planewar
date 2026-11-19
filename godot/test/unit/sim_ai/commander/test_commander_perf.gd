@@ -3,8 +3,8 @@ extends GdUnitTestSuite
 ## think does one `BuildPlanner.load_view` (own and known structures from Perception), one `BookContext` fill over the own
 ## list, and at most `cmds_per_think` steps; `resolve_site` examines <= `scan_cap` (64) candidates against tens of own
 ## structures. Measured on the SC-41 opening (two bots, the six books in turn is SC-41's job; here vanguard_standard) from
-## 0:00 to 5:00, one think per bot per second. The budget assert is unscaled on the pinned runner (best of 3 runs of the
-## mean, to ride out machine load); the numbers go to the PR.
+## 0:00 to 5:00, one think per bot per second. Timing is report-only off the pinned runner (PerfGate, R0 B.17 A-97; best of 3
+## runs of the mean); the think count is asserted hard. The numbers go to the PR.
 
 const HZ: int = Ai23Kit.HZ
 
@@ -45,4 +45,4 @@ func test_think_slice_within_the_commander_row() -> void:
 		worst_max = maxi(worst_max, sorted[n - 1])
 	print("AI-23 perf: %d thinks per run, mean %.0f us (best of 3), p95 %.0f us, max %d us (budget 700 us)" % [n, best_mean, worst_p95, worst_max])
 	assert_int(n).is_greater(500)
-	assert_float(best_mean).is_less(700.0)
+	assert_bool(PerfGate.check("test_commander_perf.think_mean", best_mean, 700.0, "05 s10 Commander row, 0.7 ms per slice")).is_true()
