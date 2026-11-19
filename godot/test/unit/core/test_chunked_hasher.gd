@@ -1,9 +1,9 @@
 extends GdUnitTestSuite
 ## Unit tests for core/chunked_hasher.gd (TA-36; 03 s11.1: SHA-256 in 256 KB pieces, one budgeted job per frame).
-## timing: runaway guards only (R0 B.17 A-97)
 
 const FACE_BYTES: int = 2 * 1024 * 1024
-const FRAME_LIMIT_USEC: int = 33000
+const FRAME_LIMIT_USEC: float = 33000.0
+const CITE: String = "TA-36; 03 s11.1 (no frame > 33 ms)"
 
 
 func _data(n: int) -> PackedByteArray:
@@ -84,7 +84,7 @@ func test_no_step_exceeds_one_frame() -> void:
 		var t0: int = Time.get_ticks_usec()
 		done = h.step(ChunkedHasher.DEFAULT_BUDGET_USEC)
 		worst = maxi(worst, Time.get_ticks_usec() - t0)
-	assert_int(worst).is_less(FRAME_LIMIT_USEC)
+	assert_bool(PerfGate.check("chunked_hasher.worst_step", float(worst), FRAME_LIMIT_USEC, CITE)).is_true()
 	assert_array(h.digest()).is_equal(_one_shot(data))
 
 
