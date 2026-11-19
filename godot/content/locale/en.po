@@ -655,6 +655,66 @@ msgstr "Trying again. Your slot is held for {s} s (attempt {n})."
 msgid "ui.reconnect.title"
 msgstr "Reconnecting..."
 
+msgid "ui.remap.action.boost"
+msgstr "Boost"
+
+msgid "ui.remap.action.brake"
+msgstr "Brake"
+
+msgid "ui.remap.action.dock"
+msgstr "Dock"
+
+msgid "ui.remap.action.fire1"
+msgstr "Fire 1"
+
+msgid "ui.remap.action.fire2"
+msgstr "Fire 2"
+
+msgid "ui.remap.action.flip"
+msgstr "Flip"
+
+msgid "ui.remap.action.release"
+msgstr "Release"
+
+msgid "ui.remap.action.throttle_up"
+msgstr "Throttle up"
+
+msgid "ui.remap.action.yaw_left"
+msgstr "Yaw left"
+
+msgid "ui.remap.action.yaw_right"
+msgstr "Yaw right"
+
+msgid "ui.remap.conflict"
+msgstr "Also used by {action}"
+
+msgid "ui.remap.device.kbm"
+msgstr "Keyboard"
+
+msgid "ui.remap.device.pad"
+msgstr "Gamepad"
+
+msgid "ui.remap.done"
+msgstr "Done"
+
+msgid "ui.remap.has_conflicts"
+msgstr "Some bindings share a key or button."
+
+msgid "ui.remap.hint"
+msgstr "Select a binding, then press the new key or button."
+
+msgid "ui.remap.listen.kbm"
+msgstr "Press a key. Esc cancels, Delete clears."
+
+msgid "ui.remap.listen.pad"
+msgstr "Press a button. Start cancels, View clears."
+
+msgid "ui.remap.reset"
+msgstr "Reset to defaults"
+
+msgid "ui.remap.title"
+msgstr "CONTROLS"
+
 msgid "ui.results.class.bomber"
 msgstr "Bomber"
 

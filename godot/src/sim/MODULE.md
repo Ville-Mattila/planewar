@@ -21,7 +21,7 @@ R0 B.5 signatures; "(03)" marks symbols 03 s15.4 adds. Anything not listed is pr
 ```gdscript
 # planned: GroundMotion, Pathing, OrderSpec, Assist, LandingGrade
 class_name SimWorld extends RefCounted                                       # _init(content: ContentSet): defs injected, no autoload in the sim (TA-18)
-func load_map(map: MapDef, seed: int, rules: MatchRules) -> Result            # rules carries mode, caps profile, sim_budget_profile
+func load_map(map: MapDef, seed: int, rules: MatchRules) -> Result            # rules carries mode, caps profile, sim_budget_profile; GD-51 spawns the map's Relay Stations
 func add_player(slot: int, team: int, doctrine: StringName, kind: int) -> void   # kind: PlayerKind ordinal (Open items); start_ore / start_ice are per player, summed into the team pool (C2-14)
 func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3) -> bool    # (TA-19) economy.start_kit around `centre`, Refinery toward `toward`; after add_player, before step 1
 func remove_player(slot: int) -> void;  func admin_release(slot: int) -> void   # disconnect (05 C12) / admin (C18), applied in the next step 1

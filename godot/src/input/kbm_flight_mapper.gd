@@ -9,6 +9,8 @@ enum ThrottleMode { POWER_KEY, LEVER }
 var throttle_mode: ThrottleMode = ThrottleMode.POWER_KEY
 ## Test seam: Callable() -> KbmState. Default polls Input with the accumulated mouse delta.
 var poller: Callable
+## Remapped bindings (UX-09); null uses the defaults. needs app: assign the shared BindingStore after load_file().
+var bindings: BindingStore
 
 var _thrust: float = 0.0
 var _stick: Vector2 = Vector2.ZERO
@@ -35,7 +37,7 @@ func sample(dt: float) -> PilotInput:
 		if raw is KbmState:
 			st = raw
 	if st == null:
-		st = KbmState.poll(_mouse_acc)
+		st = KbmState.poll(_mouse_acc, bindings)
 	_mouse_acc = Vector2.ZERO
 	return map(st, dt)
 

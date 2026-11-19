@@ -655,6 +655,66 @@ msgstr ""
 msgid "ui.reconnect.title"
 msgstr ""
 
+msgid "ui.remap.action.boost"
+msgstr ""
+
+msgid "ui.remap.action.brake"
+msgstr ""
+
+msgid "ui.remap.action.dock"
+msgstr ""
+
+msgid "ui.remap.action.fire1"
+msgstr ""
+
+msgid "ui.remap.action.fire2"
+msgstr ""
+
+msgid "ui.remap.action.flip"
+msgstr ""
+
+msgid "ui.remap.action.release"
+msgstr ""
+
+msgid "ui.remap.action.throttle_up"
+msgstr ""
+
+msgid "ui.remap.action.yaw_left"
+msgstr ""
+
+msgid "ui.remap.action.yaw_right"
+msgstr ""
+
+msgid "ui.remap.conflict"
+msgstr ""
+
+msgid "ui.remap.device.kbm"
+msgstr ""
+
+msgid "ui.remap.device.pad"
+msgstr ""
+
+msgid "ui.remap.done"
+msgstr ""
+
+msgid "ui.remap.has_conflicts"
+msgstr ""
+
+msgid "ui.remap.hint"
+msgstr ""
+
+msgid "ui.remap.listen.kbm"
+msgstr ""
+
+msgid "ui.remap.listen.pad"
+msgstr ""
+
+msgid "ui.remap.reset"
+msgstr ""
+
+msgid "ui.remap.title"
+msgstr ""
+
 msgid "ui.results.class.bomber"
 msgstr ""
 

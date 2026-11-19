@@ -1,0 +1,5 @@
+{"nodes": [{"id": "relay_r0", "kind": "relay_station", "dir": [0.0, 1.0, 0.0], "slot": -1},
+  {"id": "trap", "kind": "cold_trap", "dir": [0.0, 0.0, -1.0], "slot": -1},
+  {"id": "relay_r1", "kind": "relay_station", "dir": [0.0, -1.0, 0.0], "slot": -1}],
+ "neutral_structures": [{"def": "relay_station", "dir": [-1.0, 0.0, 0.0], "facing_dir": [0.0, 0.0, 1.0]},
+  {"def": "core", "dir": [0.0, 0.0, 1.0], "facing_dir": [1.0, 0.0, 0.0]}]}

@@ -1,0 +1,29 @@
+{
+  "_doc": "docs/06 s2.5, A11Y-06, UX-09: default bindings of the remappable flight actions, by name (keys: Godot key strings; pad: glyphs.json button ids; empty string = empty slot). Two key slots per action (yaw has A/Q and D/E as in 06 s3.1). Axes (sticks, triggers) and mouse buttons are not remappable in v1.0. Client-only, outside the content hash.",
+  "settings_path": "user://settings/input_map.cfg",
+  "slots": 2,
+  "actions": {
+    "kbm": ["throttle_up", "brake", "yaw_left", "yaw_right", "boost", "flip", "dock", "release"],
+    "pad": ["yaw_left", "yaw_right", "fire1", "fire2", "dock", "boost", "flip", "release"]
+  },
+  "kbm": {
+    "throttle_up": ["W", ""],
+    "brake": ["S", ""],
+    "yaw_left": ["A", "Q"],
+    "yaw_right": ["D", "E"],
+    "boost": ["Shift", ""],
+    "flip": ["Space", ""],
+    "dock": ["F", ""],
+    "release": ["R", ""]
+  },
+  "pad": {
+    "yaw_left": "lb",
+    "yaw_right": "rb",
+    "fire1": "a",
+    "fire2": "b",
+    "dock": "x",
+    "boost": "l3",
+    "flip": "y",
+    "release": "dpad_down"
+  }
+}

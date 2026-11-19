@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## AI-22 TeamIntel and its AiDriver wiring (05 s6 sampler, 1 Hz per team): one slice per tracked team per period on
-## distinct odd ticks (never a bot's even phase), the driver's accessors, AiDriver FORMAT 2 refusing FORMAT 1 bytes, and
+## distinct odd ticks (never a bot's even phase), the driver's accessors, AiDriver FORMAT 3 (AI-23) refusing FORMAT 1 and 2 bytes, and
 ## the S4 byte-exact restore of a brain-flown world saved mid-fight with intel on both teams.
 
 const HOME: Vector3 = Vector3(1, 0, 0)
@@ -46,7 +46,7 @@ func test_driver_refreshes_tracked_teams_before_the_brains() -> void:
 
 
 func test_driver_format_2_refuses_format_1_bytes() -> void:
-	assert_int(AiDriver.FORMAT).is_equal(2)
+	assert_int(AiDriver.FORMAT).is_equal(3)
 	var w: SimWorld = DartKit.world(5)
 	var d: AiDriver = DartKit.driver(w)
 	var intel: TeamIntel = IntelKit.intel()

@@ -84,19 +84,9 @@ static func default_glyphs(kind: int) -> StringName:
 	return &"kbm"
 
 
-## Glyph set from a joypad name (Input.get_joy_name). No KBM glyphs while a gamepad is active.
+## Glyph set from a joypad name (Input.get_joy_name); table in content/ui/glyphs.json (Glyphs). No KBM glyphs while a gamepad is active.
 static func glyphs_for_joy_name(joy_name: String) -> StringName:
-	var n: String = joy_name.to_lower()
-	if n.contains("steam deck") or n.contains("steamdeck"):
-		return &"deck"
-	if n.contains("xbox") or n.contains("xinput"):
-		return &"xbox"
-	if n.contains("playstation") or n.contains("dualsense") or n.contains("dualshock") \
-			or n.contains("ps4") or n.contains("ps5"):
-		return &"ps"
-	if n.contains("nintendo") or n.contains("switch") or n.contains("joy-con"):
-		return &"nintendo"
-	return &"generic"
+	return Glyphs.set_for_joy_name(joy_name)
 
 
 func _glyphs_for_event(kind: int, event: InputEvent) -> StringName:

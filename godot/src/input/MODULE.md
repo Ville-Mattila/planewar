@@ -99,21 +99,25 @@ var invert_pitch: bool
 func sample(_dt: float) -> PilotInput
 
 class_name PadState extends RefCounted         # gamepad snapshot (LS, RT, LT, LB, RB, L3, A, B, X, Y, D-pad Down)
-static func poll(device: int) -> PadState
+static func poll(device: int, store: BindingStore = null) -> PadState                 # store null = defaults (remap.json)
+static func with_buttons(base: PadState, held: PackedInt32Array, store: BindingStore = null) -> PadState   # pure: JoyButtons held -> button fields
 
 class_name GamepadFlightMapper extends FlightMapper   # DIRECT: LS roll/pitch, LB/RB yaw ramp 0.15 s, RT thrust, LT > 0.5 BRAKE
 var device: int
 var poller: Callable                           # test seam: Callable() -> PadState
+var bindings: BindingStore                     # remapped buttons; null = defaults (needs app: assign the shared store)
 func sample(dt: float) -> PilotInput
 func map(st: PadState, dt: float) -> PilotInput   # BOOST (L3), FLIP (Y), RELEASE (D-pad Down) fire one tick per press
 
 class_name KbmState extends RefCounted         # keyboard and mouse snapshot (W S A D Q E Shift Space F R, LMB, RMB, mouse_delta)
-static func poll(mouse_delta_px: Vector2) -> KbmState
+static func poll(mouse_delta_px: Vector2, store: BindingStore = null) -> KbmState
+static func from_held(held: PackedInt32Array, mouse_delta_px: Vector2, store: BindingStore = null) -> KbmState   # pure: physical keycodes held -> fields
 
 class_name KbmFlightMapper extends FlightMapper       # DIRECT: mouse virtual stick (tau 0.15 s), Q/E and A/D yaw
 enum ThrottleMode { POWER_KEY, LEVER }         # POWER_KEY: W ramps 4/s, S = BRAKE; LEVER: W/S +-0.25 sticky, S at 0 = BRAKE
 var throttle_mode: ThrottleMode
 var poller: Callable                           # test seam: Callable() -> KbmState
+var bindings: BindingStore                     # remapped keys; null = defaults (needs app: assign the shared store)
 func add_mouse_motion(rel: Vector2) -> void
 func current_thrust() -> float
 func sample(dt: float) -> PilotInput
@@ -157,7 +161,35 @@ func queue_flip() -> void                      # FLICK_UP: FLIP for the next sam
 func sample(dt: float) -> PilotInput
 func map(st: TouchState, dt: float) -> PilotInput
 
-# planned: AssistProfile, AssistContext, AssistStack, GestureRecognizer, BindingStore, Glyphs
+class_name BindingStore extends RefCounted     # remap/binding_store.gd (UX-09): flight-action bindings, content/ui/remap.json defaults
+const KBM: StringName; const PAD: StringName; const UNBOUND: int; const FILE_VERSION: int   # &"kbm" &"pad" -1 1
+var path: String                               # user://settings/input_map.cfg
+func _init(p_path: String = "") -> void        # empty = path from remap.json; starts at the defaults
+func slots() -> int                            # key slots per action (2)
+func actions(device: StringName) -> Array[StringName]
+func code(device: StringName, action: StringName, slot: int = 0) -> int        # physical keycode (kbm) or JoyButton (pad; slot ignored)
+func codes_of(device: StringName, action: StringName) -> PackedInt32Array
+func all_codes(device: StringName) -> PackedInt32Array
+func bind(device: StringName, action: StringName, slot: int, new_code: int) -> StringName   # applies; returns the OTHER action sharing the code, or &""
+func clear(device: StringName, action: StringName, slot: int = 0) -> void
+func conflict_of(device: StringName, action: StringName, slot: int = 0) -> StringName
+func conflicted(device: StringName) -> Array[StringName]
+func reset(device: StringName) -> void
+func save() -> Error
+func load_file() -> Error                      # OK when absent; unknown actions and malformed values ignored
+
+class_name Glyphs extends RefCounted           # remap/glyphs.gd (UX-09): content/ui/glyphs.json joypad-name table and per-set labels
+const PATH: String; const UNBOUND: int; const BUTTON_IDS: Dictionary[StringName, int]
+static func as_dict(v: Variant) -> Dictionary; static func as_array(v: Variant) -> Array
+static func set_for_joy_name(joy_name: String) -> StringName                    # DeviceMonitor.glyphs_for_joy_name delegates here
+static func fallback_set() -> StringName; static func set_ids() -> Array[StringName]
+static func button_id_of(joy_button: int) -> StringName; static func button_from_id(id: String) -> int
+static func unbound_label() -> String; static func pad_label(glyph_set: StringName, joy_button: int) -> String
+static func key_from_name(key_name: String) -> int; static func key_label(keycode: int) -> String
+static func binding_label(glyph_set: StringName, device: StringName, code: int) -> String
+static func set_for_class(kind: int, joy_set: StringName) -> StringName         # no KBM glyphs while a gamepad is active
+
+# planned: AssistProfile, AssistContext, AssistStack
 ```
 
 ## Invariants
@@ -179,12 +211,14 @@ func map(st: TouchState, dt: float) -> PilotInput
   CAM_* is emitted from keys, mouse or pad, and the flight mappers never read `rts_mapper`. CAM_PAN_VEL from here is
   held deflection |v| <= 1 and is sent again with a zero vector on release; fling vectors (touch) are always larger
   (`GestureRecognizer.FLING_MIN_SPEED` = 300 du/s > 1), which `CameraIntentDriver` relies on to ignore them.
+- I12: remaps persist to `user://settings/input_map.cfg` and reload over the defaults; a code on two actions of one device is flagged (`bind` returns the other action, `conflicted` lists both) and never refused; mappers read keys and buttons only through `BindingStore`, so remapped inputs drive the same `PilotInput` bits.
+- I13: the glyph set follows the device in the same `feed` call that changes the class (no frame of stale glyphs); `Glyphs.set_for_class` never yields `kbm` for GAMEPAD.
 - I9: `input` never reads `SimView` and never imports `ui`; world knowledge arrives through a caller-filled context.
 
 ## Data owned
 
-The `DeviceMonitor` state (active class, glyph set, pending layout class). `user://settings/input_map.cfg` and
-`content/ui/glyphs.json` are planned (BindingStore, Glyphs).
+The `DeviceMonitor` state (active class, glyph set, pending layout class). `user://settings/input_map.cfg` (BindingStore; defaults `content/ui/remap.json`) and
+`content/ui/glyphs.json` (Glyphs).
 
 ## Events emitted / consumed
 
@@ -211,6 +245,8 @@ except the key-bound InputMap scan on key presses (only on press). Not on a sim 
 - `godot/test/unit/input/test_touch_flight_mapper.gd` (stick, handle, buttons, queued flip)
 - `godot/test/unit/input/test_rts_camera_mapper.gd` (binding table, dead zone, edge zone, pan change/zero, reset)
 - `godot/test/unit/app/test_camera_intent_driver.gd` (UX-45: real mouse/key/pad events through InputRouter move the OrbitController; RTS only)
+- `godot/test/unit/input/remap/test_binding_store.gd` (defaults, conflicts, persistence, feeding KbmState / PadState / mapper)
+- `godot/test/unit/input/remap/test_glyphs.gd` (joy-name table, labels per set, same-call glyph swap)
 - `godot/test/unit/input/test_input_router_touch.gd` (TOUCH sampling, flick -> FLIP, FIRE hold -> WING_RADIAL, RTS intents)
 
 ## How to add X (recipes for the cheapest tier)
@@ -220,8 +256,10 @@ except the key-bound InputMap scan on key presses (only on press). Not on a sim 
 
 ## Open items
 
+- Contract question for the Architect: 06 A11Y-06 asks for full remapping (KBM, gamepad, UI navigation). UX-09 covers keys and pad buttons of the flight actions only; mouse buttons (Fire 1 / Fire 2), axes and UI navigation are fixed. Owner of the remaining coverage: UX-38 or a remap-coverage follow-up.
+
 - UX-07 `AssistStack` runs between mapper and emit and adds
-  ARCADE and MOUSE_AIM steering; remap (`BindingStore`) replaces the fixed keys in `KbmState.poll` / `PadState.poll`.
+  ARCADE and MOUSE_AIM steering.
 - Mapper feel constants are consts in `FlightMath` (06 names no input def; they are client-only and not hashed).
 - `intent` emitters: RTS mouse, keyboard and gamepad camera intents (`RtsCameraMapper`, UX-45; feel constants client-only,
   not hashed); touch gestures in RTS mode (`GestureIntents`: TAP -> SELECT, DOUBLE_TAP -> CAM_TIER_TOGGLE, long-press

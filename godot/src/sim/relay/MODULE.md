@@ -7,7 +7,7 @@ centres the power model reads (02 s8.4). R0 B.9 A-21 split: `SimWorld` and every
 
 | Field | Value |
 |---|---|
-| Responsibility | Who holds each open pad (a def with `capture_s`, today the neutral Relay Station): a capturer (`captures`, the Hauler) DOCKED on its pad for the def's `capture_s` with no enemy ship or ground unit within its `contest_radius_m` hands the structure its own `team` and `owner`; contested progress pauses, the Hauler leaving resets it, recapture is the same rule; the capture score (`ScoreKeeper.relay_captured`), the hold score (`relay_held`) and the `RELAY_CAPTURED` / `RELAY_CONTESTED` alerts. Loads the Solar Plateau centres of a map into `Economy.set_plateaus`. Not here: the pad service (`sim/docking/` reads the structure's team, harvest I8), sensors and visibility (`sim/vision/` reads `team` and the def's `sensor_radius`), placing the Relay Station from a map (`neutral_structures`, a maps / loader follow-up), any `SimView` read of the progress. |
+| Responsibility | Who holds each open pad (a def with `capture_s`, today the neutral Relay Station): a capturer (`captures`, the Hauler) DOCKED on its pad for the def's `capture_s` with no enemy ship or ground unit within its `contest_radius_m` hands the structure its own `team` and `owner`; contested progress pauses, the Hauler leaving resets it, recapture is the same rule; the capture score (`ScoreKeeper.relay_captured`), the hold score (`relay_held`) and the `RELAY_CAPTURED` / `RELAY_CONTESTED` alerts. Loads the Solar Plateau centres of a map into `Economy.set_plateaus`. `MapRelays` (GD-51, R0 B.30 A-150) spawns the map's Relay Stations in `SimWorld.load_map`. Not here: the pad service (`sim/docking/` reads the structure's team, harvest I8), sensors and visibility (`sim/vision/` reads `team` and the def's `sensor_radius`), where a map puts the Relay Station (the maps lane bakes it), any `SimView` read of the progress. |
 | Lane owner tier | Sonnet against this file; Opus reviews |
 | May depend on | `core`, `content`, `sim` (inside the sim module) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads, RNG |
@@ -20,6 +20,8 @@ centres the power model reads (02 s8.4). R0 B.9 A-21 split: `SimWorld` and every
 class_name RelayCapture extends RefCounted                                   # GD-23; EconomyHub.relay, step 10 after Docking
 func _init(store: EntityStore, defs: WorldDefs, score: ScoreKeeper, events: SimEvents)   # score may be null (no result counters)
 func step(dt: float) -> void                                                 # every open pad in ascending slot order
+class_name MapRelays extends RefCounted                                      # GD-51; called by SimWorld.load_map
+static func spawn(map_dir: String, defs: WorldDefs, terrain: Terrain, store: EntityStore, applier: CommandApplier, tick: int) -> int   # count spawned
 # SunPath.load_plateaus(map_dir) -> PackedVector3Array (documented in sim/economy/MODULE.md): the Plateau centres of a map, R9
 ```
 
@@ -60,6 +62,15 @@ needs `pads` >= 1 and `pad_radius_m` > 0 (`validate_content`). A target is any s
   def, then per open pad one pass over the ships for a docked capturer and, only with one on the pad, the ships and ground units for a contest.
   No Dictionary, no per-entity allocation.
 
+`MapRelays.spawn` reads `<map_dir>/features.json`: first `nodes[]` entries with `kind` "relay_station" (the 02 s9.1 `ring_features`;
+field `dir`), then `neutral_structures[]` entries with `def` "relay_station" (`dir`, optional `facing_dir`), each block in file order. One
+finished structure each (owner and team 255, F_BUILDING clear, on `Terrain.surface_point`, `up` = `Terrain.normal_at`, `fwd` = the facing or the
+tangent frame). Missing file, no entry or an unknown def spawns none. Skipped on a deserialize (the store comes from the bytes). The two blocks never overlap by
+design (03:992: `neutral_structures[]` holds the non-template structures, the template Relay Stations come from `ring_features`), so there is no
+de-duplication here. needs maps: a bake-side check that no `neutral_structures` entry restates a ring relay (`moonbake validate`). Each spawn
+leaves a SPAWN event in the queue; a caller that scans events for its own spawn drains first. Today no shipped bake carries an entry (the
+maps lane's follow-up); the loader is covered by fixtures in `test/unit/sim/relay/fixtures/`.
+
 ## Data owned
 
 Nothing outside `EntityStore` (R8).
@@ -75,7 +86,7 @@ only while a capturer sits on a pad. Bound in `test_relay_perf.gd` (PerfGate).
 
 ## Test entry points
 
-`godot/test/unit/sim/relay/test_relay_capture.gd` (R1-R6), `test_relay_effects.gd` (R7-R10), `test_relay_perf.gd` (R11); fixtures `relay_test_kit.gd`.
+`godot/test/unit/sim/relay/test_relay_capture.gd` (R1-R6), `test_relay_effects.gd` (R7-R10), `test_relay_perf.gd` (R11), `test_map_relays.gd` (GD-51); fixtures `relay_test_kit.gd`.
 
 ## How to add X
 

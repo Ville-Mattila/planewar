@@ -7,7 +7,7 @@ first, same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lin
 
 | Field | Value |
 |---|---|
-| Responsibility | Step 1 command intake and application (validation S10 / S12, the pending queue; control transitions are `sim/control/`'s), step 5 ship motion, step 6 projectile motion, the per-row profiler, the player / team side tables, input slots, match clock, events array, injected defs, state bytes for S4. Not a public surface: other lanes reach all of it through `SimWorld`, `SimView` and `CommandSinkBase` (sim/MODULE.md). |
+| Responsibility | Step 1 command intake and application (validation S10 / S12, the pending queue; control transitions are `sim/control/`'s), step 5 ship motion, step 6 projectile motion, the per-row profiler, the player / team side tables, input slots, match clock, events array, injected defs, state bytes for S4. `SimWorld.load_map` also spawns the map's Relay Stations through `MapRelays` (GD-51, `sim/relay/MODULE.md`), after the terrain, path grid, Ore Fields, Cold Traps and Plateaus load, in file order, skipped when restoring. Not a public surface: other lanes reach all of it through `SimWorld`, `SimView` and `CommandSinkBase` (sim/MODULE.md). |
 | Lane owner tier | Opus (sim lane); Sonnet for recipes against this file |
 | May depend on | `core`, `content`, `sim` (R0 B.4: inside the sim module) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`, `sim_ai`; no `await`, signals, `Thread`, autoloads (D2, D3) |
