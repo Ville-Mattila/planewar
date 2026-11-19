@@ -75,7 +75,7 @@ enum Code { ACCEPTED, REJECTED_DEAD, REJECTED_NOT_OWNER, REJECTED_NOT_POSSESSABL
 var code: Code; var reject: int                                              # reject = Build.Reject when code == REJECTED_PLACEMENT
 
 class_name PilotInput extends RefCounted
-var thrust: float; var pitch: float; var yaw: float; var roll: float; var buttons: int   # towers: pitch/yaw = slew rates; ground: thrust fwd, BRAKE stop, yaw steer, pitch = barrel elevation rate (GD-50, sim/ground B1)
+var thrust: float; var pitch: float; var yaw: float; var roll: float; var buttons: int   # towers: pitch/yaw = slew rates; ground: thrust fwd, BRAKE stop, yaw steer, pitch = barrel elevation rate (GD-50, R0 B.31 A-153, sim/ground B1)
 const BOOST := 1; const BRAKE := 2; const FLIP := 4; const FIRE1 := 8; const FIRE2 := 16; const DOCK := 32; const RELEASE := 64   # bit7 reserved
 # wire form: net's PilotWire.to_wire / from_wire (R0 B.10 A-46, NET-03); PilotInput itself has no codec
     # 04 s2.4 layout, 8 bytes: u8 thrust, i8 pitch, i8 yaw, i8 roll, u8 buttons, u8 reserved (0), u8 reserved (0), u8 tick_lo
@@ -141,7 +141,7 @@ func supply01(id: int) -> float;  func shield01(id: int) -> float            # t
 func production_queue(factory: int) -> PackedInt32Array;  func production_progress01(factory: int) -> float;  func wreck_ore(id: int) -> float   # wreck_ore: a live wreck's remaining Ore (hp), 0 otherwise, -1 no data (GD-41, A-108)
 func tech_available(team: int, def_id: int) -> bool;  func auto_replenish_target(player: int, def_id: int) -> int
 func player_score(slot: int) -> Vector2i                                     # pilot, commander (banked == total; no banking); GD-27 `ScoreKeeper` (sim/scoring/MODULE.md); match_result(): the 02 s17.1 result fields
-func landing_grade_last(id: int) -> int;  func barrel_elevation(id: int) -> float   # LandingGrade.Grade; GD-50: ground barrel radians above the horizontal (0 none / dead, NAN no data; sim/ground B1)
+func landing_grade_last(id: int) -> int;  func barrel_elevation(id: int) -> float   # LandingGrade.Grade; GD-50: ground barrel radians above the horizontal (0.0 none / dead / not received; R0 B.31 A-152)
 func team_state(team: int) -> TeamStateView;  func player_state(slot: int) -> PlayerStateView                   # (03) reused per-slot views, refilled on call (S3)
 func terrain_height(dir: Vector3) -> float                                   # (03) convenience over Terrain
 func match_arc() -> int;  func match_phase() -> int;  func match_clock_s() -> float

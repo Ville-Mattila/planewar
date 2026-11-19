@@ -38,7 +38,7 @@
       "id": "siege_crawler",
       "status": "core",
       "tags": ["ground"],
-      "_doc": "02 s3 siege_crawler row (core, owner O-4); R0 B.1 canonical: hp 400, cost 450/0, build 40 s at vehicle_bay, requires vehicle_bay and outpost, speed 8, max slope 20, siege_gun with 20 shells, sensor 1000, bounding 7, score 150, ap_crawler; R0 B.8 A-3 weapon_mount ground applies to siege_gun; GD-50 barrel (06 s3.2 pitch = barrel, sim BarrelSlew): slew 10 deg/s, elevation 0-45 deg (rest 0 = level), tuning values pending an R0 B.1 row: 45 deg is the vacuum maximum-range angle, a 1,000-1,150 m lofted shot (05 s6.7) needs about 15-18 deg, 0 to that in under 2 s inside the 4 s reload",
+      "_doc": "02 s3 siege_crawler row (core, owner O-4); R0 B.1 canonical: hp 400, cost 450/0, build 40 s at vehicle_bay, requires vehicle_bay and outpost, speed 8, max slope 20, siege_gun with 20 shells, sensor 1000, bounding 7, score 150, ap_crawler; R0 B.8 A-3 weapon_mount ground applies to siege_gun; GD-50 barrel (06 s3.2 pitch = barrel, sim BarrelSlew): slew 10 deg/s, elevation 0-45 deg (rest 0 = level), tuning anchors, R0 B.31 A-151: 45 deg is the vacuum maximum-range angle, a 1,000-1,150 m lofted shot (05 s6.7) needs about 15-18 deg, 0 to that in under 2 s inside the 4 s reload",
       "presentation": {
         "mesh": "res://assets/models/ground/gnd_siege_crawler.glb"
       },

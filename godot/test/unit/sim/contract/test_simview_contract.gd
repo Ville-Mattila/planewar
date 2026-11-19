@@ -170,6 +170,20 @@ static func _param_rows() -> Array:
 	return rows
 
 
+## R0 B.31 A-152 (GD-50): barrel_elevation has no NAN. The base view and a view that has not received it answer 0.0;
+## NetSimView flags it field_unknown (NetUnknown.NEVER until NET-61) on every id; LocalSimView never does.
+func test_barrel_elevation_is_zero_with_field_unknown_where_not_received() -> void:
+	var scene: SimViewScene = SimViewScene.build()
+	for id: int in [scene.a, scene.tower, scene.dead, 0]:
+		assert_float(SimView.new().barrel_elevation(id)).is_equal(0.0)
+	assert_bool(NetUnknown.NEVER.has("barrel_elevation")).is_true()
+	var net: NetSimView = NetSimViewFactory.new().make(scene) as NetSimView
+	assert_object(net).is_not_null()
+	for id: int in [scene.a, scene.core]:
+		assert_float(net.barrel_elevation(id)).is_equal(0.0)
+		assert_bool(net.field_unknown(id, &"barrel_elevation")).is_true()
+
+
 ## Test-local stand-in for a replicated factory (A-113): one wire quantum (1 / 255) on the four u8 fields, EPS elsewhere.
 class WireQuantumFactory extends SimViewFactory:
 	const QUANTUM_FIELDS: PackedStringArray = ["hp01", "flip_cooldown01", "supply01", "shield01"]

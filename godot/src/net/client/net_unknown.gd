@@ -4,13 +4,13 @@ class_name NetUnknown
 ## field; NetSimView.unknown(id) is "any field of id unknown". Static.
 
 ## Never received for any entity: no 04 s3.7 row (overlay, cargo, cargo_kind, link: CQ-5), a TEAM_DETAIL row NET-39
-## has not landed, no codec yet (shield01 GD-38, wreck_ore GD-41), the LANDING event not routed (landing_grade_last).
+## has not landed, no codec yet (shield01 GD-38, wreck_ore GD-41, barrel_elevation NET-61), the LANDING event not routed (landing_grade_last).
 ## While this list is non-empty every entity is `unknown` as a whole.
 const NEVER: PackedStringArray = [
 	"overlay", "cargo", "cargo_kind", "link",
 	"pad_queue", "pad_occupant", "order_head", "order_issuer", "pending_order", "supply01", "production_queue",
 	"production_progress01", "auto_replenish_target", "field_remaining", "player_score",
-	"shield01", "wreck_ore", "landing_grade_last",
+	"shield01", "wreck_ore", "landing_grade_last", "barrel_elevation",
 ]
 ## Pilot block fields (own possessed unit only, 04 s3.7); dock_state falls back to flags bit 2 elsewhere but is unknown.
 const PILOT: PackedStringArray = [

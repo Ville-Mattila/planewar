@@ -89,7 +89,7 @@ The 02 formula is exact everywhere the unit stands within its limit (`speed_fact
   bytes; identical inputs give identical bytes and a save / restore mid-drive continues identically
   (`test_same_inputs_give_identical_bytes`; `test_ground_state.gd`).
 
-- B1 (GD-50, slew law): each step 5 a live ground unit with a barrel goes to `clamp(e + clamp(pitch, -1, 1) x barrel_slew_dps x dt,
+- B1 (GD-50, R0 B.31 A-153, slew law): each step 5 a live ground unit with a barrel goes to `clamp(e + clamp(pitch, -1, 1) x barrel_slew_dps x dt,
   barrel_min_deg, barrel_max_deg)`; no rate lag; pitch 0 holds (`test_auto_pitch_slews_at_the_def_rate_and_zero_holds`,
   `test_the_barrel_stops_at_the_def_limits_and_pitch_is_clamped_to_one`, `test_dead_beat_slew_reaches_an_exact_elevation`).
 - B2 (one input, two drivers): the input slot is the only source, so PILOT_INPUT (possessed) and `CommandSinkBase.drive` (AUTO /
