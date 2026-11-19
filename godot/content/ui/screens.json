@@ -11,5 +11,6 @@
   "button_h_du": 44,
   "dim_alpha": 0.72,
   "name_col_du": 110,
-  "num_col_du": 70
+  "num_col_du": 70,
+  "remap_list_h_du": 280
 }

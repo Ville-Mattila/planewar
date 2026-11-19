@@ -1,0 +1,18 @@
+{
+  "_doc": "docs/06 s2.4 / s9.4 / UX-09: joypad name substrings -> glyph set, and per-set joypad button labels (device marks, not translated). Checked in order; first match wins; the fallback set otherwise. Steam Input glyphs arrive with GodotSteam in v1.1 (ADR-01). Icon art per family is 07; these labels are the text fallback. Button ids: a b x y lb rb l3 r3 view menu dpad_up dpad_down dpad_left dpad_right.",
+  "fallback_set": "generic",
+  "match": [
+    {"set": "deck", "contains": ["steam deck", "steamdeck"]},
+    {"set": "xbox", "contains": ["xbox", "xinput"]},
+    {"set": "ps", "contains": ["playstation", "dualsense", "dualshock", "ps4", "ps5"]},
+    {"set": "nintendo", "contains": ["nintendo", "switch", "joy-con"]}
+  ],
+  "layout": {
+    "xbox": {"a": "A", "b": "B", "x": "X", "y": "Y", "lb": "LB", "rb": "RB", "l3": "LS", "r3": "RS", "view": "View", "menu": "Menu", "dpad_up": "D-pad Up", "dpad_down": "D-pad Down", "dpad_left": "D-pad Left", "dpad_right": "D-pad Right"},
+    "deck": {"a": "A", "b": "B", "x": "X", "y": "Y", "lb": "L1", "rb": "R1", "l3": "L3", "r3": "R3", "view": "View", "menu": "Menu", "dpad_up": "D-pad Up", "dpad_down": "D-pad Down", "dpad_left": "D-pad Left", "dpad_right": "D-pad Right"},
+    "ps": {"a": "Cross", "b": "Circle", "x": "Square", "y": "Triangle", "lb": "L1", "rb": "R1", "l3": "L3", "r3": "R3", "view": "Create", "menu": "Options", "dpad_up": "D-pad Up", "dpad_down": "D-pad Down", "dpad_left": "D-pad Left", "dpad_right": "D-pad Right"},
+    "nintendo": {"a": "B", "b": "A", "x": "Y", "y": "X", "lb": "L", "rb": "R", "l3": "LS", "r3": "RS", "view": "Minus", "menu": "Plus", "dpad_up": "D-pad Up", "dpad_down": "D-pad Down", "dpad_left": "D-pad Left", "dpad_right": "D-pad Right"},
+    "generic": {"a": "A", "b": "B", "x": "X", "y": "Y", "lb": "LB", "rb": "RB", "l3": "L3", "r3": "R3", "view": "Back", "menu": "Start", "dpad_up": "D-pad Up", "dpad_down": "D-pad Down", "dpad_left": "D-pad Left", "dpad_right": "D-pad Right"}
+  },
+  "unbound": "-"
+}
