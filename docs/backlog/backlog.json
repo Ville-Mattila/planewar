@@ -2104,7 +2104,10 @@
       " 06 A2",
       " 03 TA-36"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 178,
+    "merged": "2026-11-19",
+    "notes": "PARTIAL: the \"web boots with IndexedDB disabled to the menu\" clause needs a CI web export (TA-70). App wiring in TA-69. Architect: Saves has no try_list_dir, but replay_store.gd (user://replays) and ContentDB (user://mods/) list directories. needs content: use ChunkedHasher for the 6 x 2 MB terrain hash verification."
   },
   {
     "id": "GD-09",
@@ -8505,6 +8508,42 @@
     "docs": [
       "07",
       "godot/assets/ui/theme_pw.tres"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "TA-69",
+    "title": "app: route boot-time user:// access through Saves.try_* and drive ChunkedHasher from the loading job (TA-36 follow-up)",
+    "lane": "app",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-36"
+    ],
+    "milestone": "M3",
+    "acceptance": "Every boot-time and settings user:// read/write in src/app (and BindingStore from UX-09) goes through Saves.try_*; failures degrade to defaults without a crash; the terrain hash check runs via ChunkedHasher one step per frame; tests cover ERR_UNAVAILABLE paths",
+    "docs": [
+      "06 platforms",
+      "godot/src/core/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "TA-70",
+    "title": "CI: web-export headless-browser smoke test with IndexedDB blocked boots to the main menu (TA-36 follow-up)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 1.0,
+    "depends_on": [
+      "TA-36"
+    ],
+    "milestone": "M3",
+    "acceptance": "A CI job exports the web build, serves it, runs a headless browser with IndexedDB/storage blocked and asserts the main menu appears without an uncaught error; no new third-party services; uses only allowlisted tooling",
+    "docs": [
+      "06 platforms",
+      ".github/workflows"
     ],
     "status": "todo",
     "merged": null
