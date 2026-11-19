@@ -38,8 +38,9 @@ func test_sc40_commander_opening_vanguard() -> void:
 	var run: BookRun = cb.run_of(0)
 	assert_object(run).is_not_null()
 	assert_str(String(cb.book_of(0).id)).is_equal("vanguard_standard")
-	var first_outpost: int = 6   # the first `build outpost` step of the book
-	assert_int(cb.book_of(0).def_of(first_outpost)).is_equal(outpost)
+	var first_outpost: int = 0   # the first `build outpost` step of the book
+	while cb.book_of(0).kind_of(first_outpost) != OpeningBook.Do.BUILD or cb.book_of(0).def_of(first_outpost) != outpost:
+		first_outpost += 1
 	for i: int in first_outpost + 1:
 		var ok: bool = run.outcome[i] == BookRun.DONE or run.outcome[i] == BookRun.SKIPPED_HAVE
 		assert_bool(ok).override_failure_message("step %d outcome %d" % [i, run.outcome[i]]).is_true()
@@ -47,6 +48,7 @@ func test_sc40_commander_opening_vanguard() -> void:
 	assert_float(presence).override_failure_message("no friendly unit near the Outpost site: %.0f m" % presence).is_less_equal(300.0)
 	assert_int(cb.host.st_repeat_rejects).is_equal(0)
 	assert_int(cb.host.st_locked).is_equal(0)
+	assert_int(cb.host.st_cmds - cb.host.st_accepted).override_failure_message("refused: %s" % str(cb.host.st_by_code)).is_equal(0)
 	assert_int(cb.st_thinks).is_greater(300)
 
 

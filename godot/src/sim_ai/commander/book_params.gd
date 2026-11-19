@@ -5,7 +5,7 @@ class_name BookParams extends RefCounted
 ## literal of this lane's behaviour lives in code.
 
 const KEYS: PackedStringArray = ["book_end_s", "max_rejects", "stall_s", "presence_retry_s", "lock_s", "approach_m",
-		"toward_first_m", "toward_step_m", "core_ring_m", "ring_step_m", "gap_m", "outpost_ring_m", "outpost_cover", "move_agl_m", "scan_cap",
+		"toward_first_m", "toward_step_m", "core_ring_m", "ring_step_m", "gap_m", "slot_phase_rad", "outpost_ring_m", "outpost_cover", "move_agl_m", "scan_cap",
 		"cmds_per_think"]
 
 var book_end_s: float = 0.0          ## match time at which the book hands over to the reactive planner (05 s7.3: 300)
@@ -18,6 +18,7 @@ var toward_first_m: float = 0.0      ## `toward:` anchors: distance of the first
 var toward_step_m: float = 0.0       ## `toward:` anchors: spacing of the next steps (inside the previous one's radius)
 var core_ring_m: float = 0.0         ## `core` anchors: first ring radius
 var ring_step_m: float = 0.0         ## radius growth per ring of candidates (8 per ring)
+var slot_phase_rad: float = 0.0     ## candidate spiral phase per bot slot, so two bots do not mirror each other
 var gap_m: float = 0.0               ## clearance kept between footprints
 var outpost_ring_m: float = 0.0      ## Outpost candidates: ring spacing around the anchor (inside the 300 m presence radius)
 var outpost_cover: float = 0.0       ## the home-trap Outpost site lies this share of the Outpost radius short of the trap
@@ -48,6 +49,7 @@ static func from_dict(d: Dictionary) -> BookParams:
 	p.core_ring_m = Def.num(d["core_ring_m"])
 	p.ring_step_m = Def.num(d["ring_step_m"])
 	p.gap_m = Def.num(d["gap_m"])
+	p.slot_phase_rad = Def.num(d["slot_phase_rad"])
 	p.outpost_ring_m = Def.num(d["outpost_ring_m"])
 	p.outpost_cover = Def.num(d["outpost_cover"])
 	p.move_agl_m = Def.num(d["move_agl_m"])

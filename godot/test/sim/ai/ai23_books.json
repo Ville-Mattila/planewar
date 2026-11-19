@@ -2,103 +2,397 @@
   "_doc": "AI-23 test books in the 05 s7.3 grammar on the R0 B.6 start kit (Core, Refinery, Shipyard, Vehicle Bay, 1 Harvester, 800 Ore / 300 Ice): 3 doctrines x 2 variants; AI-24 ships the real build_orders.json. Every `build outpost` follows an `order move` to the same site and carries when: presence; no storage_silo (O-4); the opening ends at book_end_s (300).",
   "build_orders": [
     {
-      "id": "vanguard_standard", "doctrine": "vanguard", "weight": 2,
+      "id": "vanguard_standard",
+      "doctrine": "vanguard",
+      "weight": 2,
       "steps": [
-        { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1" },
-        { "do": "produce", "def": "dart", "n": 1 },
-        { "do": "produce", "def": "harvester", "n": 1 },
-        { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
-        { "do": "produce", "def": "dart", "n": 1 },
-        { "do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=90" },
-        { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
-        { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2" },
-        { "do": "produce", "def": "hauler", "n": 1 },
-        { "do": "build", "def": "refinery", "near": "ore_field:home_2", "skip_if_have": "refinery>=2" },
-        { "do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1" },
-        { "do": "build", "def": "pad", "near": "core" },
-        { "do": "produce", "def": "scout", "n": 1, "then_order": "scout_auto" },
-        { "do": "set_replenish", "def": "dart", "n": 3 },
-        { "do": "raid", "target": "harvester_line", "with": "dart:3", "when": "t>=300&have:dart>=3" },
-        { "do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field", "when": "t>=420|ore>=900" },
-        { "do": "build", "def": "outpost", "near": "contested_field", "when": "presence" }
+        {
+          "def": "solar_array",
+          "near": "core",
+          "skip_if_have": "solar_array>=1",
+          "do": "build"
+        },
+        {
+          "def": "dart",
+          "n": 1,
+          "do": "produce"
+        },
+        {
+          "def": "harvester",
+          "n": 1,
+          "do": "produce"
+        },
+        {
+          "kind": "move",
+          "unit": "dart|scout",
+          "to": "outpost_site:home_trap",
+          "when": "t>=90",
+          "do": "order"
+        },
+        {
+          "def": "outpost",
+          "near": "outpost_site:home_trap",
+          "when": "presence",
+          "do": "build"
+        },
+        {
+          "def": "autocannon_turret",
+          "near": "approach:nearest_enemy",
+          "do": "build"
+        },
+        {
+          "def": "solar_array",
+          "near": "core",
+          "skip_if_have": "solar_array>=2",
+          "do": "build"
+        },
+        {
+          "def": "refinery",
+          "near": "ore_field:home_2",
+          "skip_if_have": "refinery>=2",
+          "do": "build"
+        },
+        {
+          "def": "ice_extractor",
+          "near": "cold_trap:home",
+          "when": "have:outpost>=1",
+          "do": "build"
+        },
+        {
+          "def": "pad",
+          "near": "core",
+          "do": "build"
+        },
+        {
+          "def": "scout",
+          "n": 1,
+          "then_order": "scout_auto",
+          "do": "produce"
+        },
+        {
+          "def": "dart",
+          "n": 3,
+          "do": "set_replenish"
+        },
+        {
+          "target": "harvester_line",
+          "with": "dart:3",
+          "when": "t>=300&have:dart>=3",
+          "do": "raid"
+        },
+        {
+          "kind": "move",
+          "unit": "dart|scout",
+          "to": "contested_field",
+          "when": "t>=420|ore>=900",
+          "do": "order"
+        },
+        {
+          "def": "outpost",
+          "near": "contested_field",
+          "when": "presence",
+          "do": "build"
+        }
       ]
     },
     {
-      "id": "vanguard_rush", "doctrine": "vanguard", "weight": 1,
+      "id": "vanguard_rush",
+      "doctrine": "vanguard",
+      "weight": 1,
       "steps": [
-        { "do": "produce", "def": "dart", "n": 2 },
-        { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1" },
-        { "do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=60" },
-        { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
-        { "do": "produce", "def": "harvester", "n": 1 },
-        { "do": "build", "def": "pad", "near": "core" },
-        { "do": "set_replenish", "def": "dart", "n": 4 },
-        { "do": "raid", "target": "harvester_line", "with": "dart:4", "when": "t>=240&have:dart>=4" }
+        {
+          "do": "produce",
+          "def": "dart",
+          "n": 2
+        },
+        {
+          "do": "build",
+          "def": "solar_array",
+          "near": "core",
+          "skip_if_have": "solar_array>=1"
+        },
+        {
+          "do": "order",
+          "kind": "move",
+          "unit": "dart|scout",
+          "to": "outpost_site:home_trap",
+          "when": "t>=60"
+        },
+        {
+          "do": "build",
+          "def": "outpost",
+          "near": "outpost_site:home_trap",
+          "when": "presence"
+        },
+        {
+          "do": "produce",
+          "def": "harvester",
+          "n": 1
+        },
+        {
+          "do": "build",
+          "def": "pad",
+          "near": "core"
+        },
+        {
+          "do": "set_replenish",
+          "def": "dart",
+          "n": 4
+        },
+        {
+          "do": "raid",
+          "target": "harvester_line",
+          "with": "dart:4",
+          "when": "t>=240&have:dart>=4"
+        }
       ]
     },
     {
-      "id": "bulwark_standard", "doctrine": "bulwark", "weight": 2,
+      "id": "bulwark_standard",
+      "doctrine": "bulwark",
+      "weight": 2,
       "steps": [
-        { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1" },
-        { "do": "produce", "def": "harvester", "n": 1 },
-        { "do": "produce", "def": "dart", "n": 1 },
-        { "do": "order", "kind": "move", "unit": "dart|lancer", "to": "outpost_site:home_trap", "when": "t>=100" },
-        { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
-        { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
-        { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2" },
-        { "do": "build", "def": "relay_pylon", "near": "toward:cold_trap:home", "n": 2 },
-        { "do": "produce", "def": "hauler", "n": 1 },
-        { "do": "build", "def": "flak_battery", "near": "core" },
-        { "do": "build", "def": "pad", "near": "core" },
-        { "do": "build", "def": "hangar", "near": "core" },
-        { "do": "produce", "def": "lancer", "n": 1 },
-        { "do": "set_replenish", "def": "dart", "n": 2 },
-        { "do": "build", "def": "sensor_mast", "near": "approach:nearest_enemy" },
-        { "do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1" }
+        {
+          "def": "solar_array",
+          "near": "core",
+          "skip_if_have": "solar_array>=1",
+          "do": "build"
+        },
+        {
+          "def": "harvester",
+          "n": 1,
+          "do": "produce"
+        },
+        {
+          "def": "dart",
+          "n": 1,
+          "do": "produce"
+        },
+        {
+          "kind": "move",
+          "unit": "dart|lancer",
+          "to": "outpost_site:home_trap",
+          "when": "t>=100",
+          "do": "order"
+        },
+        {
+          "def": "outpost",
+          "near": "outpost_site:home_trap",
+          "when": "presence",
+          "do": "build"
+        },
+        {
+          "def": "relay_pylon",
+          "near": "toward:cold_trap:home",
+          "n": 2,
+          "do": "build"
+        },
+        {
+          "def": "autocannon_turret",
+          "near": "approach:nearest_enemy",
+          "do": "build"
+        },
+        {
+          "def": "ice_extractor",
+          "near": "cold_trap:home",
+          "when": "have:outpost>=1",
+          "do": "build"
+        },
+        {
+          "def": "pad",
+          "near": "core",
+          "do": "build"
+        },
+        {
+          "def": "dart",
+          "n": 2,
+          "do": "set_replenish"
+        }
       ]
     },
     {
-      "id": "bulwark_greedy", "doctrine": "bulwark", "weight": 1,
+      "id": "bulwark_greedy",
+      "doctrine": "bulwark",
+      "weight": 1,
       "steps": [
-        { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1" },
-        { "do": "produce", "def": "harvester", "n": 2 },
-        { "do": "build", "def": "relay_pylon", "near": "toward:cold_trap:home", "n": 2 },
-        { "do": "produce", "def": "dart", "n": 1 },
-        { "do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=120" },
-        { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
-        { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
-        { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2" },
-        { "do": "set_replenish", "def": "harvester", "n": 4 }
+        {
+          "do": "build",
+          "def": "solar_array",
+          "near": "core",
+          "skip_if_have": "solar_array>=1"
+        },
+        {
+          "do": "produce",
+          "def": "harvester",
+          "n": 2
+        },
+        {
+          "do": "build",
+          "def": "relay_pylon",
+          "near": "toward:cold_trap:home",
+          "n": 2
+        },
+        {
+          "do": "produce",
+          "def": "dart",
+          "n": 1
+        },
+        {
+          "do": "order",
+          "kind": "move",
+          "unit": "dart|scout",
+          "to": "outpost_site:home_trap",
+          "when": "t>=120"
+        },
+        {
+          "do": "build",
+          "def": "outpost",
+          "near": "outpost_site:home_trap",
+          "when": "presence"
+        },
+        {
+          "do": "build",
+          "def": "autocannon_turret",
+          "near": "approach:nearest_enemy"
+        },
+        {
+          "do": "build",
+          "def": "solar_array",
+          "near": "core",
+          "skip_if_have": "solar_array>=2"
+        },
+        {
+          "do": "set_replenish",
+          "def": "harvester",
+          "n": 4
+        }
       ]
     },
     {
-      "id": "foundry_standard", "doctrine": "foundry", "weight": 2,
+      "id": "foundry_standard",
+      "doctrine": "foundry",
+      "weight": 2,
       "steps": [
-        { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1" },
-        { "do": "produce", "def": "harvester", "n": 1 },
-        { "do": "produce", "def": "dart", "n": 1 },
-        { "do": "build", "def": "refinery", "near": "ore_field:home_2", "skip_if_have": "refinery>=2" },
-        { "do": "produce", "def": "harvester", "n": 1 },
-        { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2" },
-        { "do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=120" },
-        { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
-        { "do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1" },
-        { "do": "produce", "def": "hauler", "n": 1 },
-        { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
-        { "do": "set_replenish", "def": "harvester", "n": 6 },
-        { "do": "build", "def": "reactor", "near": "outpost", "when": "t>=250" }
+        {
+          "do": "build",
+          "def": "solar_array",
+          "near": "core",
+          "skip_if_have": "solar_array>=1"
+        },
+        {
+          "do": "produce",
+          "def": "harvester",
+          "n": 1
+        },
+        {
+          "do": "produce",
+          "def": "dart",
+          "n": 1
+        },
+        {
+          "do": "build",
+          "def": "refinery",
+          "near": "ore_field:home_2",
+          "skip_if_have": "refinery>=2"
+        },
+        {
+          "do": "produce",
+          "def": "harvester",
+          "n": 1
+        },
+        {
+          "do": "build",
+          "def": "solar_array",
+          "near": "core",
+          "skip_if_have": "solar_array>=2"
+        },
+        {
+          "do": "order",
+          "kind": "move",
+          "unit": "dart|scout",
+          "to": "outpost_site:home_trap",
+          "when": "t>=120"
+        },
+        {
+          "do": "build",
+          "def": "outpost",
+          "near": "outpost_site:home_trap",
+          "when": "presence"
+        },
+        {
+          "do": "build",
+          "def": "ice_extractor",
+          "near": "cold_trap:home",
+          "when": "have:outpost>=1"
+        },
+        {
+          "do": "produce",
+          "def": "hauler",
+          "n": 1
+        },
+        {
+          "do": "build",
+          "def": "autocannon_turret",
+          "near": "approach:nearest_enemy"
+        },
+        {
+          "do": "set_replenish",
+          "def": "harvester",
+          "n": 6
+        },
+        {
+          "do": "build",
+          "def": "reactor",
+          "near": "outpost",
+          "when": "t>=250"
+        }
       ]
     },
     {
-      "id": "foundry_greedy", "doctrine": "foundry", "weight": 1,
+      "id": "foundry_greedy",
+      "doctrine": "foundry",
+      "weight": 1,
       "steps": [
-        { "do": "produce", "def": "harvester", "n": 2 },
-        { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1" },
-        { "do": "produce", "def": "dart", "n": 1 },
-        { "do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=100" },
-        { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
-        { "do": "build", "def": "refinery", "near": "ore_field:home_2", "skip_if_have": "refinery>=2" },
-        { "do": "set_replenish", "def": "harvester", "n": 6 }
+        {
+          "do": "produce",
+          "def": "harvester",
+          "n": 2
+        },
+        {
+          "do": "build",
+          "def": "solar_array",
+          "near": "core",
+          "skip_if_have": "solar_array>=1"
+        },
+        {
+          "do": "produce",
+          "def": "dart",
+          "n": 1
+        },
+        {
+          "do": "order",
+          "kind": "move",
+          "unit": "dart|scout",
+          "to": "outpost_site:home_trap",
+          "when": "t>=100"
+        },
+        {
+          "do": "build",
+          "def": "outpost",
+          "near": "outpost_site:home_trap",
+          "when": "presence"
+        },
+        {
+          "do": "build",
+          "def": "refinery",
+          "near": "ore_field:home_2",
+          "skip_if_have": "refinery>=2"
+        },
+        {
+          "do": "set_replenish",
+          "def": "harvester",
+          "n": 6
+        }
       ]
     }
   ]

@@ -14,7 +14,7 @@ var _all: bool = false                       ## `have` reads `have_all` (sites i
 var _atom: PackedByteArray = PackedByteArray()
 var _cmp: PackedByteArray = PackedByteArray()
 var _def: PackedInt32Array = PackedInt32Array()
-var _val: PackedFloat32Array = PackedFloat32Array()
+var _val: PackedFloat64Array = PackedFloat64Array()
 var _clause_end: PackedInt32Array = PackedInt32Array()   ## index one past the last atom of each and-clause
 
 

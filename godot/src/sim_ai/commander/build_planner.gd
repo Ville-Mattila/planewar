@@ -70,6 +70,10 @@ func _init(content: ContentSet, params: BookParams, sites: MapSites) -> void:
 	_presence = eco.outpost_presence_radius_m if eco != null else 0.0
 
 
+func is_outpost_def(def_id: int) -> bool:
+	return def_id == _outpost
+
+
 func is_structure(def_id: int) -> bool:
 	return def_id >= 0 and def_id < _is_struct.size() and _is_struct[def_id] != 0
 
@@ -254,12 +258,17 @@ func _candidate(a: Vector3, i: int, open: bool, on_node: bool, is_outpost: bool,
 	var ring: int = j >> RING_SHIFT
 	var step: float = _p.outpost_ring_m if is_outpost else (_cell_m if on_node else _p.ring_step_m)
 	var dist: float = step * float(ring + 1) if open else _p.core_ring_m + _p.ring_step_m * float(ring)
-	var theta: float = TAU * float(j % RING) / float(RING) + 0.4 * float(slot)
+	var theta: float = TAU * float(j % RING) / float(RING) + _p.slot_phase_rad * float(slot)
 	var ref: Vector3 = Vector3.UP if absf(a.y) < 0.9 else Vector3.RIGHT
 	var e1: Vector3 = ref.cross(a).normalized()
 	var t: Vector3 = e1 * cos(theta) + a.cross(e1) * sin(theta)
 	var ang: float = dist / R
 	return (a * cos(ang) + t * sin(ang)).normalized()
+
+
+## The pre-check alone: would `resolve_site` accept the unit direction `c` for `def_id` (radius or Outpost rule)?
+func accepts(def_id: int, c: Vector3) -> bool:
+	return _valid(def_id, c, def_id == _outpost)
 
 
 func _valid(def_id: int, c: Vector3, is_outpost: bool) -> bool:

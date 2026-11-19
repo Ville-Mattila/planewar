@@ -22,7 +22,7 @@ later. A change to "Public API" or "Invariants" is a contract change: contract t
 class_name BookParams extends RefCounted             # the interpreter's and planner's constants (session configuration)
 const KEYS: PackedStringArray
 var book_end_s: float; var max_rejects: int; var stall_s: float; var presence_retry_s: float; var lock_s: float
-var approach_m: float; var toward_first_m: float; var toward_step_m: float; var core_ring_m: float; var ring_step_m: float; var gap_m: float
+var approach_m: float; var toward_first_m: float; var toward_step_m: float; var core_ring_m: float; var ring_step_m: float; var gap_m: float; var slot_phase_rad: float
 var outpost_ring_m: float; var outpost_cover: float; var move_agl_m: float; var scan_cap: int; var cmds_per_think: PackedInt32Array
 static func def_of(index: Dictionary, name: StringName) -> int                 # content entity_index lookup, -1 when absent
 static func from_dict(d: Dictionary) -> BookParams                             # null on a missing key or a bad value
@@ -56,10 +56,11 @@ var status: Status; var last_k: int; var enemy_hint: Vector3
 var own_n: int; var own_def: PackedInt32Array; var own_dir: PackedVector3Array; var own_done: PackedByteArray
 var foe_n: int; var foe_def: PackedInt32Array; var foe_dir: PackedVector3Array
 func _init(content: ContentSet, params: BookParams, sites: MapSites) -> void
-func is_structure(def_id: int) -> bool;  func clear_view() -> void
+func is_structure(def_id: int) -> bool;  func is_outpost_def(def_id: int) -> bool;  func clear_view() -> void
 func add_own(def_id: int, dir: Vector3, done: bool) -> void;  func add_foe(def_id: int, dir: Vector3) -> void
 func load_view(perc: Perception, v: SimView) -> void
 func anchor(tok: SiteToken, slot: int, issued: int) -> Vector3
+func accepts(def_id: int, c: Vector3) -> bool                                  # the pre-check alone
 func resolve_site(def_id: int, tok: SiteToken, slot: int, k: int, issued: int) -> Vector3
 
 class_name BookHost extends RefCounted               # what a book needs from its bot (abstract; Out answers)
@@ -84,14 +85,16 @@ const MAX_UNITS_PER_STEP: int
 var id: StringName; var doctrine: StringName; var mode: StringName; var reactive: bool; var weight: float; var n_steps: int
 static func compile(e: Dictionary, content: ContentSet, errors: Array[String]) -> OpeningBook     # null + errors on a bad entry
 func kind_of(i: int) -> int;  func def_of(i: int) -> int;  func count_of(i: int) -> int;  func token_of(i: int) -> SiteToken
-func classes_of(i: int) -> PackedInt32Array;  func order_kind_of(i: int) -> int
+func classes_of(i: int) -> PackedInt32Array;  func order_kind_of(i: int) -> int;  func when_of(i: int) -> BookCondition
 func think(run: BookRun, ctx: BookContext, host: BookHost, tick: int, hz: int, p: BookParams, budget: int) -> int
 
 class_name CommanderHost extends BookHost            # the bot's actions: Commands through the CommandSink, verdict -> Out
 const WAIT_REJECTS: PackedInt32Array
 var planner: BuildPlanner; var cmds_left: int
-var st_by_reject: PackedInt32Array; var st_cmds: int; var st_accepted: int; var st_placement_rejects: int; var st_repeat_rejects: int; var st_locked: int; var st_raids: int
+const WAIT_FUNDS: int; const WAIT_SITE: int; const WAIT_CMDS: int; const WAIT_PRESENCE: int
+var st_by_code: PackedInt32Array; var st_waits: PackedInt32Array; var st_by_reject: PackedInt32Array; var st_cmds: int; var st_accepted: int; var st_placement_rejects: int; var st_repeat_rejects: int; var st_locked: int; var st_raids: int
 func _init(content: ContentSet, params: BookParams, plan: BuildPlanner, tick_hz: int) -> void
+func bind_doctrine(slot: int, doctrine: StringName) -> void
 func bind_think(v: SimView, sink: CommandSink, perc: Perception, slot: int, tick: int, cap: int, have_done: PackedInt32Array) -> void
 
 class_name CommanderBrain extends AiBrain            # AiDriver.set_brain(cls, brain, true) + schedule_bot(slot, tier)

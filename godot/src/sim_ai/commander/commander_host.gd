@@ -8,6 +8,11 @@ class_name CommanderHost extends BookHost
 const WAIT_REJECTS: PackedInt32Array = [Build.Reject.ELIMINATED, Build.Reject.PREREQ, Build.Reject.CAP,
 		Build.Reject.NOT_VISIBLE, Build.Reject.NO_PRESENCE, Build.Reject.FUNDS, Build.Reject.SPEND_LOCKED]
 
+const WAIT_FUNDS: int = 0
+const WAIT_SITE: int = 1
+const WAIT_CMDS: int = 2
+const WAIT_PRESENCE: int = 3
+
 var planner: BuildPlanner
 var cmds_left: int = 0                 ## commands this think may still submit (the tier cap)
 var st_cmds: int = 0
@@ -16,6 +21,8 @@ var st_placement_rejects: int = 0
 var st_repeat_rejects: int = 0         ## a placement refused twice for the same def at the same cell
 var st_locked: int = 0                 ## REJECTED_LOCKED / SPEND_LOCKED (the early share lock)
 var st_by_reject: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])   ## REJECTED_PLACEMENT by Build.Reject
+var st_by_code: PackedInt32Array = PackedInt32Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])   ## every verdict by CommandResult.Code
+var st_waits: PackedInt32Array = PackedInt32Array([0, 0, 0, 0])   ## WAIT answers of `build` by cause: WAIT_FUNDS, WAIT_SITE, WAIT_CMDS, WAIT_PRESENCE
 var st_raids: int = 0                  ## `raid` steps handed to the military manager (AI-27)
 
 var _c: ContentSet
@@ -29,6 +36,8 @@ var _hz: int = 30
 var _presence_m: float = 0.0
 var _cost_ore: PackedInt32Array = PackedInt32Array()
 var _cost_ice: PackedInt32Array = PackedInt32Array()
+var _tbl_ore: Dictionary = {}                            ## slot -> doctrine-resolved Ore costs by def (02 s5; built at the slot's first think)
+var _tbl_ice: Dictionary = {}
 var _made_at: PackedInt32Array = PackedInt32Array()      ## unit def -> factory structure def (-1: none)
 var _unit_defs: PackedInt32Array = PackedInt32Array()    ## every ship / ground def id
 var _requires: Array[PackedInt32Array] = []              ## def -> the structure defs it needs finished (tech, 02 s5)
@@ -80,8 +89,35 @@ static func _ids(content: ContentSet, names: PackedStringArray) -> PackedInt32Ar
 
 
 ## `have_done` = the think's finished-entity counts by def (the tech check reads them; the array is shared, not copied).
+## The slot's costs under its doctrine (the sim charges the resolved ones): built once per slot from the content.
+func bind_doctrine(slot: int, doctrine: StringName) -> void:
+	var dd: DoctrineDef = null
+	for d: DoctrineDef in _c.doctrines:
+		if d.id == doctrine:
+			dd = d
+	var rd: ResolvedDefs = DoctrineResolver.resolve(dd, _c.ships, _c.ground_units, _c.structures, _c.weapons, _c.projectiles)
+	var ore: PackedInt32Array = PackedInt32Array()
+	var ice: PackedInt32Array = PackedInt32Array()
+	var _r: Array[int] = [ore.resize(DefRanges.END), ice.resize(DefRanges.END)]
+	for sd: StructureDef in rd.structures:
+		ore[sd.def_id] = sd.cost_ore
+		ice[sd.def_id] = sd.cost_ice
+	for sh: ShipDef in rd.ships:
+		ore[sh.def_id] = sh.cost_ore
+		ice[sh.def_id] = sh.cost_ice
+	for g: GroundUnitDef in rd.ground_units:
+		ore[g.def_id] = g.cost_ore
+		ice[g.def_id] = g.cost_ice
+	_tbl_ore[slot] = ore
+	_tbl_ice[slot] = ice
+
+
 func bind_think(v: SimView, sink: CommandSink, perc: Perception, slot: int, tick: int, cap: int, have_done: PackedInt32Array) -> void:
 	_have_done = have_done
+	if not _tbl_ore.has(slot):
+		bind_doctrine(slot, v.player_state(slot).doctrine)
+	_cost_ore = _tbl_ore[slot]
+	_cost_ice = _tbl_ice[slot]
 	var sp: Vector3 = v.stockpile(v.player_state(slot).team)
 	_ore = sp.x
 	_ice = sp.y
@@ -95,14 +131,19 @@ func bind_think(v: SimView, sink: CommandSink, perc: Perception, slot: int, tick
 
 func presence(tok: SiteToken, _def_id: int) -> bool:
 	var dir: Vector3 = planner.anchor(tok, _slot, 0)
-	if dir == Vector3.ZERO:
-		return false
+	return dir != Vector3.ZERO and _present_at(dir)
+
+
+# An own, undocked unit inside the presence radius of the ground point under `dir` (current positions of own entities).
+func _present_at(dir: Vector3) -> bool:
 	var site: Vector3 = _ground(dir)
+	var reach: float = _presence_m - 4.0 * PI * 0.5 * Sphere.PLANET_RADIUS / float(Sphere.GRID_BUILD)   # two build cells of slack: the sim snaps the centre to its cell
+	var r: float = reach * reach
 	for i: int in _perc.n_own:
-		var d: int = _perc.own_def[i]
-		if planner.is_structure(d) or _perc.own_pos[i].distance_squared_to(site) > _presence_m * _presence_m:
+		var id: int = _perc.own_id[i]
+		if planner.is_structure(_perc.own_def[i]) or _v.owner(id) != _slot or (_v.flags(id) & EntityStore.F_DOCKED) != 0:
 			continue
-		if _v.owner(_perc.own_id[i]) == _slot and (_v.flags(_perc.own_id[i]) & EntityStore.F_DOCKED) == 0:
+		if _v.pos(id).distance_squared_to(site) <= r:
 			return true
 	return false
 
@@ -123,11 +164,16 @@ func _can_try(def_id: int, n: int) -> bool:
 
 func build(def_id: int, tok: SiteToken, k: int, issued: int) -> int:
 	if not _can_try(def_id, 1):
+		st_waits[WAIT_FUNDS] += 1
 		return OpeningBook.Out.WAIT
 	var dir: Vector3 = planner.resolve_site(def_id, tok, _slot, k, issued)
 	if planner.status == BuildPlanner.Status.UNRESOLVED:
 		return OpeningBook.Out.FAIL
 	if dir == Vector3.ZERO or cmds_left <= 0:
+		st_waits[WAIT_SITE if dir == Vector3.ZERO else WAIT_CMDS] += 1
+		return OpeningBook.Out.WAIT
+	if tok.kind != SiteToken.Kind.CORE and planner.is_outpost_def(def_id) and not _present_at(dir):
+		st_waits[WAIT_PRESENCE] += 1
 		return OpeningBook.Out.WAIT
 	var cell: int = Sphere.cell_of(dir, Sphere.GRID_BUILD)
 	var r: CommandResult = _submit(Command.build(_slot, def_id, cell, 0))
@@ -166,7 +212,8 @@ func replenish(def_id: int, n: int) -> int:
 	for u: int in _unit_defs:
 		var t: int = n if u == def_id else _v.auto_replenish_target(_slot, u)
 		if t > 0 and roster.size() < 16:
-			roster.append_array(PackedInt32Array([u, t]))
+			var _a: bool = roster.push_back(u)
+			var _b: bool = roster.push_back(t)
 	var r: CommandResult = _submit(Command.toggle_auto_replenish(_slot, factory, true, roster))
 	return OpeningBook.Out.DONE if r.code == CommandResult.Code.ACCEPTED else _wait_or_fail(r.code)
 
@@ -196,6 +243,7 @@ func _submit(cmd: Command) -> CommandResult:
 	cmds_left -= 1
 	st_cmds += 1
 	var r: CommandResult = _sink.submit(cmd)
+	st_by_code[r.code] += 1
 	if r.code == CommandResult.Code.ACCEPTED:
 		st_accepted += 1
 	elif r.code == CommandResult.Code.REJECTED_LOCKED:

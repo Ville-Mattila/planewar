@@ -77,6 +77,10 @@ func classes_of(i: int) -> PackedInt32Array:
 	return _classes[i]
 
 
+func when_of(i: int) -> BookCondition:
+	return _when[i]
+
+
 func order_kind_of(i: int) -> int:
 	return _okind[i]
 
@@ -264,9 +268,9 @@ func _append(kind: int, def: int, n: int, okind: int, tok: SiteToken, cond: Book
 func _check_outposts(c: ContentSet, errors: Array[String]) -> void:
 	var outpost: int = BookParams.def_of(c.entity_index, &"outpost")
 	for i: int in n_steps:
-		if _do[i] != Do.BUILD or _def[i] != outpost:
+		if _do[i] != Do.BUILD or _def[i] != outpost or _tok[i] == null:
 			continue
 		if not _when[i].uses_presence:
 			errors.append("%s step %d: build outpost needs when: presence" % [id, i])
-		if i == 0 or _do[i - 1] != Do.ORDER or _okind[i - 1] != OrderSpec.Kind.MOVE or _tok[i - 1].src != _tok[i].src:
+		if i == 0 or _do[i - 1] != Do.ORDER or _okind[i - 1] != OrderSpec.Kind.MOVE or _tok[i - 1] == null or _tok[i - 1].src != _tok[i].src:
 			errors.append("%s step %d: build outpost needs an order move to the same site just before it" % [id, i])
