@@ -232,6 +232,10 @@ func wreck_ore(_id: int) -> float:
 	return _f(&"wreck_ore", _inner.wreck_ore(_id))
 
 
+func barrel_elevation(_id: int) -> float:
+	return _f(&"barrel_elevation", _inner.barrel_elevation(_id))
+
+
 func production_queue(_factory: int) -> PackedInt32Array:
 	return _pia(&"production_queue", _inner.production_queue(_factory))
 

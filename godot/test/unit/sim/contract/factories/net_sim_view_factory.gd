@@ -23,6 +23,8 @@ const _EXEMPT: PackedStringArray = [
 	"supply01", "pad_occupant", "order_head", "order_issuer", "auto_replenish_target",
 	# GD-38 / GD-41: inherit -1.0 until a codec carries dome charge / wreck ore (04 s5.6 "return the def default").
 	"shield01", "wreck_ore",
+	# GD-50: inherits NAN (no data) until a codec carries the ground barrel elevation.
+	"barrel_elevation",
 	# Other teams' vision and TEAM_STATE are not sent to this client (04 s3.7 "Unknown when: other teams").
 	"visible_enemy_ships", "stockpile", "unit_count",
 	# NET-39 (R0 B.22 A-111: net may name the types now; the TEAM_DETAIL / TEAM_STATE player rows are NET-39's).

@@ -111,6 +111,9 @@ func _vitals() -> void:
 			and _v.wreck_ore(s.dead) == 0.0 and _v.wreck_ore(0) == 0.0)
 	_t(&"shield01", _near(_v.shield01(s.core), SimViewScene.SHIELD01, &"shield01") and _v.shield01(s.tower) == 0.0
 			and _v.shield01(s.a) == 0.0 and _v.shield01(s.dead) == 0.0)
+	# GD-50: the scene has no barrel-bearing unit (test_barrel_slew.gd pins the slewed values); every answer here is 0.0.
+	_t(&"barrel_elevation", _v.barrel_elevation(s.a) == 0.0 and _v.barrel_elevation(s.tower) == 0.0
+			and _v.barrel_elevation(s.core) == 0.0 and _v.barrel_elevation(s.dead) == 0.0)
 
 
 func _lists() -> void:

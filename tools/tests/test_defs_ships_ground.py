@@ -102,6 +102,12 @@ class GroundSpotValues(unittest.TestCase):
         self.assertEqual(c["weapon"], "siege_gun")
         self.assertEqual(c["ammo"], 20)
 
+    def test_siege_crawler_barrel(self) -> None:
+        # GD-50 (06 s3.2 pitch = barrel): slew 10 deg/s within 0-45 deg; the 05 s6.7 lofted band needs ~14-18 deg.
+        c = unit(self.units, "siege_crawler")
+        self.assertEqual((c["barrel_slew_dps"], c["barrel_min_deg"], c["barrel_max_deg"]), (10, 0, 45))
+        self.assertNotIn("barrel_slew_dps", unit(self.units, "harvester"))
+
     def test_siege_crawler_requires_outpost(self) -> None:
         self.assertEqual(unit(self.units, "siege_crawler")["requires"], ["vehicle_bay", "outpost"])
 
