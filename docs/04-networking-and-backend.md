@@ -451,7 +451,7 @@ TEAM_DETAIL
 | `tech_available` | derived from own roster structures, `requires[]` and the resolved doctrine | other teams |
 | `player_score` | `TEAM_DETAIL` players (banked == total, R0 C3-13) | never |
 | `landing_grade_last` | `LANDING` event | entities outside roster/team |
-| `barrel_elevation` | **not replicated** until NET-61 (R0 B.31 A-152): returns 0.0 with `field_unknown` true and never sets the entity's bit. Named path, not built: one `barrel u8` = `round((e - barrel_min) / (barrel_max - barrel_min) * 255)` (0.18 deg at the Crawler's 0-45 deg) for an entity whose def has a barrel, in tier A and FULL records, `PROTOCOL_VERSION` bump; NET-61 states the exact placement in its PR | always, until NET-61; then tier B / C entities |
+| `barrel_elevation` | **not replicated** until NET-61 (R0 B.31 A-152): returns 0.0 with `field_unknown` true and never sets the entity's bit. Named path, not built: one `barrel u8` = `round((e - barrel_min) / (barrel_max - barrel_min) * 255)` (0.18 deg at the Crawler's 0-45 deg) for an entity whose def has a barrel, in tier A and FULL records, `PROTOCOL_VERSION` bump; NET-61 states the exact placement in its PR | always, until NET-61; then tier B / C entities whose def has a barrel (an entity whose def has no barrel returns 0.0, known) |
 | `projectiles_near` | client-spawned `PROJECTILE_BATCH` projectiles + replicated projectile entities | approximate by design |
 | `path_grid_version` | not replicated (server AI only) | always (returns 0) |
 | `overlay` | **not replicated** in v1 (server AI execution state, 03 s3.2 row 35; the HUD reads `ALERT(LINK_WEAK)`, `RELEASED(reason)`, `CEILING_RELEASE` and `ai_tag`; R0 B.23 A-116) | always (returns 0 NONE) |
