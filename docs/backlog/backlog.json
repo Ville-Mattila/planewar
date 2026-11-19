@@ -3204,7 +3204,10 @@
       " 06 s9.4",
       " 06 UX-09"
     ],
-    "status": "todo"
+    "status": "done",
+    "pr": 180,
+    "merged": "2026-11-19",
+    "notes": "needs app: create one BindingStore, load_file(), assign to both flight mappers, host remap.tscn from Settings Controls, call RemapScreen.set_glyph_set on glyph_set_changed. BindingStore writes user:// directly: switch to Saves.try_* once TA-36 merges. Architect: mouse remapping vs 06 A11Y-06 (input MODULE.md Open items). Finnish ui.remap.* strings pending. Selected-tab cue weak (~1.11:1) until theme_pw.tres is applied: UX-47."
   },
   {
     "id": "UX-02",
@@ -8481,6 +8484,25 @@
     "docs": [
       "docs/reviews/R0-amendments-24.md",
       "R0 B.1"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "UX-47",
+    "title": "ui+app: apply the generated theme_pw.tres at runtime and give selected tabs a visible accent",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "ART-21",
+      "UX-09"
+    ],
+    "milestone": "M3",
+    "acceptance": "theme_pw.tres (ART-21) is the project/root theme at runtime; selected tab/toggle states (RemapScreen, ProductionDrawer tabs) use the theme accent with >= 3:1 contrast against unselected; windowed screenshot described in the PR; no hard-coded colours added",
+    "docs": [
+      "07",
+      "godot/assets/ui/theme_pw.tres"
     ],
     "status": "todo",
     "merged": null
