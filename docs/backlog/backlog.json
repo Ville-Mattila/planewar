@@ -8547,5 +8547,23 @@
     ],
     "status": "todo",
     "merged": null
+  },
+  {
+    "id": "BUG-3",
+    "title": "sim: Build.stamp places structures at the datum radius instead of on the terrain, so on real maps Harvesters never reach the Refinery and Outpost presence checks fail (AI-23 finding)",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 1.0,
+    "depends_on": [],
+    "milestone": "M3",
+    "acceptance": "Structures (start kit and built) are placed on the terrain surface (TerrainSampler / surface_point) at their footprint, consistent with Collision and pad decks; on cradle slot 0 a start-kit Harvester completes a full mine-deliver cycle to the Refinery; Build._check_vision_and_radius Outpost presence/spacing and Harvest._refinery_near pass on real terrain; existing flat-datum tests unchanged; save/restore byte-equal (FORMAT bump if layout changes); AI-23 SC-40/41 re-run on cradle passes or names the next blocker",
+    "docs": [
+      "02 s8",
+      "03 build/terrain sections",
+      "https://github.com/Ville-Mattila/planewar/pull/183#issuecomment-7015327581"
+    ],
+    "status": "todo",
+    "merged": null,
+    "notes": "Found by the AI-23 Opus review: cradle slot 0's start kit sits ~335 m below datum; the 3-D reach check (Harvest._refinery_near) and the 300 m Outpost presence check (Build._check_vision_and_radius) can never pass. Likely affects every real map. High priority before M3 playtests."
   }
 ]
