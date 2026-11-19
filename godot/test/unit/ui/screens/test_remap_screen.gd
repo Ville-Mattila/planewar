@@ -131,3 +131,49 @@ func test_reset_button_restores_defaults() -> void:
 	s._reset.pressed.emit()
 	assert_str(s.slot_button(&"flip", 0).text).is_equal("Space")
 	s.free()
+
+
+func test_selected_tab_is_the_listed_device_for_both_devices() -> void:
+	var s: RemapScreen = _screen()
+	for d: StringName in [BindingStore.PAD, BindingStore.KBM]:
+		s._show_device(d)
+		var other: StringName = BindingStore.KBM if d == BindingStore.PAD else BindingStore.PAD
+		assert_bool(s.tab_pressed(d)).is_true()
+		assert_bool(s.tab_pressed(other)).is_false()
+		assert_bool(s._tab_buttons[d].disabled).is_false()   # selected is highlighted, never dimmed
+		assert_bool(s._tab_buttons[other].disabled).is_false()
+		var acts: Array[StringName] = s.model.store.actions(d)
+		assert_int(s._slot_buttons.size()).is_equal(acts.size() * s.model.slot_count())
+		for a: StringName in acts:
+			for slot: int in s.model.slot_count():
+				assert_str(s.slot_button(a, slot).text).is_equal(
+						Glyphs.binding_label(s.glyph_set, d, s.model.store.code(d, a, slot)))
+	s.free()
+
+
+func test_lb_rb_and_page_keys_switch_tabs() -> void:
+	var s: RemapScreen = _screen()
+	assert_int(RemapScreen.tab_step(_btn(JOY_BUTTON_RIGHT_SHOULDER))).is_equal(1)
+	assert_int(RemapScreen.tab_step(_btn(JOY_BUTTON_LEFT_SHOULDER))).is_equal(-1)
+	assert_int(RemapScreen.tab_step(_key(KEY_PAGEDOWN))).is_equal(1)
+	assert_int(RemapScreen.tab_step(_key(KEY_PAGEUP))).is_equal(-1)
+	assert_int(RemapScreen.tab_step(_key(KEY_A))).is_equal(0)
+	assert_str(String(s.model.device)).is_equal("kbm")
+	s._input(_btn(JOY_BUTTON_RIGHT_SHOULDER))
+	assert_str(String(s.model.device)).is_equal("pad")
+	assert_bool(s.tab_pressed(BindingStore.PAD)).is_true()
+	s._input(_key(KEY_PAGEUP))
+	assert_str(String(s.model.device)).is_equal("kbm")
+	s._input(_btn(JOY_BUTTON_LEFT_SHOULDER))
+	assert_str(String(s.model.device)).is_equal("pad")   # wraps
+	s.free()
+
+
+func test_tab_keys_are_bindable_while_listening_not_tab_switches() -> void:
+	var s: RemapScreen = _screen()
+	s._show_device(BindingStore.PAD)
+	s.model.begin_listen(&"flip", 0)
+	s._input(_btn(JOY_BUTTON_RIGHT_SHOULDER))
+	assert_str(String(s.model.device)).is_equal("pad")
+	assert_int(s.model.store.code(BindingStore.PAD, &"flip")).is_equal(JOY_BUTTON_RIGHT_SHOULDER)
+	s.free()

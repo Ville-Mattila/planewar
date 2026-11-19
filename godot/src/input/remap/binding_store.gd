@@ -8,6 +8,8 @@ const PARAMS_PATH: String = "res://content/ui/remap.json"
 const KBM: StringName = &"kbm"
 const PAD: StringName = &"pad"
 const UNBOUND: int = Glyphs.UNBOUND
+## input_map.cfg format version ([meta] version); a newer file is ignored, older ones load (missing = 0).
+const FILE_VERSION: int = 1
 
 var path: String = ""
 
@@ -129,6 +131,7 @@ func reset(device: StringName) -> void:
 
 func save() -> Error:
 	var cf: ConfigFile = ConfigFile.new()
+	cf.set_value("meta", "version", FILE_VERSION)
 	for a: StringName in actions(KBM):
 		var list: Array = []
 		for c: int in _kbm.get(a, PackedInt32Array()):
@@ -150,6 +153,9 @@ func load_file() -> Error:
 	var err: Error = cf.load(path)
 	if err != OK:
 		return err
+	var ver: Variant = cf.get_value("meta", "version", 0)
+	if ver is int and ver > FILE_VERSION:
+		return ERR_FILE_UNRECOGNIZED   # written by a newer build: keep the defaults
 	for a: StringName in actions(KBM):
 		var v: Variant = cf.get_value(String(KBM), String(a), [])
 		var list: Array = Glyphs.as_array(v)

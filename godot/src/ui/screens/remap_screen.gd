@@ -28,6 +28,7 @@ func _ready() -> void:
 	for d: StringName in [BindingStore.KBM, BindingStore.PAD]:
 		var t: Button = ScreenKit.button(tr(StringName("ui.remap.device." + String(d))))
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.toggle_mode = true
 		ScreenKit.on(t.pressed, func() -> void: _show_device(d))
 		tabs.add_child(t)
 		_tab_buttons[d] = t
@@ -86,9 +87,33 @@ func handle_back() -> bool:
 
 
 func _input(event: InputEvent) -> void:
-	if model != null and model.is_listening() and model.capture(event):
+	if model == null:
+		return
+	if model.is_listening():
+		if model.capture(event):
+			get_viewport().set_input_as_handled()
+			refresh()
+		return
+	var step: int = tab_step(event)
+	if step != 0:
 		get_viewport().set_input_as_handled()
-		refresh()
+		_show_device(model.step_device(step))
+
+
+## LB / PageUp = -1, RB / PageDown = +1 (06 s3.4); 0 for anything else.
+static func tab_step(event: InputEvent) -> int:
+	if event is InputEventJoypadButton and (event as InputEventJoypadButton).pressed:
+		var b: JoyButton = (event as InputEventJoypadButton).button_index
+		return -1 if b == JOY_BUTTON_LEFT_SHOULDER else (1 if b == JOY_BUTTON_RIGHT_SHOULDER else 0)
+	if event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo:
+		var ke: InputEventKey = event as InputEventKey
+		var k: Key = ke.keycode if ke.keycode != KEY_NONE else ke.physical_keycode
+		return -1 if k == KEY_PAGEUP else (1 if k == KEY_PAGEDOWN else 0)
+	return 0
+
+
+func tab_pressed(d: StringName) -> bool:
+	return _tab_buttons[d].button_pressed
 
 
 func slot_button(action: StringName, slot: int) -> Button:
@@ -108,7 +133,7 @@ func refresh() -> void:
 	for a: StringName in model.actions():
 		_rows_box.add_child(_row(a))
 	for d: StringName in _tab_buttons:
-		_tab_buttons[d].disabled = d == model.device
+		_tab_buttons[d].set_pressed_no_signal(d == model.device)
 	_prompt.text = _prompt_text()
 
 

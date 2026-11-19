@@ -31,6 +31,12 @@ func set_device(d: StringName) -> void:
 	last_conflict = &""
 
 
+## Device after `dir` (+1 / -1) steps in the tab order, wrapping.
+func step_device(dir: int) -> StringName:
+	var order: Array[StringName] = [BindingStore.KBM, BindingStore.PAD]
+	return order[posmod(order.find(device) + dir, order.size())]
+
+
 func is_listening() -> bool:
 	return _action != &""
 

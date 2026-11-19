@@ -162,7 +162,7 @@ func sample(dt: float) -> PilotInput
 func map(st: TouchState, dt: float) -> PilotInput
 
 class_name BindingStore extends RefCounted     # remap/binding_store.gd (UX-09): flight-action bindings, content/ui/remap.json defaults
-const KBM: StringName; const PAD: StringName; const UNBOUND: int      # &"kbm" &"pad" -1
+const KBM: StringName; const PAD: StringName; const UNBOUND: int; const FILE_VERSION: int   # &"kbm" &"pad" -1 1
 var path: String                               # user://settings/input_map.cfg
 func _init(p_path: String = "") -> void        # empty = path from remap.json; starts at the defaults
 func slots() -> int                            # key slots per action (2)
@@ -211,7 +211,7 @@ static func set_for_class(kind: int, joy_set: StringName) -> StringName         
   CAM_* is emitted from keys, mouse or pad, and the flight mappers never read `rts_mapper`. CAM_PAN_VEL from here is
   held deflection |v| <= 1 and is sent again with a zero vector on release; fling vectors (touch) are always larger
   (`GestureRecognizer.FLING_MIN_SPEED` = 300 du/s > 1), which `CameraIntentDriver` relies on to ignore them.
-- I12: remaps persist to `user://settings/input_map.cfg` and reload over the defaults; a code on two actions of one device is flagged (`bind` returns the other action, `conflicted` lists both) and never refused; mouse buttons and axes are not remappable (v1.0); mappers read keys and buttons only through `BindingStore`, so remapped inputs drive the same `PilotInput` bits.
+- I12: remaps persist to `user://settings/input_map.cfg` and reload over the defaults; a code on two actions of one device is flagged (`bind` returns the other action, `conflicted` lists both) and never refused; mappers read keys and buttons only through `BindingStore`, so remapped inputs drive the same `PilotInput` bits.
 - I13: the glyph set follows the device in the same `feed` call that changes the class (no frame of stale glyphs); `Glyphs.set_for_class` never yields `kbm` for GAMEPAD.
 - I9: `input` never reads `SimView` and never imports `ui`; world knowledge arrives through a caller-filled context.
 
@@ -255,6 +255,8 @@ except the key-bound InputMap scan on key presses (only on press). Not on a sim 
 - A new class-qualifying event: add the branch in `DeviceMonitor.classify`, add a table row test.
 
 ## Open items
+
+- Contract question for the Architect: 06 A11Y-06 asks for full remapping (KBM, gamepad, UI navigation). UX-09 covers keys and pad buttons of the flight actions only; mouse buttons (Fire 1 / Fire 2), axes and UI navigation are fixed. Owner of the remaining coverage: UX-38 or a remap-coverage follow-up.
 
 - UX-07 `AssistStack` runs between mapper and emit and adds
   ARCADE and MOUSE_AIM steering.

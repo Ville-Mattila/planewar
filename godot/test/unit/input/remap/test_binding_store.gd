@@ -63,6 +63,20 @@ func test_remaps_persist_across_a_restart() -> void:
 	assert_int(b.code(BindingStore.KBM, &"throttle_up", 0)).is_equal(KEY_W)
 
 
+func test_file_carries_a_version_and_a_newer_file_is_ignored() -> void:
+	var a: BindingStore = BindingStore.new(TMP)
+	var _c: StringName = a.bind(BindingStore.KBM, &"dock", 0, KEY_G)
+	assert_int(a.save()).is_equal(OK)
+	var cf: ConfigFile = ConfigFile.new()
+	assert_int(cf.load(TMP)).is_equal(OK)
+	assert_int(int(cf.get_value("meta", "version", 0))).is_equal(BindingStore.FILE_VERSION)
+	cf.set_value("meta", "version", BindingStore.FILE_VERSION + 1)
+	assert_int(cf.save(TMP)).is_equal(OK)
+	var b: BindingStore = BindingStore.new(TMP)
+	assert_int(b.load_file()).is_not_equal(OK)
+	assert_int(b.code(BindingStore.KBM, &"dock", 0)).is_equal(KEY_F)
+
+
 func test_missing_or_malformed_file_keeps_defaults() -> void:
 	var s: BindingStore = BindingStore.new("user://test_remap/none.cfg")
 	assert_int(s.load_file()).is_equal(OK)
@@ -114,10 +128,28 @@ func test_pad_state_follows_remapped_buttons() -> void:
 	assert_bool(st.lb).is_true()   # the old yaw_left default now conflicts; both fire, which is what "flagged" means
 
 
-func test_mapper_uses_its_bindings_for_a_remapped_flip() -> void:
+func _press_physical(code: Key, pressed: bool) -> void:
+	var e: InputEventKey = InputEventKey.new()
+	e.physical_keycode = code
+	e.keycode = code
+	e.pressed = pressed
+	Input.parse_input_event(e)
+	Input.flush_buffered_events()
+
+
+## No poller: sample() must forward its `bindings` member to KbmState.poll. A mapper that ignored `bindings`
+## would poll the defaults (Space = flip) and see no FLIP for G.
+func test_mapper_forwards_its_bindings_member_to_poll() -> void:
 	var s: BindingStore = BindingStore.new(TMP)
 	var _c: StringName = s.bind(BindingStore.KBM, &"flip", 0, KEY_G)
 	var m: KbmFlightMapper = KbmFlightMapper.new()
 	m.bindings = s
-	m.poller = func() -> KbmState: return KbmState.from_held(PackedInt32Array([KEY_G]), Vector2.ZERO, s)
-	assert_int(m.sample(1.0 / 30.0).buttons & PilotInput.FLIP).is_equal(PilotInput.FLIP)
+	_press_physical(KEY_G, true)
+	var got: int = m.sample(1.0 / 30.0).buttons
+	_press_physical(KEY_G, false)
+	assert_int(got & PilotInput.FLIP).is_equal(PilotInput.FLIP)
+	var plain: KbmFlightMapper = KbmFlightMapper.new()   # defaults: G is not bound
+	_press_physical(KEY_G, true)
+	var none: int = plain.sample(1.0 / 30.0).buttons
+	_press_physical(KEY_G, false)
+	assert_int(none & PilotInput.FLIP).is_equal(0)

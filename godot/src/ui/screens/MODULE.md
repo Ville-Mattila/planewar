@@ -142,7 +142,7 @@ func button_of(id: StringName) -> Button
 class_name RemapModel extends RefCounted     # UX-09 remapping state; persists on every change
 var store: BindingStore; var device: StringName; var autosave: bool; var last_conflict: StringName
 func _init(p_store: BindingStore) -> void
-func actions() -> Array[StringName]; func slot_count() -> int; func set_device(d: StringName) -> void
+func actions() -> Array[StringName]; func slot_count() -> int; func set_device(d: StringName) -> void; func step_device(dir: int) -> StringName
 func is_listening() -> bool; func listening_action() -> StringName; func listening_slot() -> int
 func begin_listen(action: StringName, slot: int) -> void; func cancel() -> void
 func capture(event: InputEvent) -> bool       # Esc / Start cancel, Delete / View clear, else bind; true when consumed
@@ -153,6 +153,8 @@ class_name RemapScreen extends ScreenBase    # scenes/ui/screens/remap.tscn; ent
 signal done_requested
 var model: RemapModel
 var glyph_set: StringName
+static func tab_step(event: InputEvent) -> int  # LB / PageUp -1, RB / PageDown +1, else 0 (06 s3.4)
+func tab_pressed(d: StringName) -> bool         # the tab drawn selected
 func set_glyph_set(p_set: StringName) -> void   # host calls on InputRouter.glyph_set_changed; labels swap at once
 func slot_button(action: StringName, slot: int) -> Button
 func prompt_text() -> String
@@ -182,7 +184,7 @@ func refresh() -> void
 - U18: Results bind every `MATCH_END` field of 06 s8 / R0 C2-17 (winner, `end_reason`, tick, `structure_value` per team; per player `score_pilot`, `score_commander`, medals in `medals.json` order, `structures_destroyed`, `sorties`, `ore_mined`, `ore_spent`, `ice_delivered`, `pilot_time_s[5]`, kills, manual landings). TIME_LIMIT iff `end_reason` is `Protocol.MatchEndReason.HARD_END_VALUE`; a `medals[i]` byte != 0 means earned.
 - U19: REMATCH_VOTE lasts `rematch_vote_s` (20); unanimity of the eligible slots passes, any no or the timeout fails.
 - U20: Pause items are the eight of 06 s8; Save/Load only offline with `pause_save` and not `listen_host`; `pauses_sim` is true offline and for the Co-op listen host only. Unavailable items stay focusable-by-order but disabled, with a reason key.
-- U22: Remap (UX-09): one row per `BindingStore` action, a button per slot, a conflict flag naming the other action, Reset and Done; every control focusable, buttons >= 44 du; B / Esc first cancels a pending listen, then leaves; keys and pad buttons persist on each bind; pad labels follow the active glyph set (`ui.remap.*` keys, `content/ui/screens.json` `remap_list_h_du`).
+- U22: Remap (UX-09): one row per `BindingStore` action, a button per slot, a conflict flag naming the other action, Reset and Done; the selected tab is a pressed toggle (never disabled), LB / RB and PageUp / PageDown switch tabs while not listening; every control focusable, buttons >= 44 du; Esc (kbm tab) / Start (pad tab) cancel a pending listen, and on the pad tab B is a bindable button while listening; outside a listen B / Esc leave, then leaves; keys and pad buttons persist on each bind; pad labels follow the active glyph set (`ui.remap.*` keys, `content/ui/screens.json` `remap_list_h_du`).
 - U21: every string is a locale key (`ui.loading.*`, `ui.reconnect.*`, `ui.pause.*`, `ui.eliminated.*`, `ui.results.*`, `ui.medal.*`); text >= `font_du_min`; buttons >= `button_h_du` (44); every screen has an initial focus and B / Esc handling.
 
 ## Data owned
