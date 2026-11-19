@@ -11,7 +11,7 @@ contract tests first, same PR; `tools/gen_module_api.py --check` must pass; <= 3
 | May depend on | as `ui/MODULE.md`; `Protocol.MatchEndReason` (net) for the end reason |
 | Must never touch | sim internals, `input/`, `camera/`, `net/` sources |
 | Autoloads used | none (`ContentDB` only in tests) |
-| Status | UX-27 implemented |
+| Status | UX-27 implemented; UX-09 remap screen |
 
 ## Public API
 
@@ -139,6 +139,24 @@ signal item_chosen(id: StringName)
 var items: Array[PauseItem]
 func configure(p_items: Array[PauseItem]) -> void
 func button_of(id: StringName) -> Button
+class_name RemapModel extends RefCounted     # UX-09 remapping state; persists on every change
+var store: BindingStore; var device: StringName; var autosave: bool; var last_conflict: StringName
+func _init(p_store: BindingStore) -> void
+func actions() -> Array[StringName]; func slot_count() -> int; func set_device(d: StringName) -> void
+func is_listening() -> bool; func listening_action() -> StringName; func listening_slot() -> int
+func begin_listen(action: StringName, slot: int) -> void; func cancel() -> void
+func capture(event: InputEvent) -> bool       # Esc / Start cancel, Delete / View clear, else bind; true when consumed
+func clear(action: StringName, slot: int) -> void; func reset_device() -> void
+func label(action: StringName, slot: int, glyph_set: StringName) -> String
+func conflict_of(action: StringName, slot: int) -> StringName; func has_conflicts() -> bool
+class_name RemapScreen extends ScreenBase    # scenes/ui/screens/remap.tscn; enter({store: BindingStore, glyph_set: StringName})
+signal done_requested
+var model: RemapModel
+var glyph_set: StringName
+func set_glyph_set(p_set: StringName) -> void   # host calls on InputRouter.glyph_set_changed; labels swap at once
+func slot_button(action: StringName, slot: int) -> Button
+func prompt_text() -> String
+func refresh() -> void
 class_name EliminatedOverlay extends Control   # scenes/ui/screens/eliminated.tscn; never blocks input
 func show_for(selfdestruct_left_s: float) -> void
 func hide_overlay() -> void
@@ -164,6 +182,7 @@ func refresh() -> void
 - U18: Results bind every `MATCH_END` field of 06 s8 / R0 C2-17 (winner, `end_reason`, tick, `structure_value` per team; per player `score_pilot`, `score_commander`, medals in `medals.json` order, `structures_destroyed`, `sorties`, `ore_mined`, `ore_spent`, `ice_delivered`, `pilot_time_s[5]`, kills, manual landings). TIME_LIMIT iff `end_reason` is `Protocol.MatchEndReason.HARD_END_VALUE`; a `medals[i]` byte != 0 means earned.
 - U19: REMATCH_VOTE lasts `rematch_vote_s` (20); unanimity of the eligible slots passes, any no or the timeout fails.
 - U20: Pause items are the eight of 06 s8; Save/Load only offline with `pause_save` and not `listen_host`; `pauses_sim` is true offline and for the Co-op listen host only. Unavailable items stay focusable-by-order but disabled, with a reason key.
+- U22: Remap (UX-09): one row per `BindingStore` action, a button per slot, a conflict flag naming the other action, Reset and Done; every control focusable, buttons >= 44 du; B / Esc first cancels a pending listen, then leaves; keys and pad buttons persist on each bind; pad labels follow the active glyph set (`ui.remap.*` keys, `content/ui/screens.json` `remap_list_h_du`).
 - U21: every string is a locale key (`ui.loading.*`, `ui.reconnect.*`, `ui.pause.*`, `ui.eliminated.*`, `ui.results.*`, `ui.medal.*`); text >= `font_du_min`; buttons >= `button_h_du` (44); every screen has an initial focus and B / Esc handling.
 
 ## Data owned
@@ -172,7 +191,7 @@ func refresh() -> void
 
 ## Test entry points
 
-`godot/test/unit/ui/screens/` (`test_reconnect_model.gd`, `test_rematch_vote.gd`, `test_results_math.gd`, `test_overlay_models.gd`, `test_screens_scene.gd`).
+`godot/test/unit/ui/screens/` (`test_reconnect_model.gd`, `test_rematch_vote.gd`, `test_results_math.gd`, `test_overlay_models.gd`, `test_screens_scene.gd`, `test_remap_screen.gd`).
 
 ## Open items
 

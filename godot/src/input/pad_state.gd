@@ -14,18 +14,45 @@ var y: bool
 var dpad_down: bool
 
 
-## Reads the live Input singleton for `device`.
-static func poll(device: int) -> PadState:
+static var _defaults: BindingStore = null
+
+
+## Reads the live Input singleton for `device`; `store` supplies the remapped buttons (null = defaults).
+static func poll(device: int, store: BindingStore = null) -> PadState:
 	var s: PadState = PadState.new()
 	s.left_stick = Vector2(Input.get_joy_axis(device, JOY_AXIS_LEFT_X), Input.get_joy_axis(device, JOY_AXIS_LEFT_Y))
 	s.right_trigger = Input.get_joy_axis(device, JOY_AXIS_TRIGGER_RIGHT)
 	s.left_trigger = Input.get_joy_axis(device, JOY_AXIS_TRIGGER_LEFT)
-	s.lb = Input.is_joy_button_pressed(device, JOY_BUTTON_LEFT_SHOULDER)
-	s.rb = Input.is_joy_button_pressed(device, JOY_BUTTON_RIGHT_SHOULDER)
-	s.l3 = Input.is_joy_button_pressed(device, JOY_BUTTON_LEFT_STICK)
-	s.a = Input.is_joy_button_pressed(device, JOY_BUTTON_A)
-	s.b = Input.is_joy_button_pressed(device, JOY_BUTTON_B)
-	s.x = Input.is_joy_button_pressed(device, JOY_BUTTON_X)
-	s.y = Input.is_joy_button_pressed(device, JOY_BUTTON_Y)
-	s.dpad_down = Input.is_joy_button_pressed(device, JOY_BUTTON_DPAD_DOWN)
-	return s
+	var st: BindingStore = _store_or_default(store)
+	var held: PackedInt32Array = PackedInt32Array()
+	for c: int in st.all_codes(BindingStore.PAD):
+		if Input.is_joy_button_pressed(device, c as JoyButton):
+			var _ok: bool = held.append(c)
+	return with_buttons(s, held, st)
+
+
+## Pure: sets the button fields of `base` from the held JoyButtons under `store`.
+static func with_buttons(base: PadState, held: PackedInt32Array, store: BindingStore = null) -> PadState:
+	var st: BindingStore = _store_or_default(store)
+	base.lb = _down(st, &"yaw_left", held)
+	base.rb = _down(st, &"yaw_right", held)
+	base.a = _down(st, &"fire1", held)
+	base.b = _down(st, &"fire2", held)
+	base.x = _down(st, &"dock", held)
+	base.l3 = _down(st, &"boost", held)
+	base.y = _down(st, &"flip", held)
+	base.dpad_down = _down(st, &"release", held)
+	return base
+
+
+static func _down(st: BindingStore, action: StringName, held: PackedInt32Array) -> bool:
+	var c: int = st.code(BindingStore.PAD, action)
+	return c != BindingStore.UNBOUND and held.has(c)
+
+
+static func _store_or_default(store: BindingStore) -> BindingStore:
+	if store != null:
+		return store
+	if _defaults == null:
+		_defaults = BindingStore.new()
+	return _defaults

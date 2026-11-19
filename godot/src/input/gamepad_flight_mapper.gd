@@ -6,6 +6,8 @@ class_name GamepadFlightMapper extends FlightMapper
 var device: int = 0
 ## Test seam: Callable() -> PadState. Default polls the Input singleton for `device`.
 var poller: Callable
+## Remapped bindings (UX-09); null uses the defaults. needs app: assign the shared BindingStore after load_file().
+var bindings: BindingStore
 
 var _yaw: float = 0.0
 var _prev_edge: int = 0
@@ -18,7 +20,7 @@ func sample(dt: float) -> PilotInput:
 		if raw is PadState:
 			st = raw
 	if st == null:
-		st = PadState.poll(device)
+		st = PadState.poll(device, bindings)
 	return map(st, dt)
 
 
