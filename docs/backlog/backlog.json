@@ -8419,9 +8419,10 @@
       "06 s3.2",
       "05 s6.7"
     ],
-    "status": "todo",
-    "merged": null,
-    "notes": "Ruling R0-amendments-25 (B.31 A-151..A-155): the acceptance clause 'Architect confirms whether an R0 row is needed' is answered (rows A-151, A-152, A-153). The GD-50 author may add the one string to godot/src/net/client/net_unknown.gd (NEVER) under A-152."
+    "status": "done",
+    "merged": "2026-11-19",
+    "notes": "Ruling R0-amendments-25 (B.31 A-151..A-155): the acceptance clause 'Architect confirms whether an R0 row is needed' is answered (rows A-151, A-152, A-153). The GD-50 author may add the one string to godot/src/net/client/net_unknown.gd (NEVER) under A-152. Ruling R0-amendments-25 (B.31 A-151..A-155): barrel_* keys, SimView.barrel_elevation (0.0 + field_unknown), ground pitch = slew rate, FORMAT 18. Lofted Crawler shots at 1,000-1,150 m land 0.6-3.5 m from target. Follow-ups: AI-18b (wire the brain; use BarrelSlew.muzzle_dir), NET-61, CONTENT-5, UX-48 (per-mode bindings, barrel holds), UX-49, ART-40. 12 s shell lifetime caps level-ground shots above ~19 deg (GD-34 to measure).",
+    "pr": 182
   },
   {
     "id": "AI-18b",
