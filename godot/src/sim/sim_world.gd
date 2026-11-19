@@ -9,6 +9,7 @@ class_name SimWorld extends RefCounted
 ## caller drains events. Helpers: `sim/world/`; control transitions: `sim/control/` (05 s2, AI-02).
 
 const _MAPS_ROOT: String = "res://content/maps/"
+static var _features_dir_override: String = ""   ## test seam: the dir the Relay Stations are read from instead of the map's (GD-51)
 const _BUDGET_RUNGS_MAX: int = 8   ## rung 7 (native twins) is code, not a profile entry; 8 is A-55
 
 var rng: Rng = Rng.new(0)              ## S7: the only RNG of the match; no forks exist yet
@@ -72,6 +73,7 @@ func load_map(map: MapDef, _seed: int, rules: MatchRules) -> Result:
 		var _fields: int = _econ.harvest.fields.load_map_dir(_MAPS_ROOT + String(_map_id))   # GD-12: the recipe's Ore Fields
 		var _traps: int = _econ.ice.nodes.load_map_dir(_MAPS_ROOT + String(_map_id))         # GD-14: its Cold Traps
 		_econ.economy.set_plateaus(SunPath.load_plateaus(_MAPS_ROOT + String(_map_id)))   # GD-23: the Solar Plateau centres
+		var _relays: int = 0 if _restoring else MapRelays.spawn(_features_dir(), _defs, _terrain, _store, _applier, _state.tick)   # GD-51: its Relay Stations
 	collision.configure(_defs.projectile_radius, _defs.pad_radius_by_def, _defs.common, rules.tick_hz)
 	collision.launch_pad = _defs.launch_pad_by_def
 	collision.open_pad = _defs.open_pad_by_def   # GD-23: an open pad (capture_s > 0) ...
@@ -79,6 +81,10 @@ func load_map(map: MapDef, _seed: int, rules: MatchRules) -> Result:
 	_match_seed = _seed
 	rng = Rng.new(_seed)
 	return Result.success()
+
+
+func _features_dir() -> String:
+	return _features_dir_override if _features_dir_override != "" else _MAPS_ROOT + String(_map_id)
 
 
 func add_player(slot: int, team: int, doctrine: StringName, kind: int) -> void:
