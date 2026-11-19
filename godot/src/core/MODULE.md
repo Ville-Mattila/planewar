@@ -84,6 +84,23 @@ class_name Result extends RefCounted  # ok/err without exceptions
 var ok: bool; var error: int; var message: String; var value: Variant
 static func success(v: Variant = null) -> Result;  static func failure(code: int, msg: String) -> Result
 
+class_name Saves extends RefCounted   # user:// only, never crashes (web IndexedDB may be unavailable; 03 s11.4, TA-36)
+const ERR_BAD_PATH: int;  const ERR_UNAVAILABLE: int;  const USER_PREFIX: String;  const PROBE_NAME: String   # 1001, 1002
+static var simulate_unavailable: bool                              # test seam: behave as if storage were disabled
+static func is_user_path(path: String) -> bool
+static func storage_available() -> bool
+static func try_exists(path: String) -> bool
+static func try_write_bytes(path: String, data: PackedByteArray) -> Result;  static func try_read_bytes(path: String) -> Result
+static func try_write_text(path: String, text: String) -> Result;  static func try_read_text(path: String) -> Result
+static func try_remove(path: String) -> Result;  static func try_make_dir(path: String) -> Result
+
+class_name ChunkedHasher extends RefCounted   # incremental SHA-256, 256 KiB per update, one budgeted step per frame (03 s11.1)
+const CHUNK_BYTES: int;  const DEFAULT_BUDGET_USEC: int            # 262144, 8000
+static func chunk_count(size: int) -> int
+func begin(data: PackedByteArray) -> void
+func step(budget_usec: int = DEFAULT_BUDGET_USEC) -> bool          # at least one chunk; true when done
+func is_done() -> bool;  func progress() -> float;  func digest() -> PackedByteArray
+
 class_name MathX                      # static helpers that keep warning annotations out of sim code
 static func floori_div(a: int, b: int) -> int;  static func posmod_i(a: int, b: int) -> int
 static func move_toward_v3(from: Vector3, to: Vector3, delta: float) -> Vector3
@@ -151,6 +168,7 @@ PC-mid, per call, `godot/test/perf/perf_core.gd`: `face_uv_to_dir` <= 0.6 us, `d
 
 - `godot/test/unit/core/test_sphere.gd` (03 s2.8 vectors, C1-C5 on 10,000 random dirs, C8, C9, determinism)
 - `godot/test/unit/core/test_entity_id.gd` (C10), `godot/test/unit/core/test_rng.gd` (C6), `godot/test/unit/core/test_result.gd`
+- `godot/test/unit/core/test_saves.gd`, `godot/test/unit/core/test_chunked_hasher.gd` (TA-36)
 - `godot/test/unit/core/test_log.gd`, `godot/test/unit/core/test_config.gd`, `godot/test/unit/core/test_mathx.gd`
 - `godot/test/perf/perf_core.gd` (`godot --headless --path godot -s res://test/perf/perf_core.gd`)
 
