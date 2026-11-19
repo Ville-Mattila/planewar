@@ -239,7 +239,7 @@ An agent does **not** model by hand-driving the viewport. Each asset is a determ
 | Geometry | Build one half (X >= 0) and mirror, then apply. Flat shading (`shade_flat`). No bevel except on Core (1 segment, key edges only). Adjacent non-coplanar faces differ by >= 20 degrees; coplanar leftovers removed with `dissolve_limited(angle_limit=radians(1))`. Triangulate at export. |
 | Material | Exactly one material per asset, named `PW_Atlas`. No images embedded. |
 | Hardpoints | Empties named `HP_*` (e.g. `HP_Nose`, `HP_Tail`, `HP_Muzzle_L`, `HP_Exhaust_0`, `HP_Bomb_0`..`HP_Bomb_5`, `HP_Rocket_0`.., `HP_Tether`, `HP_Dock`, `HP_Light_0`, and on every ship the three tail landing struts `HP_Gear_0..2` at the foot-plate centres). Plain axes, size 0.5. `HP_Nose` and `HP_Tail` are on the thrust axis; `HP_Tail` sits at the engine nozzle, between the struts. |
-| Parts that move | Separate objects: tower `Turret` (yaw) and `Barrel` (pitch); Hangar `Roof`; Shipyard `Arm_L/R`. Rigid sub-nodes only; no skeletal animation in v1 (animated in code). |
+| Parts that move | Separate objects: tower `Turret` (yaw) and `Barrel` (pitch); Siege Crawler `Barrel` (pitch, modelled level; driven by `SimView.barrel_elevation`, R0 B.31 A-155); Hangar `Roof`; Shipyard `Arm_L/R`. Rigid sub-nodes only; no skeletal animation in v1 (animated in code). |
 | Foundation | Every structure has a mesh part `Foundation`: its footprint extruded down by `max(0.27 x half_footprint, 0.6 m)` (tan 15 degrees, the maximum placement slope; 0.6 m minimum for small structures), flat swatch `hull_700`. |
 | Far mesh | Each unit and every structure over 15 m has a `<PascalId>Far` object (<= 48 tris, single swatch family, team zone as one swatch). |
 
@@ -829,3 +829,4 @@ Applied on 2026-10-10 against `reviews/R0-resolution-register.md`, owner decisio
 | C3-19 (per-mode exposure timers) | 8.5 music phases selected by `match_arc()` |
 | O-4 (moving sun stays) | Header decision 5; 1.5 `sun_dir` uniform; `alert_dusk` (DUSK_WARN); 9.4 M5 map note |
 | R0 B.11 A-57, A-58 (CONTRACT-0 amendments 04, 2026-10-14; ART-01 REPORT s6) | 1.5 include path `godot/src/presentation/shaders/moon_light.gdshaderinc`, Compatibility sRGB note (`ml_to_linear` / `ml_encode`), earthshine gain 0.50, rim faded in by camera height 1.5-4.5 km (HUM-09 taste check); 4.3 instance-uniform fallback chosen: `UnitMaterialCache` 8 x 5 materials, `unit_lit_instanced` kept for v1.x; `presentation/MODULE.md` is the contract for views, pools, VFX and the material cache (planet keeps its own) |
+| R0 B.31 A-155 (CONTRACT-0 amendments 25, 2026-11-19) | 4.2 "Parts that move": the Siege Crawler's `Barrel` is a separate object (ART-08), pitched in code by ART-40 |
