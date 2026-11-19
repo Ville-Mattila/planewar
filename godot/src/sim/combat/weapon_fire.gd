@@ -17,6 +17,7 @@ var unsupplied: PackedByteArray = PackedByteArray()        ## per slot: 1 = towe
 var tower_power: PackedFloat32Array = PackedFloat32Array() ## per team tower rate multiplier, 0 = offline (GD-13; SimWorld sets it each tick, not state)
 var scans: int = 0                                         ## CB13a diagnostic: `_pick` scans run (tests pin the cadence; not state)
 var terrain: Terrain = null                                ## GD-09: the AGL floor of a tower's seeker (SimWorld wires it; null = no floor)
+var barrel: BarrelSlew = null                              ## GD-50: a ground unit's barrel frame for its shots (SimWorld wires it; null = heading)
 
 var _store: EntityStore
 var _proj: ProjectileStore
@@ -237,7 +238,12 @@ func _shoot(s: int, wi: int, k: int, which: int, target: int) -> bool:
 		return false                                     # no rounds, or the pool is at its cap: no draw, no spend
 	var speed: float = _t.p_speed[pi]
 	var p: Vector3 = _pos[s]
-	var dir: Vector3 = FireTables.aim(_fwd[s], _up[s], _spread[k], _dice)
+	var f: Vector3 = _fwd[s]
+	var u: Vector3 = _up[s]
+	if barrel != null:                                   # GD-50: a barrel tilts the frame; other mounts keep fwd / up
+		f = barrel.frame(s, p, f, u)
+		u = barrel.frame_up
+	var dir: Vector3 = FireTables.aim(f, u, _spread[k], _dice)
 	var v: Vector3 = _vel[s] + dir * speed
 	var at: Vector3 = p + dir * _rad[s]
 	var flags: int = 0

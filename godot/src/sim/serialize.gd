@@ -3,7 +3,7 @@ class_name SimSerialize
 ## `write` / `read`. File: magic u32, format u32, raw size u32, SHA-256 of the raw body (32 B), `ContentSet.content_hash` (32 B, A-72), then the raw body zstd-compressed (the packed arrays are
 ## mostly zeros; ~600 KB raw is ~185 KB at 1,200 entities and 2,000 projectiles). Raw body, in this order (names in
 ## `SECTIONS`): header (seed, RNG, map), rules, clock,
-## players, input slots, rate buckets, pending commands, control, entity store, projectile store, Collision's per-slot
+## players, input slots, rate buckets, pending commands, control, entity store (+ the GD-50 ground barrels), projectile store, Collision's per-slot
 ## state, Combat's fire state and shield domes, orders, pathing, vision, economy (`EconomyHub`: Build, Economy, Construction, Production),
 ## the queued hook events (A-71), the AI hook's opaque bytes and the Spatial index of the last step 7 (TA-65). Events are not included: the caller drains them each tick.
 ## Versioning: `FORMAT` counts layout changes; there is no migration, a world is only read by the format that wrote it.
@@ -11,7 +11,7 @@ class_name SimSerialize
 ## same build on the same machine (ADR-03/06): the bytes are a function of the state alone.
 
 const MAGIC: int = 0x57535750   ## "PWSW" little-endian
-const FORMAT: int = 17          ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section; 8: TA-58 content hash; 9: TA-57 pending hook events; 10: GD-17 launch bay + replenish targets (Production state); 11: TA-65 the step-7 Spatial index (no rebuild on load); 12: GD-10 the shield domes (after the fire state, in the combat section); 13: GD-15 Docking (pad queues, service records, landing log, pilot track) at the end of the economy section; 14: GD-27 `ScoreKeeper` (ledger, assist hit ring, dead-shooter ring, sortie flights, Ore spent high-water, match_win flag) after Docking in the economy section; 15: GD-12 `OreFields` (the field table and the Ore left) after the ScoreKeeper in the economy section; 16: GD-14 `IceNodes` (the Cold Trap table and the Ice left) after the Ore Fields; 17: GD-20 `MatchJudge` state in `MatchState` (the clock section)
+const FORMAT: int = 18          ## 4: Combat fire state (GD-36); 5: TA-21 vision pass clocks, zstd file; 6: raw-body SHA-256 in the header; 7: TA-19 economy section; 8: TA-58 content hash; 9: TA-57 pending hook events; 10: GD-17 launch bay + replenish targets (Production state); 11: TA-65 the step-7 Spatial index (no rebuild on load); 12: GD-10 the shield domes (after the fire state, in the combat section); 13: GD-15 Docking (pad queues, service records, landing log, pilot track) at the end of the economy section; 14: GD-27 `ScoreKeeper` (ledger, assist hit ring, dead-shooter ring, sortie flights, Ore spent high-water, match_win flag) after Docking in the economy section; 15: GD-12 `OreFields` (the field table and the Ore left) after the ScoreKeeper in the economy section; 16: GD-14 `IceNodes` (the Cold Trap table and the Ice left) after the Ore Fields; 17: GD-20 `MatchJudge` state in `MatchState` (the clock section); 18: GD-50 `BarrelSlew` (ground barrel elevations) after the entity store
 const HASH_BYTES: int = 32
 const HEADER_BYTES: int = 12 + 2 * HASH_BYTES   ## magic, format, raw size (u32 each), SHA-256 of the raw body, content hash
 const COMPRESSION: int = FileAccess.COMPRESSION_ZSTD
@@ -118,6 +118,7 @@ static func write_raw(w: SimWorld, marks: PackedInt32Array = PackedInt32Array())
 	w._control.write_state(buf)
 	_mark(buf, marks, 7)
 	w._store.write_state(buf)
+	w._barrel.write_state(buf)
 	_mark(buf, marks, 8)
 	w._proj.write_state(buf)
 	_mark(buf, marks, 9)
@@ -215,7 +216,7 @@ static func _read_body(w: SimWorld, buf: StreamPeerBuffer) -> bool:
 		return false
 	if not (w._validator.read_state(buf) and w._intake.read_state(buf) and w._control.read_state(buf)):
 		return false
-	if not (w._store.read_state(buf) and w._proj.read_state(buf)):
+	if not (w._store.read_state(buf) and w._barrel.read_state(buf) and w._proj.read_state(buf)):
 		return false
 	if not StateIO.get_props(buf, w.collision, _COLLISION_STATE) or not w._combat.read_state(buf):
 		return false

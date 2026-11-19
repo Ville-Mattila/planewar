@@ -249,6 +249,12 @@ func landing_grade_last(_id: int) -> int:
 	return -1
 
 
+## GD-50: barrel elevation of a ground unit's weapon in radians above the local horizontal (BarrelSlew); 0.0 for an entity
+## without a barrel or a dead id; NAN when the view has no data (NetSimView until a codec carries it).
+func barrel_elevation(_id: int) -> float:
+	return NAN
+
+
 func team_state(_team: int) -> TeamStateView:
 	return null
 
