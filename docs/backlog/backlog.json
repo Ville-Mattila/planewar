@@ -2668,8 +2668,11 @@
       " R0 C2-14",
       " 05 AI-23"
     ],
-    "status": "todo",
-    "acceptance_append": "; SC-43 fog fairness re-run with the real Commander through AI-22's AuditDriver (every AI command checked against the per-tick visible_to record)"
+    "status": "done",
+    "acceptance_append": "; SC-43 fog fairness re-run with the real Commander through AI-22's AuditDriver (every AI command checked against the per-tick visible_to record)",
+    "pr": 183,
+    "merged": "2026-11-19",
+    "notes": "PARTIAL: SC-40/41 run on the flat datum carrying cradle slots/fields/traps; re-run on cradle terrain after BUG-3 closes it. New sim_ai/commander/ module, AiDriver FORMAT 3. Fixed in-PR: doctrine-resolved step costs, Outpost presence at candidate with current positions. Fixture books trimmed to fit 300 s income (originals stall on funds): AI-24/GD-21 must check the 05 s7.3 books fit 300 s of income. needs content: bot_profiles.json opening_book constants (required? Architect). needs sim: map nodes not marked in the build grid (Ice Extractor gets NODE). Stand-ins: raid/non-move orders wait for AI-27; per-think cap stands in for AI-28. Nits: Outpost slack comment says 2 cells, code subtracts 4 (~37 m); SC-41 time-gated check looks only at t>= prefix."
   },
   {
     "id": "AI-24",
@@ -8564,6 +8567,6 @@
     ],
     "status": "todo",
     "merged": null,
-    "notes": "Found by the AI-23 Opus review: cradle slot 0's start kit sits ~335 m below datum; the 3-D reach check (Harvest._refinery_near) and the 300 m Outpost presence check (Build._check_vision_and_radius) can never pass. Likely affects every real map. High priority before M3 playtests."
+    "notes": "Found by the AI-23 Opus review: cradle slot 0's start kit sits ~335 m below datum; the 3-D reach check (Harvest._refinery_near) and the 300 m Outpost presence check (Build._check_vision_and_radius) can never pass. Likely affects every real map. High priority before M3 playtests. After the fix: re-run AI-23 SC-40/41 on cradle terrain (closes AI-23 partial)."
   }
 ]
