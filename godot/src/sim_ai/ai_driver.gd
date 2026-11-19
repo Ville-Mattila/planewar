@@ -1,18 +1,17 @@
 class_name AiDriver extends SimAiHook
 ## The AI's tick-order step 3 (05 s4.3, R0 B.5): schedules class-batched autopilot thinks and per-tick acts, plus the
-## staggered Commander bot thinks, and the overlays SAFETY / RECOVER_CEILING (AI-08, `Overlays`): a per-tick check of
-## the possessed entities sees the POSSESSED -> released edge, the overlay runs after the class's act (its input
-## wins) and the entity does not think until it ends; then it is woken. Think: entity thinks when `(tick + stagger) % P == 0`; `stagger` is a per-entity
-## round-robin number, so every phase holds an equal share. Event wake: `wake` forces a think on the next `on_tick`, at most
-## once per `WAKE_MIN_GAP` ticks per entity. Act: every tick over the whole class batch. No per-entity objects, no
-## allocation per tick (budget: 03 s4.2 "AI think + act", 6.0 ms; this class is the scheduling share of it).
-## Periods are constructor arguments whose defaults mirror `autopilots.json` (10, cut-ladder rung 1: 15) and
-## `bot_profiles.json` (90/30/30/30); the session reads the defs and passes them (A-43 pattern).
+## staggered Commander bot thinks, and the overlays SAFETY / RECOVER_CEILING (AI-08, `Overlays`): a per-tick check of the
+## possessed entities sees the POSSESSED -> released edge, the overlay runs after the class's act (its input wins) and the
+## entity does not think until it ends; then it is woken. Think: when `(tick + stagger) % P == 0` (`stagger` is a per-entity
+## round-robin number, so every phase holds an equal share); `wake` forces a think on the next `on_tick`, at most once per
+## `WAKE_MIN_GAP` ticks per entity. Act: every tick over the whole class batch. No per-entity objects, no allocation per
+## tick (03 s4.2 "AI think + act", 6.0 ms; this is the scheduling share). Periods are constructor arguments whose defaults
+## mirror `autopilots.json` (10, cut-ladder rung 1: 15) and `bot_profiles.json` (90/30/30/30), passed by the session (A-43).
 
 const MAX_CLASSES: int = 16
 const WAKE_MIN_GAP: int = 5
 const BOT_STAGGER: int = 4              ## 05 s7: bot k thinks when (tick + 4k) % P == 0
-const FORMAT: int = 2                   ## AI-22: + the TeamIntel section (FORMAT 1 bytes are refused)
+const FORMAT: int = 3                   ## AI-23: + the bot brain's section (FORMAT 1 and 2 bytes are refused)
 
 var state: AiState = AiState.new()
 
@@ -323,8 +322,7 @@ func reset_stats() -> void:
 	_stats_overlay_ticks = 0
 
 
-## S4 bytes: FORMAT, flags, reg counter, bots, rng state, the AiState blob, then the TeamIntel blob (both
-## length-prefixed; the intel blob is empty without intel).
+## S4 bytes: FORMAT, flags, reg counter, bots, rng state, then the length-prefixed AiState, TeamIntel and bot-brain blobs.
 func serialize() -> PackedByteArray:
 	var b: StreamPeerBuffer = StreamPeerBuffer.new()
 	b.put_u8(FORMAT)
@@ -341,6 +339,9 @@ func serialize() -> PackedByteArray:
 	var ib: PackedByteArray = _intel.serialize() if _intel != null else PackedByteArray()
 	b.put_u32(ib.size())
 	var _e3: Error = b.put_data(ib)
+	var bb: PackedByteArray = _bot_brain.serialize() if _bot_brain != null else PackedByteArray()
+	b.put_u32(bb.size())
+	var _e4: Error = b.put_data(bb)
 	return b.data_array
 
 
@@ -351,6 +352,7 @@ func deserialize(bytes: PackedByteArray) -> void:
 		b.due.clear()
 	if _intel != null:
 		var _none: bool = _intel.deserialize(PackedByteArray())
+	var _no_bot: bool = _bot_brain == null or _bot_brain.deserialize(PackedByteArray())
 	_bot_slot.clear()
 	_bot_tier.clear()
 	var _cleared: bool = state.deserialize(PackedByteArray())
@@ -380,8 +382,10 @@ func deserialize(bytes: PackedByteArray) -> void:
 	pos = b.get_position()
 	if not state.deserialize(bytes.slice(pos, pos + len_st)):
 		return
-	if _intel != null and not _intel.deserialize(_tail(bytes, pos + len_st)):
-		var _reset: bool = state.deserialize(PackedByteArray())   # a bad intel section refuses the whole blob
+	var intel_bytes: PackedByteArray = _tail(bytes, pos + len_st)
+	var bot_bytes: PackedByteArray = _tail(bytes, pos + len_st + 4 + intel_bytes.size())
+	if (_intel != null and not _intel.deserialize(intel_bytes)) or (_bot_brain != null and not _bot_brain.deserialize(bot_bytes)):
+		var _reset: bool = state.deserialize(PackedByteArray())   # a bad intel or bot-brain section refuses the whole blob
 		return
 	for s: int in state.capacity:
 		if state.cls[s] != AiState.NO_CLASS:

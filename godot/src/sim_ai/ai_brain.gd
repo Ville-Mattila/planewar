@@ -45,3 +45,14 @@ func hears_impacts() -> bool:
 ## before the tick's thinks; true = wake `id` (the driver's rate-limited wake). Per-entity effects go to AiState only.
 func on_impact(_id: int, _ev: SimEvent, _st: AiState) -> bool:
 	return false
+
+
+## AI-23: the S4 bytes of a brain that keeps state of its own (the Commander's book runs); `AiDriver` writes the bot brain's
+## bytes after the intel section. The per-class brains keep their state in `AiState` and leave these as they are.
+func serialize() -> PackedByteArray:
+	return PackedByteArray()
+
+
+## Restores `serialize` bytes; false refuses them (the driver then refuses the whole blob).
+func deserialize(_bytes: PackedByteArray) -> bool:
+	return true
