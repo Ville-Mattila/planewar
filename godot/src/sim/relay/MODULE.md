@@ -65,7 +65,9 @@ needs `pads` >= 1 and `pad_radius_m` > 0 (`validate_content`). A target is any s
 `MapRelays.spawn` reads `<map_dir>/features.json`: first `nodes[]` entries with `kind` "relay_station" (the 02 s9.1 `ring_features`;
 field `dir`), then `neutral_structures[]` entries with `def` "relay_station" (`dir`, optional `facing_dir`), each block in file order. One
 finished structure each (owner and team 255, F_BUILDING clear, on `Terrain.surface_point`, `up` = `Terrain.normal_at`, `fwd` = the facing or the
-tangent frame). Missing file, no entry or an unknown def spawns none. Skipped on a deserialize (the store comes from the bytes). Each spawn
+tangent frame). Missing file, no entry or an unknown def spawns none. Skipped on a deserialize (the store comes from the bytes). The two blocks never overlap by
+design (03:992: `neutral_structures[]` holds the non-template structures, the template Relay Stations come from `ring_features`), so there is no
+de-duplication here. needs maps: a bake-side check that no `neutral_structures` entry restates a ring relay (`moonbake validate`). Each spawn
 leaves a SPAWN event in the queue; a caller that scans events for its own spawn drains first. Today no shipped bake carries an entry (the
 maps lane's follow-up); the loader is covered by fixtures in `test/unit/sim/relay/fixtures/`.
 

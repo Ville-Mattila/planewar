@@ -88,3 +88,57 @@ func test_the_relay_read_is_a_load_time_cost_only() -> void:
 		var _n: int = MapRelays.spawn("res://content/maps/cradle", _w._defs, _w._terrain, _w.store(), _w._applier, 0)
 	var us: float = float(Time.get_ticks_usec() - t0) / 20.0
 	assert_bool(PerfGate.check("map_relays_load_cradle", us, 20000.0, "GD-51 load time only (not on a tick path)")).is_true()
+
+
+# --- through SimWorld.load_map (the seam points the relay read at a fixture features.json) ---------------------------
+
+func after_test() -> void:
+	SimWorld._features_dir_override = ""
+
+
+func _map_world() -> SimWorld:
+	SimWorld._features_dir_override = FIX + "one_relay"
+	var w: SimWorld = WorldTestKit.world(7, null, &"tiny_test")
+	_w = w
+	return w
+
+
+func _spawn_events(events: Array[SimEvent]) -> int:
+	var n: int = 0
+	for e: SimEvent in events:
+		if e.kind == SimEvent.Kind.SPAWN and e.b == WorldTestKit.def_id(&"relay_station"):
+			n += 1
+	return n
+
+
+func test_load_map_spawns_the_maps_relay_station() -> void:
+	var w: SimWorld = _map_world()
+	assert_int(_relays().size()).is_equal(1)
+	assert_int(_spawn_events(w.drain_events())).is_equal(1)
+
+
+func test_load_map_relay_survives_save_restore_byte_exact_without_a_double_spawn() -> void:
+	var w: SimWorld = _map_world()
+	var _e: Array[SimEvent] = w.drain_events()
+	var bytes: PackedByteArray = w.serialize()
+	var back: SimWorld = SimWorld.deserialize(bytes, WorldTestKit.content(), null)
+	assert_object(back).is_not_null()
+	assert_array(back.serialize()).is_equal(bytes)
+	_w = back
+	assert_int(_relays().size()).is_equal(1)
+	assert_int(_spawn_events(back.drain_events())).is_equal(0)
+
+
+func test_a_hauler_captures_the_relay_station_load_map_spawned() -> void:
+	var w: SimWorld = _map_world()
+	var _e: Array[SimEvent] = w.drain_events()
+	var relay: int = w.store().id_of(_relays()[0])
+	var sd: ShipDef = DockingTestKit.ship_def(&"hauler")
+	var up: Vector3 = w.store().up[EntityId.slot(relay)]
+	var h: int = DockingTestKit.ship_over(w, &"hauler", 0, 0, relay, sd.bounding_radius, 0.0, -up * 2.0)
+	var _d: Array[SimEvent] = w.drain_events()
+	w.step()
+	assert_int(w.store().link[EntityId.slot(h)]).is_equal(relay)
+	for _i: int in K.seconds(K.rule("capture_s")) + 5:
+		w.step()
+	assert_int(K.team_of(w, relay)).is_equal(0)
