@@ -3041,7 +3041,8 @@
       "NET-17",
       "TA-21",
       "UX-24",
-      "NET-15"
+      "NET-15",
+      "UX-48"
     ],
     "milestone": "M3",
     "acceptance": "Offline match starts, pauses, saves, loads and resumes on the same tick; AssistContext filled each tick",
@@ -3050,7 +3051,8 @@
       " R0 C2-23",
       " 06 UX-39"
     ],
-    "status": "todo"
+    "status": "todo",
+    "notes": "R0 B.31 A-154: match_controller enters InputRouter Mode.GROUND only with UX-48's ground mapper; never on the flight mappers."
   },
   {
     "id": "APP-01",
@@ -3147,7 +3149,7 @@
       "UX-01"
     ],
     "milestone": "M3",
-    "acceptance": "Three simultaneous touches register; layout matches 06 s4.3 within 1 du; lint <= 7 touch controls on the right half passes",
+    "acceptance": "Three simultaneous touches register; layout matches 06 s4.3 within 1 du; lint <= 7 touch controls on the right half passes; in GROUND mode for a unit with a barrel the thrust slider is replaced by two hold buttons BARREL UP / BARREL DOWN that drive ux_barrel_up / ux_barrel_down (R0 B.31 A-154); they count against the 06 s4.3 right-half budget; for a unit without a barrel (the Harvester) the two buttons are hidden and their place stays empty, the other controls do not move",
     "docs": [
       "06 s4.3",
       " R0 C3-06",
@@ -3660,7 +3662,7 @@
       "ART-06"
     ],
     "milestone": "M3",
-    "acceptance": "As ART-07 minus struts",
+    "acceptance": "As ART-07 minus struts; the Siege Crawler's barrel is a separate object named Barrel, modelled level (elevation 0), pivoting about its local X at the trunnion (07 s4.2 'Parts that move', R0 B.31 A-155)",
     "docs": [
       "07 s4.5",
       " 07 ART-08"
@@ -8412,13 +8414,14 @@
       "AI-18"
     ],
     "milestone": "M3",
-    "acceptance": "A ground unit's mounted weapon fires along heading pitched by a barrel elevation taken from PilotInput pitch (06 s3.2), slewed at a def rate within def limits; Ballistics.predict_impact agrees with the simulated impact within loft_tol_m for lofted Crawler shots at 1,000-1,150 m; constants in defs with schema and _doc; possessed and AUTO paths both; save/restore byte-equal; sim/MODULE.md (or nested) current; Architect confirms whether an R0 row is needed",
+    "acceptance": "A ground unit's mounted weapon fires along heading pitched by a barrel elevation taken from PilotInput pitch (06 s3.2), slewed at a def rate within def limits; Ballistics.predict_impact agrees with the simulated impact within loft_tol_m for lofted Crawler shots at 1,000-1,150 m; constants in defs with schema and _doc; possessed and AUTO paths both; save/restore byte-equal; sim/MODULE.md (or nested) current; Architect confirms whether an R0 row is needed; R0 B.31 A-152: the base SimView.barrel_elevation returns 0.0 (no NAN), 'barrel_elevation' is in NetUnknown.NEVER and the net_sim_view_factory exemption is dropped if the clause passes; A-151 / A-153 cited in the Crawler _doc, the schema $comments and the MODULE.md lines",
     "docs": [
       "06 s3.2",
       "05 s6.7"
     ],
     "status": "todo",
-    "merged": null
+    "merged": null,
+    "notes": "Ruling R0-amendments-25 (B.31 A-151..A-155): the acceptance clause 'Architect confirms whether an R0 row is needed' is answered (rows A-151, A-152, A-153). The GD-50 author may add the one string to godot/src/net/client/net_unknown.gd (NEVER) under A-152."
   },
   {
     "id": "AI-18b",
@@ -8431,7 +8434,7 @@
       "GD-50"
     ],
     "milestone": "M3",
-    "acceptance": "CrawlerBrain sets the barrel elevation from SiegeAim; test_attacks_from_1000_to_1150_m asserts impacts within loft_tol_m of the target; ORDER_FAILED(NO_AMMO / UNREACHABLE) raised when the sink gains fail_order (else documented); restore test covers a pending near-bomb relocation",
+    "acceptance": "CrawlerBrain sets the barrel elevation from SiegeAim; test_attacks_from_1000_to_1150_m asserts impacts within loft_tol_m of the target; ORDER_FAILED(NO_AMMO / UNREACHABLE) raised when the sink gains fail_order (else documented); restore test covers a pending near-bomb relocation; R0 B.31 A-153 / A-155: the brain reads SimView.barrel_elevation and writes pitch = clamp((e* - e) / (barrel rate x dt), -1, 1) through CommandSink.drive; SiegeAim.loft solves from the sim muzzle by calling the static BarrelSlew.muzzle_dir / muzzle_up (no second copy of the formula), so the 1.7-2.1 m muzzle bias is gone; the PR reports the highest elevation at which a siege shell still reaches the ground inside lifetime_s on flat ground and on cradle, and what happens above it, for GD-34 (A-151)",
     "docs": [
       "05 s6.7"
     ],
@@ -8568,5 +8571,103 @@
     "status": "todo",
     "merged": null,
     "notes": "Found by the AI-23 Opus review: cradle slot 0's start kit sits ~335 m below datum; the 3-D reach check (Harvest._refinery_near) and the 300 m Outpost presence check (Build._check_vision_and_radius) can never pass. Likely affects every real map. High priority before M3 playtests. After the fix: re-run AI-23 SC-40/41 on cradle terrain (closes AI-23 partial)."
+  },
+  {
+    "id": "NET-61",
+    "title": "net: replicate the ground barrel elevation for barrel defs at tier A and FULL; NetSimView.barrel_elevation reads it (R0 B.31 A-152)",
+    "lane": "net",
+    "tier": "Opus",
+    "size_days": 1.0,
+    "depends_on": [
+      "GD-50"
+    ],
+    "milestone": "M4",
+    "acceptance": "One u8 per replicated entity whose def has a barrel, round((e - barrel_min) / (barrel_max - barrel_min) * 255), in tier A and FULL records; the placement, mask bit and byte cost are stated in the PR as 'Contract impact: change (R0 B.31 A-152)' and 04 s3.3 / s3.4 / s3.7 are updated in the same PR; PROTOCOL_VERSION bumped; an entity without a barrel pays zero bytes (the bench hash and byte budget of a scene without a Siege Crawler are unchanged); NetSimView.barrel_elevation returns the decoded value within one quantum (the contract factory tolerance gains the accessor) and 0.0 with field_unknown true at tier B / C; 'barrel_elevation' leaves NetUnknown.NEVER; a slewed-Crawler case is added to the SimView contract clause and passes for LocalSimView and NetSimView; the PR says whether the possessing client predicts its own barrel or shows the replicated value; perf note (prepare_tick delta on the canonical bench); a design that needs a new message id or grows the tier B record goes back to the Architect",
+    "docs": [
+      "docs/reviews/R0-amendments-25.md",
+      "04 s3.3",
+      "04 s3.4",
+      "04 s3.7"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "CONTENT-5",
+    "title": "content+sim: typed GroundUnitDef.barrel_slew_dps / barrel_min_deg / barrel_max_deg; BarrelSlew reads them; cross-field rules (R0 B.31 A-151)",
+    "lane": "content+sim",
+    "tier": "Haiku",
+    "size_days": 0.2,
+    "depends_on": [
+      "GD-50"
+    ],
+    "milestone": "M3",
+    "acceptance": "GroundUnitDef gains var barrel_slew_dps: float = 0.0, barrel_min_deg: float = 0.0, barrel_max_deg: float = 0.0 (not req); def unit tests assert siege_crawler 10 / 0 / 45 and harvester 0 / 0 / 0; ContentSet.warnings no longer lists the three keys; BarrelSlew reads the typed fields and grep of src/sim/** finds no raw.get for them; validate_content rejects barrel_min_deg > barrel_max_deg and any barrel key on an entry whose weapon is null, one negative case each in test_validate_content.py; the barrel suites are unchanged and green (no behaviour change)",
+    "docs": [
+      "docs/reviews/R0-amendments-25.md",
+      "R0 B.1"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "UX-48",
+    "title": "input: ground mapper for the three input classes (drive, steer, BRAKE, FIRE1, barrel holds) so GROUND mode stops sampling the flight mappers (06 s3.2, R0 B.31 A-154)",
+    "lane": "input+ui",
+    "tier": "Sonnet",
+    "size_days": 2.0,
+    "depends_on": [
+      "GD-50"
+    ],
+    "milestone": "M3",
+    "acceptance": "Contract impact: change (R0 B.31 A-154), contract tests and input/MODULE.md first. In Mode.GROUND InputRouter samples a ground mapper for the active input class, not the flight mapper. Gamepad: LS Y forward -> thrust, LS Y back -> BRAKE, LS X -> yaw, RT -> FIRE1, RB / LB held -> pitch +1 / -1. KBM: W -> thrust, S -> BRAKE, A / D -> yaw, LMB -> FIRE1, E / Q held -> pitch +1 / -1; mouse motion never reaches PilotInput. Touch: stick Y / X -> drive / steer, ux_fire1 -> FIRE1, ux_barrel_up / ux_barrel_down -> pitch +1 / -1. Always: roll 0; no BOOST, FLIP, DOCK or FIRE2 bits; invert_pitch not applied; yaw sign as sim/ground (+ = left); right stick and mouse are emitted as the camera orbit intent the PR names (06 s3.2). Bindings exactly as R0 B.31 A-154 rules them, nothing invented: content/ui/remap.json gains the sets object (flight / ground per device) and the appended actions steer_left, steer_right (kbm), barrel_up, barrel_down (kbm, pad) with defaults A, D, E, Q and rb, lb; input/MODULE.md I12 carries the replacement text of R0-amendments-25 verbatim; BindingStore flags a code only between two actions of one device that share a set, with no signature change to bind / conflict_of / conflicted; the six test_binding_store.gd cases named in R0-amendments-25 are added before the code and the existing conflict cases stay green unchanged; FILE_VERSION stays 1; the ground mapper reads steer, barrel, drive and release through BindingStore (A / D steer comes from steer_left / steer_right, not from yaw_left / yaw_right); the remap screen lists the ground actions under their own heading with ui.remap.* strings (en; fi pending as UX-09) and shows no conflict cue on the defaults. Unit tests per class through the existing poller seams, including 'stick Y and mouse Y leave pitch at 0 in GROUND' and 'FLIGHT, TURRET and PEEK output is unchanged'; RELEASE and the menu / peek / ping intents still work in GROUND; input/MODULE.md current",
+    "docs": [
+      "docs/reviews/R0-amendments-25.md",
+      "06 s3.2",
+      "06 s2",
+      "godot/src/input/MODULE.md I12"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "UX-49",
+    "title": "ui/hud: barrel elevation readout for a possessed ground unit with a barrel (R0 B.31 A-155)",
+    "lane": "ui/hud",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-50",
+      "UX-16"
+    ],
+    "milestone": "M3",
+    "acceptance": "While the possessed entity is a ground unit whose def has a barrel, the Chase HUD shows the elevation in whole degrees from SimView.barrel_elevation with the def's min and max as end marks; nothing is shown for a unit without a barrel, and nothing while the view reports the field as not received (the existing HUD handling of unknown fields, 06 s6.1); HudMath unit test for the conversion and clamping; windowed screenshot in the PR; no new SimView function (a predicted-impact marker is a contract question, not this task)",
+    "docs": [
+      "docs/reviews/R0-amendments-25.md",
+      "06 s3.2",
+      "06 s6.1"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "ART-40",
+    "title": "presentation: the view of a ground unit with a barrel pitches its Barrel node by SimView.barrel_elevation (R0 B.31 A-155)",
+    "lane": "presentation",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-50",
+      "ART-08",
+      "TA-26"
+    ],
+    "milestone": "M3",
+    "acceptance": "For an entity whose def has a barrel, EntityViewPool rotates the mesh's Barrel node (07 s4.2 'Parts that move') about its local X by SimView.barrel_elevation each synced frame; 0.0 (level) when the view has not received the value; a mesh without a Barrel node is skipped without an error; no per-frame allocation; unit test with a fixture scene (0, 20 and 45 deg); perf note against the 800-view sync row; windowed screenshot of a raised Crawler barrel",
+    "docs": [
+      "docs/reviews/R0-amendments-25.md",
+      "07 s4.2"
+    ],
+    "status": "todo",
+    "merged": null
   }
 ]
