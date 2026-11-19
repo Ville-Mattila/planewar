@@ -1,5 +1,6 @@
 extends GdUnitTestSuite
 ## Unit tests for core/chunked_hasher.gd (TA-36; 03 s11.1: SHA-256 in 256 KB pieces, one budgeted job per frame).
+## timing: runaway guards only (R0 B.17 A-97)
 
 const FACE_BYTES: int = 2 * 1024 * 1024
 const FRAME_LIMIT_USEC: int = 33000
