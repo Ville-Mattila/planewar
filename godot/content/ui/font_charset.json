@@ -1,0 +1,6 @@
+{
+  "_doc": "Codepoints kept in the UI font subsets (docs/07 s7: Latin + Latin-Ext; ART-21). Read by tools/art/subset_font.py. Covers EN + FI (aao with diacritics) and the other Latin-1/Latin Extended-A locales. 'tabular' codepoints use the font's fixed-advance digit glyphs (timers). Web payload budget 150 KB.",
+  "ranges": [[32, 126], [160, 383], [8208, 8231], [8240, 8250], [8592, 8595]],
+  "extra": [710, 732, 8364, 8482, 8722, 8725, 215],
+  "tabular": [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58]
+}
