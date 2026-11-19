@@ -199,8 +199,10 @@ While the drawer is open, face buttons (gamepad) or the right cluster (touch) op
 | Entity | Touch | Gamepad | KBM | PilotInput use (05 interprets) |
 |---|---|---|---|---|
 | Tower | drag on right 60 % of screen = aim (0.15 deg/du); FIRE | RS (or LS) aim; RT fire | mouse aim (captured); LMB | `pitch`, `yaw` = aim rates; FIRE1 |
-| Harvester / Siege Crawler | left stick Y = drive, X = steer; FIRE (Crawler) | LS drive/steer; RT fire; RS camera orbit | W/S drive, A/D steer; mouse orbits camera; LMB | `thrust` forward, BRAKE = stop (reverse only at <= 3 m/s after 0.5 s held), `yaw` = steer, `pitch` = barrel |
+| Harvester / Siege Crawler | left stick Y = drive, X = steer; FIRE (Crawler); BARREL UP / BARREL DOWN hold buttons (Crawler) | LS drive/steer; RT fire; RS camera orbit; RB / LB hold = barrel up / down (Crawler) | W/S drive, A/D steer; mouse orbits camera; LMB; E / Q hold = barrel up / down (Crawler) | `thrust` forward, BRAKE = stop (reverse only at <= 3 m/s after 0.5 s held), `yaw` = steer, `pitch` = barrel elevation **rate** (+ raises, 0 holds; R0 B.31 A-153) |
 | Shipyard / Vehicle Bay | opens UNITS tab filtered to that factory; Tactical camera over it | same | same | none |
+
+**Barrel (R0 B.31 A-153, A-154).** For a ground unit whose def has a barrel (`ground_units.json` `barrel_slew_dps`, `barrel_min_deg`, `barrel_max_deg`; today the Siege Crawler: 10 deg/s, 0-45 deg, resting level) `pitch` is a slew **rate**, never an angle, exactly as a tower's `pitch` is (02 s4.4, R0 B.23 A-118): `pitch` in -1..1 is the fraction of `barrel_slew_dps`, + raises the muzzle, 0 holds the barrel where it is, and the sim clamps the elevation to the def limits. The barrel controls are digital holds that send `pitch` = +1, -1 or 0; `invert_pitch` does not apply to them. In GROUND mode stick Y and mouse Y never reach `pitch`: stick Y is drive and the mouse orbits the camera, as the row says. A unit without a barrel (the Harvester) sends `pitch` 0 and shows no barrel control. The elevation the HUD shows is `SimView.barrel_elevation(id)`. Ground mapper `[planned: UX-48]`: until it lands GROUND mode falls through to the flight mappers (stick Y and mouse Y feed `pitch`, drive is on the thrust control), and `app` does not enter GROUND mode before it (UX-39).
 
 ### 3.3 Tactical and Commander
 
@@ -1142,3 +1144,4 @@ Revised 2026-10-10 against R0 (binding), the owner decisions and 01 v1.1.
 | C3-23 | s3.6 Bomb release assist |
 | C3-24 | s13 pad-time telemetry |
 | R0 B.9 A-16, A-17, A-18 (CONTRACT-0 amendments 02, 2026-10-13) | s8 Pause (`pause_scope`); s9.1 and s9.3 Offline caps (`caps_web_mobile`); s11 locale keys `promise.<id>.audience` / `.human_target` live in `content/locale/*.json` (02 s15) |
+| R0 B.31 A-153, A-154 (CONTRACT-0 amendments 25, 2026-11-19) | s3.2 ground row and the Barrel paragraph: `pitch` = barrel elevation rate (+ raises, 0 holds); barrel controls per input class; ground mapper UX-48 |

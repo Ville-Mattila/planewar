@@ -530,7 +530,7 @@ flowchart TD
   A[1 Apply queued Commands, incl. POSSESS/RELEASE handoffs by ControlMachine] --> B[2 Store this tick's human PilotInputs into input slots]
   B --> C[3 AI hook: SimAiHook.on_tick - think slice + act for every AI-driven entity, writing input slots via CommandSink.drive, then Pathing.advance]
   C --> D[4 Assist substitution: Assist.auto_dock / Assist.link_bridge overwrite input slots where active]
-  D --> E[5 Kinematics: step_ship for ships, GroundMotion.step for ground, turret slew for towers, tether follow]
+  D --> E[5 Kinematics: step_ship for ships, GroundMotion.step for ground, turret slew for towers, barrel slew for ground barrels, tether follow]
   E --> F[6 Projectiles: straight / ballistic / guided / rendezvous]
   F --> G[7 Spatial: counting-sort hash rebuild]
   G --> H[8 Collision: projectile sweeps, 8b projectile vs terrain, ship-terrain classification, ship-ship, ship-structure]
@@ -1672,6 +1672,7 @@ func production_queue(factory: int) -> PackedInt32Array;  func production_progre
 func tech_available(team: int, def_id: int) -> bool;  func auto_replenish_target(player: int, def_id: int) -> int
 func player_score(slot: int) -> Vector2i                                     # pilot, commander (banked == total; no banking)
 func landing_grade_last(id: int) -> int                                      # LandingGrade.Grade
+func barrel_elevation(id: int) -> float                                      # radians above the local horizontal; 0.0 for no barrel / dead / not received (R0 B.31 A-152)
 func team_state(team: int) -> TeamStateView;  func player_state(slot: int) -> PlayerStateView                   # (03)
 func terrain_height(dir: Vector3) -> float                                   # (03) convenience over Terrain
 func match_arc() -> int;  func match_phase() -> int;  func match_clock_s() -> float
@@ -1907,3 +1908,4 @@ Every register row applied (R0 = `docs/reviews/R0-resolution-register.md`) and t
 | R0 B.24 A-119, A-120, A-124, A-125 (CONTRACT-0 amendments 18, 2026-10-27) | 3.2, 4.1, 6.4 | GD-15 (PR #128) CQ-1..CQ-5: landings detected in step 8 resolve at the end of step 9; `timer_a` rearm line and `timer_b` launch hold; the service-pad launch rule (thrust hold, A-87 clearing, ascending contacts never land); `crash_pad_damage` through `DamageSink`; the horizontal `pad_queue_radius_m` queue zone |
 | R0 B.25 A-135 (CONTRACT-0 amendments 19, 2026-10-27) | 6.4 | GD-15 (PR #128) CQ-8: a pad crash deals `crash_pad_damage` unshielded (02 s4.3 rule 6 covers projectiles only); A-120's "so shields apply" withdrawn |
 | R0 B.28 A-141 (CONTRACT-0 amendments 22, 2026-11-16) | 12.4 | PM-04: D1 row's `ui` list gains read-only `TeamStateView`, `PlayerStateView` (the return types of `SimView.team_state` / `player_state`); no `SimView` signature added |
+| R0 B.31 A-152, A-153 (CONTRACT-0 amendments 25, 2026-11-19) | 4.1, 15.4 | GD-50 (PR #182): step 5 gains `BarrelSlew.step` after `GroundMotion.step` (ground `pitch` = barrel elevation rate); `SimView.barrel_elevation(id) -> float` appended; the barrel state is a saved section after the entity store (`SimSerialize.FORMAT` 18), not an `EntityStore` field (3.2 unchanged) |

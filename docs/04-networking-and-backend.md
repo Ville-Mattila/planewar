@@ -196,7 +196,7 @@ Ids `0x94-0xFF` reserved (`0xF0-0xFF` for v1.1 WebRTC signalling).
 | 6 | reserved | u8 | must be 0 (checked by V-INP) |
 | 7 | tick_lo | u8 | low 8 bits of the tick this input is for; checked against `base_tick + i` |
 
-Per-entity meaning (R0 B.3, owned by 05 s1.1): ships use every field as above; **towers** read `pitch`/`yaw` as turret slew rates and FIRE1/FIRE2 (there is no absolute aim field); **ground units** read `thrust` as forward drive, `yaw` as steer and BRAKE as stop, reversing at <= 3 m/s after BRAKE is held 0.5 s.
+Per-entity meaning (R0 B.3, owned by 05 s1.1): ships use every field as above; **towers** read `pitch`/`yaw` as turret slew rates and FIRE1/FIRE2 (there is no absolute aim field); **ground units** read `thrust` as forward drive, `yaw` as steer and BRAKE as stop, reversing at <= 3 m/s after BRAKE is held 0.5 s, and, for a def with a barrel, `pitch` as the barrel elevation slew rate (+ raises, 0 holds; there is no absolute elevation field; R0 B.31 A-153).
 
 `PilotInput.from_wire(bytes, offset)` and `to_wire()` are pure and round-trip exactly on the quantised values; the client **applies the quantised values to its own prediction**, so prediction and server see bit-identical inputs (01 s9.4 contract note). An `INPUT` packet carries inputs for `base_tick`, `base_tick+1`, `base_tick+2`, the newest last; the server keeps a per-player ring buffer of 64 ticks and drops inputs older than `current_tick - 2` or newer than `current_tick + 8`. A client that cannot hold 30 Hz sends every other tick with `count` 3 (03 s12.3); no protocol change is needed.
 
@@ -451,6 +451,7 @@ TEAM_DETAIL
 | `tech_available` | derived from own roster structures, `requires[]` and the resolved doctrine | other teams |
 | `player_score` | `TEAM_DETAIL` players (banked == total, R0 C3-13) | never |
 | `landing_grade_last` | `LANDING` event | entities outside roster/team |
+| `barrel_elevation` | **not replicated** until NET-61 (R0 B.31 A-152): returns 0.0 with `field_unknown` true and never sets the entity's bit. Named path, not built: one `barrel u8` = `round((e - barrel_min) / (barrel_max - barrel_min) * 255)` (0.18 deg at the Crawler's 0-45 deg) for an entity whose def has a barrel, in tier A and FULL records, `PROTOCOL_VERSION` bump; NET-61 states the exact placement in its PR | always, until NET-61; then tier B / C entities |
 | `projectiles_near` | client-spawned `PROJECTILE_BATCH` projectiles + replicated projectile entities | approximate by design |
 | `path_grid_version` | not replicated (server AI only) | always (returns 0) |
 | `overlay` | **not replicated** in v1 (server AI execution state, 03 s3.2 row 35; the HUD reads `ALERT(LINK_WEAK)`, `RELEASED(reason)`, `CEILING_RELEASE` and `ai_tag`; R0 B.23 A-116) | always (returns 0 NONE) |
@@ -1542,3 +1543,4 @@ Applied 2026-10-10 from `docs/reviews/R0-resolution-register.md`, the owner deci
 | R0 B.24 A-121 (CONTRACT-0 amendments 18, 2026-10-27) | GD-15 (PR #128) CQ-3: `LANDING` flags bit2 = dead stick inside the existing byte (bits 3-7 reserved zero); payload, scope and `PROTOCOL_VERSION` unchanged | 3.6 |
 | R0 B.25 A-132, A-134 (CONTRACT-0 amendments 19, 2026-10-27) | NET-58 (PR #133): 4.1 states the 3-tick `ROSTER_REMOVE` / 6-tick index hold for replicated projectiles (A-20's 0-tick quarantine); 2.3 row 0x86 bounds `roster_count` at 2,848 (`KeyframeCodec.RECORDS_MAX`); `PROTOCOL_VERSION` stays 1 | 2.3, 4.1 |
 | R0 B.26 A-136 (CONTRACT-0 amendments 20, 2026-10-28) | PM-05 (NET-58 PR #133 review): 4.1 says the client learns a projectile's death from its `ROSTER_REMOVE` (<= 3 ticks + latency), dead-reckoned <= 3 ticks then `stale` until then (a missing record is not a death); 2.3 row 0x86 states the `RECORDS_MAX` derivation and that the encoder returns empty above it; text only | 2.3, 4.1 |
+| R0 B.31 A-152, A-153 (CONTRACT-0 amendments 25, 2026-11-19) | GD-50 (PR #182): 2.4 ground units read `pitch` as the barrel elevation slew rate (no layout change, `PROTOCOL_VERSION` stays 1); 3.7 gains the `barrel_elevation` row (not replicated until NET-61: 0.0 with `field_unknown` true; named path one u8 for barrel defs at tier A / FULL) | 2.4, 3.7 |
