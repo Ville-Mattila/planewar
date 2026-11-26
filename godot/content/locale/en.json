@@ -190,5 +190,11 @@
   "ui.remap.action.dock": "Dock",
   "ui.remap.action.release": "Release",
   "ui.remap.action.fire1": "Fire 1",
-  "ui.remap.action.fire2": "Fire 2"
+  "ui.remap.action.fire2": "Fire 2",
+  "ui.remap.action.steer_left": "Steer left",
+  "ui.remap.action.steer_right": "Steer right",
+  "ui.remap.action.barrel_up": "Barrel up",
+  "ui.remap.action.barrel_down": "Barrel down",
+  "ui.remap.set.flight": "FLIGHT",
+  "ui.remap.set.ground": "GROUND UNITS"
 }

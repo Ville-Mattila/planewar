@@ -655,6 +655,12 @@ msgstr "Trying again. Your slot is held for {s} s (attempt {n})."
 msgid "ui.reconnect.title"
 msgstr "Reconnecting..."
 
+msgid "ui.remap.action.barrel_down"
+msgstr "Barrel down"
+
+msgid "ui.remap.action.barrel_up"
+msgstr "Barrel up"
+
 msgid "ui.remap.action.boost"
 msgstr "Boost"
 
@@ -675,6 +681,12 @@ msgstr "Flip"
 
 msgid "ui.remap.action.release"
 msgstr "Release"
+
+msgid "ui.remap.action.steer_left"
+msgstr "Steer left"
+
+msgid "ui.remap.action.steer_right"
+msgstr "Steer right"
 
 msgid "ui.remap.action.throttle_up"
 msgstr "Throttle up"
@@ -711,6 +723,12 @@ msgstr "Press a button. Start cancels, View clears."
 
 msgid "ui.remap.reset"
 msgstr "Reset to defaults"
+
+msgid "ui.remap.set.flight"
+msgstr "FLIGHT"
+
+msgid "ui.remap.set.ground"
+msgstr "GROUND UNITS"
 
 msgid "ui.remap.title"
 msgstr "CONTROLS"

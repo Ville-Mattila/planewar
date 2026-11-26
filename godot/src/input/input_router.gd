@@ -2,7 +2,8 @@ class_name InputRouter extends Node
 ## Routes device events to the DeviceMonitor and emits one PilotInput per physics tick in flight modes
 ## (06 s2.1-2.3). Runs before ClientSession.tick() (priority -10). Raw PilotInput comes from `sampler` when set
 ## (tests, replays), else from the mapper of the active class: GAMEPAD -> gamepad_mapper, POINTER -> kbm_mapper,
-## TOUCH -> touch_mapper (UX-04). The assist stack (UX-07) runs after the mapper.
+## TOUCH -> touch_mapper (UX-04); in GROUND every class samples `ground_mapper` instead (UX-48). The assist stack
+## (UX-07) runs after the mapper.
 
 enum Mode { MENU, FLIGHT, TURRET, GROUND, RTS, PLACEMENT, TEXT, PEEK }
 
@@ -16,6 +17,8 @@ var sampler: Callable
 var gamepad_mapper: GamepadFlightMapper = GamepadFlightMapper.new()
 var kbm_mapper: KbmFlightMapper = KbmFlightMapper.new()
 var touch_mapper: TouchFlightMapper = TouchFlightMapper.new()
+## GROUND mode, all three classes (UX-48): drive, steer, BRAKE, FIRE1 and the barrel holds; orbit goes out as FREE_LOOK.
+var ground_mapper: GroundMapper = GroundMapper.new()
 ## Touch gestures (UX-04). The HUD sets `gestures.stick_zone` and `gestures.fire_zone`.
 var gestures: GestureRecognizer = GestureRecognizer.new()
 ## RTS-mode mouse, keyboard and gamepad camera intents (UX-45). The HUD sets `rts_mapper.viewport_size`.
@@ -41,7 +44,11 @@ func _input(event: InputEvent) -> void:
 ## Feeds an event to the monitor and emits class and glyph changes. Public for tests and replays.
 func route_event(event: InputEvent, now_ms: int) -> void:
 	if event is InputEventMouseMotion and is_flight_mode(_mode):
-		kbm_mapper.add_mouse_motion((event as InputEventMouseMotion).relative)
+		var rel: Vector2 = (event as InputEventMouseMotion).relative
+		if _mode == Mode.GROUND:
+			ground_mapper.add_mouse_motion(rel)
+		else:
+			kbm_mapper.add_mouse_motion(rel)
 	if _mode == Mode.RTS:
 		_emit_all(rts_mapper.feed(event))
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
@@ -76,6 +83,8 @@ func _handle_gestures(list: Array[Gesture]) -> void:
 
 func _flight_gesture(g: Gesture) -> void:
 	if g.kind == Gesture.Kind.FLICK_UP:
+		if _mode == Mode.GROUND:
+			return   # FLIP does not exist on the ground; a queued flip would leak into the next flight sample
 		touch_mapper.queue_flip()
 	elif g.kind == Gesture.Kind.FIRE_HOLD:
 		if g.phase == Gesture.Phase.BEGIN and wing_radial_allowed:
@@ -128,6 +137,11 @@ func emit_tick() -> bool:
 
 
 func _mapper_sample() -> PilotInput:
+	if _mode == Mode.GROUND:
+		var g: PilotInput = ground_mapper.sample_for(_monitor.active_class)
+		if ground_mapper.orbit != Vector2.ZERO:
+			intent.emit(Intents.FREE_LOOK, {Intents.K_VEC: ground_mapper.orbit})
+		return g
 	var dt: float = 1.0 / float(Engine.physics_ticks_per_second)
 	match _monitor.active_class:
 		InputClass.Kind.GAMEPAD:

@@ -3,7 +3,8 @@
 Contract for `godot/src/input/**` (06 s2-s3; UX-03). A change to "Public API" or "Invariants" is a contract change:
 update the contract tests first, in the same PR (ADR-11); `tools/gen_module_api.py --check` must pass; <= 300 lines.
 UX-03 lands the router, class detection, glyph selection and the intent catalogue; UX-05 the gamepad and KBM
-DIRECT flight mappers; UX-04 the gesture recognizer and touch flight mapper. Assist stack and remap are later tasks.
+DIRECT flight mappers; UX-04 the gesture recognizer and touch flight mapper; UX-48 the ground mapper and the per-mode-set
+remap conflicts. The assist stack is a later task.
 
 | Field | Value |
 |---|---|
@@ -12,7 +13,7 @@ DIRECT flight mappers; UX-04 the gesture recognizer and touch flight mapper. Ass
 | May depend on | `core`; the sim public type `PilotInput` only (`tools/deps.json`) |
 | Must never touch | `sim` beyond `PilotInput`, `net`, `ui`, `camera`, `presentation`, `content` loaders, `app` |
 | Autoloads used | none |
-| Status | UX-03 (router, class, monitor, intents) and UX-05 (gamepad and KBM DIRECT mappers) and UX-04 (gestures, touch mapper) implemented; assists planned |
+| Status | UX-03 (router, class, monitor, intents) and UX-05 (gamepad and KBM DIRECT mappers) and UX-04 (gestures, touch mapper) and UX-48 (ground mapper, I12 mode sets) implemented; assists planned |
 
 ## Public API
 
@@ -49,6 +50,7 @@ var sampler: Callable                                  # Callable() -> PilotInpu
 var gamepad_mapper: GamepadFlightMapper                # sampled while the active class is GAMEPAD
 var kbm_mapper: KbmFlightMapper                        # sampled while POINTER; fed MouseMotion.relative in flight modes
 var touch_mapper: TouchFlightMapper                    # sampled while TOUCH
+var ground_mapper: GroundMapper                        # sampled in GROUND by every class (UX-48); orbit leaves as FREE_LOOK {K_VEC}
 var gestures: GestureRecognizer                        # fed every ScreenTouch/ScreenDrag; HUD sets its zones
 var rts_mapper: RtsCameraMapper                        # RTS-mode mouse/keyboard/gamepad CAM_* intents (UX-45); HUD sets viewport_size
 var wing_radial_allowed: bool                          # app: true while no hostile within 800 m (06 s3.1)
@@ -98,7 +100,7 @@ class_name FlightMapper extends RefCounted     # base: one raw PilotInput per ti
 var invert_pitch: bool
 func sample(_dt: float) -> PilotInput
 
-class_name PadState extends RefCounted         # gamepad snapshot (LS, RT, LT, LB, RB, L3, A, B, X, Y, D-pad Down)
+class_name PadState extends RefCounted         # gamepad snapshot (LS, RS, RT, LT, LB, RB, L3, A, B, X, Y, D-pad Down, barrel_up/down)
 static func poll(device: int, store: BindingStore = null) -> PadState                 # store null = defaults (remap.json)
 static func with_buttons(base: PadState, held: PackedInt32Array, store: BindingStore = null) -> PadState   # pure: JoyButtons held -> button fields
 
@@ -109,7 +111,7 @@ var bindings: BindingStore                     # remapped buttons; null = defaul
 func sample(dt: float) -> PilotInput
 func map(st: PadState, dt: float) -> PilotInput   # BOOST (L3), FLIP (Y), RELEASE (D-pad Down) fire one tick per press
 
-class_name KbmState extends RefCounted         # keyboard and mouse snapshot (W S A D Q E Shift Space F R, LMB, RMB, mouse_delta)
+class_name KbmState extends RefCounted         # keyboard and mouse snapshot (W S A D Q E Shift Space F R, LMB, RMB, mouse_delta, steer_left/right, barrel_up/down)
 static func poll(mouse_delta_px: Vector2, store: BindingStore = null) -> KbmState
 static func from_held(held: PackedInt32Array, mouse_delta_px: Vector2, store: BindingStore = null) -> KbmState   # pure: physical keycodes held -> fields
 
@@ -122,6 +124,14 @@ func add_mouse_motion(rel: Vector2) -> void
 func current_thrust() -> float
 func sample(dt: float) -> PilotInput
 func map(st: KbmState, dt: float) -> PilotInput
+
+class_name GroundMapper extends RefCounted     # UX-48; GROUND for all classes: drive, steer (+ = left), BRAKE, FIRE1, pitch = barrel hold +-1; roll 0
+var pad_poller: Callable; var kbm_poller: Callable; var touch_poller: Callable   # test seams -> PadState / KbmState / TouchState
+var device: int; var bindings: BindingStore    # null bindings = defaults; needs app: assign the shared store
+var orbit: Vector2                             # last sample: mouse px (KBM) or RS (pad); zero on touch
+func add_mouse_motion(rel: Vector2) -> void
+func sample_for(kind: int) -> PilotInput       # kind = InputClass.Kind
+func map_pad(st: PadState) -> PilotInput; func map_kbm(st: KbmState) -> PilotInput; func map_touch(st: TouchState) -> PilotInput
 
 class_name RtsCameraMapper extends RefCounted  # pure; 06 s3.3 KBM + Gamepad columns -> {&"kind", &"payload"} dicts
 const EDGE_DU: float; const WHEEL_LOG_STEP: float; const MMB_ROT_RAD_PER_DU: float; const KEY_ROT_RAD_PER_S: float   # 8 + client-only feel
@@ -152,7 +162,7 @@ func reset() -> void
 class_name GestureIntents extends RefCounted   # 06 s3.3 touch column
 static func rts_intent(g: Gesture) -> Dictionary   # {} or {&"kind": StringName, &"payload": Dictionary}
 
-class_name TouchState extends RefCounted       # InputMap `ux_*` actions snapshot (stick, throttle, boost, brake, flip, fire1, fire2, dock, release)
+class_name TouchState extends RefCounted       # InputMap `ux_*` actions snapshot (stick, throttle, boost, brake, flip, fire1, fire2, dock, release, barrel_up, barrel_down)
 static func poll() -> TouchState
 
 class_name TouchFlightMapper extends FlightMapper   # stick -> roll/pitch (0.12, 1.6), handle -> thrust, buttons; FLIP one tick
@@ -172,8 +182,12 @@ func codes_of(device: StringName, action: StringName) -> PackedInt32Array
 func all_codes(device: StringName) -> PackedInt32Array
 func bind(device: StringName, action: StringName, slot: int, new_code: int) -> StringName   # applies; returns the OTHER action sharing the code, or &""
 func clear(device: StringName, action: StringName, slot: int = 0) -> void
-func conflict_of(device: StringName, action: StringName, slot: int = 0) -> StringName
+func conflict_of(device: StringName, action: StringName, slot: int = 0) -> StringName   # I12: only actions sharing a mode set
 func conflicted(device: StringName) -> Array[StringName]
+func set_ids() -> Array[StringName]            # UX-48 append: `flight`, `ground` (remap.json `sets`)
+func actions_in_set(device: StringName, set_id: StringName) -> Array[StringName]
+func sets_of(device: StringName, action: StringName) -> Array[StringName]
+func share_a_set(device: StringName, a: StringName, b: StringName) -> bool
 func reset(device: StringName) -> void
 func save() -> Error
 func load_file() -> Error                      # OK when absent; unknown actions and malformed values ignored
@@ -213,6 +227,7 @@ static func set_for_class(kind: int, joy_set: StringName) -> StringName         
   (`GestureRecognizer.FLING_MIN_SPEED` = 300 du/s > 1), which `CameraIntentDriver` relies on to ignore them.
 - I12: remaps persist to `user://settings/input_map.cfg` and reload over the defaults; every remappable action belongs to one or more mode sets (`content/ui/remap.json` `sets`: `flight`, read in FLIGHT / TURRET / PEEK, and `ground`, read in GROUND); a code on two actions of one device that share a mode set is flagged (`bind` returns the other action, `conflicted` lists both) and never refused; a code on two actions with no common set is not a conflict; mappers read keys and buttons only through `BindingStore`, so remapped inputs drive the same `PilotInput` bits (R0 B.31 A-154).
 - I13: the glyph set follows the device in the same `feed` call that changes the class (no frame of stale glyphs); `Glyphs.set_for_class` never yields `kbm` for GAMEPAD.
+- I14: in GROUND every class is sampled by `GroundMapper` only (R0 B.31 A-154): roll 0; no BOOST, FLIP, DOCK, FIRE2; `invert_pitch` not applied; `pitch` is +1 / -1 / 0 from the barrel actions and never from stick Y, mouse Y or RS; the mouse and RS leave as `FREE_LOOK` with `K_VEC`; FLICK_UP queues no FLIP.
 - I9: `input` never reads `SimView` and never imports `ui`; world knowledge arrives through a caller-filled context.
 
 ## Data owned
@@ -245,7 +260,10 @@ except the key-bound InputMap scan on key presses (only on press). Not on a sim 
 - `godot/test/unit/input/test_touch_flight_mapper.gd` (stick, handle, buttons, queued flip)
 - `godot/test/unit/input/test_rts_camera_mapper.gd` (binding table, dead zone, edge zone, pan change/zero, reset)
 - `godot/test/unit/app/test_camera_intent_driver.gd` (UX-45: real mouse/key/pad events through InputRouter move the OrbitController; RTS only)
-- `godot/test/unit/input/remap/test_binding_store.gd` (defaults, conflicts, persistence, feeding KbmState / PadState / mapper)
+- `godot/test/unit/input/remap/test_binding_store.gd` (defaults, conflicts, persistence, feeding KbmState / PadState / mapper; the six A-154 mode-set contract cases)
+- `godot/test/unit/input/remap/test_binding_sets.gd` (set queries, ground remap persistence)
+- `godot/test/unit/input/test_ground_mapper.gd` (per class: drive, steer sign, BRAKE, FIRE1, barrel holds, orbit, no pitch from stick or mouse, no illegal bits, RELEASE edge)
+- `godot/test/unit/input/test_input_router_ground.gd` (GROUND samples the ground mapper, FLIGHT / TURRET / PEEK unchanged, FREE_LOOK orbit, menu flow)
 - `godot/test/unit/input/remap/test_glyphs.gd` (joy-name table, labels per set, same-call glyph swap)
 - `godot/test/unit/input/test_input_router_touch.gd` (TOUCH sampling, flick -> FLIP, FIRE hold -> WING_RADIAL, RTS intents)
 

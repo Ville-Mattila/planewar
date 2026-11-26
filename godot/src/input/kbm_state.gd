@@ -14,6 +14,11 @@ var r: bool
 var lmb: bool
 var rmb: bool
 var mouse_delta: Vector2       ## pixels accumulated since the last tick
+## Ground-set actions (UX-48): `steer_*` and `barrel_*` bindings, read by GroundMapper only.
+var steer_left: bool
+var steer_right: bool
+var barrel_up: bool
+var barrel_down: bool
 
 
 static var _defaults: BindingStore = null
@@ -48,6 +53,10 @@ static func from_held(held: PackedInt32Array, mouse_delta_px: Vector2, store: Bi
 	k.space = _down(st, &"flip", held)
 	k.f = _down(st, &"dock", held)
 	k.r = _down(st, &"release", held)
+	k.steer_left = _down(st, &"steer_left", held)
+	k.steer_right = _down(st, &"steer_right", held)
+	k.barrel_up = _down(st, &"barrel_up", held)
+	k.barrel_down = _down(st, &"barrel_down", held)
 	k.mouse_delta = mouse_delta_px
 	return k
 

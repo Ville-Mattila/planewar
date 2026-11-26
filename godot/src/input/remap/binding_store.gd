@@ -1,7 +1,7 @@
 class_name BindingStore extends RefCounted
-## Remappable bindings of the flight actions (06 s2.5, A11Y-06, UX-09), persisted to `user://settings/input_map.cfg`.
-## Defaults come from `content/ui/remap.json`. Conflicts (one code on two actions of a device) are flagged, never
-## refused: the player may keep them. Codes are physical keycodes (kbm, `slots` per action) or JoyButtons (pad,
+## Remappable bindings of the flight and ground actions (06 s2.5, A11Y-06, UX-09, UX-48), persisted to
+## `user://settings/input_map.cfg`. Defaults come from `content/ui/remap.json`. Conflicts (one code on two actions of a
+## device that share a mode set, I12) are flagged, never refused: the player may keep them. Codes are physical keycodes (kbm, `slots` per action) or JoyButtons (pad,
 ## one per action); Glyphs.UNBOUND (-1) is an empty slot.
 
 const PARAMS_PATH: String = "res://content/ui/remap.json"
@@ -37,6 +37,41 @@ func actions(device: StringName) -> Array[StringName]:
 	for id: Variant in Glyphs.as_array(Glyphs.as_dict(_params.get("actions", {})).get(String(device), [])):
 		out.append(StringName(str(id)))
 	return out
+
+
+## Mode-set ids in remap.json order (`flight`, `ground`).
+func set_ids() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for id: Variant in Glyphs.as_dict(_params.get("sets", {})):
+		out.append(StringName(str(id)))
+	return out
+
+
+## Actions of `device` read in mode set `set_id`; empty for an unknown set.
+func actions_in_set(device: StringName, set_id: StringName) -> Array[StringName]:
+	var out: Array[StringName] = []
+	var per_device: Dictionary = Glyphs.as_dict(Glyphs.as_dict(_params.get("sets", {})).get(String(set_id), {}))
+	for id: Variant in Glyphs.as_array(per_device.get(String(device), [])):
+		out.append(StringName(str(id)))
+	return out
+
+
+## Mode sets that read `action` (an action in no set is a data error and returns empty).
+func sets_of(device: StringName, action: StringName) -> Array[StringName]:
+	var out: Array[StringName] = []
+	for set_id: StringName in set_ids():
+		if actions_in_set(device, set_id).has(action):
+			out.append(set_id)
+	return out
+
+
+## True when two actions are read in a common mode set (the I12 conflict domain).
+func share_a_set(device: StringName, a: StringName, b: StringName) -> bool:
+	var sa: Array[StringName] = sets_of(device, a)
+	for s: StringName in sets_of(device, b):
+		if sa.has(s):
+			return true
+	return false
 
 
 ## Code in `slot` of `action` (pad ignores `slot`); UNBOUND when empty or unknown.
@@ -89,18 +124,18 @@ func clear(device: StringName, action: StringName, slot: int = 0) -> void:
 	var _c: StringName = bind(device, action, slot, UNBOUND)
 
 
-## Another action holding the same code as (action, slot); &"" when none or empty.
+## Another action sharing a mode set and holding the same code as (action, slot); &"" when none or empty.
 func conflict_of(device: StringName, action: StringName, slot: int = 0) -> StringName:
 	var c: int = code(device, action, slot)
 	if c == UNBOUND:
 		return &""
 	for other: StringName in actions(device):
-		if other != action and codes_of(device, other).has(c):
+		if other != action and codes_of(device, other).has(c) and share_a_set(device, action, other):
 			return other
 	return &""
 
 
-## Actions of `device` that share a code with another action.
+## Actions of `device` that share a code with another action of a common mode set.
 func conflicted(device: StringName) -> Array[StringName]:
 	var out: Array[StringName] = []
 	for a: StringName in actions(device):

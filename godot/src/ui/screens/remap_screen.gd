@@ -130,7 +130,12 @@ func refresh() -> void:
 		c.queue_free()
 		_rows_box.remove_child(c)
 	_slot_buttons.clear()
+	var section: StringName = &""
 	for a: StringName in model.actions():
+		var sec: StringName = model.section_of(a)
+		if sec != section:
+			section = sec
+			_rows_box.add_child(ScreenKit.label(tr(StringName("ui.remap.set." + String(sec))), 0, UiTokens.UI_ACCENT))
 		_rows_box.add_child(_row(a))
 	for d: StringName in _tab_buttons:
 		_tab_buttons[d].set_pressed_no_signal(d == model.device)

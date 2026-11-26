@@ -12,6 +12,9 @@ var b: bool
 var x: bool
 var y: bool
 var dpad_down: bool
+var right_stick: Vector2       ## raw RS (ground camera orbit, UX-48)
+var barrel_up: bool            ## ground-set actions (UX-48), read by GroundMapper only
+var barrel_down: bool
 
 
 static var _defaults: BindingStore = null
@@ -21,6 +24,7 @@ static var _defaults: BindingStore = null
 static func poll(device: int, store: BindingStore = null) -> PadState:
 	var s: PadState = PadState.new()
 	s.left_stick = Vector2(Input.get_joy_axis(device, JOY_AXIS_LEFT_X), Input.get_joy_axis(device, JOY_AXIS_LEFT_Y))
+	s.right_stick = Vector2(Input.get_joy_axis(device, JOY_AXIS_RIGHT_X), Input.get_joy_axis(device, JOY_AXIS_RIGHT_Y))
 	s.right_trigger = Input.get_joy_axis(device, JOY_AXIS_TRIGGER_RIGHT)
 	s.left_trigger = Input.get_joy_axis(device, JOY_AXIS_TRIGGER_LEFT)
 	var st: BindingStore = _store_or_default(store)
@@ -42,6 +46,8 @@ static func with_buttons(base: PadState, held: PackedInt32Array, store: BindingS
 	base.l3 = _down(st, &"boost", held)
 	base.y = _down(st, &"flip", held)
 	base.dpad_down = _down(st, &"release", held)
+	base.barrel_up = _down(st, &"barrel_up", held)
+	base.barrel_down = _down(st, &"barrel_down", held)
 	return base
 
 
