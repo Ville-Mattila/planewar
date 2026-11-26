@@ -2682,7 +2682,8 @@
     "size_days": 1,
     "depends_on": [
       "AI-23",
-      "GD-05"
+      "GD-05",
+      "BUG-4"
     ],
     "milestone": "M3",
     "acceptance": "Schema-valid; no storage_silo; every build outpost preceded by an order move with when: presence; each book passes SC-41",
@@ -2691,7 +2692,8 @@
       " R0 C2-14",
       " 05 AI-24"
     ],
-    "status": "todo"
+    "status": "todo",
+    "notes": "PR #193 on hold for BUG-4: t>=215 gates hid unrun book tails from SC-41 (SC-41 exempts t>= steps); remove BK1 (out-of-lane, records a bug-lowered income). Refit after BUG-4."
   },
   {
     "id": "AI-25",
@@ -8724,12 +8726,32 @@
       "BUG-3"
     ],
     "milestone": "M3",
-    "acceptance": "Ruling in R0-amendments-NN on: (1) built structures keep a radial up while GD-51 Relay Stations tilt to the terrain normal - pick one rule (solar output on slopes); (2) on a sloped pad the ground rises above the deck, so an off-centre landing misses the landing band at ~1.9 m from centre on 15 deg, 5.7 m on 5 deg - flatten footprint, limit build slope, or widen the band; (3) A-10 datum occlusion now hides enemy ground units in a basin from structures there (cradle slot 0) - intended or fix; each with a named follow-up task",
+    "acceptance": "Ruling in R0-amendments-NN on: (1) built structures keep a radial up while GD-51 Relay Stations tilt to the terrain normal - pick one rule (solar output on slopes); (2) on a sloped pad the ground rises above the deck, so an off-centre landing misses the landing band at ~1.9 m from centre on 15 deg, 5.7 m on 5 deg - flatten footprint, limit build slope, or widen the band; (3) A-10 datum occlusion now hides enemy ground units in a basin from structures there (cradle slot 0) - intended or fix; each with a named follow-up task; (4) 02 s8.2 harvest distance d: state how d is measured (02 s9.2 cradle gives 600 m centre-to-centre, 02 s8.2 uses 450 m = 600 - field radius)",
     "docs": [
       "https://github.com/Ville-Mattila/planewar/pull/190#issuecomment-7198733100",
       "03 s7.6"
     ],
     "status": "todo",
     "merged": null
+  },
+  {
+    "id": "BUG-4",
+    "title": "sim+sim_ai: start-kit Harvester spawns empty 500 m from Field A instead of already mining (R0 B.6), and the AI-16 brain picks a far-side mining spot (AI-24 finding)",
+    "lane": "sim+sim_ai",
+    "tier": "Opus",
+    "size_days": 1.0,
+    "depends_on": [
+      "BUG-3"
+    ],
+    "milestone": "M3",
+    "acceptance": "EconomyHub.spawn_start_kit spawns the start Harvester already mining in Field A per R0 B.6 (as tools/econ_model.py:95 models); HarvestSites.spot() picks the near-side (approach-side) mining spot, not one keyed on unit id; a cycle test driven through the AI-16 brain (not a test driver) stays within 5 % of 02 s8.2 at 450 m and 600 m; the first start-kit delivery lands within 95 s on cradle; determinism and save/restore byte-equal; AI-23 SC-40/41 still pass",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/193#issuecomment-7198753244",
+      "R0 B.6",
+      "02 s8.2"
+    ],
+    "status": "todo",
+    "merged": null,
+    "notes": "Found by the AI-24 Opus review: ~49 of the 55 s first-delivery gap is the empty driving spawn (economy_hub.gd:151-154); steady cycle 148.7 s vs 136 s (+9 %) from the id-keyed spot. GD-12's cycle test used a test driver and missed it. AI-24 (PR #193) refits its book tails after this lands."
   }
 ]
