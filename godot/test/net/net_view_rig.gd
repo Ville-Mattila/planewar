@@ -15,6 +15,7 @@ var clock: LocalClock = LocalClock.new()
 var server: LocalTransport
 var codec: SnapshotCodec
 var roster: Roster = Roster.new()
+var defs: NetDefs                           ## the barrel tables (NET-61): SnapshotFrame.set_barrel for ground units
 var frame: SnapshotFrame = SnapshotFrame.new()
 var sessions: Array[ClientSession] = []
 var conns: PackedInt32Array = PackedInt32Array()
@@ -36,6 +37,7 @@ func _init(w: SimWorld, c: ContentSet, model: FaultModel = null) -> void:
 	if model != null:
 		server.set_fault_model(model)
 	codec = SnapshotCodec.new(c.rules.gravity, c.rules.tick_hz)
+	defs = NetDefs.new(c)
 	var _r: int = server.packet.connect(_on_server_packet)
 	tick = w.tick()
 
@@ -122,11 +124,15 @@ func _send_possessed(k: int, fresh: PackedInt32Array) -> void:
 		server.send(conns[k], Protocol.CH_EVENTS, buf.slice(0, at), true)
 
 
-## Every live store entity and every live projectile of a replicated kind into `frame`, roster kept in step.
+## Every live store entity (ground units from the store: SimView lists none; NET-61) and every live projectile of a
+## replicated kind into `frame`, roster kept in step; a ground unit's barrel byte through NetDefs.barrel_byte.
 func fill_frame() -> void:
 	var ids: PackedInt32Array = PackedInt32Array()
 	for list: PackedInt32Array in [local.structures(), local.ships(), local.wrecks()]:
 		ids.append_array(list)
+	var st: EntityStore = world.store()
+	for s: int in st.ground:
+		var _g: bool = ids.push_back(st.id_of(s))
 	var ps: ProjectileStore = world.projectiles()
 	var proj: PackedInt32Array = PackedInt32Array()
 	for i: int in ps.live:
@@ -146,6 +152,7 @@ func fill_frame() -> void:
 		frame.set_entity(r, s, local.pos(id), local.vel(id), local.basis(id).get_rotation_quaternion(), local.hp01(id),
 				Codec.make_flags(local.control_state(id), bits), local.team(id) & 0xFF, local.ai_tag(id), false, vis)
 		frame.gen[r] = EntityId.gen(id)
+		frame.set_barrel(r, defs.barrel_byte(local.def_id(id), local.barrel_elevation(id)))
 	for k: int in proj.size():
 		_fill_projectile(ps, proj[k], ids.size() + k)
 
@@ -240,7 +247,7 @@ static func _fixed(q: int) -> int:
 func snap_world() -> bool:
 	var st: EntityStore = world.store()
 	var ok: bool = true
-	for list: PackedInt32Array in [st.structures, st.ships, st.wrecks]:
+	for list: PackedInt32Array in [st.structures, st.ships, st.ground, st.wrecks]:
 		for s: int in list:
 			ok = _snap(st, s) and ok
 	var ps: ProjectileStore = world.projectiles()

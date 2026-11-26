@@ -26,6 +26,7 @@ const C_SERVICE: Vector3 = Vector3(0.4, 0.5, 0.8)   ## GD-15: docked `c`'s fuel0
 const C_GRADE: int = LandingGrade.Grade.CLEAN   ## GD-15: `c`'s last landing
 const MOVE_POINT: Vector3 = Vector3(100.0, 200.0, 300.0)
 const EXTRA_STEPS: int = 3
+const BARREL_DEG: float = 17.0          ## NET-61: the Crawler's slewed barrel (a lofted-shot elevation, R0 B.31 A-151)
 
 var world: SimWorld
 var a: int = 0              ## player 0, team 0 Dart: the subject of most scalar accessors; possessed by slot 0
@@ -38,6 +39,7 @@ var tower: int = 0          ## player 0 autocannon turret holding TOWER_AMMO rou
 var wreck: int = 0
 var rocket: int = 0         ## team 1 rocket aimed at `a`
 var dead: int = 0           ## stale generation of `a`
+var crawler: int = 0        ## player 0 Siege Crawler 2.5 km west of `a` (out of `b`'s sensors), barrel slewed to BARREL_DEG
 var content: ContentSet
 
 
@@ -53,6 +55,7 @@ static func build() -> SimViewScene:
 	s.a = WorldTestKit.spawn(w, &"dart", 0, 0, WorldTestKit.at(500.0), Vector3(0, 40, 0))
 	s.b = WorldTestKit.spawn(w, &"dart", 1, 1, WorldTestKit.at(500.0, 250.0), Vector3(0, 40, 0))
 	s.c = WorldTestKit.spawn(w, &"dart", 0, 0, WorldTestKit.at(20.0, 200.0))
+	s.crawler = WorldTestKit.spawn(w, &"siege_crawler", 0, 0, WorldTestKit.at(7.0, -2500.0))
 	var order: OrderSpec = OrderSpec.make(OrderSpec.Kind.MOVE, 0, MOVE_POINT)
 	var res: CommandResult = w.apply_command(Command.order(0, PackedInt32Array([s.a]), order))
 	assert(res.code == CommandResult.Code.ACCEPTED)
@@ -110,6 +113,9 @@ func _script_state() -> void:
 	pr.kind[pr.index_of(rocket)] = ProjectileStore.ROCKET
 	pr.target[pr.index_of(rocket)] = a
 	pr.owner[pr.index_of(rocket)] = ROCKET_OWNER
+	var barrel: BarrelSlew = (world.view() as LocalSimView).barrel      # as if slewed by pitch (BarrelSlew state, S4)
+	barrel.elevation[EntityId.slot(crawler)] = deg_to_rad(BARREL_DEG)
+	barrel.bound[EntityId.slot(crawler)] = crawler
 	world.spatial.rebuild()
 	world.vision.rebuild_lists()             # TA-63: the per-team lists carry the masks scripted above (V5)
 
