@@ -68,7 +68,7 @@ func load_map(map: MapDef, _seed: int, rules: MatchRules) -> Result:
 		var err: Error = _terrain.load_map(_MAPS_ROOT + String(_map_id))
 		if err != OK:
 			return Result.failure(err, "SimWorld: map %s failed to load" % _map_id)
-		err = _load_pathing(_MAPS_ROOT + String(_map_id))
+		err = MapPathing.prepare(_pathing, _defs.content.ground_units, _MAPS_ROOT + String(_map_id), _restoring)   # A-55
 		if err != OK:
 			return Result.failure(err, "SimWorld: path grid of %s failed to load" % _map_id)
 		var _fields: int = _econ.harvest.fields.load_map_dir(_MAPS_ROOT + String(_map_id))   # GD-12: the recipe's Ore Fields
@@ -338,22 +338,6 @@ func _wire(rules: MatchRules) -> void:
 	vision = Vision.new(_store, _defs, rules.tick_hz)
 	_view.vision = vision
 	_bridge = BridgeParams.table(c, _defs.rules, rules.tick_hz)
-
-
-# Map load (A-55): baked weights; region graphs for each distinct ground-unit slope mask (at most MASK_SLOTS, in
-# def order) unless deserialize brings them. The flat datum keeps weight 1 everywhere and builds graphs lazily.
-func _load_pathing(map_dir: String) -> Error:
-	var err: Error = _pathing.load_weights(map_dir)
-	if err != OK or _restoring:
-		return err
-	var masks: PackedInt32Array = PackedInt32Array()
-	for g: GroundUnitDef in _defs.content.ground_units:
-		var m: int = Pathing.mask_for(g.max_slope_deg)
-		if m > 0 and not masks.has(m) and masks.size() < PathSearch.MASK_SLOTS:
-			var _a: bool = masks.push_back(m)
-	for m: int in masks:
-		_pathing.prepare(m)
-	return OK
 
 
 # Step 4 (R0 B.5): assist substitution (`AssistStep`, sim/steer): LINK_BRIDGE (05 C10, C13; AI-08) through
