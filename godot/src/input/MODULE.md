@@ -211,7 +211,7 @@ static func set_for_class(kind: int, joy_set: StringName) -> StringName         
   CAM_* is emitted from keys, mouse or pad, and the flight mappers never read `rts_mapper`. CAM_PAN_VEL from here is
   held deflection |v| <= 1 and is sent again with a zero vector on release; fling vectors (touch) are always larger
   (`GestureRecognizer.FLING_MIN_SPEED` = 300 du/s > 1), which `CameraIntentDriver` relies on to ignore them.
-- I12: remaps persist to `user://settings/input_map.cfg` and reload over the defaults; a code on two actions of one device is flagged (`bind` returns the other action, `conflicted` lists both) and never refused; mappers read keys and buttons only through `BindingStore`, so remapped inputs drive the same `PilotInput` bits.
+- I12: remaps persist to `user://settings/input_map.cfg` and reload over the defaults; every remappable action belongs to one or more mode sets (`content/ui/remap.json` `sets`: `flight`, read in FLIGHT / TURRET / PEEK, and `ground`, read in GROUND); a code on two actions of one device that share a mode set is flagged (`bind` returns the other action, `conflicted` lists both) and never refused; a code on two actions with no common set is not a conflict; mappers read keys and buttons only through `BindingStore`, so remapped inputs drive the same `PilotInput` bits (R0 B.31 A-154).
 - I13: the glyph set follows the device in the same `feed` call that changes the class (no frame of stale glyphs); `Glyphs.set_for_class` never yields `kbm` for GAMEPAD.
 - I9: `input` never reads `SimView` and never imports `ui`; world knowledge arrives through a caller-filled context.
 
