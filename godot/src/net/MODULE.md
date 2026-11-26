@@ -143,7 +143,7 @@ func set_projectile(i: int, slot_id: int, projectile_kind: int, p: Vector3, v: V
 class_name SnapshotCodec extends RefCounted           # net/snapshot_codec.gd: shared cache (indexed by roster index) + per-client encode
 const HEADER_BYTES: int; const MAX_PACKET_BYTES: int; const MAX_PACKETS_PER_TICK: int; const SECTION_MAX: int; const TEAM_MAX: int; const CAPACITY: int
 const GAP_MAX: int; const GAP_ESCAPE: int; const FULL_BODY_BYTES: int; const SMALL_SHIFT: int; const SMALL_MAX: int; const POS_SEND_MIN: int; const LARGE_MAX: int
-const MASK_POS_SMALL: int; const MASK_POS_LARGE: int; const MASK_ORI: int; const MASK_VEL: int; const MASK_HP: int; const MASK_FLAGS: int; const MASK_BARREL: int; const MASK_FULL: int   # MASK_BARREL 0x40 (was CELL_CHANGED, NET-61)
+const MASK_POS_SMALL: int; const MASK_POS_LARGE: int; const MASK_ORI: int; const MASK_VEL: int; const MASK_HP: int; const MASK_FLAGS: int; const MASK_BARREL: int; const MASK_CELL_CHANGED: int; const MASK_FULL: int   # MASK_BARREL 0x40 (NET-61); MASK_CELL_CHANGED deprecated alias (Open items)
 enum Tier { A, B, C }
 enum Kind { NONE, FULL, DELTA, BLIP }
 var gravity: float;  var dt: float;  var prepare_count: int;  var cache_tick: int;  var max_packets: int;  var deferred: int;  var cache_bytes: bool   # false = pre-NET-49 FULL/C-BLIP path, same bytes; var append_frame: bool
@@ -233,8 +233,7 @@ COMMAND payload codecs (`CommandCodec`, NET-04): see `commands/MODULE.md`. KEYFR
 04 s2.3 is the catalogue; `Protocol.CATALOGUE` is that table as data (id, channel, Max B) and is pinned to the doc by `test_protocol.gd`. Multi-byte integers are little-endian (04 s3.5 worked example). Every packet's first byte is
 the message id; ids 0x0E-0x7F and 0x94-0xFF are reserved (0x70-0x7F / 0xF0-0xFF for v1.1 WebRTC signalling) and 0x00 is never valid.
 
-Field layouts (`Codec`, 04 s3.2-s3.3): vec3q = cell u16, e u16, n u16, u u16 with `e = dot(p - c, east)` etc. in the
-ADR-03 ENU frame of `c = Sphere.cell_center_dir(cell, GRID_INTEREST) * PLANET_RADIUS`, level k = -1280 + k * 3.906 cm
+Field layouts (`Codec`, 04 s3.2-s3.3): vec3q = cell u16, e u16, n u16, u u16 with `e = dot(p - c, east)` etc. in the ADR-03 ENU frame of `c = Sphere.cell_center_dir(cell, GRID_INTEREST) * PLANET_RADIUS`, level k = -1280 + k * 3.906 cm
 (e, n) and -768 + k * 6.25 cm (u), rounded to nearest. quat_s3 = u32 LE: bits 0-1 index of the largest |component| in
 x y z w order (ties: lowest index), bits 2-11 / 12-21 / 22-31 the other three ascending as 10-bit two's complement of
 `round(c * 511 * sqrt(2))`, signs flipped so the dropped component is positive (04 s3.5's `9A 2F 4C 71` has index 2).
@@ -271,6 +270,7 @@ POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x i16
   delta baseline only when the client acknowledged it, which it does only for a complete tick (every packet index
   received, `BaselineStore.complete_tick`; A-36, NET-48); every emitted frame is `usable`; `prepare_tick` runs once per tick.
 - N10: `SnapshotDecoder.decode` validates the whole packet before applying; anything but OK changes nothing.
+- N11: a `SnapshotFrame` row has `barrel != 0` exactly when its def has a barrel by R0 B.31 A-151 (`NetDefs.barrel_def`, read as `SnapshotDecoder.barrel_def`); every filler calls `set_barrel(i, NetDefs.barrel_byte(def_id, elevation))` after `set_entity` for every row, with a `NetDefs` built from the same `ContentSet` the clients load. A row that disagrees makes every packet that carries it MALFORMED (R0 B.32 A-156).
 
 ## Data owned
 
@@ -297,4 +297,4 @@ NET-03: `test/unit/net/test_pilot_wire.gd` (all byte values round trip, reserved
 
 ## Open items
 
-NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 + perf note and NET-03's questions: closed by R0 B.10 A-36..A-40, A-44..A-46 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 and the silence rule (keep BOOST / BRAKE, drop FLIP / DOCK / RELEASE / FIRE1/2; 10 ticks, NQ10 closed) are ratified as written above. A-36 landed in NET-48 (`PROTOCOL_VERSION` stays 1, OWNER), A-40 in NET-49 (`encode(refresh)` is the primitive NET-07 fills). Pending: sim lane `PilotInput`'s `to_bytes` comment (A-46; the wire form is `PilotWire`). R0 B.11 (`docs/reviews/R0-amendments-04.md`): the roster has 1,536 entries so wrecks are addressable (A-54, done in NET-50: `test_roster_wrecks.gd`); NET-10's worst-case 4.3 ms event routing and NET-49's 9.7 ms canonical encode are recorded in 03 s4.2 as dev-box numbers for S-SIM-1 / NET-08 (A-62); `NetSimView` implements `SimView.read_poses` in NET-17 (A-56). NET-17: `shield01` (GD-38) and `wreck_ore` (GD-41, R0 B.20 A-108) inherit -1.0 on `NetSimView` (04 s5.6 default; TEST-02 exempt) until a codec task replicates dome charge / wreck ore; CORE_SHIELD_UP travels in TEAM_STATE.flags; open items (R0 B.22 A-111..A-115) in `client/MODULE.md`.
+NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 + perf note and NET-03's questions: closed by R0 B.10 A-36..A-40, A-44..A-46 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 and the silence rule (keep BOOST / BRAKE, drop FLIP / DOCK / RELEASE / FIRE1/2; 10 ticks, NQ10 closed) are ratified as written above. A-36 landed in NET-48 (`PROTOCOL_VERSION` stays 1, OWNER), A-40 in NET-49 (`encode(refresh)` is the primitive NET-07 fills). Pending: sim lane `PilotInput`'s `to_bytes` comment (A-46; the wire form is `PilotWire`). R0 B.11 (`docs/reviews/R0-amendments-04.md`): the roster has 1,536 entries so wrecks are addressable (A-54, done in NET-50: `test_roster_wrecks.gd`); NET-10's worst-case 4.3 ms event routing and NET-49's 9.7 ms canonical encode are recorded in 03 s4.2 as dev-box numbers for S-SIM-1 / NET-08 (A-62); `NetSimView` implements `SimView.read_poses` in NET-17 (A-56). NET-17: `shield01` (GD-38) and `wreck_ore` (GD-41, R0 B.20 A-108) inherit -1.0 on `NetSimView` (04 s5.6 default; TEST-02 exempt) until a codec task replicates dome charge / wreck ore; CORE_SHIELD_UP travels in TEAM_STATE.flags; open items (R0 B.22 A-111..A-115) in `client/MODULE.md`. Deprecated: `SnapshotCodec.MASK_CELL_CHANGED` (0x40) since NET-61: no wire meaning, equals `MASK_BARREL`; do not use it; deleted at a major version by ADR (10 s4.1, R0 B.32 A-156).

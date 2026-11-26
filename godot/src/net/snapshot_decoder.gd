@@ -285,7 +285,8 @@ func _parse_full(b: PackedByteArray, at: int, own: bool, bar: bool, tier_a: bool
 ## MASK_BARREL (bit 6) only in an A record of a def with a barrel; bit 7 never (NET-61).
 func _parse_delta(b: PackedByteArray, at: int, tier_b: bool, src: BaselineFrame, own: bool) -> int:
 	var m: int = b[at]
-	if (m & 0x80) != 0 or m == 0 or (m & 3) == 3 or ((m & SnapshotCodec.MASK_FLAGS) != 0 and tier_b and not own) 			or ((m & SnapshotCodec.MASK_BARREL) != 0 and (tier_b or not _has_barrel(_gap_idx))):
+	if (m & 0x80) != 0 or m == 0 or (m & 3) == 3 or ((m & SnapshotCodec.MASK_FLAGS) != 0 and tier_b and not own) \
+			or ((m & SnapshotCodec.MASK_BARREL) != 0 and (tier_b or not _has_barrel(_gap_idx))):
 		return -1
 	if at + SnapshotCodec.delta_body_bytes(m, tier_b, own) > b.size():
 		return -1

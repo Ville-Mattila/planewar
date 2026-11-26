@@ -73,6 +73,8 @@ func test_protocol_version_is_bumped() -> void:
 	assert_int(Codec.BARREL_BYTES).is_equal(1)
 	assert_int(SnapshotCodec.MASK_BARREL).is_equal(0x40)
 	assert_int(SnapshotMasks.MASK_BARREL).is_equal(0x40)
+	assert_int(SnapshotCodec.MASK_CELL_CHANGED).is_equal(0x40)              # deprecated v1 name of bit 6 (R0 B.32 A-156)
+	assert_int(SnapshotCodec.MASK_CELL_CHANGED).is_equal(SnapshotCodec.MASK_BARREL)
 	assert_int(SnapshotCodec.delta_body_bytes(SnapshotCodec.MASK_BARREL, false, false)).is_equal(2)
 	assert_int(SnapshotCodec.delta_body_bytes(SnapshotCodec.MASK_BARREL | SnapshotCodec.MASK_FLAGS, false, true)).is_equal(4)
 

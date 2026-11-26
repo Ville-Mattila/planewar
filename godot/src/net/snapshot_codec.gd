@@ -17,6 +17,7 @@ const MASK_VEL: int = SnapshotMasks.MASK_VEL
 const MASK_HP: int = SnapshotMasks.MASK_HP
 const MASK_FLAGS: int = SnapshotMasks.MASK_FLAGS
 const MASK_BARREL: int = SnapshotMasks.MASK_BARREL   # A-DELTA of a barrel def only (bit 6, was CELL_CHANGED; NET-61)
+const MASK_CELL_CHANGED: int = 0x40         # deprecated (R0 B.32 A-156): the v1 name of bit 6, never sent; use MASK_BARREL
 const MASK_FULL: int = 0xFF
 const GAP_MAX: int = 254
 const GAP_ESCAPE: int = 0xFF
@@ -32,8 +33,7 @@ var gravity: float = 0.0
 var dt: float = 0.0
 var prepare_count: int = 0
 var cache_tick: int = -1
-## Packets per tick per client (1..4; A-36: a split tick is a baseline once complete and acked); records past it are deferred.
-var max_packets: int = MAX_PACKETS_PER_TICK
+var max_packets: int = MAX_PACKETS_PER_TICK   # per client per tick, 1..4 (A-36: a complete split tick is a baseline); excess deferred
 var deferred: int = 0                       # records deferred by the packet cap in the last encode()
 var cache_bytes: bool = true                # false: the pre-NET-49 FULL / C-BLIP path (same bytes, more cost)
 var append_frame: bool = false              # true: encode() continues the frame begun for `tick` (replay chunks, NET-25)
