@@ -1,0 +1,143 @@
+{
+  "_doc": "Opening books (05 s7.3, R0 C2-14, AI-24) on the R0 B.6 start kit (Core, Refinery, Shipyard with launch pad, Vehicle Bay, 1 Harvester mining, 800 Ore / 300 Ice): 3 doctrines x 2 variants, picked by weighted draw on the AI RNG. Grammar and location tokens: 05 s7.3 (opening_book.gd, BuildPlanner.resolve_site). No storage_silo (O-4); every build outpost follows an order move to the same site and carries when: presence (AI-23 refuses a book that breaks it). The books hand over to the reactive planner at book_end_s 300. Each *_standard is the 05 s7.3 book cut to what a Normal bot can pay by 5:00 in the SC-41 world: the 05 text costs more Ore than 300 s of income (see each book's _doc and the AI-24 PR); steps that do not fit are gated t>=215 (215 + stall_s 90 > 300: they run when income allows and are never skipped for a stall) instead of being cut.",
+  "build_orders": [
+    {
+      "id": "vanguard_standard",
+      "status": "core",
+      "tags": [],
+      "_doc": "vanguard_standard: 05 s7.3 text with 4 changes. (1) refinery before hauler: the hauler (200 Ore) held it past stall_s 90; (2) hauler, ice_extractor, pad, scout gated t>=215 (05 costs 2,560 Ore to the scout; the SC-41 bot has ~2,350 by 5:00); (3) raid t>=300 -> t>=285 (300 is the hand-over, the step could never run); (4) contested Outpost steps as in 05 (t>=420|ore>=900).",
+      "doctrine": "vanguard",
+      "weight": 2,
+      "steps": [
+        {"do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1"},
+        {"do": "produce", "def": "dart", "n": 1},
+        {"do": "produce", "def": "harvester", "n": 1},
+        {"do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy"},
+        {"do": "produce", "def": "dart", "n": 1},
+        {"do": "produce", "def": "harvester", "n": 1},
+        {"do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=150"},
+        {"do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence"},
+        {"do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2"},
+        {"do": "build", "def": "refinery", "near": "ore_field:home_2", "skip_if_have": "refinery>=2"},
+        {"do": "produce", "def": "hauler", "n": 1, "when": "t>=215"},
+        {"do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "t>=215&have:outpost>=1"},
+        {"do": "build", "def": "pad", "near": "core", "when": "t>=215"},
+        {"do": "produce", "def": "scout", "n": 1, "then_order": "scout_auto", "when": "t>=215"},
+        {"do": "set_replenish", "def": "dart", "n": 3},
+        {"do": "raid", "target": "harvester_line", "with": "dart:3", "when": "t>=285&have:dart>=3"},
+        {"do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field", "when": "t>=420|ore>=900"},
+        {"do": "build", "def": "outpost", "near": "contested_field", "when": "presence"}
+      ]
+    },
+    {
+      "id": "vanguard_rush",
+      "status": "core",
+      "tags": [],
+      "_doc": "vanguard_rush: AI-24 variant (05 s7.3 names *_rush): 2 Darts first, early home-trap Outpost (t>=60), then a Dart raid at 4:00; costs 1,250 Ore, completes with no stall.",
+      "doctrine": "vanguard",
+      "weight": 1,
+      "steps": [
+        {"do": "produce", "def": "dart", "n": 2},
+        {"do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1"},
+        {"do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=60"},
+        {"do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence"},
+        {"do": "produce", "def": "harvester", "n": 1},
+        {"do": "build", "def": "pad", "near": "core"},
+        {"do": "set_replenish", "def": "dart", "n": 4},
+        {"do": "raid", "target": "harvester_line", "with": "dart:4", "when": "t>=240&have:dart>=4"}
+      ]
+    },
+    {
+      "id": "bulwark_standard",
+      "status": "core",
+      "tags": [],
+      "_doc": "bulwark_standard: 05 s7.3 text with 5 changes. (1) home-trap Outpost added (order move + build outpost): the home Cold Trap is 1,700 m from the Core on cradle, the 2-Pylon chain (450 + 220 m, 250 m radius each) cannot reach it, so the Extractor of 05 waited on WAIT_SITE; (2) the first Outpost is the home one (05 had the contested Outpost at t>=330: placed + 45 s build cannot meet 01 s3.3 first Outpost by 6:00); (3) flak_battery t>=240, pad, hangar (with have:pad>=1, C2-14), lancer, sensor_mast gated t>=215 (05 costs 3,025 Ore incl. the Outpost vs ~2,350 by 5:00); (4) the contested Outpost stays at t>=330 (after the hand-over: the reactive expansion rule, 05 s7.5); (5) Extractor waits for the Outpost (have:outpost>=1).",
+      "doctrine": "bulwark",
+      "weight": 2,
+      "steps": [
+        {"do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1"},
+        {"do": "produce", "def": "harvester", "n": 1},
+        {"do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy"},
+        {"do": "produce", "def": "dart", "n": 1},
+        {"do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2"},
+        {"do": "build", "def": "relay_pylon", "near": "toward:cold_trap:home", "n": 2},
+        {"do": "order", "kind": "move", "unit": "dart|lancer", "to": "outpost_site:home_trap", "when": "t>=100"},
+        {"do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence"},
+        {"do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1"},
+        {"do": "produce", "def": "hauler", "n": 1},
+        {"do": "build", "def": "flak_battery", "near": "core", "when": "t>=240"},
+        {"do": "build", "def": "pad", "near": "core", "when": "t>=215"},
+        {"do": "build", "def": "hangar", "near": "core", "when": "t>=215&have:pad>=1"},
+        {"do": "produce", "def": "lancer", "n": 1, "when": "t>=215"},
+        {"do": "set_replenish", "def": "dart", "n": 2},
+        {"do": "build", "def": "sensor_mast", "near": "approach:nearest_enemy", "when": "t>=215"},
+        {"do": "order", "kind": "move", "unit": "dart|lancer", "to": "contested_field", "when": "t>=330"},
+        {"do": "build", "def": "outpost", "near": "contested_field", "when": "presence"}
+      ]
+    },
+    {
+      "id": "bulwark_greedy",
+      "status": "core",
+      "tags": [],
+      "_doc": "bulwark_greedy: AI-24 variant: 2 extra Harvesters and the Pylon chain before the first Dart, home-trap Outpost at t>=120, tower after; costs 1,650 Ore.",
+      "doctrine": "bulwark",
+      "weight": 1,
+      "steps": [
+        {"do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1"},
+        {"do": "produce", "def": "harvester", "n": 2},
+        {"do": "build", "def": "relay_pylon", "near": "toward:cold_trap:home", "n": 2},
+        {"do": "produce", "def": "dart", "n": 1},
+        {"do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=120"},
+        {"do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence"},
+        {"do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy"},
+        {"do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2"},
+        {"do": "set_replenish", "def": "harvester", "n": 4}
+      ]
+    },
+    {
+      "id": "foundry_standard",
+      "status": "core",
+      "tags": [],
+      "_doc": "foundry_standard: 05 s7.3 text with 3 changes. (1) replenish Harvesters before the reactor and the contested Outpost (free step, was after a step that cannot finish by 5:00); (2) reactor t>=600 -> t>=250 (t>=600 is after the 5:00 hand-over: dead in 05); (3) contested Outpost order t>=270 -> t>=270&ore>=900 (a 450 Ore Outpost placed after 4:30 does not finish by the hand-over on the 2 Harvester income of SC-41; the step stays pending-gated, reactive expansion takes it).",
+      "doctrine": "foundry",
+      "weight": 2,
+      "steps": [
+        {"do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1"},
+        {"do": "produce", "def": "harvester", "n": 1},
+        {"do": "produce", "def": "dart", "n": 1},
+        {"do": "build", "def": "refinery", "near": "ore_field:home_2", "skip_if_have": "refinery>=2"},
+        {"do": "produce", "def": "harvester", "n": 1},
+        {"do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2"},
+        {"do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=120"},
+        {"do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence"},
+        {"do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1"},
+        {"do": "produce", "def": "hauler", "n": 1},
+        {"do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy"},
+        {"do": "set_replenish", "def": "harvester", "n": 6},
+        {"do": "build", "def": "reactor", "near": "outpost", "when": "t>=250"},
+        {"do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field", "when": "t>=270&ore>=900"},
+        {"do": "build", "def": "outpost", "near": "contested_field", "when": "presence"}
+      ]
+    },
+    {
+      "id": "foundry_greedy",
+      "status": "core",
+      "tags": [],
+      "_doc": "foundry_greedy: AI-24 variant: 2 Harvesters first, home-trap Outpost at t>=100, second Refinery, Extractor, Hauler, one tower; costs 2,100 Ore.",
+      "doctrine": "foundry",
+      "weight": 1,
+      "steps": [
+        {"do": "produce", "def": "harvester", "n": 2},
+        {"do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=1"},
+        {"do": "produce", "def": "dart", "n": 1},
+        {"do": "order", "kind": "move", "unit": "dart|scout", "to": "outpost_site:home_trap", "when": "t>=100"},
+        {"do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence"},
+        {"do": "build", "def": "refinery", "near": "ore_field:home_2", "skip_if_have": "refinery>=2"},
+        {"do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1"},
+        {"do": "produce", "def": "hauler", "n": 1},
+        {"do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy"},
+        {"do": "set_replenish", "def": "harvester", "n": 6}
+      ]
+    }
+  ]
+}

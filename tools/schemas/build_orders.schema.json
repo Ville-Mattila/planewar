@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "build_orders.schema.json",
+  "title": "BuildOrderDef[] (godot/content/defs/build_orders.json)",
+  "$comment": "05 s7.3 opening books (R0 C2-14, AI-24). Grammar: `when` / `skip_if_have` are condition strings (t>=N, ore>=X, ice>=X, have:<def>>=N, power01<X, enemy_seen, affordable, presence; & and |), location tokens are resolved by BuildPlanner.resolve_site (05 s7.3). Cross-file rules the schema cannot express (no storage_silo, every build outpost preceded by an order move to the same site and carrying when: presence, defs and kinds exist) are enforced by tools/validate_content.py (check_books) and by OpeningBook.compile. `mode` / `reactive` are the campaign script keys (05 s7.10, AI-34); `doctrine` (absent for a script) and `weight` (default 1) are optional so AI-34 scripts need no new field.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "_doc": {
+      "$ref": "#/$defs/doc"
+    },
+    "build_orders": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/book"
+      }
+    }
+  },
+  "required": [
+    "_doc",
+    "build_orders"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "condition": {
+      "type": "string",
+      "pattern": "^[a-z0-9_:<>=.&| ]*$"
+    },
+    "token": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_:]*$"
+    },
+    "book": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "_doc": {
+          "$ref": "#/$defs/doc"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "doctrine": {
+          "$ref": "#/$defs/id"
+        },
+        "weight": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "mode": {
+          "enum": [
+            "replace",
+            "prepend"
+          ]
+        },
+        "reactive": {
+          "type": "boolean"
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        },
+        "presentation": {
+          "$ref": "#/$defs/presentation"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "tags",
+        "steps"
+      ]
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "do": {
+          "enum": [
+            "build",
+            "produce",
+            "set_replenish",
+            "order",
+            "raid"
+          ]
+        },
+        "def": {
+          "$ref": "#/$defs/id"
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25
+        },
+        "near": {
+          "$ref": "#/$defs/token"
+        },
+        "to": {
+          "$ref": "#/$defs/token"
+        },
+        "kind": {
+          "type": "string",
+          "pattern": "^[a-z_]+$"
+        },
+        "unit": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_|]*$"
+        },
+        "target": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_:]*$"
+        },
+        "with": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_:|]*$"
+        },
+        "then_order": {
+          "$ref": "#/$defs/id"
+        },
+        "when": {
+          "$ref": "#/$defs/condition"
+        },
+        "skip_if_have": {
+          "$ref": "#/$defs/condition"
+        }
+      },
+      "required": [
+        "do"
+      ]
+    },
+    "doc": {
+      "type": "string",
+      "$comment": "hash-excluded one-line rationale (ADR-09, 03 s9.4)"
+    },
+    "status": {
+      "enum": [
+        "core",
+        "candidate"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "presentation": {
+      "type": "object",
+      "$comment": "07-owned; stripped from the content hash (03 s9.2). Keys: R0 B.1 ship block + 03 s15.3 PresentationDef + 02 s7 icon.",
+      "additionalProperties": false,
+      "properties": {
+        "mesh": {
+          "type": "string"
+        },
+        "far_mesh_node": {
+          "type": "string"
+        },
+        "vfx": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sfx": {
+          "type": "object"
+        },
+        "smoke_hp01": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chase_distance_m": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "budget_tris": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200000
+        },
+        "pool": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "icon": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -233,6 +233,33 @@ def cadence_pairs(prom: dict, hz: float, with_rate: bool) -> tuple[tuple[str, An
     return pairs + (("max_commands_per_min", prom.get("command_rate_cap")),) if with_rate else pairs
 
 
+def check_books(rep: Report, defs: dict[str, Any]) -> None:
+    """05 s7.3 / R0 C2-14 / AI-24: opening books name real defs (no storage_silo, O-4) and a real doctrine, and every
+    `build outpost` step is preceded by an `order move` to the same site and carries `presence` in its `when`."""
+    known = {e.get("id") for stem in ENTITY_FILES for e in collection(defs.get(stem), stem)}
+    doctrines = {e.get("id") for e in collection(defs.get("doctrines"), "doctrines")}
+    for n, book in enumerate(collection(defs.get("build_orders"), "build_orders")):
+        where = f"godot/content/defs/build_orders.json:/build_orders/{n}"
+        doc = book.get("doctrine")
+        if doc is not None and doctrines and doc not in doctrines:
+            rep.add(f"{where}/doctrine", f"unknown doctrine '{doc}'")
+        steps = [s for s in book.get("steps", []) if isinstance(s, dict)]
+        for i, st in enumerate(steps):
+            ref = st.get("def")
+            if ref == "storage_silo":
+                rep.add(f"{where}/steps/{i}/def", "storage_silo does not exist (O-4)")
+            elif ref is not None and ref not in known:
+                rep.add(f"{where}/steps/{i}/def", f"unknown def '{ref}'")
+            if st.get("do") != "build" or ref != "outpost":
+                continue
+            atoms = re.split(r"[&|]", str(st.get("when", "")).replace(" ", ""))
+            if "presence" not in atoms:
+                rep.add(f"{where}/steps/{i}/when", "build outpost needs when: presence (05 s7.3)")
+            prev = steps[i - 1] if i > 0 else {}
+            if prev.get("do") != "order" or prev.get("kind") != "move" or prev.get("to") != st.get("near"):
+                rep.add(f"{where}/steps/{i}", "build outpost needs an order move to the same site just before it (05 s7.3)")
+
+
 def check_profiles(rep: Report, hz: float, defs: dict[str, Any]) -> None:
     """R0 C2-13 and B.8 A-6: tier profiles mirror their promise's cadence and rate; Adjutant profiles
     have no promise and run at the `normal` cadence (05 s8), with their own command rate."""
@@ -337,6 +364,7 @@ def run_defs(val: Validator, rep: Report, root: Path, stems: set[str]) -> None:
         defs[path.stem] = data
     check_unique_ids(rep, defs)
     check_cross(rep, defs)
+    check_books(rep, defs)
     check_dangling(rep, defs)
     for path in sorted((root / "godot/content/maps").glob("*/recipe.json")):
         rel = path.relative_to(root).as_posix()

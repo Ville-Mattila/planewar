@@ -9,7 +9,7 @@ const TOTAL_S: int = 360
 
 
 func test_sc41_every_book_completes_and_places_its_first_outpost() -> void:
-	for book: OpeningBook in Ai23Kit.books():
+	for book: OpeningBook in Ai23Kit.shipped_books():
 		_run_book(book)
 
 

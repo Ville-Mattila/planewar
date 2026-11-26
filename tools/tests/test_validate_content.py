@@ -22,9 +22,9 @@ REPO = TOOLS.parent
 FIX = Path(__file__).resolve().parent / "fixtures" / "content"
 CANON = FIX / "canonical"
 # 03 CONTRACT-0 brief / R0 C1-10: the 15 schemas; GD-05 (R0 B.1 scoring.json) adds `scoring` -> 16; AI-01 (R0 B.1 order_rules.json) adds `order_rules` -> 17;
-# TA-47 (R0 B.9 A-22) adds `quality_tiers` -> 18; FEAT-01 (08 SL-2/3/5) adds wing, callsigns, barks, commander_verbs -> 22; ART-14 adds biome_ramps (content/biome_ramps.json, not a def file) -> 23; TA-33 adds sim_scenario (test/sim/scenarios/*.json, not a def file) -> 24; UX-43 adds ai_tags (content/ui/ai_tags.json, not a def file) -> 25; GD-28 adds medals and progression -> 27.
+# TA-47 (R0 B.9 A-22) adds `quality_tiers` -> 18; FEAT-01 (08 SL-2/3/5) adds wing, callsigns, barks, commander_verbs -> 22; ART-14 adds biome_ramps (content/biome_ramps.json, not a def file) -> 23; TA-33 adds sim_scenario (test/sim/scenarios/*.json, not a def file) -> 24; UX-43 adds ai_tags (content/ui/ai_tags.json, not a def file) -> 25; GD-28 adds medals and progression -> 27; AI-24 adds build_orders (opening books, 05 s7.3) -> 28.
 CONTRACT0 = sorted("ships ground_units weapons projectiles structures towers doctrines economy match_rules modes "
-                   "bot_promises bot_profiles autopilots map_recipe rules scoring order_rules quality_tiers "
+                   "bot_promises bot_profiles autopilots build_orders map_recipe rules scoring order_rules quality_tiers "
                    "wing callsigns barks commander_verbs biome_ramps sim_scenario ai_tags medals progression".split())
 # Tools-only schemas: validated by their own tool, not def files; ART-22 sfx_recipe (tools/audio/recipes/*.json),
 # ART-05 asset_budgets (tools/art/asset_budgets.json, loaded and schema-checked by validate_glb.py).
@@ -68,7 +68,7 @@ class SchemaSet(unittest.TestCase):
     def test_exactly_the_contract0_set(self) -> None:
         got = sorted(p.name[: -len(".schema.json")] for p in (TOOLS / "schemas").glob("*.schema.json"))
         self.assertEqual([g for g in got if g not in TOOLS_ONLY], CONTRACT0)
-        self.assertEqual(len(got) - len(TOOLS_ONLY), 27)
+        self.assertEqual(len(got) - len(TOOLS_ONLY), 28)
 
     def test_meta_clean(self) -> None:
         store = SchemaStore(TOOLS / "schemas")
@@ -151,6 +151,71 @@ class Amendments01(unittest.TestCase):
                 self.assertEqual(prof["think_period_ticks"], normal["think_period_ticks"], prof["id"])
                 self.assertEqual(prof["reaction_delay_s"], normal["reaction_delay_s"], prof["id"])
                 self.assertEqual(prof["max_commands_per_min"], 20, prof["id"])  # 05 s8
+
+
+class OpeningBooks(unittest.TestCase):
+    """AI-24 (05 s7.3, R0 C2-14): the shipped books and the cross-file rules of `check_books`."""
+
+    DEFS = {"structures": {"structures": [{"id": "outpost"}, {"id": "solar_array"}]},
+            "ships": {"ships": [{"id": "dart"}]},
+            "doctrines": {"doctrines": [{"id": "vanguard"}]}}
+
+    @staticmethod
+    def books() -> list:
+        f = REPO / "godot" / "content" / "defs" / "build_orders.json"
+        return json.loads(f.read_text(encoding="utf-8"))["build_orders"]
+
+    def findings(self, steps: list, doctrine: str = "vanguard") -> list:
+        rep = validate_content.Report()
+        defs = dict(self.DEFS, build_orders={"build_orders": [{"id": "b", "doctrine": doctrine, "steps": steps}]})
+        validate_content.check_books(rep, defs)
+        return rep.errors
+
+    MOVE = {"do": "order", "kind": "move", "unit": "dart", "to": "outpost_site:home_trap"}
+    OUTPOST = {"do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence"}
+
+    def test_three_doctrines_two_variants_each(self) -> None:
+        books = self.books()
+        for doctrine in ("vanguard", "bulwark", "foundry"):
+            mine = [b for b in books if b["doctrine"] == doctrine]
+            self.assertEqual(len(mine), 2, doctrine)
+            self.assertTrue(any(b["id"] == f"{doctrine}_standard" for b in mine), doctrine)
+        self.assertEqual(len(books), 6)
+
+    def test_shipped_books_have_no_silo_and_every_outpost_follows_a_presence_move(self) -> None:
+        rep = validate_content.Report()
+        defs = {stem: json.loads((REPO / "godot" / "content" / "defs" / f"{stem}.json").read_text(encoding="utf-8"))
+                for stem in ("structures", "ships", "ground_units", "towers", "doctrines", "build_orders")}
+        validate_content.check_books(rep, defs)
+        self.assertEqual(rep.errors, [])
+        outposts = 0
+        for b in self.books():
+            for i, st in enumerate(b["steps"]):
+                self.assertNotEqual(st.get("def"), "storage_silo", b["id"])
+                if st["do"] == "build" and st["def"] == "outpost":
+                    outposts += 1
+                    self.assertIn("presence", st["when"], b["id"])
+                    self.assertEqual((b["steps"][i - 1]["do"], b["steps"][i - 1]["kind"], b["steps"][i - 1]["to"]), ("order", "move", st["near"]), b["id"])
+        self.assertGreaterEqual(outposts, 6)
+
+    def test_a_clean_book_passes(self) -> None:
+        self.assertEqual(self.findings([self.MOVE, self.OUTPOST]), [])
+
+    def test_storage_silo_is_refused(self) -> None:
+        errs = self.findings([{"do": "build", "def": "storage_silo", "near": "core"}])
+        self.assertEqual(len(errs), 1)
+        self.assertIn("storage_silo", errs[0])
+
+    def test_outpost_without_presence_or_move_is_refused(self) -> None:
+        self.assertIn("presence", self.findings([self.MOVE, dict(self.OUTPOST, when="t>=60")])[0])
+        self.assertIn("order move", self.findings([self.OUTPOST])[0])
+        other = dict(self.MOVE, to="contested_field")
+        self.assertIn("same site", self.findings([other, self.OUTPOST])[0])
+        self.assertEqual(self.findings([self.MOVE, dict(self.OUTPOST, when="t>=60&presence")]), [])
+
+    def test_unknown_def_and_doctrine_are_refused(self) -> None:
+        self.assertIn("unknown def", self.findings([{"do": "produce", "def": "ghost", "n": 1}])[0])
+        self.assertIn("unknown doctrine", self.findings([self.MOVE, self.OUTPOST], doctrine="ghost")[0])
 
 
 class Amendments02(unittest.TestCase):
@@ -243,7 +308,7 @@ class Repo(unittest.TestCase):
     def test_real_repo_passes(self) -> None:
         code, out = run(REPO)
         self.assertEqual(code, 0, out)
-        self.assertIn(f"{27 + len(TOOLS_ONLY)} schemas", out)
+        self.assertIn(f"{28 + len(TOOLS_ONLY)} schemas", out)
 
 
 class Canonical(Tree):
