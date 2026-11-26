@@ -38,11 +38,11 @@ func _init(store: EntityStore, inputs: InputSlots, defs: WorldDefs) -> void:
 	_hi.fill(0.0)
 	_has.fill(0)
 	for k: int in gs.size():
-		var r: Dictionary = gs[k].raw
-		var lo: float = deg_to_rad(Def.num(r.get("barrel_min_deg", 0.0)))
-		var hi: float = deg_to_rad(Def.num(r.get("barrel_max_deg", 0.0)))
+		var g: GroundUnitDef = gs[k]
+		var lo: float = deg_to_rad(g.barrel_min_deg)
+		var hi: float = deg_to_rad(g.barrel_max_deg)
 		var d: int = DefRanges.GROUND_BASE + k
-		_rate[d] = maxf(deg_to_rad(Def.num(r.get("barrel_slew_dps", 0.0))), 0.0)
+		_rate[d] = maxf(deg_to_rad(g.barrel_slew_dps), 0.0)
 		_lo[d] = minf(lo, hi)
 		_hi[d] = maxf(lo, hi)
 		_has[d] = 1 if _rate[d] > 0.0 or lo != 0.0 or hi != 0.0 else 0
