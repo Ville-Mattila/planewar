@@ -134,7 +134,7 @@ func test_two_start_kits_on_one_field_with_one_miner_slot_claim_it_once() -> voi
 	var eco: EconomyDef = WorldTestKit.content().economy
 	if second >= 0:
 		assert_int(w.store().link[second]).is_equal(0)
-		assert_float(_arc(w.store().pos[second], w.store().pos[ref1])).is_equal_approx(eco.start_adjacent_dist_m, 5.0)   # TA-19 placement
+		assert_float(_arc(w.store().pos[second], w.store().pos[ref1])).is_equal_approx(eco.start_adjacent_dist_m, 10.0)   # TA-19 placement (the Refinery snaps to its build cell)
 	assert_int(w.economy().harvest.fields.miners_of(f)).is_equal(1)       # the spawn counted its claim
 	var _e: Array[SimEvent] = EconomyTestKit.run(w, 2)
 	assert_int(w.economy().harvest.fields.miners_of(f)).is_equal(1)       # step 10's recount from the links: no double count

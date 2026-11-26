@@ -199,6 +199,7 @@ func _spawn_unit(slot: int, def: int, along: Vector3, ref_dir: Vector3, toward: 
 	if s < 0:
 		return false
 	_store.link[s] = Harvest.pack(Harvest.State.MINING, f)
+	fl.miners[f] += 1   # counted like H3's claim, so a second kit on this field before step 1 sees it (step 10 recounts from links)
 	return true
 
 
