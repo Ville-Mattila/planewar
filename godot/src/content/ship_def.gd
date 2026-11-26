@@ -38,12 +38,13 @@ var repair_time_s: float = 0.0
 var cargo_ice: int = 0
 var tow_slots: int = 0
 var possessable: bool = false
+var captures: bool = false  ## true = lands on open pads to capture them (the Hauler only; R0 B.30 A-146); absent = false
 var autopilot: StringName = &""
 
 const SPEC: Dictionary = {
 	"f": "build_time_s sensor_radius bounding_radius v_cruise v_cruise_loaded v_boost boost_duration_s boost_cooldown_s v_dive_max a_thrust pitch_rate_dps yaw_rate_dps roll_rate_dps rate_accel_dps2 flip_cooldown_s flip_duration_s k_side k_up k_up_flight fuel_s refuel_time_s rearm_time_s repair_time_s",
 	"i": "hp cost_ore cost_ice refuel_ice cargo_ice score_value tow_slots",
-	"b": "possessable",
+	"b": "possessable captures",
 	"n": "produced_at autopilot",
 	"a": "requires",
 	"extra": "primary secondary",
