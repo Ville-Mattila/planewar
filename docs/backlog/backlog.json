@@ -2693,7 +2693,7 @@
       " 05 AI-24"
     ],
     "status": "todo",
-    "notes": "PR #193 on hold for BUG-4: t>=215 gates hid unrun book tails from SC-41 (SC-41 exempts t>= steps); remove BK1 (out-of-lane, records a bug-lowered income). Refit after BUG-4."
+    "notes": "PR #193 on hold for BUG-4: t>=215 gates hid unrun book tails from SC-41 (SC-41 exempts t>= steps); remove BK1 (out-of-lane, records a bug-lowered income). Refit after BUG-4. BUG-4 merged 2026-11-26: refit book tails to the sim income now (first delivery 68 s on cradle)."
   },
   {
     "id": "AI-25",
@@ -8750,9 +8750,10 @@
       "R0 B.6",
       "02 s8.2"
     ],
-    "status": "todo",
-    "merged": null,
-    "notes": "Found by the AI-24 Opus review: ~49 of the 55 s first-delivery gap is the empty driving spawn (economy_hub.gd:151-154); steady cycle 148.7 s vs 136 s (+9 %) from the id-keyed spot. GD-12's cycle test used a test driver and missed it. AI-24 (PR #193) refits its book tails after this lands."
+    "status": "done",
+    "merged": "2026-11-26",
+    "notes": "Found by the AI-24 Opus review: ~49 of the 55 s first-delivery gap is the empty driving spawn (economy_hub.gd:151-154); steady cycle 148.7 s vs 136 s (+9 %) from the id-keyed spot. GD-12's cycle test used a test driver and missed it. AI-24 (PR #193) refits its book tails after this lands. Start Harvester spawns mining (W10), counts its claim; brain uses new HarvestSites.approach_spot (spot/GOLDEN_RAD kept, deprecated) and turns in place to face its next stop. Cycle through the brain: 450 m 110.3 s (+1.7 %), 600 m 137.7 s (+1.2 %); cradle first delivery 68.2 s (was 144.2). Follow-ups: Harvesters from one Refinery share one spot (visual stacking); first delivery now earlier than econ_model 86 s - AI-24 refits to the sim.",
+    "pr": 195
   },
   {
     "id": "BUG-5",
