@@ -17,7 +17,7 @@ func test_verifies_a_real_map_one_step_at_a_time() -> void:
 	assert_bool(PerfGate.check("loading_job_tiny_test", us, 2000000.0, "R0 B.17 A-97")).is_true()
 	assert_int(job.error()).is_equal(OK)
 	assert_float(job.progress()).is_equal(1.0)
-	assert_int(steps).is_greater(0)
+	assert_int(steps + 1).is_greater_equal(job.expected.size())   # at least one step per file
 
 
 func test_missing_map_fails_without_crash() -> void:
@@ -29,7 +29,8 @@ func test_missing_map_fails_without_crash() -> void:
 func test_corrupt_hash_is_reported() -> void:
 	var job: LoadingJob = LoadingJob.new()
 	assert_int(job.begin(MAP)).is_equal(OK)
-	job.corrupt_expected_for_test()
+	for k: Variant in job.expected.keys():
+		job.expected[k] = "00"
 	while not job.step(0):
 		pass
 	assert_int(job.error()).is_equal(ERR_FILE_CORRUPT)
