@@ -57,6 +57,13 @@ func _init(content: ContentSet) -> void:
 	_defs = WorldDefs.new(content)
 
 
+# S18 (BUG-5): the subsystems point back at each other and a RefCounted cycle is never freed, so the world cuts them.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE and _econ != null:
+		_validator.judge = null
+		_econ.unlink()
+
+
 ## Builds every system for one match: `map` null or with an empty id keeps the flat datum (tests); otherwise
 ## `res://content/maps/<id>` is loaded and SHA-verified (S9). Failure leaves the world unusable.
 func load_map(map: MapDef, _seed: int, rules: MatchRules) -> Result:

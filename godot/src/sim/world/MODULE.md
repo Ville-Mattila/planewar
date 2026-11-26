@@ -116,6 +116,7 @@ var build: Build; var economy: Economy; var construction: Construction; var prod
 var docking: Docking                                                         # (GD-15) landing, pad queues, service: step 10 after production; SimWorld calls track (step 4) and land (end of step 9) (sim/docking/MODULE.md)
 static func handles(kind: Command.Kind) -> bool;  func apply(cmd: Command) -> void;  func begin_tick(t: int) -> void;  func step(t: int, dt: float) -> void;  func on_death(s: int) -> void
 func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3, tick: int) -> bool;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
+func unlink() -> void                                                         # (BUG-5, S18) cuts validator -> Build / Production and AutoReplenish -> Production; SimWorld NOTIFICATION_PREDELETE
 class_name StateIO                                                           # S4 bytes: named properties via put_var / get_var, type-checked
 static func put_props(buf: StreamPeerBuffer, o: Object, names: PackedStringArray) -> void;  static func get_props(buf: StreamPeerBuffer, o: Object, names: PackedStringArray) -> bool
 static func size_of(v: Variant) -> int;  static func sizes_ok(o: Object, names: PackedStringArray, n: int) -> bool;  static func ints_in(v: PackedInt32Array, count: int, lo: int, hi: int) -> bool   # (TA-21) range checks of restored state
