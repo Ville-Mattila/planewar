@@ -8534,8 +8534,10 @@
       "06 platforms",
       "godot/src/core/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-26",
+    "pr": 185,
+    "notes": "PARTIAL: LoadingJob (ChunkedHasher map-hash check) is built but not wired; needs the app boot / loading-screen task to drive it, and an Architect ruling on how Terrain.load_map skips or chunks its own synchronous hash (else maps hash twice). Cross-lane edits: input BindingStore and ui LocaleSelect now use Saves.try_*. Still direct user://: ContentDB user://mods and net/replay user://replays, waiting on Saves.try_list_dir (Architect)."
   },
   {
     "id": "TA-70",

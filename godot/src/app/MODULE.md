@@ -51,6 +51,15 @@ func go(id: StringName, args: Dictionary = {}) -> bool
 func back() -> bool
 func on_intent(kind: StringName, _payload: Dictionary) -> void
 
+class_name LoadingJob extends RefCounted   # TA-69: map output SHA-256 via ChunkedHasher, one budgeted step per frame
+const META_FILE: String
+var expected: Dictionary                     # file name -> hex digest from meta.json outputs
+func begin(map_dir: String) -> Error         # reads meta.json, queues outputs; error = job already done
+func step(budget_usec: int = ChunkedHasher.DEFAULT_BUDGET_USEC) -> bool   # true when all verified or failed
+func is_done() -> bool
+func error() -> Error                        # OK, ERR_FILE_CORRUPT on a digest mismatch
+func progress() -> float
+
 class_name CameraIntentDriver extends Node   # UX-44: router CAM_* intents -> OrbitController, RTS mode only
 const TILT_DEG_PER_DU: float; const COMMANDER_SNAP_ALTITUDE: float; const MIN_GRAB_DT: float   # 0.15, 5000, 0.001
 var controller: OrbitController; var router: InputRouter; var camera: Camera3D
@@ -75,6 +84,7 @@ func compass_tap() -> void;  func toggle_north_up() -> void;  func follow(dir: V
 ## Test entry points
 
 - `godot/test/unit/app/test_screen_flow.gd`
+- `godot/test/unit/app/test_loading_job.gd`, `godot/test/unit/input/remap/test_binding_store_saves.gd` (TA-69)
 - `godot/test/unit/app/test_camera_intent_driver.gd` (touch through InputRouter, mouse/gamepad intents, flight modes inert)
 
 ## Open items

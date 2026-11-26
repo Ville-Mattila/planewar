@@ -139,18 +139,30 @@ func save() -> Error:
 		cf.set_value(String(KBM), String(a), list)
 	for a: StringName in actions(PAD):
 		cf.set_value(String(PAD), String(a), code(PAD, a))
-	var dir: String = path.get_base_dir()
-	if not DirAccess.dir_exists_absolute(dir):
-		var _e: Error = DirAccess.make_dir_recursive_absolute(dir)
-	return cf.save(path)
+	var dir: Result = Saves.try_make_dir(path.get_base_dir())
+	if not dir.ok:
+		return _to_error(dir)
+	return _to_error(Saves.try_write_text(path, cf.encode_to_text()))
+
+
+## Saves failures (ERR_UNAVAILABLE = storage blocked) as a Godot Error; the caller keeps its defaults.
+static func _to_error(r: Result) -> Error:
+	if r.ok:
+		return OK
+	if r.error == Saves.ERR_UNAVAILABLE:
+		return ERR_UNAVAILABLE
+	if r.error == Saves.ERR_BAD_PATH:
+		return ERR_INVALID_PARAMETER
+	return ERR_CANT_OPEN if r.error <= 0 or r.error > ERR_BUG else r.error as Error
 
 
 ## Loads the saved map over the defaults; unknown actions and malformed values are ignored. OK when the file is absent.
 func load_file() -> Error:
-	if not FileAccess.file_exists(path):
-		return OK
+	var rd: Result = Saves.try_read_text(path)
+	if not rd.ok:
+		return OK if rd.error == ERR_FILE_NOT_FOUND else _to_error(rd)
 	var cf: ConfigFile = ConfigFile.new()
-	var err: Error = cf.load(path)
+	var err: Error = cf.parse(str(rd.value))
 	if err != OK:
 		return err
 	var ver: Variant = cf.get_value("meta", "version", 0)
