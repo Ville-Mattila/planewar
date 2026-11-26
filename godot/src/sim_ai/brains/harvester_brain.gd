@@ -91,6 +91,7 @@ func _act(id: int, s: int, view: SimView, st: AiState, sink: CommandSink, tick: 
 			GroundFollower.wait(s, tick, st, prm.ground, _inp)
 	if not sink.drive(id, _inp):
 		GroundFollower.lose_brake(s, st)        # refused: the pilot drives, its BRAKE run is unknown to the AI
+		st.bflags[s] &= ~B_FACED                # ... and may turn it: a held unit faces its next stop again after release
 	elif st.overlay[s] == Overlays.NONE:        # an overlay overrides this drive and books its own
 		GroundFollower.book_brake(s, _inp.buttons, st)
 
@@ -269,7 +270,7 @@ func _pick(id: int, s: int, p: Vector3, avoid: int, view: SimView, st: AiState, 
 		return
 	st.aux_id[s] = f + 1
 	_mode(id, s, AiTag.Tag.TO_FIELD, st, sink, tick)
-	_start(s, p, sites.spot(f, p), st, sink, tick)
+	_start(s, p, sites.approach_spot(f, p), st, sink, tick)
 
 
 # The field the sim has `id` MINING in (`Harvest.state_of(link)`), -1 for none.
@@ -292,7 +293,7 @@ func _adopt(id: int, s: int, f: int, p: Vector3, view: SimView, st: AiState, sin
 # The spot of the unit's last field seen from `p` (the field it returns to after unloading, sticky), the zero vector for none.
 func _next_spot(s: int, p: Vector3, st: AiState) -> Vector3:
 	var f: int = st.aux_id[s] - 1
-	return sites.spot(f, p) if f >= 0 and f < sites.field_count() else Vector3.ZERO
+	return sites.approach_spot(f, p) if f >= 0 and f < sites.field_count() else Vector3.ZERO
 
 
 # The dock stop a loaded unit at `p` will drive to (`best_refinery`), the zero vector for none.

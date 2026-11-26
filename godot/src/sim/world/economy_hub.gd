@@ -178,11 +178,15 @@ func read_state(buf: StreamPeerBuffer) -> bool:
 # Field A) is "already mining" it (R0 B.6, 02 s8.1): just inside the field's edge on the Refinery side (its bounding
 # radius in, where a Harvester coming from the Refinery first stands in the field: the shortest first leg, 02 s8.2's
 # "Refinery to Home Field A"), facing the Refinery, stopped, holding a MINING claim (Harvest H3). Otherwise (no field
-# there: the flat datum, or another unit) it stands `start_adjacent_dist_m` past the Refinery, empty (TA-19).
+# there: the flat datum, or another unit; or H3 would refuse the claim: no free miner slot, under 1 Ore) it stands
+# `start_adjacent_dist_m` past the Refinery, empty (TA-19).
 func _spawn_unit(slot: int, def: int, along: Vector3, ref_dir: Vector3, toward: Vector3, tick: int) -> bool:
 	var rd: ResolvedDefs = _defs.resolved(slot)
 	var g: GroundUnitDef = rd.ground_unit(def) if rd != null else null
-	var f: int = harvest.fields.field_at(toward.normalized()) if g != null and g.mine_rate > 0.0 else -1
+	var fl: OreFields = harvest.fields
+	var f: int = fl.field_at(toward.normalized()) if g != null and g.mine_rate > 0.0 else -1
+	if f >= 0 and (fl.miners[f] >= fl.max_miners[f] or fl.amount[f] < 1.0):
+		f = -1   # Harvest H3's claim guard (a free miner slot, at least 1 Ore): no claim, the TA-19 placement
 	if f < 0:
 		var d: Vector3 = _step(ref_dir, along, _defs.economy.start_adjacent_dist_m)
 		return _applier.spawn(def, slot, _players.team[slot], _ground(d), Vector3.ZERO, along, tick) >= 0
