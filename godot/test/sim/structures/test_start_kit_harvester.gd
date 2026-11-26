@@ -109,3 +109,32 @@ func test_a_field_a_without_ore_gets_no_claim_h3() -> void:
 	assert_int(w.store().link[h]).is_equal(0)
 	var eco: EconomyDef = WorldTestKit.content().economy
 	assert_float(_arc(w.store().pos[h], w.store().pos[ref])).is_equal_approx(eco.start_adjacent_dist_m, 5.0)   # the TA-19 placement
+
+
+func test_two_start_kits_on_one_field_with_one_miner_slot_claim_it_once() -> void:
+	var w: SimWorld = EconomyTestKit.solo_world(false)   # flat datum, players 0 and 1, no kit yet
+	var a: float = 1100.0 / R
+	var field_dir: Vector3 = Vector3(cos(a), sin(a), 0.0)
+	var f: int = w.economy().harvest.fields.add(field_dir, 6000, 2.0, 150.0, 1)   # max_miners 1
+	assert_bool(w.spawn_start_kit(0, Vector3.RIGHT, field_dir)).is_true()
+	assert_bool(w.spawn_start_kit(1, Vector3(cos(2.0 * a), sin(2.0 * a), 0.0), field_dir)).is_true()
+	var hid: int = WorldTestKit.def_id(&"harvester")
+	var claims: int = 0
+	var second: int = -1
+	for s: int in w.store().ground:
+		if w.store().def_id[s] != hid:
+			continue
+		if Harvest.state_of(w.store().link[s]) == Harvest.State.MINING:
+			claims += 1
+		elif w.store().owner[s] == 1:
+			second = s
+	assert_int(claims).is_equal(1)
+	assert_int(second).is_greater_equal(0)                               # the second kit's Harvester: no claim
+	var ref1: int = EconomyTestKit.find(w, &"refinery", 1)
+	var eco: EconomyDef = WorldTestKit.content().economy
+	if second >= 0:
+		assert_int(w.store().link[second]).is_equal(0)
+		assert_float(_arc(w.store().pos[second], w.store().pos[ref1])).is_equal_approx(eco.start_adjacent_dist_m, 5.0)   # TA-19 placement
+	assert_int(w.economy().harvest.fields.miners_of(f)).is_equal(1)       # the spawn counted its claim
+	var _e: Array[SimEvent] = EconomyTestKit.run(w, 2)
+	assert_int(w.economy().harvest.fields.miners_of(f)).is_equal(1)       # step 10's recount from the links: no double count
