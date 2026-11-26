@@ -41,6 +41,7 @@ func _put(s: int, dir: Vector3, toward: Vector3, metres: float) -> void:
 	var st: EntityStore = _w.store()
 	st.pos[s] = d * (R + _w.terrain().height_at(d) + _w.store().radius[s])
 	st.vel[s] = Vector3.ZERO
+	st.link[s] = 0   # a teleport ends the start kit's MINING claim (BUG-4: it spawns mining Field A)
 
 
 func test_start_kit_stands_on_the_ground() -> void:

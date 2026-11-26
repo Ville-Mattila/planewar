@@ -299,6 +299,62 @@ func test_after_a_possession_the_unit_repaths_from_where_it_was_left() -> void:
 	assert_int(_b.stats_gave_up).is_equal(0)
 
 
+# --- BUG-4: a unit the sim already has MINING; facing the next stop ---------------------------------------------------
+
+func _heading_err_deg(h: int, q: Vector3) -> float:
+	var p: Vector3 = _w.view().pos(h)
+	var n: Vector3 = p.normalized()
+	var t: Vector3 = q - p
+	t = (t - n * t.dot(n)).normalized()
+	return rad_to_deg(acos(clampf(_w.store().fwd[EntityId.slot(h)].dot(t), -1.0, 1.0)))
+
+
+func test_a_unit_the_sim_has_mining_is_adopted_and_mines_where_it_stands() -> void:
+	_w = Ai16Kit.world(11)
+	var _r: int = Ai16Kit.put(_w, &"refinery", 0, 0.0)
+	var f: int = Ai16Kit.field(_w, 450.0, 0.0, 6000, 2.0, 150.0, 2)
+	var h: int = Ai16Kit.put(_w, &"harvester", 0, 330.0)        # inside the field, 45 m from the brain's own spot
+	_w.store().link[EntityId.slot(h)] = Harvest.pack(Harvest.State.MINING, f)   # the start kit's claim (sim/world W10)
+	var p0: Vector3 = _w.view().pos(h)
+	_b = Ai16Kit.brain()
+	_d = Ai16Kit.driver(_w, _b)
+	assert_bool(_until(h, AiTag.Tag.MINE, 2 * _d.think_period())).is_true()
+	assert_int(_field_of(h)).is_equal(f)
+	_run(15 * HZ)
+	assert_float(GroundFollower.flat(p0, _w.view().pos(h))).is_less(0.01)    # it turned in place, never drove off
+	assert_int(Harvest.state_of(_w.view().link(h))).is_equal(Harvest.State.MINING)
+	assert_bool(_until(h, AiTag.Tag.TO_REFINERY, 10 * HZ)).is_true()
+	assert_float(_w.view().cargo(h)).is_equal_approx(300.0, 0.01)           # a full load from where it stood
+
+
+func test_a_harvest_here_order_on_another_field_is_not_overridden_by_a_claim() -> void:
+	_w = Ai16Kit.world(11)
+	var _r: int = Ai16Kit.put(_w, &"refinery", 0, 0.0)
+	var _f0: int = Ai16Kit.field(_w, 450.0, 0.0, 6000, 2.0, 150.0, 2)
+	var _f1: int = Ai16Kit.field(_w, 1500.0, 0.0, 6000, 2.0, 150.0, 2)
+	var h: int = Ai16Kit.put(_w, &"harvester", 0, 330.0)        # stopped inside field 0: the sim claims a slot (H3)
+	_run(1)
+	assert_int(Harvest.state_of(_w.view().link(h))).is_equal(Harvest.State.MINING)
+	_order(h, OrderSpec.make(OrderSpec.Kind.HARVEST_HERE, 0, Ai16Kit.dir_at(1500.0) * Ai16Kit.R))
+	_b = Ai16Kit.brain()
+	_d = Ai16Kit.driver(_w, _b)
+	_run(2 * _d.think_period())
+	assert_int(_field_of(h)).is_equal(1)
+	assert_int(_tag(h)).is_equal(AiTag.Tag.TO_FIELD)
+
+
+func test_while_the_sim_holds_it_the_unit_turns_to_its_next_stop() -> void:
+	var h: int = _world([450.0])
+	var ref: Vector3 = Ai16Kit.dir_at(0.0) * Ai16Kit.R
+	assert_bool(_until(h, AiTag.Tag.MINE, 120 * HZ)).is_true()
+	assert_float(_heading_err_deg(h, ref)).is_greater(90.0)                   # it drove in facing away from the Refinery
+	assert_bool(_until(h, AiTag.Tag.TO_REFINERY, 60 * HZ)).is_true()
+	assert_float(_heading_err_deg(h, ref)).is_less(5.0)                       # turned while it mined (no U-turn on the way)
+	assert_bool(_until(h, AiTag.Tag.UNLOAD, 120 * HZ)).is_true()
+	assert_bool(_until(h, AiTag.Tag.TO_FIELD, 30 * HZ)).is_true()
+	assert_float(_heading_err_deg(h, Ai16Kit.dir_at(450.0) * Ai16Kit.R)).is_less(5.0)   # turned while it unloaded
+
+
 # --- S4 -----------------------------------------------------------------------------------------------------------------
 
 func test_a_restored_world_continues_byte_for_byte() -> void:
