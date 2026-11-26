@@ -80,11 +80,12 @@ static func ground(w: SimWorld, d: Vector3) -> Vector3:
 
 ## A cradle world with bots on slots 0 (team 0) and 2 (team 1), each with the start kit, Ice nodes marked in the build grid
 ## (the stand-in for the sim marking them, see the PR), and a driver running the four ship brains and the intel of
-## teams 0 and 1; `with_enemy` false leaves slot 2 empty (SC-40).
-static func world(seed_value: int = 7, map_id: StringName = &"cradle", with_enemy: bool = true, doctrine0: StringName = &"vanguard", doctrine2: StringName = &"vanguard") -> SimWorld:
+## teams 0 and 1; `with_enemy` false leaves slot 2 empty (SC-40). `on_terrain` loads the map's baked terrain (BUG-3: the
+## start kit stands on the ground); false keeps the flat datum with the map's own geometry.
+static func world(seed_value: int = 7, map_id: StringName = &"cradle", with_enemy: bool = true, doctrine0: StringName = &"vanguard", doctrine2: StringName = &"vanguard", on_terrain: bool = false) -> SimWorld:
 	var w: SimWorld = SimWorld.new(content())
 	var map: MapDef = MapDef.new()
-	map.id = &""   # the flat datum with the map's own geometry: Harvesters stop 340 m short of the start-kit Refinery on cradle's terrain (needs AI-16, see the PR)
+	map.id = map_id if on_terrain else &""
 	var res: Result = w.load_map(map, seed_value, DartKit.rules())
 	assert(res.ok, res.message)
 	w.add_player(0, 0, doctrine0, PlayerTable.KIND_BOT)
