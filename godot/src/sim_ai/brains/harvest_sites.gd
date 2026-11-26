@@ -6,8 +6,6 @@ class_name HarvestSites extends RefCounted
 ## Crowding (`assigned`, free miner slots) is counted from the Harvesters near a field (`ids_near`, the team's own plus the
 ## enemy's it sees); every read is `SimView` only. Runs at choice points (once per trip), never per tick.
 
-const GOLDEN_RAD: float = 2.3999632297286533   ## the golden angle: spreads the mining spots of different slots
-
 var prm: HarvesterParams = null
 var harvester_def: int = -1
 var scans: int = 0                              ## structure-list scans made (tests, perf)
@@ -84,11 +82,11 @@ func _count(view: SimView, team: int, i: int) -> void:
 			_free[i] -= 1
 
 
-## A mining spot of field `i` for slot `s`: `spot_frac` of the radius from the centre, at the slot's golden-angle bearing.
-func spot(i: int, s: int) -> Vector3:
-	var fr: Basis = Sphere.tangent_frame(_dir[i])
-	var th: float = float(s) * GOLDEN_RAD
-	return arc_point(_dir[i], fr.x * cos(th) + fr.y * sin(th), _radius[i] * prm.spot_frac)
+## The mining spot of field `i` for a Harvester coming from world point `from` (BUG-4): `spot_frac` of the radius from the
+## centre on the side `from` lies (the approach side, so the legs to and from a Refinery there are the shortest; 02 s8.2
+## prices the trip by that leg). Not keyed on the unit: Harvesters from one Refinery share it (ground units do not collide).
+func spot(i: int, from: Vector3) -> Vector3:
+	return toward(_dir[i], from, _radius[i] * prm.spot_frac)
 
 
 ## Point `dist` m of arc from direction `from` toward tangent direction `along` (a unit vector in the tangent plane); on the datum.

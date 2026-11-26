@@ -128,7 +128,7 @@ func on_death(s: int) -> void:
 
 ## C2-14 (02 s8.1): `economy.start_kit` for `slot` around `centre` (a direction from the planet centre): the Core there,
 ## the Refinery `start_refinery_dist_m` toward `toward` (Home Field A), the Shipyard `start_adjacent_dist_m` beside the
-## Core, the Vehicle Bay beside the Refinery, the Harvester next to the Refinery; every piece on the terrain (BUG-3). All finished, all pre-built (they count
+## Core, the Vehicle Bay beside the Refinery, the Harvester already mining Field A (BUG-4, R0 B.6; `_spawn_unit`); every piece on the terrain (BUG-3). All finished, all pre-built (they count
 ## against `max_per_player`). False when a structure cannot be created (entity store full or a def without footprint); occupancy is not checked, the kit is laid out on a clear site.
 func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3, tick: int) -> bool:
 	var eco: EconomyDef = _defs.economy
@@ -152,9 +152,7 @@ func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3, tick: int) -> 
 				ok = _stamp(slot, def, _step(ref_dir, side, eco.start_adjacent_dist_m)) and ok
 			_:
 				if _defs.entity_kind(def) != EntityStore.K_STRUCTURE:
-					var d: Vector3 = _step(ref_dir, along, eco.start_adjacent_dist_m)
-					var at: Vector3 = d * (Sphere.PLANET_RADIUS + _terrain.height_at(d))   # on the ground (BUG-3); GroundMotion lifts it by its radius
-					ok = _applier.spawn(def, slot, _players.team[slot], at, Vector3.ZERO, along, tick) >= 0 and ok
+					ok = _spawn_unit(slot, def, along, ref_dir, toward, tick) and ok
 	economy.mark_dirty()
 	return ok
 
@@ -174,6 +172,35 @@ func read_state(buf: StreamPeerBuffer) -> bool:
 	return build.read_state(buf) and economy.read_state(buf) and construction.read_state(buf) \
 			and production.read_state(buf) and docking.read_state(buf) \
 			and score.read_state(buf) and harvest.fields.read_state(buf) and ice.nodes.read_state(buf)
+
+
+# The start kit's ground unit (sim/world W10). A Harvester (resolved `mine_rate` > 0) with an Ore Field at `toward` (Home
+# Field A) is "already mining" it (R0 B.6, 02 s8.1): just inside the field's edge on the Refinery side (its bounding
+# radius in, where a Harvester coming from the Refinery first stands in the field: the shortest first leg, 02 s8.2's
+# "Refinery to Home Field A"), facing the Refinery, stopped, holding a MINING claim (Harvest H3). Otherwise (no field
+# there: the flat datum, or another unit) it stands `start_adjacent_dist_m` past the Refinery, empty (TA-19).
+func _spawn_unit(slot: int, def: int, along: Vector3, ref_dir: Vector3, toward: Vector3, tick: int) -> bool:
+	var rd: ResolvedDefs = _defs.resolved(slot)
+	var g: GroundUnitDef = rd.ground_unit(def) if rd != null else null
+	var f: int = harvest.fields.field_at(toward.normalized()) if g != null and g.mine_rate > 0.0 else -1
+	if f < 0:
+		var d: Vector3 = _step(ref_dir, along, _defs.economy.start_adjacent_dist_m)
+		return _applier.spawn(def, slot, _players.team[slot], _ground(d), Vector3.ZERO, along, tick) >= 0
+	var c: Vector3 = harvest.fields.dirs[f]
+	var to_ref: Vector3 = ref_dir - c * ref_dir.dot(c)
+	to_ref = -along if to_ref.is_zero_approx() else to_ref   # a Refinery over the field centre: the side of the Core
+	var at: Vector3 = _step(c, to_ref, maxf(harvest.fields.radius_m[f] - g.bounding_radius, 0.0))
+	var face: Vector3 = ref_dir - at * ref_dir.dot(at)
+	var s: int = _applier.spawn(def, slot, _players.team[slot], _ground(at), Vector3.ZERO, face if not face.is_zero_approx() else to_ref, tick)
+	if s < 0:
+		return false
+	_store.link[s] = Harvest.pack(Harvest.State.MINING, f)
+	return true
+
+
+# The ground point under unit direction `d` (BUG-3); GroundMotion lifts a unit by its radius.
+func _ground(d: Vector3) -> Vector3:
+	return d * (Sphere.PLANET_RADIUS + _terrain.height_at(d))
 
 
 func _stamp(slot: int, def: int, dir: Vector3) -> bool:

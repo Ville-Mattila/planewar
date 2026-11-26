@@ -82,7 +82,7 @@ func test_without_a_field_at_toward_the_start_harvester_waits_empty_beside_the_r
 	var ref: int = EconomyTestKit.find(w, &"refinery")
 	var eco: EconomyDef = WorldTestKit.content().economy
 	assert_int(w.store().link[h]).is_equal(0)
-	assert_float(_arc(w.store().pos[h], w.store().pos[ref])).is_equal_approx(eco.start_adjacent_dist_m, 0.5)
+	assert_float(_arc(w.store().pos[h], w.store().pos[ref])).is_equal_approx(eco.start_adjacent_dist_m, 5.0)   # the Refinery snaps to its cell
 	var _e: Array[SimEvent] = EconomyTestKit.run(w, 2 * HZ)
 	assert_float(w.store().cargo[h]).is_equal(0.0)
 

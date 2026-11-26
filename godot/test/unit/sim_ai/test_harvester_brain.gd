@@ -350,6 +350,7 @@ func test_while_the_sim_holds_it_the_unit_turns_to_its_next_stop() -> void:
 	assert_float(_heading_err_deg(h, ref)).is_greater(90.0)                   # it drove in facing away from the Refinery
 	assert_bool(_until(h, AiTag.Tag.TO_REFINERY, 60 * HZ)).is_true()
 	assert_float(_heading_err_deg(h, ref)).is_less(5.0)                       # turned while it mined (no U-turn on the way)
+	assert_int(_d.state.bflags[EntityId.slot(h)] & HarvesterBrain.B_FACED).is_not_equal(0)   # and stopped turning once it faced it
 	assert_bool(_until(h, AiTag.Tag.UNLOAD, 120 * HZ)).is_true()
 	assert_bool(_until(h, AiTag.Tag.TO_FIELD, 30 * HZ)).is_true()
 	assert_float(_heading_err_deg(h, Ai16Kit.dir_at(450.0) * Ai16Kit.R)).is_less(5.0)   # turned while it unloaded

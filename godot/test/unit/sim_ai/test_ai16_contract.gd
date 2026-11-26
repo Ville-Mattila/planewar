@@ -74,6 +74,7 @@ func test_harvester_params_read_the_autopilot_def_the_unit_def_and_economy() -> 
 	assert_float(p.queue_m).is_equal(20.0 * Ai16Kit.ground_def().ground_speed)   # queue_len x 20 s x 12 m/s
 	assert_float(p.deliver_m).is_equal(c.economy.salvage_deliver_m)
 	assert_float(p.cargo_ore).is_equal(300.0)
+	assert_float(p.face_tol_rad).is_equal_approx(deg_to_rad(40.0) / 30.0, 0.000001)   # BUG-4: one tick of ground_turn_rate_dps
 	assert_int(p.mask).is_equal(Pathing.mask_for(25.0))                      # the Harvester's max_slope_deg
 	assert_int(p.vision_period).is_greater(0)
 	assert_object(p.ground).is_not_null()

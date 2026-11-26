@@ -8,14 +8,17 @@ class_name HarvesterBrain extends AiBrain
 ## ship the team sees within `flee_radius_m`), then the mode's transitions and the route health (ticket timeout = a stuck
 ## strike, `NO_PATH`, a path-grid face of the route changed, off the route, no progress for 10 s: repath, then another
 ## destination, then give up to PICK_FIELD). Act (every tick): poll the ticket, then `GroundFollower.drive`; a unit without a
-## route waits (BRAKE, then still). State is `AiState` only: mode, `aux_id` = field + 1, `target` = Refinery or flee site,
-## `goal`, `bflags`, `hp_mark` / `mark_tick`, `order_tick`, `path`, `ground`. Vision only: ships come from `TeamPicture`,
-## structures of the own team, fields from the map.
+## route waits (BRAKE, then still); a unit the sim holds (MINE, QUEUE, UNLOAD) turns in place toward its next stop (BUG-4).
+## A unit the sim already has MINING (the start kit, R0 B.6) is adopted where it stands. State is `AiState` only: mode,
+## `aux_id` = field + 1, `target` = Refinery or flee site, `goal` (the route's end; while held, the next stop), `bflags`,
+## `hp_mark` / `mark_tick`, `order_tick`, `path`, `ground`. Vision only: ships come from `TeamPicture`, structures of the
+## own team, fields from the map.
 
 const B_ARRIVED: int = 1   ## bflags: the act reached the goal (cleared by the think that takes the next step)
 const B_MINED: int = 2     ## bflags: the unit has been MINING on this arrival
 const B_NOPATH: int = 4    ## bflags: the sim proved the last request has no route
 const B_DRY: int = 8       ## bflags: the HARVEST_HERE field ran dry: the order is AUTO from then on (cleared by a new order)
+const B_FACED: int = 16    ## bflags: held, the unit faces its next stop (`face_tol_rad`): no more turning this hold (BUG-4)
 const HP_EPS: float = 0.0001
 
 var prm: HarvesterParams
@@ -72,8 +75,11 @@ static func moving(m: int) -> bool:
 func _act(id: int, s: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -> void:
 	_inp.pitch = 0.0
 	_inp.roll = 0.0
-	if not moving(st.mode[s]):
+	var m: int = st.mode[s]
+	if not moving(m):
 		GroundFollower.stop(_inp)
+		if (st.bflags[s] & B_FACED) == 0 and (m == AiTag.Tag.MINE or m == AiTag.Tag.QUEUE or m == AiTag.Tag.UNLOAD):
+			_face(id, s, view, st)
 	else:
 		if GroundFollower.poll(s, st, sink, view) == GroundFollower.Poll.NO_PATH:
 			st.bflags[s] |= B_NOPATH
@@ -87,6 +93,26 @@ func _act(id: int, s: int, view: SimView, st: AiState, sink: CommandSink, tick: 
 		GroundFollower.lose_brake(s, st)        # refused: the pilot drives, its BRAKE run is unknown to the AI
 	elif st.overlay[s] == Overlays.NONE:        # an overlay overrides this drive and books its own
 		GroundFollower.book_brake(s, _inp.buttons, st)
+
+
+# Held by the sim (mining, queueing, unloading): turn in place toward `goal`, the next stop set when the hold began, so
+# the next leg starts without a U-turn (02 s8.2 prices none). Thrust 0 and no BRAKE: a unit turning in place has zero `vel`,
+# so the sim keeps mining / unloading it (Harvest H3-H5), and the BRAKE run never grows (AI-16 BRAKE rule). Once within
+# `face_tol_rad` (B_FACED) the rest of the hold costs what standing still did.
+func _face(id: int, s: int, view: SimView, st: AiState) -> void:
+	var q: Vector3 = st.goal[s]
+	if q == Vector3.ZERO:
+		return
+	var p: Vector3 = view.pos(id)
+	var n: Vector3 = p.normalized()
+	var d: Vector3 = q - p
+	var t: Vector3 = d - n * d.dot(n)
+	var fwd: Vector3 = -view.basis(id).z
+	var err: float = atan2(fwd.cross(t).dot(n), fwd.dot(t)) if not t.is_zero_approx() else 0.0
+	if absf(err) <= prm.face_tol_rad:
+		st.bflags[s] |= B_FACED
+		return
+	_inp.yaw = clampf(prm.ground.kp_yaw * err, -1.0, 1.0)
 
 
 # --- think -----------------------------------------------------------------------------------------------------------
@@ -231,6 +257,10 @@ func _pick(id: int, s: int, p: Vector3, avoid: int, view: SimView, st: AiState, 
 		f = o if o >= 0 and view.field_remaining(o) > 0 else -1
 		if f < 0:
 			st.bflags[s] |= B_DRY   # the ordered field is dry: the order falls back to AUTO (05 s3.2), for good
+	var m: int = _claimed(id, view)
+	if m >= 0 and m != avoid and (f < 0 or f == m):
+		_adopt(id, s, m, p, view, st, sink, tick)   # the sim has it mining already (start kit; stopped in a field)
+		return
 	if f < 0:
 		f = sites.pick_field(view, view.team(id), p, avoid, st.aux_id[s] - 1)
 	if f < 0:
@@ -239,7 +269,36 @@ func _pick(id: int, s: int, p: Vector3, avoid: int, view: SimView, st: AiState, 
 		return
 	st.aux_id[s] = f + 1
 	_mode(id, s, AiTag.Tag.TO_FIELD, st, sink, tick)
-	_start(s, p, sites.spot(f, s), st, sink, tick)
+	_start(s, p, sites.spot(f, p), st, sink, tick)
+
+
+# The field the sim has `id` MINING in (`Harvest.state_of(link)`), -1 for none.
+func _claimed(id: int, view: SimView) -> int:
+	var link: int = view.link(id)
+	var f: int = Harvest.index_of(link)
+	return f if Harvest.state_of(link) == Harvest.State.MINING and f < sites.field_count() else -1
+
+
+# Takes a unit the sim already has MINING field `f` as arrived there: MINE, facing the Refinery it will deliver to.
+func _adopt(id: int, s: int, f: int, p: Vector3, view: SimView, st: AiState, sink: CommandSink, tick: int) -> void:
+	GroundFollower.clear(s, st, sink)
+	st.ground.strikes[s] = 0
+	st.aux_id[s] = f + 1
+	st.bflags[s] = (st.bflags[s] & B_DRY) | B_MINED   # B_FACED clear: face the Refinery
+	_mode(id, s, AiTag.Tag.MINE, st, sink, tick)
+	st.goal[s] = _next_dock(id, p, view, tick)
+
+
+# The spot of the unit's last field seen from `p` (the field it returns to after unloading, sticky), the zero vector for none.
+func _next_spot(s: int, p: Vector3, st: AiState) -> Vector3:
+	var f: int = st.aux_id[s] - 1
+	return sites.spot(f, p) if f >= 0 and f < sites.field_count() else Vector3.ZERO
+
+
+# The dock stop a loaded unit at `p` will drive to (`best_refinery`), the zero vector for none.
+func _next_dock(id: int, p: Vector3, view: SimView, tick: int) -> Vector3:
+	var r: int = sites.best_refinery(view, view.team(id), p, tick, 0)
+	return sites.dock_stop(view, r, p) if r != 0 else Vector3.ZERO
 
 
 func _go_refinery(id: int, s: int, p: Vector3, avoid: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -> void:
@@ -255,10 +314,11 @@ func _go_refinery(id: int, s: int, p: Vector3, avoid: int, view: SimView, st: Ai
 func _travel(id: int, s: int, p: Vector3, view: SimView, st: AiState, sink: CommandSink, tick: int) -> void:
 	var m: int = st.mode[s]
 	if (st.bflags[s] & B_ARRIVED) != 0:
-		st.bflags[s] &= ~(B_ARRIVED | B_MINED)
+		st.bflags[s] &= ~(B_ARRIVED | B_MINED | B_FACED)
 		st.ground.strikes[s] = 0
 		GroundFollower.clear(s, st, sink)
 		_mode(id, s, AiTag.Tag.MINE if m == AiTag.Tag.TO_FIELD else AiTag.Tag.QUEUE, st, sink, tick)
+		st.goal[s] = _next_dock(id, p, view, tick) if m == AiTag.Tag.TO_FIELD else _next_spot(s, p, st)   # the stop to face while held
 	elif m == AiTag.Tag.TO_REFINERY and not sites.usable(view, view.team(id), st.target[s]):
 		_go_refinery(id, s, p, 0, view, st, sink, tick)   # gone, captured or none yet
 	elif m == AiTag.Tag.TO_FIELD and view.field_remaining(st.aux_id[s] - 1) <= 0:
