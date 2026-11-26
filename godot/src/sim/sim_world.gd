@@ -250,7 +250,7 @@ func economy() -> EconomyHub:
 
 ## The match result of 02 s17.1 as of now (final once MATCH_END fired): per-player rows and the structure value per team.
 func match_result() -> MatchResult:
-	return _econ.score.result(_state.winner_team, _state.ended_tick if _state.ended() else _state.tick)
+	return _econ.score.result(_state.winner_team, _state.ended_tick if _state.ended() else _state.tick, _judge.values_by_team())
 
 
 func terrain() -> Terrain:

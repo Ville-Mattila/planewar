@@ -22,6 +22,7 @@ var _mr: MatchRulesDef
 var _core_def: int = -1
 var _cores: PackedInt32Array = PackedInt32Array()      # scratch: live Cores per player slot, rebuilt each step 10
 var _members: PackedInt32Array = PackedInt32Array()    # scratch: active players per team
+var _killer: PackedInt32Array = PackedInt32Array()     # scratch: per slot, team whose damage destroyed its Core this tick (-1 unknown)
 var _fresh_defeat: bool = false
 var _reason: int = EndReason.CORES_DESTROYED
 
@@ -39,8 +40,9 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	_state = state
 	_mr = defs.content.match_rules
 	_core_def = defs.content.entity_index.get(&"core", -1)
-	var e: int = _cores.resize(PlayerTable.SLOTS) | _members.resize(PlayerTable.TEAMS)
+	var e: int = _cores.resize(PlayerTable.SLOTS) | _members.resize(PlayerTable.TEAMS) | _killer.resize(PlayerTable.SLOTS)
 	assert(e == OK)
+	_killer.fill(-1)
 
 
 ## Step 1: a SURRENDER from `player`, counted when `check_vote` accepts it; the verdict (unanimity) is `step`'s.
@@ -58,7 +60,8 @@ func check_vote(player: int, tick: int) -> int:
 	if _state.ended() or tick < _ticks(_mr.surrender_min_s_1v1 if _one_v_one() else _mr.surrender_min_s):
 		return CommandResult.Code.REJECTED_PHASE
 	var t: int = _players.team[player]
-	if _players.kind[player] != PlayerTable.KIND_HUMAN or _players.connected[player] == 0 or t < 0 or t >= PlayerTable.TEAMS 			or _state.defeated[t] != 0:
+	if _players.kind[player] != PlayerTable.KIND_HUMAN or _players.connected[player] == 0 or t < 0 or t >= PlayerTable.TEAMS \
+			or _state.defeated[t] != 0:
 		return CommandResult.Code.REJECTED_NO_RIGHTS
 	return CommandResult.Code.ACCEPTED
 
@@ -68,6 +71,7 @@ func check_vote(player: int, tick: int) -> int:
 func step_selfdestruct(tick: int) -> void:
 	if _state.ended():
 		return
+	_note_core_killers()
 	for p: int in PlayerTable.SLOTS:
 		var due: int = _state.selfdestruct[p]
 		if due < 0 or tick < due:
@@ -77,6 +81,14 @@ func step_selfdestruct(tick: int) -> void:
 			if _store.owner[s] == p:
 				_store.attacker[s] = 0                       # nobody is credited with a self-destruct
 				_applier.kill_for(s, SimEvent.DeathCause.SELF_DESTRUCT)
+
+
+# M1: the Cores dying this tick (still in the store) name the team of their last attacker for PLAYER_ELIMINATED.
+func _note_core_killers() -> void:
+	_killer.fill(-1)
+	for s: int in _applier.dying:
+		if _store.def_id[s] == _core_def and _store.owner[s] < PlayerTable.SLOTS:
+			_killer[_store.owner[s]] = shooter_team(_store.attacker[s])
 
 
 ## Step 10 (after the economy): the Exposure event, elimination, team defeat, surrender, then the hard end.
@@ -117,6 +129,26 @@ func structure_value(team: int) -> float:
 		var full: float = _defs.hp_max(o, _store.def_id[s])
 		v += base * clampf(_store.hp[s] / full, 0.0, 1.0) if full > 0.0 else 0.0
 	return v
+
+
+## The team of entity `id`, alive or dead (a shot outlives its shooter: `ScoreKeeper.shooters` remembers the dead); -1 unknown.
+func shooter_team(id: int) -> int:
+	if id == 0:
+		return -1
+	if _store.alive(id):
+		return _store.team[EntityId.slot(id)]
+	var i: int = _score.shooters.find(id)
+	return _score.shooters.team[i] if i >= 0 else -1
+
+
+## The 02 s12.1 value per team rounded to whole points: what `MatchResult.structure_value` reports (one formula).
+func values_by_team() -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	var e: int = out.resize(PlayerTable.TEAMS)
+	assert(e == OK)
+	for t: int in PlayerTable.TEAMS:
+		out[t] = roundi(structure_value(t))
+	return out
 
 
 ## DamageSink: `amount` of damage dealt to a finished enemy structure by an entity of `team` (the hard-end tie-break).
@@ -166,7 +198,7 @@ func _eliminate_lost_cores(tick: int) -> void:
 func _eliminate(p: int, tick: int) -> void:
 	_players.eliminated[p] = 1
 	_state.selfdestruct[p] = tick + (_ticks(_mr.eliminated_selfdestruct_s) if _mr != null else 0)
-	var _e: SimEvent = _events.emit(SimEvent.Kind.PLAYER_ELIMINATED, p, -1, Vector3.ZERO, 0.0, _players.team[p])
+	var _e: SimEvent = _events.emit(SimEvent.Kind.PLAYER_ELIMINATED, p, _killer[p], Vector3.ZERO, 0.0, _players.team[p])
 
 
 # M3: a team whose members once owned a Core and own none now is defeated.

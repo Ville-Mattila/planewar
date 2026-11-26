@@ -196,23 +196,9 @@ func relay_held(player: int, minutes: float) -> void:
 		ledger.credit(player, false, minutes * Def.num(_def.relay.get("hold_per_min", 0.0)))
 
 
-## cost_ore + cost_ice of the finished structures of `team`.
-func structure_value(team: int) -> int:
-	var v: int = 0
-	for s: int in _store.structures:
-		if _store.team[s] == team and (_store.flags[s] & EntityStore.F_BUILDING) == 0:
-			v += _cost(s)
-	return v
-
-
-## The match result as of now (04 s2.3 / 02 s17.1): active players in slot order, structure value per team.
-func result(winner_team: int, tick: int) -> MatchResult:
-	var sv: PackedInt32Array = PackedInt32Array()
-	var e: int = sv.resize(PlayerTable.TEAMS)
-	assert(e == OK)
-	for t: int in PlayerTable.TEAMS:
-		sv[t] = structure_value(t)
-	return MatchResult.build(ledger, _players, _hz, winner_team, tick, sv)
+## The match result as of now (04 s2.3 / 02 s17.1): active players in slot order, `value_by_team` as `MatchJudge.values_by_team` gives it.
+func result(winner_team: int, tick: int, value_by_team: PackedInt32Array) -> MatchResult:
+	return MatchResult.build(ledger, _players, _hz, winner_team, tick, value_by_team)
 
 
 func write_state(buf: StreamPeerBuffer) -> void:

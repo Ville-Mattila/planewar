@@ -49,7 +49,7 @@ func end_tick(spent_ore: PackedInt32Array) -> void                            # 
 func finalize(winner_team: int) -> void                                       # MATCH_END: match_win to each member of the winner, once
 func ore_mined(player: int, ore: int) -> void;  func ice_delivered(player: int, ice: int, possessed: bool) -> void   # seams of GD-12 / GD-14
 func relay_captured(player: int, possessed: bool) -> void;  func relay_held(player: int, minutes: float) -> void       # seams of GD-23
-func structure_value(team: int) -> int;  func result(winner_team: int, tick: int) -> MatchResult
+func result(winner_team: int, tick: int, value_by_team: PackedInt32Array) -> MatchResult   # the per-team value comes from MatchJudge.values_by_team (GD-49: one 02 s12.1 formula)
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 
 class_name ScoreLedger extends RefCounted                                     # per-player arrays (slot index): pilot, commander, kills, deaths, structures_built, structures_destroyed, manual_landings, sorties, ore_mined, ore_spent, ice_delivered; pilot_ticks[slot * 5 + class]

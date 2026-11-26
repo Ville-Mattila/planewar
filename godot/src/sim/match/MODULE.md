@@ -24,6 +24,8 @@ func vote(player: int, tick: int) -> void                                    # s
 func check_vote(player: int, tick: int) -> int                              # CommandResult.Code of a SURRENDER applied at `tick`: REJECTED_PHASE before the minimum clock / after the end, REJECTED_NO_RIGHTS unless a connected human of a team still in
 func step_selfdestruct(tick: int) -> void                                    # step 9, before the score pass: due structures are killed with SELF_DESTRUCT
 func step(tick: int) -> void                                                 # step 10: Exposure event, elimination, team defeat, surrender, hard end, MATCH_END
+func shooter_team(id: int) -> int                                            # team of a live or dead entity (ScoreKeeper.shooters), -1 unknown
+func values_by_team() -> PackedInt32Array                                    # structure_value per team, rounded: MatchResult.structure_value (GD-49)
 func structure_value(team: int) -> float                                     # 02 s12.1: sum((cost_ore + cost_ice) * hp01) over finished structures, the Core `core_value * hp01`
 func note_damage(team: int, amount: float) -> void                          # DamageSink: damage dealt to a finished enemy structure by `team` (the tie-break)
 func structure_damage(team: int) -> float
@@ -35,7 +37,7 @@ func selfdestruct_tick(player: int) -> int                                   # t
 ## Invariants
 
 - M1 (elimination): a player that owned a Core (`had_core`) and owns none gets `PlayerTable.eliminated = 1`, one
-  `PLAYER_ELIMINATED` (a = slot, b = -1 unknown killer team, team = its team) and `selfdestruct_tick = tick +
+  `PLAYER_ELIMINATED` (a = slot, b = the team whose damage destroyed its last Core, -1 when unknown or when eliminated by team defeat, team = its team) and `selfdestruct_tick = tick +
   round(eliminated_selfdestruct_s * tick_hz)`. A player that never owned a Core is never eliminated by this rule. Its
   units stay, keep their owner and are ordered by teammates; BUILD / PRODUCE / queue edits are the validator's (`eliminated`).
 - M2 (self-destruct): at `selfdestruct_tick` every structure and site the player still owns is killed in step 9 with
@@ -48,9 +50,10 @@ func selfdestruct_tick(player: int) -> int                                   # t
   when exactly two teams of one active player each) or after the end; `REJECTED_NO_RIGHTS` for a bot, a disconnected
   human or a member of a defeated team. The voters of a team are its connected human members (an eliminated teammate
   still votes); unanimity of them defeats the team as in M3 with reason SURRENDER (2). No accepted vote is dropped. Votes survive S4.
+- M1b: the killer team is read in step 9 from the dying Cores' last attacker (live, or a dead shooter via `ScoreKeeper.shooters`); per-tick scratch, not saved.
 - M5 (Exposure): `CORE_EXPOSURE` fires once at `core_exposure_s` (the first tick the phase is not PLAYING).
 - M6 (hard end): at `hard_end_s` the surviving team with the higher `structure_value` wins; equal: the higher
-  `structure_damage`; equal: draw (-1). Reason HARD_END_VALUE (1). Every possession is released (C16, reason MATCH).
+  `structure_damage` (damage of shooters that died before the end counts: `DamageSink` resolves the team with `shooter_team`); equal: draw (-1). `MatchResult.structure_value` is `values_by_team()`: one formula. Reason HARD_END_VALUE (1). Every possession is released (C16, reason MATCH).
 - M7: after MATCH_END nothing changes (`step` returns at once; commands answer REJECTED_PHASE).
 - M8 (S4): the state is in `MatchState` (`had_core`, `selfdestruct`, `votes`, `defeated`, `structure_damage`, `end_reason`).
 - M9 (shield): `TeamStateView.CORE_SHIELD_UP` is set from tick 0 until `core_shield_until_s` (GD-10 owns it; tested here).
