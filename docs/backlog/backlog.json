@@ -8767,8 +8767,9 @@
       "godot/src/sim/MODULE.md",
       "godot/src/sim/world/sim_world.gd"
     ],
-    "status": "todo",
-    "merged": null,
-    "notes": "Diagnosed on GD-49 PR #194 (2026-11-26): main's unit-sim shard peaks 18.3 GB private / 11.4 GB working set; every load_map world keeps ~14.8 MB alive after free; confirmed cycle MatchJudge._applier -> CommandApplier._validator -> CommandValidator.judge -> MatchJudge (sim_world.gd:334), at least one more remains. Runner shutdowns on unit-sim (PRs #169, #182, #186, #190, #194) are this, not flakiness. Blocks GD-49 merge."
+    "status": "done",
+    "merged": "2026-11-26",
+    "notes": "Diagnosed on GD-49 PR #194 (2026-11-26): main's unit-sim shard peaks 18.3 GB private / 11.4 GB working set; every load_map world keeps ~14.8 MB alive after free; confirmed cycle MatchJudge._applier -> CommandApplier._validator -> CommandValidator.judge -> MatchJudge (sim_world.gd:334), at least one more remains. Runner shutdowns on unit-sim (PRs #169, #182, #186, #190, #194) are this, not flakiness. Blocks GD-49 merge. Fixed: 6-class cycle broken at SimWorld PREDELETE (EconomyHub.unlink, AutoReplenish.unlink); MapPathing extracted. Shard peak 18.3 GB -> 1.1 GB; CI unit-sim 7m25s -> 6m03s. Nits: S18 wording (parts unusable after world freed); load_map twice on one world still leaks the first links; follow-up idea: static cycle check in tools/.",
+    "pr": 196
   }
 ]
