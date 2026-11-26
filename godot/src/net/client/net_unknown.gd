@@ -4,13 +4,14 @@ class_name NetUnknown
 ## field; NetSimView.unknown(id) is "any field of id unknown". Static.
 
 ## Never received for any entity: no 04 s3.7 row (overlay, cargo, cargo_kind, link: CQ-5), a TEAM_DETAIL row NET-39
-## has not landed, no codec yet (shield01 GD-38, wreck_ore GD-41, barrel_elevation NET-61), the LANDING event not routed (landing_grade_last).
+## has not landed, no codec yet (shield01 GD-38, wreck_ore GD-41), the LANDING event not routed (landing_grade_last).
+## barrel_elevation left NEVER in NET-61: unknown for a def with a barrel while no tier-A value is held (R0 B.31 A-152).
 ## While this list is non-empty every entity is `unknown` as a whole.
 const NEVER: PackedStringArray = [
 	"overlay", "cargo", "cargo_kind", "link",
 	"pad_queue", "pad_occupant", "order_head", "order_issuer", "pending_order", "supply01", "production_queue",
 	"production_progress01", "auto_replenish_target", "field_remaining", "player_score",
-	"shield01", "wreck_ore", "landing_grade_last", "barrel_elevation",
+	"shield01", "wreck_ore", "landing_grade_last",
 ]
 ## Pilot block fields (own possessed unit only, 04 s3.7); dock_state falls back to flags bit 2 elsewhere but is unknown.
 const PILOT: PackedStringArray = [
@@ -31,6 +32,10 @@ static func field(v: NetSimView, i: int, accessor: StringName) -> bool:
 			return not v.pose.has_ori(i)                 # C tier (known blip) or no orientation record
 		"ai_tag":
 			return v.roster.team_of(i) != v.team_id
+		"barrel_elevation":
+			var d: int = v.roster.def_of(i)
+			var f: BaselineFrame = v.pose.frame()
+			return v.defs.valid(d) and v.defs.barrel_def[d] != 0 and (f == null or f.barrel[i] == 0)
 		"radius":
 			return v.defs.kind_of(v.roster.def_of(i), i) == NetSimView.K_WRECK   # split wrecks show the hull's def radius (R0 B.22 A-114)
 	return false

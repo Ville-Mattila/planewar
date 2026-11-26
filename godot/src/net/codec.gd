@@ -1,6 +1,6 @@
 class_name Codec
 ## Field quantisers of the snapshot codec (04 s3.2-s3.3): per-cell ENU position (vec3q), smallest-three
-## orientation (full 4 B and coarse 3 B), velocity, hp, flags and ai_tag. All static and allocation-free:
+## orientation (full 4 B and coarse 3 B), velocity, hp, flags, ai_tag and the ground barrel elevation (NET-61). All static and allocation-free:
 ## quantisers return packed ints (the shared per-tick cache stores them, R0 C1-02) and the byte helpers
 ## write/read them little-endian at an offset. Decoders never throw; malformed input yields a defined
 ## value or an INVALID sentinel. Changing any constant or layout here is a wire change (PROTOCOL_VERSION).
@@ -41,6 +41,7 @@ const FLAG_BOOSTING: int = 0x10
 const FLAG_BRAKING: int = 0x20
 const FLAG_CLASS_BIT: int = 0x40            # shield up / cargo loaded / towing, per def class
 const FLAG_DYING: int = 0x80                # also selects the gravity dead-reckoning branch (04 s3.4)
+const BARREL_LEVELS: int = 255              # barrel u8 = round((e - min) / (max - min) * 255) (R0 B.31 A-152)
 # endregion
 
 # region byte sizes (04 s3.3-s3.4)
@@ -51,6 +52,7 @@ const VEL_BYTES: int = 3
 const HP_BYTES: int = 1
 const FLAGS_BYTES: int = 1
 const AI_TAG_BYTES: int = 1
+const BARREL_BYTES: int = 1                 # ground barrel elevation, defs with a barrel only (NET-61, R0 B.31 A-152)
 ## FULL record: gap u8 + mask u8 + vec3q + quat_s3 + vel + hp + flags = 19 (+1 ai_tag own team).
 const FULL_RECORD_BYTES: int = 2 + POS_BYTES + QUAT_BYTES + VEL_BYTES + HP_BYTES + FLAGS_BYTES
 # endregion
@@ -285,6 +287,15 @@ static func quantize_hp(hp01: float) -> int:
 
 static func dequantize_hp(b: int) -> float:
 	return float(b & 0xFF) / HP_MAX
+
+
+## Barrel u8 (04 s3.3, R0 B.31 A-152): `e` radians in the def's [lo, hi] (radians), clamped; 0 when hi <= lo (no span).
+static func quantize_barrel(e: float, lo: float, hi: float) -> int:
+	return clampi(roundi((e - lo) / (hi - lo) * BARREL_LEVELS), 0, BARREL_LEVELS) if hi > lo else 0
+
+
+static func dequantize_barrel(b: int, lo: float, hi: float) -> float:
+	return lo + float(b & 0xFF) / BARREL_LEVELS * (hi - lo) if hi > lo else lo
 
 
 ## control_state (Protocol.ControlState) in bits 0-1; `bits` supplies FLAG_DOCKED .. FLAG_DYING.

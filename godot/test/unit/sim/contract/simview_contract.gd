@@ -111,8 +111,10 @@ func _vitals() -> void:
 			and _v.wreck_ore(s.dead) == 0.0 and _v.wreck_ore(0) == 0.0)
 	_t(&"shield01", _near(_v.shield01(s.core), SimViewScene.SHIELD01, &"shield01") and _v.shield01(s.tower) == 0.0
 			and _v.shield01(s.a) == 0.0 and _v.shield01(s.dead) == 0.0)
-	# GD-50: the scene has no barrel-bearing unit (test_barrel_slew.gd pins the slewed values); every answer here is 0.0.
-	_t(&"barrel_elevation", _v.barrel_elevation(s.a) == 0.0 and _v.barrel_elevation(s.tower) == 0.0
+	# GD-50 / NET-61: the slewed Crawler answers its elevation (a replicated view within one barrel quantum); units without a
+	# barrel, structures and dead ids answer 0.0.
+	_t(&"barrel_elevation", _near(_v.barrel_elevation(s.crawler), deg_to_rad(SimViewScene.BARREL_DEG), &"barrel_elevation")
+			and _v.barrel_elevation(s.a) == 0.0 and _v.barrel_elevation(s.tower) == 0.0
 			and _v.barrel_elevation(s.core) == 0.0 and _v.barrel_elevation(s.dead) == 0.0)
 
 
@@ -126,11 +128,11 @@ func _lists() -> void:
 	_t(&"ships", _same(_v.ships(), [s.a, s.b, s.c]))
 	_t(&"structures", _same(_v.structures(), [s.core, s.pad, s.yard, s.tower]))
 	_t(&"wrecks", _same(_v.wrecks(), [s.wreck]))
-	_t(&"visible_ids", _same(_v.visible_ids(0), [s.core, s.pad, s.yard, s.tower, s.a, s.b, s.c]) and _v.visible_ids(7).is_empty())
+	_t(&"visible_ids", _same(_v.visible_ids(0), [s.core, s.pad, s.yard, s.tower, s.a, s.b, s.c, s.crawler]) and _v.visible_ids(7).is_empty())
 	_t(&"visible_enemy_ships", _enemy_ships_ok())
 	_t(&"visible_to", _v.visible_to(0, s.a) and _v.visible_to(0, s.b) and not _v.visible_to(0, s.wreck)
 			and not _v.visible_to(0, s.dead) and not _v.visible_to(9, s.a))
-	_t(&"unit_count", _v.unit_count(0) == 2 and _v.unit_count(1) == 1 and _v.unit_count(2) == 0)
+	_t(&"unit_count", _v.unit_count(0) == 3 and _v.unit_count(1) == 1 and _v.unit_count(2) == 0)   # a, c, crawler
 
 
 ## TA-63: team 0 sees only `b` (its own ships, the structures and the wreck are never listed), team 1 `a` and `c` (not the core it also sees); ids ascending (V10: a state-only order); a long pre-filled `out` is neither reallocated nor read past the count; bad teams give 0.
@@ -201,7 +203,7 @@ func _team_and_match() -> void:
 			and _v.team_state(9) == null)
 	var p0: PlayerStateView = _v.player_state(0)
 	var p1: PlayerStateView = _v.player_state(1)
-	_t(&"player_state", p0 != null and p1 != null and p0.team == 0 and p1.team == 1 and p0.unit_count == 2
+	_t(&"player_state", p0 != null and p1 != null and p0.team == 0 and p1.team == 1 and p0.unit_count == 3
 			and p0.structure_count == 4 and p0.early_spend_left_ore == eco.early_share_ore and p1.early_spend_left_ore == -1 and p1.doctrine == &"vanguard" and p1.connected
 			and _v.player_state(2).kind == PlayerTable.KIND_BOT and _v.player_state(9) == null)
 	_t(&"match_arc", _v.match_arc() == MatchArc.Arc.OPEN)

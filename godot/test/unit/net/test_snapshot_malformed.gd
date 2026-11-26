@@ -147,7 +147,7 @@ func test_bad_delta_masks() -> void:
 	# _pkt's first A record is a DELTA (entities moved); one gap byte at 11, its mask at 12.
 	assert_int(_pkt[11]).is_less(SnapshotCodec.GAP_ESCAPE)
 	assert_int(_pkt[12] & 0x80).is_equal(0)
-	for m: int in [_pkt[12] | SnapshotCodec.MASK_CELL_CHANGED, (_pkt[12] & ~3) | 3, 0]:
+	for m: int in [_pkt[12] | SnapshotCodec.MASK_BARREL, (_pkt[12] & ~3) | 3, 0]:
 		var p: PackedByteArray = _pkt.duplicate()
 		p[12] = m
 		_expect(p, SnapshotDecoder.Status.MALFORMED)

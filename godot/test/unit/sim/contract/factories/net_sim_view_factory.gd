@@ -10,6 +10,7 @@ class_name NetSimViewFactory extends SimViewFactory
 
 const U8_QUANTUM: float = 1.0 / 255.0
 const U8_FIELDS: PackedStringArray = ["hp01", "flip_cooldown01", "supply01", "production_progress01"]
+var _barrel_quantum: float = SimViewContract.EPS   # NET-61: (max - min) / 255 of the widest barrel def in the scene's content
 const _EXEMPT: PackedStringArray = [
 	# The scene's wreck is not visible to team 0 (visible_to(0, wreck) is false in the clause itself), so a team-0
 	# client never receives it (04 s4.1 interest = team vision; net/interest I1). The rocket is replicated through the
@@ -40,6 +41,9 @@ func label() -> String:
 
 func make(scene: SimViewScene) -> SimView:
 	var rig: NetViewRig = NetViewRig.new(scene.world, scene.content)
+	for d: int in rig.defs.barrel_def.size():
+		if rig.defs.barrel_def[d] != 0:
+			_barrel_quantum = maxf(_barrel_quantum, (rig.defs.barrel_hi[d] - rig.defs.barrel_lo[d]) / float(Codec.BARREL_LEVELS))
 	if not rig.snap_world():
 		return null                                # no fixed point on the wire lattice: the contract reports no view
 	var cs: ClientSession = rig.add_client(0, 0)
@@ -52,8 +56,11 @@ func make(scene: SimViewScene) -> SimView:
 
 
 ## One wire quantum for the fields 04 s3.3 carries as a u8 fraction (R0 B.22 A-113): hp (`round(hp01 * 255)`), the pilot
-## block's flip_cooldown01, and TEAM_DETAIL's supply01 / progress01 bytes; EPS (exact) for everything else.
+## block's flip_cooldown01, and TEAM_DETAIL's supply01 / progress01 bytes; the barrel u8 (NET-61, R0 B.31 A-152) one barrel
+## quantum; EPS (exact) for everything else.
 func tolerance(accessor: StringName) -> float:
+	if accessor == &"barrel_elevation":
+		return _barrel_quantum
 	return U8_QUANTUM if U8_FIELDS.has(String(accessor)) else SimViewContract.EPS
 
 

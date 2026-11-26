@@ -6,9 +6,12 @@ DELTA records against the previous written frame, ENTITY_META / ROSTER_REMOVE, E
 Positions stay as quantised levels (cell, e, n, u); it does not need the moon's cell geometry. Used by moderators
 (CHAT text, NET-43) and perf scripts. Standard library only.
 
-    python tools/replay_inspect.py match.pwr [--json] [--gravity 6.0 --hz 30 --gravity-def 3 ...] [--chat] [--redact OUT]
+    python tools/replay_inspect.py match.pwr [--json] [--gravity 6.0 --hz 30 --gravity-def 3 ...] [--barrel-def 2 ...]
+        [--chat] [--redact OUT]
 
-Gravity-bearing entity defs (bomb, siege shell) are content data, so pass their def ids with --gravity-def.
+Gravity-bearing entity defs (bomb, siege shell) are content data, so pass their def ids with --gravity-def. Ground defs
+with a barrel (the Siege Crawler; NET-61, R0 B.31 A-152, PROTOCOL_VERSION 2) end every FULL record with a barrel u8 and
+may carry A-DELTA mask bit 6 (MASK_BARREL, u8 after FLAGS): pass their def ids with --barrel-def.
 Exit code: 0 ok, 1 file unreadable or unsupported, 2 recovered from a truncated file (frames up to the cut printed).
 """
 from __future__ import annotations
@@ -24,7 +27,7 @@ from dataclasses import dataclass, field
 
 MAGIC = b"PWR1"
 END_MAGIC = b"PWRE"
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 FRAME_HEADER = 9
 FOOTER = 44
 KEYFRAME, DELTA, EVENTS, CHAT, INPUT_SUMMARY, PROJECTILES = 1, 2, 3, 4, 5, 6
@@ -41,6 +44,7 @@ FINE_MASK = 0x1FFFFF
 FINE_MAX = 0xFFFFF
 FLAG_DYING = 0x80
 MASK_POS_SMALL, MASK_POS_LARGE, MASK_ORI, MASK_VEL, MASK_HP, MASK_FLAGS = 0x01, 0x02, 0x04, 0x08, 0x10, 0x20
+MASK_BARREL = 0x40
 HEADER_BYTES = 10
 
 
@@ -291,8 +295,9 @@ def split_packets(payload: bytes) -> list[bytes]:
 class State:
     """The replicated state a reader holds: roster (slot -> meta dict) and the newest decoded frame's entries."""
 
-    def __init__(self, gravity: float, hz: int, gravity_defs: set[int]):
+    def __init__(self, gravity: float, hz: int, gravity_defs: set[int], barrel_defs: set[int] | None = None):
         self.g, self.dt, self.grav_defs = gravity, 1.0 / hz, gravity_defs
+        self.barrel_defs = barrel_defs or set()
         self.roster: dict[int, dict] = {}
         self.entries: dict[int, Entry] = {}
         self.tick = 0
@@ -353,9 +358,10 @@ class State:
             ori = struct.unpack_from("<I", p, at + 9)[0]
             vel = p[at + 13] | (p[at + 14] << 8) | (p[at + 15] << 16)
             self.entries[slot] = Entry((cell, e, n, u), ori, fine_from_bits(vel), p[at + 16], p[at + 17], tick)
-            return at + 18
+            return at + 18 + (1 if self.roster[slot]["def"] in self.barrel_defs else 0)
         src = self.entries.get(slot)
-        if src is None or mask & 0xC0 or mask == 0 or (mask & 3) == 3:
+        bar_ok = self.roster[slot]["def"] in self.barrel_defs
+        if src is None or mask & 0x80 or mask == 0 or (mask & 3) == 3 or (mask & MASK_BARREL and not bar_ok):
             raise ReplayError("bad delta record")
         at += 1
         grav = self._is_grav(slot, src)
@@ -384,6 +390,10 @@ class State:
             at += 1
         if mask & MASK_FLAGS:
             new.flags = p[at]
+            at += 1
+        if mask & MASK_BARREL:
+            if at >= len(p):                       # the barrel byte (not part of the summary)
+                raise ReplayError("short barrel group")
             at += 1
         self.entries[slot] = new
         return at
@@ -437,9 +447,9 @@ def decode_chat(body: bytes) -> dict:
 
 
 def decode_all(rp: Replay, gravity: float = 6.0, hz: int = 30, gravity_defs: set[int] | None = None,
-               stop_tick: int | None = None) -> dict:
+               stop_tick: int | None = None, barrel_defs: set[int] | None = None) -> dict:
     """Replays every frame; returns a summary dict (the shape godot/test/fixtures/replay/*.json pins)."""
-    st = State(gravity, hz, gravity_defs or set())
+    st = State(gravity, hz, gravity_defs or set(), barrel_defs)
     counts = {name: 0 for name in FRAME_NAMES.values()}
     events: list[dict] = []
     chat: list[dict] = []
@@ -505,13 +515,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--gravity", type=float, default=6.0, help="rules.json gravity (m/s^2)")
     ap.add_argument("--hz", type=int, default=30)
     ap.add_argument("--gravity-def", type=int, action="append", default=[], help="entity def id with gravity:true")
+    ap.add_argument("--barrel-def", type=int, action="append", default=[], help="ground def id with a barrel (NET-61)")
     ap.add_argument("--redact", metavar="OUT", help="write a same-length redacted copy (gzip) to OUT")
     ns = ap.parse_args(argv)
     try:
         with open(ns.file, "rb") as f:
             data = f.read()
         rp = open_replay(data)
-        summary = decode_all(rp, ns.gravity, ns.hz, set(ns.gravity_def))
+        summary = decode_all(rp, ns.gravity, ns.hz, set(ns.gravity_def), barrel_defs=set(ns.barrel_def))
     except (OSError, *READ_ERRORS) as e:
         print(f"replay_inspect: {e}", file=sys.stderr)
         return 1

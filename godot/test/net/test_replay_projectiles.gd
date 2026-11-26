@@ -7,8 +7,12 @@ extends GdUnitTestSuite
 const TICKS: int = 3600
 ## SHA-256 of the inflated stream over the ProjectileRig scene (_projectile_raw). WITHOUT_SHOTS was measured on main
 ## before NET-51 (a null ShotBuffer must change no byte); WITH_SHOTS adds the PROJECTILES frames.
-const SHA_WITHOUT_SHOTS: String = "73d658684c2c272d06cfaf2172ba75ff9a58bf2451d964ab3d95d0e8280ba380"
-const SHA_WITH_SHOTS: String = "9db458329c5c68ea8c129cd3e78368a8a85e703fab42e808a8025431c2eba0dd"
+## NET-61 re-pinned both (PROTOCOL_VERSION 1 -> 2, R0 B.31 A-152): the scene has no barrel def, so the only changed bytes
+## are the header's protocol_version u16 at offset 4; with it written back to 1 the stream hashes to the pre-NET-61 pins.
+const SHA_WITHOUT_SHOTS: String = "d62b4c996e159bbd5324fcdb0a52b45f7a367a1c282c28b8cd83c63f28b63d00"
+const SHA_WITH_SHOTS: String = "799bd5b393480efc530ce440b611170c6cc1288e2c7e65f2a71c84ba2cc77eb0"
+const SHA_WITHOUT_SHOTS_V1: String = "73d658684c2c272d06cfaf2172ba75ff9a58bf2451d964ab3d95d0e8280ba380"
+const SHA_WITH_SHOTS_V1: String = "9db458329c5c68ea8c129cd3e78368a8a85e703fab42e808a8025431c2eba0dd"
 
 
 func _shots_for(tick: int) -> ShotBuffer:
@@ -193,11 +197,19 @@ func _sha(raw: PackedByteArray) -> String:
 
 
 func test_replay_bytes_over_live_projectiles_pinned() -> void:
-	var a: String = _sha(_projectile_raw(false))
-	var b: String = _sha(_projectile_raw(true))
+	var raw_a: PackedByteArray = _projectile_raw(false)
+	var raw_b: PackedByteArray = _projectile_raw(true)
+	var a: String = _sha(raw_a)
+	var b: String = _sha(raw_b)
 	print("SHA_WITHOUT_SHOTS=", a, " SHA_WITH_SHOTS=", b)
 	assert_str(a).is_equal(SHA_WITHOUT_SHOTS)
 	assert_str(b).is_equal(SHA_WITH_SHOTS)
+	assert_int(raw_a.decode_u16(4)).is_equal(Protocol.PROTOCOL_VERSION)
+	assert_int(raw_b.decode_u16(4)).is_equal(Protocol.PROTOCOL_VERSION)
+	raw_a.encode_u16(4, 1)                                                       # NET-61: the version is the only change
+	raw_b.encode_u16(4, 1)
+	assert_str(_sha(raw_a)).is_equal(SHA_WITHOUT_SHOTS_V1)
+	assert_str(_sha(raw_b)).is_equal(SHA_WITH_SHOTS_V1)
 
 
 func test_projectile_orientation_survives_replay_when_writer_reads_first() -> void:

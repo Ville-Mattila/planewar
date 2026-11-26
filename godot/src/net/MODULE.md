@@ -20,7 +20,7 @@ Anything not listed is private (prefix `_`).
 
 ```gdscript
 class_name Protocol                                   # net/protocol.gd; all static (04 s2)
-const PROTOCOL_VERSION: int                           # 1; bump on any layout change (04 s2.2)
+const PROTOCOL_VERSION: int                           # 2 (NET-61 barrel byte, R0 B.31 A-152); bump on any layout change (04 s2.2)
 const HELLO: int .. const DOCTRINE_PICK: int          # client -> server ids 0x01-0x0D (04 s2.3)
 const WELCOME: int .. const LOBBY_STATE: int          # server -> client ids 0x80-0x93
 const INVALID_ID: int; const SERVER_TO_CLIENT_MIN: int
@@ -67,7 +67,7 @@ const SPARE_LOW_MASK: int; const SPARE_CLASS_BIT: int; const SPARE_DYING: int; c
 static func flags_to_spare(f: int) -> int;  static func spare_to_flags(s: int) -> int   # tier-B flags (A-24); braking reads false
 static func quantize_vel(v: Vector3, cell: int) -> int   # 3 x i8 at 2 m/s in cell ENU; 0 for an invalid cell
 static func dequantize_vel(bits: int, cell: int) -> Vector3;  static func quantize_hp(hp01: float) -> int;  static func dequantize_hp(b: int) -> float
-static func make_flags(control_state: int, bits: int) -> int;  static func flags_control(f: int) -> int;  static func quantize_ai_tag(tag: int) -> int
+static func make_flags(control_state: int, bits: int) -> int;  static func flags_control(f: int) -> int;  static func quantize_ai_tag(tag: int) -> int;  const BARREL_BYTES: int; const BARREL_LEVELS: int;  static func quantize_barrel(e: float, lo: float, hi: float) -> int;  static func dequantize_barrel(b: int, lo: float, hi: float) -> float   # 1; 255; radians, def limits (NET-61)
 static func write_pos(buf: PackedByteArray, at: int, q: int) -> int;  static func read_pos(buf: PackedByteArray, at: int) -> int
 static func write_u32(buf: PackedByteArray, at: int, v: int) -> int;  static func read_u32(buf: PackedByteArray, at: int) -> int
 static func write_u24(buf: PackedByteArray, at: int, v: int) -> int;  static func read_u24(buf: PackedByteArray, at: int) -> int
@@ -136,20 +136,20 @@ class_name SnapshotFrame extends RefCounted           # net/snapshot_frame.gd: p
 var tick: int;  var count: int;  var slot: PackedInt32Array;  var pos: PackedVector3Array;  var vel: PackedVector3Array;  var rot: PackedVector4Array
 var hp01: PackedFloat32Array;  var flags: PackedByteArray;  var ai_tag: PackedByteArray;  var team: PackedByteArray;  var gravity: PackedByteArray
 var under_fire: PackedByteArray;  var visible_mask: PackedInt32Array;  var gen: PackedInt32Array;  func resize(n: int) -> void   # gen: EntityId generation (NET-08 Interest)
-var kind: PackedByteArray;  var shooter: PackedInt32Array;  var target: PackedInt32Array;  const SLUG: int .. const CANISTER: int;  const REPLICATED_KINDS: int   # projectile rows (A-112): ProjectileStore.kind ordinals 0-6; BOMB | ROCKET | SIEGE_SHELL | CANISTER
+var kind: PackedByteArray;  var shooter: PackedInt32Array;  var target: PackedInt32Array;  const SLUG: int .. const CANISTER: int;  const REPLICATED_KINDS: int;  var barrel: PackedInt32Array;  func set_barrel(i: int, wire_byte: int) -> void   # projectile rows (A-112): ProjectileStore.kind ordinals 0-6; BOMB | ROCKET | SIEGE_SHELL | CANISTER. barrel (NET-61): 0 none, else BaselineFrame.BARREL_KNOWN | byte; set_barrel(< 0) = none
 func set_entity(i: int, slot_id: int, p: Vector3, v: Vector3, q: Quaternion, hp: float, flag_byte: int, team_id: int, tag: int = 0, has_gravity: bool = false, visible: int = 0) -> void
 func set_projectile(i: int, slot_id: int, projectile_kind: int, p: Vector3, v: Vector3, team_id: int, has_gravity: bool, shooter_id: int, target_id: int, generation: int) -> void;  static func replicated_kind(projectile_kind: int) -> bool;  func index_of_row(i: int) -> int   # -1: no roster index / slug, flak, rail
 
 class_name SnapshotCodec extends RefCounted           # net/snapshot_codec.gd: shared cache (indexed by roster index) + per-client encode
 const HEADER_BYTES: int; const MAX_PACKET_BYTES: int; const MAX_PACKETS_PER_TICK: int; const SECTION_MAX: int; const TEAM_MAX: int; const CAPACITY: int
 const GAP_MAX: int; const GAP_ESCAPE: int; const FULL_BODY_BYTES: int; const SMALL_SHIFT: int; const SMALL_MAX: int; const POS_SEND_MIN: int; const LARGE_MAX: int
-const MASK_POS_SMALL: int; const MASK_POS_LARGE: int; const MASK_ORI: int; const MASK_VEL: int; const MASK_HP: int; const MASK_FLAGS: int; const MASK_CELL_CHANGED: int; const MASK_FULL: int
+const MASK_POS_SMALL: int; const MASK_POS_LARGE: int; const MASK_ORI: int; const MASK_VEL: int; const MASK_HP: int; const MASK_FLAGS: int; const MASK_BARREL: int; const MASK_CELL_CHANGED: int; const MASK_FULL: int   # MASK_BARREL 0x40 (NET-61); MASK_CELL_CHANGED deprecated alias (Open items)
 enum Tier { A, B, C }
 enum Kind { NONE, FULL, DELTA, BLIP }
 var gravity: float;  var dt: float;  var prepare_count: int;  var cache_tick: int;  var max_packets: int;  var deferred: int;  var cache_bytes: bool   # false = pre-NET-49 FULL/C-BLIP path, same bytes; var append_frame: bool
 var n_full: int;  var n_delta: int;  var n_blip: int;  var n_pos_small: int;  var n_pos_large: int   # cumulative record counters
 var c_tick: PackedInt32Array;  var c_pos: PackedInt64Array;  var c_ori: PackedInt64Array;  var c_coarse: PackedInt32Array;  var c_vel: PackedInt32Array;  var c_fine: PackedInt64Array
-var c_hp: PackedByteArray;  var c_flags: PackedByteArray;  var c_ai: PackedByteArray;  var c_team: PackedByteArray;  var c_grav: PackedByteArray;  var c_blip: PackedInt32Array;  var c_vmask: PackedInt32Array;  var c_gen: PackedInt32Array   # c_vmask: V bits, projectile = own team | shooter's | target's (A-112); a projectile index's new generation is sent FULL
+var c_hp: PackedByteArray;  var c_flags: PackedByteArray;  var c_ai: PackedByteArray;  var c_team: PackedByteArray;  var c_grav: PackedByteArray;  var c_blip: PackedInt32Array;  var c_vmask: PackedInt32Array;  var c_gen: PackedInt32Array;  var c_barrel: PackedInt32Array   # c_vmask: V bits, projectile = own team | shooter's | target's (A-112); a projectile index's new generation is sent FULL
 func _init(gravity_mps2: float, tick_hz: int) -> void;  func prepare_tick(frame: SnapshotFrame) -> void   # once per tick, before any encode
 func ensure_full(s: int) -> void;  func coarse_of(s: int) -> int;  func blip_of(s: int) -> int;  func team_visible(team: int) -> PackedInt32Array   # NET-60: ensure_full = a projectile row quantises c_ori / c_fine on first use (call before reading them); coarse/blip/team_visible lazy per tick
 func encode(store: BaselineStore, tick: int, a: PackedInt32Array, b: PackedInt32Array, c: PackedInt32Array, pilot: PilotBlock, out: Array[PackedByteArray], refresh: PackedInt32Array = PackedInt32Array()) -> int   # refresh: FULLs in C (04 s4.3)
@@ -158,13 +158,13 @@ class_name SnapshotMasks extends RefCounted         # net/snapshot_masks.gd: DEL
 static func pos_mask(res: Vector3i) -> int;  static func wire_residual(mask: int, res: Vector3i) -> Vector3i;  static func applied_residual(mask: int, res: Vector3i) -> Vector3i;  static func delta_body_bytes(mask: int, tier_b: bool, own: bool) -> int
 class_name SnapshotWriter extends RefCounted          # net/snapshot_writer.gd: packet assembly for encode()
 var packets: int;  func start(tick: int, base_tick: int, pilot: PilotBlock, out: Array[PackedByteArray], limit: int) -> void
-func place(s: int, tier: int, body: int) -> bool;  func finish() -> int;  func put_u24(v: int) -> void;  func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int) -> void;  func put_full_words(w0: int, w1: int, w2: int, own: bool) -> void
-func put_delta(mask: int, res: Vector3i, ori: int, tier_b: bool, vel: int, hp: int, flags: int, ai_tag: int) -> void
+func place(s: int, tier: int, body: int) -> bool;  func finish() -> int;  func put_u24(v: int) -> void;  func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int, barrel: int = 0) -> void;  func put_full_words(w0: int, w1: int, w2: int, own: bool, barrel: int = 0) -> void
+func put_delta(mask: int, res: Vector3i, ori: int, tier_b: bool, vel: int, hp: int, flags: int, ai_tag: int, barrel: int = 0) -> void   # barrel: 0 or BARREL_KNOWN | byte
 class_name SnapshotByteCache extends RefCounted       # net/snapshot_byte_cache.gd: client-independent FULL / C-BLIP bytes per tick (A-40)
 const CAPACITY: int;  var w0: PackedInt64Array;  var w1: PackedInt64Array;  var w2: PackedInt32Array;  var oc: PackedInt32Array;  func full(s: int, tick: int, pos_q: int, ori_bits: int, vel_bits: int, hp_flags_ai: int) -> void;  func blip_pos(s: int, tick: int, pos_q: int, blip: int) -> int
 class_name SnapshotDecoder extends RefCounted         # net/snapshot_decoder.gd: validate the whole packet, then apply
 enum Status { OK, MALFORMED, STALE, NO_BASELINE, MISSING_ROSTER }
-const MAX_RECORDS: int;  var store: BaselineStore;  var roster: Roster;  var gravity_def: PackedByteArray;  var gravity: float;  var dt: float;  var born: PackedInt32Array;  var born_gen: PackedInt32Array   # born: first FULL tick of an index's roster generation (NET-58)
+const MAX_RECORDS: int;  var store: BaselineStore;  var roster: Roster;  var gravity_def: PackedByteArray;  var barrel_def: PackedByteArray;  var gravity: float;  var dt: float;  var born: PackedInt32Array;  var born_gen: PackedInt32Array   # born: first FULL tick of an index's roster generation (NET-58)
 var pilot: PilotBlock;  var pilot_tick: int;  var missing: PackedInt32Array;  var malformed: int;  var records_applied: int
 func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) -> void;  func current() -> BaselineFrame;  func decode(bytes: PackedByteArray) -> int;  func forget_tick(tick: int) -> void;  func reset() -> void; func accept_keyframe(tick: int) -> BaselineFrame   # NET-25 replay chunks / seek; NET-07 keyframe reset (net/keyframe/MODULE.md)
 
@@ -173,12 +173,12 @@ const DEPTH: int;  var team: int;  var acked_tick: int;  var newest_tick: int;  
 func frame_at(t: int) -> BaselineFrame;  func begin(t: int, base_tick: int) -> BaselineFrame;  func ack(t: int) -> void;  func base_for(t: int) -> int;  func reset() -> void
 
 class_name BaselineFrame extends RefCounted           # net/baseline_frame.gd: what one client holds per roster index after a tick
-const CAPACITY: int; const ORI_UNKNOWN: int
+const CAPACITY: int; const ORI_UNKNOWN: int; const BARREL_KNOWN: int   # 0x100: barrel[i] = BARREL_KNOWN | byte while held from section A, else 0 (NET-61)
 var tick: int;  var base_tick: int;  var usable: bool;  var present: PackedByteArray;  var pos: PackedInt64Array;  var ori: PackedInt64Array;  var ori_c: PackedInt32Array
-var vel: PackedInt64Array;  var hp: PackedByteArray;  var flags: PackedByteArray;  var ai: PackedByteArray;  var blip: PackedInt32Array;  var etick: PackedInt32Array;  var hi: int   # NET-59: hi = one past the highest index written since clear/copy; every entry >= hi is default; clear skips at 0 and re-takes a blank frame (memcpy, no fills)
+var vel: PackedInt64Array;  var hp: PackedByteArray;  var flags: PackedByteArray;  var ai: PackedByteArray;  var blip: PackedInt32Array;  var barrel: PackedInt32Array;  var etick: PackedInt32Array;  var hi: int   # NET-59: hi = one past the highest index written since clear/copy; every entry >= hi is default; clear skips at 0 and re-takes a blank frame (memcpy, no fills)
 func clear(t: int) -> void;  func copy_from(src: BaselineFrame, t: int) -> void;  func set_blip(i: int, t: int, blip_bits: int) -> void;  func set_blip_at(i: int, t: int, blip_bits: int, pos_q: int) -> void
-func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void;  func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int, fine_vel: int, hp_b: int, flag_b: int, ai_tag: int) -> void
-func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: int, ori_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void
+func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int, barrel_v: int = 0) -> void;  func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int, fine_vel: int, hp_b: int, flag_b: int, ai_tag: int, barrel_v: int = 0) -> void
+func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: int, ori_bits: int, hp_b: int, flag_b: int, ai_tag: int, barrel_v: int = 0) -> void
 static func coarse_of_full(ori_bits: int) -> int;  func same_state(other: BaselineFrame) -> bool;  func state_hash() -> int;  func shown_blip(i: int, t: int, def_grav: bool, g: float, dt: float) -> int   # NET-54
 func shown_levels(i: int, t: int, def_grav: bool, g: float, dt: float) -> Vector3i;  func base_grav(i: int, def_grav: bool) -> bool   # NET-56; NET-57
 
@@ -233,8 +233,7 @@ COMMAND payload codecs (`CommandCodec`, NET-04): see `commands/MODULE.md`. KEYFR
 04 s2.3 is the catalogue; `Protocol.CATALOGUE` is that table as data (id, channel, Max B) and is pinned to the doc by `test_protocol.gd`. Multi-byte integers are little-endian (04 s3.5 worked example). Every packet's first byte is
 the message id; ids 0x0E-0x7F and 0x94-0xFF are reserved (0x70-0x7F / 0xF0-0xFF for v1.1 WebRTC signalling) and 0x00 is never valid.
 
-Field layouts (`Codec`, 04 s3.2-s3.3): vec3q = cell u16, e u16, n u16, u u16 with `e = dot(p - c, east)` etc. in the
-ADR-03 ENU frame of `c = Sphere.cell_center_dir(cell, GRID_INTEREST) * PLANET_RADIUS`, level k = -1280 + k * 3.906 cm
+Field layouts (`Codec`, 04 s3.2-s3.3): vec3q = cell u16, e u16, n u16, u u16 with `e = dot(p - c, east)` etc. in the ADR-03 ENU frame of `c = Sphere.cell_center_dir(cell, GRID_INTEREST) * PLANET_RADIUS`, level k = -1280 + k * 3.906 cm
 (e, n) and -768 + k * 6.25 cm (u), rounded to nearest. quat_s3 = u32 LE: bits 0-1 index of the largest |component| in
 x y z w order (ties: lowest index), bits 2-11 / 12-21 / 22-31 the other three ascending as 10-bit two's complement of
 `round(c * 511 * sqrt(2))`, signs flipped so the dropped component is positive (04 s3.5's `9A 2F 4C 71` has index 2).
@@ -249,7 +248,7 @@ A, B, C in that order, each a u8 count (1-255) then records. A record starts wit
 previous record of the packet (the chain runs across sections and restarts per packet; 0 only for index 0 as the first
 record), or 0xFF + u16 index. Next byte 0xFF = FULL (vec3q, quat_s3, vel, hp, flags, +ai_tag own team); otherwise A/B: a
 DELTA mask (bit 7 and bit 6 clear, not both POS bits), groups in mask-bit order; C: a C-BLIP (e8 clamped to 254 so it
-never reads 0xFF, n8, alt6 | state << 6).
+never reads 0xFF, n8, alt6 | state << 6). NET-61 (R0 B.31 A-152, PROTOCOL_VERSION 2): a def with a barrel (`barrel_def`) ends every FULL with barrel u8 and its A-DELTA may set bit 6 MASK_BARREL (u8 after FLAGS; MALFORMED in B or for other defs); held only from section A, B / C records and KEYFRAMEs clear it, a held entry planned in B / C sends one record (B: HP group, C: the C-BLIP) so it clears (04 s3.4 "Barrel holding").
 NET-54/56 (no wire change): no C-BLIP for an unknown-blip C entry while `BaselineFrame.shown_blip` equals `blip_of`; UNDER_FIRE always sends. `shown_levels` is the one presentation rule: a known blip shows its stored bucket (no gravity even if DYING), anything else dead-reckons; ReplayReader.position_of uses it, NetSimView (NET-17, client/MODULE.md CS5) evaluates the same rule. NET-57 (R0 B.19 A-103, no byte change, PROTOCOL_VERSION 1): both codecs take a known blip's DELTA base from `shown_levels` (stored bucket) with `base_grav` false, so neither end applies gravity or advances its velocity, DYING or not; A/B and unknown-blip entries dead-reckon as before.
 POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x i16 quanta, both against `DeadReckon.dr_levels` of the client's entry. B ORI = coarse u24 with the A-24 flags; B bit 5 = ai_tag (own team = roster team equals the client's). The 15-byte pilot block ends packet index 0. Decoder (A-36): HAS_PILOT off index 0, CONTINUED on index 3 or an index above the tick's LAST is MALFORMED; a repeated index is STALE; a missing one is loss.
 
@@ -271,6 +270,7 @@ POS_SMALL = 3 x i8 in 4-quanta steps (15.6 cm E/N, 25 cm U), POS_LARGE = 3 x i16
   delta baseline only when the client acknowledged it, which it does only for a complete tick (every packet index
   received, `BaselineStore.complete_tick`; A-36, NET-48); every emitted frame is `usable`; `prepare_tick` runs once per tick.
 - N10: `SnapshotDecoder.decode` validates the whole packet before applying; anything but OK changes nothing.
+- N11: a `SnapshotFrame` row has `barrel != 0` exactly when its def has a barrel by R0 B.31 A-151 (`NetDefs.barrel_def`, read as `SnapshotDecoder.barrel_def`); every filler calls `set_barrel(i, NetDefs.barrel_byte(def_id, elevation))` after `set_entity` for every row, with a `NetDefs` built from the same `ContentSet` the clients load. A row that disagrees makes every packet that carries it MALFORMED (R0 B.32 A-156).
 
 ## Data owned
 
@@ -297,4 +297,4 @@ NET-03: `test/unit/net/test_pilot_wire.gd` (all byte values round trip, reserved
 
 ## Open items
 
-NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 + perf note and NET-03's questions: closed by R0 B.10 A-36..A-40, A-44..A-46 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 and the silence rule (keep BOOST / BRAKE, drop FLIP / DOCK / RELEASE / FIRE1/2; 10 ticks, NQ10 closed) are ratified as written above. A-36 landed in NET-48 (`PROTOCOL_VERSION` stays 1, OWNER), A-40 in NET-49 (`encode(refresh)` is the primitive NET-07 fills). Pending: sim lane `PilotInput`'s `to_bytes` comment (A-46; the wire form is `PilotWire`). R0 B.11 (`docs/reviews/R0-amendments-04.md`): the roster has 1,536 entries so wrecks are addressable (A-54, done in NET-50: `test_roster_wrecks.gd`); NET-10's worst-case 4.3 ms event routing and NET-49's 9.7 ms canonical encode are recorded in 03 s4.2 as dev-box numbers for S-SIM-1 / NET-08 (A-62); `NetSimView` implements `SimView.read_poses` in NET-17 (A-56). NET-17: `shield01` (GD-38) and `wreck_ore` (GD-41, R0 B.20 A-108) inherit -1.0 on `NetSimView` (04 s5.6 default; TEST-02 exempt) until a codec task replicates dome charge / wreck ore; CORE_SHIELD_UP travels in TEAM_STATE.flags; open items (R0 B.22 A-111..A-115) in `client/MODULE.md`.
+NET-02 CQ-1..3, CHAT_RELAY, `SessionPhase`: closed by NET-47 (R0 B.9 A-23..A-26, A-28). NET-06 CQ-4..7 + perf note and NET-03's questions: closed by R0 B.10 A-36..A-40, A-44..A-46 (`docs/reviews/R0-amendments-03.md`); CQ-5..7 and the silence rule (keep BOOST / BRAKE, drop FLIP / DOCK / RELEASE / FIRE1/2; 10 ticks, NQ10 closed) are ratified as written above. A-36 landed in NET-48 (`PROTOCOL_VERSION` stays 1, OWNER), A-40 in NET-49 (`encode(refresh)` is the primitive NET-07 fills). Pending: sim lane `PilotInput`'s `to_bytes` comment (A-46; the wire form is `PilotWire`). R0 B.11 (`docs/reviews/R0-amendments-04.md`): the roster has 1,536 entries so wrecks are addressable (A-54, done in NET-50: `test_roster_wrecks.gd`); NET-10's worst-case 4.3 ms event routing and NET-49's 9.7 ms canonical encode are recorded in 03 s4.2 as dev-box numbers for S-SIM-1 / NET-08 (A-62); `NetSimView` implements `SimView.read_poses` in NET-17 (A-56). NET-17: `shield01` (GD-38) and `wreck_ore` (GD-41, R0 B.20 A-108) inherit -1.0 on `NetSimView` (04 s5.6 default; TEST-02 exempt) until a codec task replicates dome charge / wreck ore; CORE_SHIELD_UP travels in TEAM_STATE.flags; open items (R0 B.22 A-111..A-115) in `client/MODULE.md`. Deprecated: `SnapshotCodec.MASK_CELL_CHANGED` (0x40) since NET-61: no wire meaning, equals `MASK_BARREL`; do not use it; deleted at a major version by ADR (10 s4.1, R0 B.32 A-156).

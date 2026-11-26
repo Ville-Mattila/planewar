@@ -15,6 +15,9 @@ const MAX_RECORDS: int = 512
 var store: BaselineStore
 var roster: Roster
 var gravity_def: PackedByteArray = PackedByteArray()   # by def id: 1 = def gravity:true (bomb, siege shell)
+## By def id: 1 = the def has a ground barrel (NetDefs.barrel_def; NET-61, R0 B.31 A-152): its FULL records end with the
+## barrel byte and its A-DELTAs may carry MASK_BARREL. Must equal the server's def table, like gravity_def.
+var barrel_def: PackedByteArray = PackedByteArray()
 var gravity: float = 0.0
 var dt: float = 0.0
 var pilot: PilotBlock = PilotBlock.new()
@@ -36,6 +39,7 @@ var _vel: PackedInt64Array = PackedInt64Array()   # FULL: wire bits; DELTA: fine
 var _hp: PackedByteArray = PackedByteArray()
 var _fl: PackedByteArray = PackedByteArray()
 var _ai: PackedInt32Array = PackedInt32Array()
+var _br: PackedInt32Array = PackedInt32Array()    # BaselineFrame.barrel value the record leaves (0 = not held)
 var _gap_idx: int = 0
 var _tick: int = 0
 # packets received per tick, ring keyed by tick % BaselineStore.DEPTH (A-36)
@@ -58,6 +62,7 @@ func _init(gravity_mps2: float, tick_hz: int, team_id: int, roster_ref: Roster) 
 	var _r6: int = _hp.resize(MAX_RECORDS)
 	var _r7: int = _fl.resize(MAX_RECORDS)
 	var _r8: int = _ai.resize(MAX_RECORDS)
+	var _rc: int = _br.resize(MAX_RECORDS)
 	var _r9: int = _rx_tick.resize(BaselineStore.DEPTH)
 	var _ra: int = _rx_got.resize(BaselineStore.DEPTH)
 	var _rb: int = _rx_last.resize(BaselineStore.DEPTH)
@@ -237,9 +242,10 @@ func _parse_record(b: PackedByteArray, at: int, tier: int, src: BaselineFrame) -
 	var own: bool = roster.team_of(i) == store.team
 	_idx[_n] = i
 	_ai[_n] = -1
+	_br[_n] = 0
 	var m: int = b[at]
 	if m == SnapshotCodec.MASK_FULL:
-		at = _parse_full(b, at + 1, own)
+		at = _parse_full(b, at + 1, own, _has_barrel(i), tier == SnapshotCodec.Tier.A)
 	elif src == null or src.present[i] == 0:
 		return -1
 	elif tier == SnapshotCodec.Tier.C:
@@ -255,8 +261,9 @@ func _parse_record(b: PackedByteArray, at: int, tier: int, src: BaselineFrame) -
 	return at
 
 
-func _parse_full(b: PackedByteArray, at: int, own: bool) -> int:
-	var body: int = SnapshotCodec.FULL_BODY_BYTES - 1 + (Codec.AI_TAG_BYTES if own else 0)
+## FULL body after the mask; a def with a barrel ends with the barrel byte, held only in section A (`tier_a`).
+func _parse_full(b: PackedByteArray, at: int, own: bool, bar: bool, tier_a: bool) -> int:
+	var body: int = SnapshotCodec.FULL_BODY_BYTES - 1 + (Codec.AI_TAG_BYTES if own else 0) + (Codec.BARREL_BYTES if bar else 0)
 	if at + body > b.size():
 		return -1
 	var q: int = Codec.read_pos(b, at)
@@ -270,12 +277,16 @@ func _parse_full(b: PackedByteArray, at: int, own: bool) -> int:
 	_fl[_n] = b[at + 16]
 	if own:
 		_ai[_n] = b[at + 17]
+	if bar and tier_a:
+		_br[_n] = BaselineFrame.BARREL_KNOWN | b[at + body - 1]
 	return at + body
 
 
+## MASK_BARREL (bit 6) only in an A record of a def with a barrel; bit 7 never (NET-61).
 func _parse_delta(b: PackedByteArray, at: int, tier_b: bool, src: BaselineFrame, own: bool) -> int:
 	var m: int = b[at]
-	if (m & 0xC0) != 0 or m == 0 or (m & 3) == 3 or ((m & SnapshotCodec.MASK_FLAGS) != 0 and tier_b and not own):
+	if (m & 0x80) != 0 or m == 0 or (m & 3) == 3 or ((m & SnapshotCodec.MASK_FLAGS) != 0 and tier_b and not own) \
+			or ((m & SnapshotCodec.MASK_BARREL) != 0 and (tier_b or not _has_barrel(_gap_idx))):
 		return -1
 	if at + SnapshotCodec.delta_body_bytes(m, tier_b, own) > b.size():
 		return -1
@@ -321,7 +332,16 @@ func _parse_groups(b: PackedByteArray, at: int, m: int, tier_b: bool, own: bool)
 		if own:
 			_ai[_n] = b[at]
 			at += 1
+	if m & SnapshotCodec.MASK_BARREL:
+		_br[_n] = BaselineFrame.BARREL_KNOWN | b[at]
+		at += 1
 	return at
+
+
+## True when roster index `i`'s def has a ground barrel (barrel_def).
+func _has_barrel(i: int) -> bool:
+	var d: int = roster.def_of(i)
+	return d >= 0 and d < barrel_def.size() and barrel_def[d] != 0
 
 
 static func _s8(v: int) -> int:
@@ -333,7 +353,7 @@ func _apply_all(cur: BaselineFrame) -> void:
 		var i: int = _idx[k]
 		var kind: int = _kind[k]
 		if kind == SnapshotCodec.Kind.FULL:
-			cur.set_full(i, _tick, _pos[k], _ori[k], _vel[k], _hp[k], _fl[k], _ai[k])
+			cur.set_full(i, _tick, _pos[k], _ori[k], _vel[k], _hp[k], _fl[k], _ai[k], _br[k])
 			var g: int = roster.generation_of(i)
 			if g != born_gen[i] or _tick < born[i]:
 				born_gen[i] = g
@@ -342,5 +362,5 @@ func _apply_all(cur: BaselineFrame) -> void:
 			cur.set_blip(i, _tick, _ori[k])
 		else:
 			var m: int = _mask[k]
-			cur.set_delta(i, _tick, (m & 0x100) != 0, m & 0xFF, _pos[k], _vel[k], _ori[k], _hp[k], _fl[k], _ai[k])
+			cur.set_delta(i, _tick, (m & 0x100) != 0, m & 0xFF, _pos[k], _vel[k], _ori[k], _hp[k], _fl[k], _ai[k], _br[k])
 	records_applied += _n

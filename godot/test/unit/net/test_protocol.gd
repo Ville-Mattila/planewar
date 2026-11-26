@@ -81,7 +81,7 @@ func _leading_int(s: String) -> int:
 # --- version, ids, channels, sizes ---------------------------------------------------------------
 
 func test_protocol_version_is_1() -> void:
-	assert_int(Protocol.PROTOCOL_VERSION).is_equal(1)
+	assert_int(Protocol.PROTOCOL_VERSION).is_equal(2)                 # NET-61: barrel u8 (R0 B.31 A-152)
 
 
 func test_every_s2_3_id_is_defined_once() -> void:

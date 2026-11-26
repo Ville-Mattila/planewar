@@ -28,6 +28,9 @@ var gen: PackedInt32Array = PackedInt32Array()
 var kind: PackedByteArray = PackedByteArray()
 var shooter: PackedInt32Array = PackedInt32Array()
 var target: PackedInt32Array = PackedInt32Array()
+## Ground barrel (NET-61, R0 B.31 A-152): 0 for a def without a barrel, else BaselineFrame.BARREL_KNOWN | the wire byte
+## (set_barrel; NetDefs.barrel_byte quantises). Must agree with the client's def table (SnapshotDecoder.barrel_def).
+var barrel: PackedInt32Array = PackedInt32Array()
 
 const SLUG: int = 0                         ## ProjectileStore.kind ordinals (sim/MODULE.md)
 const BOMB: int = 1
@@ -54,7 +57,7 @@ func resize(n: int) -> void:
 	var _j: int = under_fire.resize(count)
 	var _k: int = visible_mask.resize(count)
 	var _l: int = gen.resize(count)
-	var e: int = kind.resize(count) | shooter.resize(count) | target.resize(count)
+	var e: int = kind.resize(count) | shooter.resize(count) | target.resize(count) | barrel.resize(count)
 	assert(e == OK)
 
 
@@ -75,6 +78,12 @@ func set_entity(i: int, slot_id: int, p: Vector3, v: Vector3, q: Quaternion, hp:
 	kind[i] = 0
 	shooter[i] = 0
 	target[i] = 0
+	barrel[i] = 0
+
+
+## Row i's barrel wire byte (0-255; the row's def has a barrel), or < 0 for none (NetDefs.barrel_byte). set_entity clears it.
+func set_barrel(i: int, wire_byte: int) -> void:
+	barrel[i] = BaselineFrame.BARREL_KNOWN | (wire_byte & 0xFF) if wire_byte >= 0 else 0
 
 
 ## Fills row i with a projectile entity: `slot_id` 4,096-6,143, `projectile_kind` = ProjectileStore.kind, `team_id` =

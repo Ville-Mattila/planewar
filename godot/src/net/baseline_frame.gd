@@ -1,7 +1,7 @@
 class_name BaselineFrame extends RefCounted
 ## What one client holds for every roster index after a snapshot tick (04 s3.4 baseline rule): quantised
-## position (vec3q), full and coarse orientation, fine velocity (DeadReckon, 1/1024 m/s), hp, flags, ai_tag, the last C-BLIP, and the
-## tick at which pos/vel are valid (`etick`, the dead-reckoning origin). The server keeps one per client per
+## position (vec3q), full and coarse orientation, fine velocity (DeadReckon, 1/1024 m/s), hp, flags, ai_tag, the last C-BLIP, the
+## tier-A barrel byte (NET-61) and the tick at which pos/vel are valid (`etick`, the dead-reckoning origin). The server keeps one per client per
 ## tick as a mirror; the client keeps its own. Both mutate it only through the set_* functions below, so the
 ## two copies stay bit-identical (codec_delta_test).
 
@@ -9,6 +9,9 @@ const CAPACITY: int = Roster.CAPACITY
 ## `ori` / `ori_c` after a record of the other form: unknown, so the next record in that form carries ORI.
 ## (Re-deriving one form from the other costs ~2 us per record; FULL records still derive `ori_c`.)
 const ORI_UNKNOWN: int = -1
+## `barrel[i]` = BARREL_KNOWN | the wire byte while the last record of entry i was in section A (R0 B.31 A-152); 0 = not
+## held (a def without a barrel, a B / C record, a KEYFRAME). NetSimView reports 0.0 + field_unknown for 0 (NET-61).
+const BARREL_KNOWN: int = 0x100
 ## The all-default frame `_reset` copies from (never written: its mark stays 0).
 static var _blank: BaselineFrame = BaselineFrame.new()
 
@@ -24,6 +27,7 @@ var hp: PackedByteArray = PackedByteArray()
 var flags: PackedByteArray = PackedByteArray()
 var ai: PackedByteArray = PackedByteArray()
 var blip: PackedInt32Array = PackedInt32Array()
+var barrel: PackedInt32Array = PackedInt32Array()
 var etick: PackedInt32Array = PackedInt32Array()
 ## High-water mark (NET-59): one past the highest roster index any set_* call wrote since the last clear / copy. Every
 ## entry at or above it holds its default (present 0, blip BLIP_UNKNOWN, everything else 0), so clear / copy_from move
@@ -43,6 +47,7 @@ func _init() -> void:
 	var _h: int = ai.resize(CAPACITY)
 	var _i: int = blip.resize(CAPACITY)
 	var _j: int = etick.resize(CAPACITY)
+	var _k: int = barrel.resize(CAPACITY)
 	blip.fill(DeadReckon.BLIP_UNKNOWN)
 	clear(0)
 
@@ -70,6 +75,7 @@ func _reset() -> void:
 	flags = _blank.flags.duplicate()
 	ai = _blank.ai.duplicate()
 	blip = _blank.blip.duplicate()
+	barrel = _blank.barrel.duplicate()
 	etick = _blank.etick.duplicate()
 
 
@@ -93,11 +99,14 @@ func copy_from(src: BaselineFrame, t: int) -> void:
 	flags = src.flags.duplicate()
 	ai = src.ai.duplicate()
 	blip = src.blip.duplicate()
+	barrel = src.barrel.duplicate()
 	etick = src.etick.duplicate()
 
 
-## FULL record: every field replaced. `ai_tag` < 0 keeps the stored tag (other team's entity).
-func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int) -> void:
+## FULL record: every field replaced. `ai_tag` < 0 keeps the stored tag (other team's entity). `barrel_v`: BARREL_KNOWN
+## | byte for a section-A record of a def with a barrel, else 0 (B / C sections and KEYFRAME do not leave it held).
+func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: int, flag_b: int, ai_tag: int,
+		barrel_v: int = 0) -> void:
 	if i >= hi:
 		hi = i + 1
 	present[i] = 1
@@ -110,13 +119,14 @@ func set_full(i: int, t: int, pos_q: int, ori_bits: int, vel_bits: int, hp_b: in
 	if ai_tag >= 0:
 		ai[i] = ai_tag & 0xFF
 	blip[i] = DeadReckon.BLIP_UNKNOWN
+	barrel[i] = barrel_v
 	etick[i] = t
 
 
 ## set_full with the values it derives passed in (SnapshotCodec's per-tick cache, A-40): `ori_c_bits` =
 ## coarse_of_full(ori_bits), `fine_vel` = DeadReckon.fine_from_bits(vel bits). Same state as set_full.
 func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int, fine_vel: int, hp_b: int,
-		flag_b: int, ai_tag: int) -> void:
+		flag_b: int, ai_tag: int, barrel_v: int = 0) -> void:
 	if i >= hi:
 		hi = i + 1
 	present[i] = 1
@@ -129,13 +139,15 @@ func set_full_cached(i: int, t: int, pos_q: int, ori_bits: int, ori_c_bits: int,
 	if ai_tag >= 0:
 		ai[i] = ai_tag & 0xFF
 	blip[i] = DeadReckon.BLIP_UNKNOWN
+	barrel[i] = barrel_v
 	etick[i] = t
 
 
 ## A- or B-DELTA record: `pos_q` / `fine_vel` are the reconstructed values (dead reckoning + residual; the
-## sent velocity or DeadReckon.dr_fine when VEL is absent); optional groups by `mask` (SnapshotCodec.MASK_*).
+## sent velocity or DeadReckon.dr_fine when VEL is absent); optional groups by `mask` (SnapshotCodec.MASK_*). A B record
+## drops the held barrel; an A record with MASK_BARREL sets `barrel_v` (BARREL_KNOWN | byte).
 func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: int, ori_bits: int, hp_b: int,
-		flag_b: int, ai_tag: int) -> void:
+		flag_b: int, ai_tag: int, barrel_v: int = 0) -> void:
 	if i >= hi:
 		hi = i + 1
 	pos[i] = pos_q
@@ -157,6 +169,10 @@ func set_delta(i: int, t: int, tier_b: bool, mask: int, pos_q: int, fine_vel: in
 			flags[i] = flag_b & 0xFF
 		if ai_tag >= 0:
 			ai[i] = ai_tag & 0xFF
+	if tier_b:
+		barrel[i] = 0
+	elif mask & SnapshotCodec.MASK_BARREL:
+		barrel[i] = barrel_v
 
 
 ## C-BLIP record: position becomes the blip's bucket centre in the stored cell, velocity zero.
@@ -166,6 +182,7 @@ func set_blip(i: int, t: int, blip_bits: int) -> void:
 	pos[i] = DeadReckon.blip_pos(Codec.pos_cell(pos[i]), blip_bits)
 	vel[i] = 0
 	blip[i] = blip_bits
+	barrel[i] = 0
 	etick[i] = t
 
 
@@ -176,6 +193,7 @@ func set_blip_at(i: int, t: int, blip_bits: int, pos_q: int) -> void:
 	pos[i] = pos_q
 	vel[i] = 0
 	blip[i] = blip_bits
+	barrel[i] = 0
 	etick[i] = t
 
 
@@ -213,8 +231,8 @@ static func coarse_of_full(ori_bits: int) -> int:
 func same_state(other: BaselineFrame) -> bool:
 	return present == other.present and pos == other.pos and ori == other.ori and ori_c == other.ori_c \
 			and vel == other.vel and hp == other.hp and flags == other.flags and ai == other.ai \
-			and blip == other.blip and etick == other.etick
+			and blip == other.blip and barrel == other.barrel and etick == other.etick
 
 
 func state_hash() -> int:
-	return hash([present, pos, ori, ori_c, vel, hp, flags, ai, blip, etick])
+	return hash([present, pos, ori, ori_c, vel, hp, flags, ai, blip, barrel, etick])

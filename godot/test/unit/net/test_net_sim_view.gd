@@ -216,7 +216,7 @@ func test_replicable_part_of_exempt_clauses() -> void:
 	var s: SimViewScene = SimViewScene.build()
 	var v: NetSimView = NetSimViewFactory.new().make(s) as NetSimView
 	var st: EntityStore = s.world.store()
-	for id: int in [s.a, s.b, s.c, s.core, s.pad, s.yard, s.tower]:
+	for id: int in [s.a, s.b, s.c, s.core, s.pad, s.yard, s.tower, s.crawler]:
 		assert_bool(v.alive(id)).is_true()
 		assert_int(v.def_kind(id)).is_equal(st.kind[EntityId.slot(id)])
 		assert_float(v.radius(id)).is_equal_approx(st.radius[EntityId.slot(id)], 1e-5)
@@ -236,7 +236,7 @@ func test_replicable_part_of_exempt_clauses() -> void:
 	assert_float(v.stockpile(0).x).is_equal(float(eco.start_ore * 2))
 	assert_float(v.stockpile(0).y).is_equal(float(eco.start_ice * 2))
 	assert_vector(v.stockpile(0)).is_equal_approx(s.world.view().stockpile(0), Vector3.ONE * 1e-4)
-	assert_int(v.unit_count(0)).is_equal(2)
+	assert_int(v.unit_count(0)).is_equal(3)                                  # a, c and the NET-61 Crawler
 	assert_int(v.team_flags(0) & TeamStateView.CORE_SHIELD_UP).is_equal(TeamStateView.CORE_SHIELD_UP)   # GD-38 via 0x85
 	assert_int(v.team_flags(0)).is_equal(s.world.view().team_state(0).flags)
 	assert_int(v.team_flags(1)).is_equal(0)
