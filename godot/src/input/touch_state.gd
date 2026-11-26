@@ -15,6 +15,8 @@ const A_FIRE1: StringName = &"ux_fire1"
 const A_FIRE2: StringName = &"ux_fire2"
 const A_DOCK: StringName = &"ux_dock"
 const A_RELEASE: StringName = &"ux_release"
+const A_BARREL_UP: StringName = &"ux_barrel_up"        ## UX-48: ground-mode hold buttons (UX-06 draws them)
+const A_BARREL_DOWN: StringName = &"ux_barrel_down"
 
 var stick: Vector2             ## raw virtual stick, x right, y up (nose up), unit disc
 var throttle: float            ## slider handle h in 0..1 (sticky; the UI holds the action at h)
@@ -25,6 +27,8 @@ var fire1: bool
 var fire2: bool
 var dock: bool
 var release: bool
+var barrel_up: bool
+var barrel_down: bool
 
 
 ## Reads the live InputMap actions; actions that are not registered read as released.
@@ -39,6 +43,8 @@ static func poll() -> TouchState:
 	s.fire2 = _strength(A_FIRE2) > 0.5
 	s.dock = _strength(A_DOCK) > 0.5
 	s.release = _strength(A_RELEASE) > 0.5
+	s.barrel_up = _strength(A_BARREL_UP) > 0.5
+	s.barrel_down = _strength(A_BARREL_DOWN) > 0.5
 	return s
 
 

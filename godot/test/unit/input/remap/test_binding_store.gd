@@ -153,3 +153,84 @@ func test_mapper_forwards_its_bindings_member_to_poll() -> void:
 	var none: int = plain.sample(1.0 / 30.0).buttons
 	_press_physical(KEY_G, false)
 	assert_int(none & PilotInput.FLIP).is_equal(0)
+
+
+# --- UX-48 / R0 B.31 A-154: I12 judges conflicts per mode set (flight, ground) -------------------------------------
+
+func test_the_default_bindings_raise_no_conflict_on_either_device() -> void:
+	var s: BindingStore = BindingStore.new(TMP)
+	assert_int(s.code(BindingStore.KBM, &"barrel_up", 0)).is_equal(KEY_E)
+	assert_int(s.code(BindingStore.KBM, &"barrel_down", 0)).is_equal(KEY_Q)
+	assert_int(s.code(BindingStore.KBM, &"steer_left", 0)).is_equal(KEY_A)
+	assert_int(s.code(BindingStore.KBM, &"steer_right", 0)).is_equal(KEY_D)
+	assert_int(s.code(BindingStore.PAD, &"barrel_up")).is_equal(JOY_BUTTON_RIGHT_SHOULDER)
+	assert_int(s.code(BindingStore.PAD, &"barrel_down")).is_equal(JOY_BUTTON_LEFT_SHOULDER)
+	assert_bool(s.conflicted(BindingStore.KBM).is_empty()).is_true()
+	assert_bool(s.conflicted(BindingStore.PAD).is_empty()).is_true()
+
+
+func test_a_code_shared_by_a_flight_only_and_a_ground_only_action_is_not_a_conflict() -> void:
+	var s: BindingStore = BindingStore.new(TMP)
+	assert_int(s.code(BindingStore.KBM, &"yaw_right", 1)).is_equal(KEY_E)   # E on yaw_right and on barrel_up
+	assert_int(s.code(BindingStore.KBM, &"barrel_up", 0)).is_equal(KEY_E)
+	assert_str(String(s.conflict_of(BindingStore.KBM, &"yaw_right", 1))).is_equal("")
+	assert_str(String(s.conflict_of(BindingStore.KBM, &"barrel_up", 0))).is_equal("")
+	assert_str(String(s.bind(BindingStore.KBM, &"barrel_up", 0, KEY_E))).is_equal("")
+	assert_str(String(s.bind(BindingStore.PAD, &"barrel_up", 0, JOY_BUTTON_RIGHT_SHOULDER))).is_equal("")   # rb is yaw_right
+	assert_bool(s.conflicted(BindingStore.KBM).is_empty()).is_true()
+	assert_bool(s.conflicted(BindingStore.PAD).is_empty()).is_true()
+
+
+func test_a_code_shared_inside_the_ground_set_is_flagged() -> void:
+	var s: BindingStore = BindingStore.new(TMP)
+	assert_str(String(s.bind(BindingStore.KBM, &"barrel_up", 0, KEY_A))).is_equal("steer_left")
+	var flagged: Array[StringName] = s.conflicted(BindingStore.KBM)
+	assert_bool(flagged.has(&"barrel_up")).is_true()
+	assert_bool(flagged.has(&"steer_left")).is_true()
+	assert_int(s.code(BindingStore.KBM, &"barrel_up", 0)).is_equal(KEY_A)   # flagged, never refused
+
+
+func test_an_action_in_both_sets_conflicts_with_either() -> void:
+	var s: BindingStore = BindingStore.new(TMP)
+	assert_str(String(s.bind(BindingStore.KBM, &"barrel_down", 0, KEY_W))).is_equal("throttle_up")
+	var ground: Array[StringName] = s.conflicted(BindingStore.KBM)
+	assert_bool(ground.has(&"barrel_down")).is_true()
+	assert_bool(ground.has(&"throttle_up")).is_true()
+	s.reset(BindingStore.KBM)
+	assert_str(String(s.bind(BindingStore.KBM, &"yaw_left", 0, KEY_W))).is_equal("throttle_up")
+	var flight: Array[StringName] = s.conflicted(BindingStore.KBM)
+	assert_bool(flight.has(&"yaw_left")).is_true()
+	assert_bool(flight.has(&"throttle_up")).is_true()
+
+
+func test_every_action_is_in_at_least_one_set() -> void:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(BindingStore.PARAMS_PATH))
+	var params: Dictionary = Glyphs.as_dict(parsed)
+	var sets: Dictionary = Glyphs.as_dict(params.get("sets", {}))
+	assert_bool(sets.has("flight")).is_true()
+	assert_bool(sets.has("ground")).is_true()
+	var actions: Dictionary = Glyphs.as_dict(params.get("actions", {}))
+	for device: String in actions:
+		for action: Variant in Glyphs.as_array(actions[device]):
+			var found: bool = false
+			for set_id: String in sets:
+				var per_device: Dictionary = Glyphs.as_dict(sets[set_id])
+				if Glyphs.as_array(per_device.get(device, [])).has(action):
+					found = true
+			assert_bool(found).override_failure_message("%s.%s is in no set" % [device, action]).is_true()
+
+
+func test_a_saved_file_without_the_ground_actions_loads_their_defaults() -> void:
+	var cf: ConfigFile = ConfigFile.new()
+	cf.set_value("meta", "version", BindingStore.FILE_VERSION)
+	cf.set_value("kbm", "dock", [KEY_G, BindingStore.UNBOUND])
+	cf.set_value("pad", "dock", JOY_BUTTON_X)
+	var _e: Error = DirAccess.make_dir_recursive_absolute("user://test_remap")
+	assert_int(cf.save(TMP)).is_equal(OK)
+	var s: BindingStore = BindingStore.new(TMP)
+	assert_int(s.load_file()).is_equal(OK)
+	assert_int(s.code(BindingStore.KBM, &"dock", 0)).is_equal(KEY_G)
+	assert_int(s.code(BindingStore.KBM, &"steer_left", 0)).is_equal(KEY_A)
+	assert_int(s.code(BindingStore.KBM, &"barrel_up", 0)).is_equal(KEY_E)
+	assert_int(s.code(BindingStore.PAD, &"barrel_down")).is_equal(JOY_BUTTON_LEFT_SHOULDER)
+	assert_int(BindingStore.FILE_VERSION).is_equal(1)

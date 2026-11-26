@@ -655,6 +655,12 @@ msgstr ""
 msgid "ui.reconnect.title"
 msgstr ""
 
+msgid "ui.remap.action.barrel_down"
+msgstr ""
+
+msgid "ui.remap.action.barrel_up"
+msgstr ""
+
 msgid "ui.remap.action.boost"
 msgstr ""
 
@@ -674,6 +680,12 @@ msgid "ui.remap.action.flip"
 msgstr ""
 
 msgid "ui.remap.action.release"
+msgstr ""
+
+msgid "ui.remap.action.steer_left"
+msgstr ""
+
+msgid "ui.remap.action.steer_right"
 msgstr ""
 
 msgid "ui.remap.action.throttle_up"
@@ -710,6 +722,12 @@ msgid "ui.remap.listen.pad"
 msgstr ""
 
 msgid "ui.remap.reset"
+msgstr ""
+
+msgid "ui.remap.set.flight"
+msgstr ""
+
+msgid "ui.remap.set.ground"
 msgstr ""
 
 msgid "ui.remap.title"
