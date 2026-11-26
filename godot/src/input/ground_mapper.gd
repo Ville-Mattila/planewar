@@ -25,6 +25,13 @@ func add_mouse_motion(rel: Vector2) -> void:
 	_mouse_acc += rel
 
 
+## Drops pending mouse motion, orbit and the RELEASE edge memory (the router calls it on a mode change).
+func reset() -> void:
+	_mouse_acc = Vector2.ZERO
+	orbit = Vector2.ZERO
+	_prev_edge = 0
+
+
 ## One raw PilotInput for the active class `kind` (InputClass.Kind).
 func sample_for(kind: int) -> PilotInput:
 	var acc: Vector2 = _mouse_acc

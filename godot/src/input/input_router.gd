@@ -173,6 +173,7 @@ func set_match_input_class(kind: int) -> void:
 func set_mode(new_mode: Mode) -> void:
 	if new_mode != _mode:
 		rts_mapper.reset()
+		ground_mapper.reset()
 	_mode = new_mode
 
 

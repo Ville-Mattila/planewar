@@ -59,9 +59,13 @@ func test_pad_ground_barrel_follows_a_remap_and_ignores_yaw_buttons() -> void:
 	var m: GroundMapper = GroundMapper.new()
 	var x: PadState = PadState.with_buttons(PadState.new(), PackedInt32Array([JOY_BUTTON_X]), s)
 	assert_float(m.map_pad(x).pitch).is_equal(1.0)
-	_c = s.bind(BindingStore.PAD, &"yaw_right", 0, JOY_BUTTON_START)   # a flight remap never moves the barrel
+	# RB is still yaw_right (the default) but is no longer barrel_up: the flight mapper would yaw on it, ground must not.
 	var rb: PadState = PadState.with_buttons(PadState.new(), PackedInt32Array([JOY_BUTTON_RIGHT_SHOULDER]), s)
-	assert_float(m.map_pad(rb).yaw).is_equal(0.0)
+	assert_bool(rb.rb).is_true()
+	assert_float(GamepadFlightMapper.new().map(rb, 1.0).yaw).is_less(0.0)   # the premise: yaw WOULD be non-zero
+	var out: PilotInput = m.map_pad(rb)
+	assert_float(out.yaw).is_equal(0.0)
+	assert_float(out.pitch).is_equal(0.0)
 
 
 func test_pad_right_stick_is_the_orbit_not_pitch() -> void:

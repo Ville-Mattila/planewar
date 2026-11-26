@@ -53,14 +53,12 @@ func test_ground_samples_the_ground_mapper_for_the_gamepad_not_the_flight_mapper
 
 
 func test_ground_kbm_mouse_motion_feeds_the_orbit_intent_and_never_pitch() -> void:
+	# Real events through route_event, no poller override: the router's own GROUND wiring is under test.
 	_become_kbm()
 	_router.set_mode(InputRouter.Mode.GROUND)
 	var m: InputEventMouseMotion = InputEventMouseMotion.new()
 	m.relative = Vector2(12.0, -80.0)
 	_router.route_event(m, 10)
-	var st: KbmState = KbmState.new()
-	st.mouse_delta = Vector2(12.0, -80.0)
-	_router.ground_mapper.kbm_poller = func() -> KbmState: return st
 	var _e: bool = _router.emit_tick()
 	assert_float(_last.pitch).is_equal(0.0)
 	assert_float(_last.roll).is_equal(0.0)
@@ -68,7 +66,19 @@ func test_ground_kbm_mouse_motion_feeds_the_orbit_intent_and_never_pitch() -> vo
 	assert_str(String(_intents[0][&"kind"])).is_equal(String(Intents.FREE_LOOK))
 	var payload: Dictionary = _intents[0][&"payload"]
 	assert_vector(payload[Intents.K_VEC] as Vector2).is_equal(Vector2(12.0, -80.0))
-	assert_float(_router.kbm_mapper.map(KbmState.new(), 0.0).roll).is_equal(0.0)   # the flight mapper never saw it
+	# Motion that arrives in GROUND and is never sampled must not reach the first FLIGHT sample.
+	var late: InputEventMouseMotion = InputEventMouseMotion.new()
+	late.relative = Vector2(0.0, -300.0)
+	_router.route_event(late, 20)
+	_router.set_mode(InputRouter.Mode.FLIGHT)
+	_last = null
+	var _f: bool = _router.emit_tick()
+	assert_float(_last.pitch).is_equal(0.0)
+	assert_float(_last.roll).is_equal(0.0)
+	_intents.clear()
+	_router.set_mode(InputRouter.Mode.GROUND)   # re-entering GROUND starts clean too
+	var _g: bool = _router.emit_tick()
+	assert_bool(_intents.is_empty()).is_true()
 
 
 func test_ground_touch_barrel_and_release_work_and_the_menu_flow_is_untouched() -> void:

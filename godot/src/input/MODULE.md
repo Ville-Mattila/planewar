@@ -130,6 +130,7 @@ var pad_poller: Callable; var kbm_poller: Callable; var touch_poller: Callable  
 var device: int; var bindings: BindingStore    # null bindings = defaults; needs app: assign the shared store
 var orbit: Vector2                             # last sample: mouse px (KBM) or RS (pad); zero on touch
 func add_mouse_motion(rel: Vector2) -> void
+func reset() -> void                           # router calls it on a mode change: no stale motion or RELEASE edge
 func sample_for(kind: int) -> PilotInput       # kind = InputClass.Kind
 func map_pad(st: PadState) -> PilotInput; func map_kbm(st: KbmState) -> PilotInput; func map_touch(st: TouchState) -> PilotInput
 
