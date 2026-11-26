@@ -8404,8 +8404,10 @@
       "02 s12.1",
       "godot/src/sim/match/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-26",
+    "pr": 194,
+    "notes": "MatchResult.structure_value = MatchJudge.values_by_team() (02 s12.1); PLAYER_ELIMINATED b = last attacker team via MatchJudge.shooter_team; tie-break keeps dead shooters damage. ScoreKeeper.structure_value kept, deprecated. Matches the 0x8E u32 per-team field."
   },
   {
     "id": "GD-50",
