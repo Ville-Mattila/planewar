@@ -84,7 +84,8 @@ dock count from `structures.json` `docks`; the delivery reach is `economy.json` 
   stockpile pick it up from the ledger. A unit that dies loses its cargo and its claim (miners and docks are re-counted from the units each pass).
 - H7 Trip time. With a unit that drives straight and stops at once (the test stand-in), the measured interval between two deliveries at
   `d` = 450 m and 600 m is within 5 % of `Economy.harvest_trip_time(d)` (02 s8.2: 108.5 s, 136.0 s); the cycle adds no time beyond the
-  four terms of the formula (`mine` = `cargo_ore / mine_rate` stationary, `unload_time_s` stationary).
+  four terms of the formula (`mine` = `cargo_ore / mine_rate` stationary, `unload_time_s` stationary). BUG-4: the same 5 % holds driven
+  by the AI-16 `HarvesterBrain` (`d` = its dock stop to its mining spot), `godot/test/sim/ai/test_bug4_harvest_cycle.gd`.
 - H8 State (S4). The only state outside `EntityStore` is `OreFields.amount` with its table, written after the ScoreKeeper in the
   economy section (`SimSerialize.FORMAT` 15); the table is saved whole so a restored world needs no loader. Unit state is `link`,
   `cargo`, `cargo_kind`, `timer_a`; `miners` and the per-Refinery dock counts are re-derived every pass.
