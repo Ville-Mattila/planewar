@@ -24,6 +24,7 @@ var _defs: WorldDefs
 var _events: SimEvents
 var _applier: CommandApplier
 var _validator: CommandValidator
+var _terrain: Terrain
 var _tick: int = 0
 
 
@@ -35,6 +36,7 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	_events = events
 	_applier = applier
 	_validator = validator
+	_terrain = terrain
 	build = Build.new(defs, store, players, terrain, rules)
 	economy = Economy.new(store, players, defs, rules.tick_hz, events, build)
 	economy.sun_period_s = rules.sun_period_s
@@ -126,7 +128,7 @@ func on_death(s: int) -> void:
 
 ## C2-14 (02 s8.1): `economy.start_kit` for `slot` around `centre` (a direction from the planet centre): the Core there,
 ## the Refinery `start_refinery_dist_m` toward `toward` (Home Field A), the Shipyard `start_adjacent_dist_m` beside the
-## Core, the Vehicle Bay beside the Refinery, the Harvester next to the Refinery. All finished, all pre-built (they count
+## Core, the Vehicle Bay beside the Refinery, the Harvester next to the Refinery; every piece on the terrain (BUG-3). All finished, all pre-built (they count
 ## against `max_per_player`). False when a structure cannot be created (entity store full or a def without footprint); occupancy is not checked, the kit is laid out on a clear site.
 func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3, tick: int) -> bool:
 	var eco: EconomyDef = _defs.economy
@@ -150,7 +152,8 @@ func spawn_start_kit(slot: int, centre: Vector3, toward: Vector3, tick: int) -> 
 				ok = _stamp(slot, def, _step(ref_dir, side, eco.start_adjacent_dist_m)) and ok
 			_:
 				if _defs.entity_kind(def) != EntityStore.K_STRUCTURE:
-					var at: Vector3 = _step(ref_dir, along, eco.start_adjacent_dist_m) * Sphere.PLANET_RADIUS
+					var d: Vector3 = _step(ref_dir, along, eco.start_adjacent_dist_m)
+					var at: Vector3 = d * (Sphere.PLANET_RADIUS + _terrain.height_at(d))   # on the ground (BUG-3); GroundMotion lifts it by its radius
 					ok = _applier.spawn(def, slot, _players.team[slot], at, Vector3.ZERO, along, tick) >= 0 and ok
 	economy.mark_dirty()
 	return ok
