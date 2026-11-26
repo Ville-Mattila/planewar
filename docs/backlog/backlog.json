@@ -2969,10 +2969,11 @@
       "NET-11",
       "NET-14",
       "TA-18",
-      "AI-04"
+      "AI-04",
+      "NET-61"
     ],
     "milestone": "M3",
-    "acceptance": "Runs the canonical scene with 8 LocalTransport clients; AI never called outside step(); phase timings exported; snapshot_budget_test passes (dependency edited: ENet/WS transports plug in via NET-24)",
+    "acceptance": "Runs the canonical scene with 8 LocalTransport clients; AI never called outside step(); phase timings exported; snapshot_budget_test passes (dependency edited: ENet/WS transports plug in via NET-24); R0 B.32 A-156: ServerSession fills every SnapshotFrame row with set_entity and then set_barrel(i, NetDefs.barrel_byte(def_id, SimView.barrel_elevation(id))) (net/MODULE.md N11); a LocalTransport test whose scene holds a Siege Crawler with a slewed barrel asserts zero MALFORMED snapshot decodes on every client and NetSimView.barrel_elevation within one quantum of the server's value on a client that holds the Crawler at tier A",
     "docs": [
       "04 s7",
       " R0 C2-04",
@@ -8593,7 +8594,8 @@
       "04 s3.7"
     ],
     "status": "todo",
-    "merged": null
+    "merged": null,
+    "notes": "Ruling R0-amendments-26 (B.32 A-156): bit 6 = MASK_BARREL is covered by A-152; SnapshotCodec.MASK_CELL_CHANGED stays as a deprecated symbol (10 s4.1); net/MODULE.md gains N11; the trailing optional parameters are Appends."
   },
   {
     "id": "CONTENT-5",
