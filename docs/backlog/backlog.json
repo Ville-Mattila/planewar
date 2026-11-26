@@ -2672,7 +2672,7 @@
     "acceptance_append": "; SC-43 fog fairness re-run with the real Commander through AI-22's AuditDriver (every AI command checked against the per-tick visible_to record)",
     "pr": 183,
     "merged": "2026-11-19",
-    "notes": "PARTIAL: SC-40/41 run on the flat datum carrying cradle slots/fields/traps; re-run on cradle terrain after BUG-3 closes it. New sim_ai/commander/ module, AiDriver FORMAT 3. Fixed in-PR: doctrine-resolved step costs, Outpost presence at candidate with current positions. Fixture books trimmed to fit 300 s income (originals stall on funds): AI-24/GD-21 must check the 05 s7.3 books fit 300 s of income. needs content: bot_profiles.json opening_book constants (required? Architect). needs sim: map nodes not marked in the build grid (Ice Extractor gets NODE). Stand-ins: raid/non-move orders wait for AI-27; per-think cap stands in for AI-28. Nits: Outpost slack comment says 2 cells, code subtracts 4 (~37 m); SC-41 time-gated check looks only at t>= prefix."
+    "notes": "PARTIAL: SC-40/41 run on the flat datum carrying cradle slots/fields/traps; re-run on cradle terrain after BUG-3 closes it. New sim_ai/commander/ module, AiDriver FORMAT 3. Fixed in-PR: doctrine-resolved step costs, Outpost presence at candidate with current positions. Fixture books trimmed to fit 300 s income (originals stall on funds): AI-24/GD-21 must check the 05 s7.3 books fit 300 s of income. needs content: bot_profiles.json opening_book constants (required? Architect). needs sim: map nodes not marked in the build grid (Ice Extractor gets NODE). Stand-ins: raid/non-move orders wait for AI-27; per-think cap stands in for AI-28. Nits: Outpost slack comment says 2 cells, code subtracts 4 (~37 m); SC-41 time-gated check looks only at t>= prefix. Partial closed by BUG-3 (PR #190): SC-40/41 pass on cradle terrain."
   },
   {
     "id": "AI-24",
@@ -8575,9 +8575,10 @@
       "03 build/terrain sections",
       "https://github.com/Ville-Mattila/planewar/pull/183#issuecomment-7015327581"
     ],
-    "status": "todo",
-    "merged": null,
-    "notes": "Found by the AI-23 Opus review: cradle slot 0's start kit sits ~335 m below datum; the 3-D reach check (Harvest._refinery_near) and the 300 m Outpost presence check (Build._check_vision_and_radius) can never pass. Likely affects every real map. High priority before M3 playtests. After the fix: re-run AI-23 SC-40/41 on cradle terrain (closes AI-23 partial)."
+    "status": "done",
+    "merged": "2026-11-26",
+    "notes": "Found by the AI-23 Opus review: cradle slot 0's start kit sits ~335 m below datum; the 3-D reach check (Harvest._refinery_near) and the 300 m Outpost presence check (Build._check_vision_and_radius) can never pass. Likely affects every real map. High priority before M3 playtests. After the fix: re-run AI-23 SC-40/41 on cradle terrain (closes AI-23 partial). Structures on terrain at footprint centre (03 s7.6), up radial; invariant B10; no FORMAT bump. AI-23 SC-40/41/43/47 pass on cradle. Architect questions filed as PM-06. Nits: place/can_place test relies on its Core precondition; Ice pipe uses 3-D distance vs build radius arc distance.",
+    "pr": 190
   },
   {
     "id": "NET-61",
@@ -8709,6 +8710,24 @@
     "acceptance": "tools/lint_commits.py accepts subjects starting with ids like AI-18b: and AI-33b: (backlog ids with a lowercase letter suffix) and still rejects malformed ids; unit tests for both; CI green",
     "docs": [
       "tools/lint_commits.py"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "PM-06",
+    "title": "Architect: structure orientation and terrain follow-ups from BUG-3 (pad up vector, sloped decks, basin occlusion)",
+    "lane": "architect",
+    "tier": "Fable",
+    "size_days": 0.25,
+    "depends_on": [
+      "BUG-3"
+    ],
+    "milestone": "M3",
+    "acceptance": "Ruling in R0-amendments-NN on: (1) built structures keep a radial up while GD-51 Relay Stations tilt to the terrain normal - pick one rule (solar output on slopes); (2) on a sloped pad the ground rises above the deck, so an off-centre landing misses the landing band at ~1.9 m from centre on 15 deg, 5.7 m on 5 deg - flatten footprint, limit build slope, or widen the band; (3) A-10 datum occlusion now hides enemy ground units in a basin from structures there (cradle slot 0) - intended or fix; each with a named follow-up task",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/190#issuecomment-7198733100",
+      "03 s7.6"
     ],
     "status": "todo",
     "merged": null
