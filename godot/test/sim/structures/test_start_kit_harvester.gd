@@ -10,7 +10,7 @@ const SLOT0: Vector3 = Vector3(0.923879533, 0.382683432, 0.0)
 const FIELD_A: Vector3 = Vector3(0.838630392, 0.544700895, 0.0)   # home_field_a_s0 of cradle's features.json
 
 
-func _cradle() -> SimWorld:
+func _cradle(empty_field_a: bool = false) -> SimWorld:
 	var w: SimWorld = SimWorld.new(WorldTestKit.content())
 	var map: MapDef = MapDef.new()
 	map.id = &"cradle"
@@ -18,6 +18,8 @@ func _cradle() -> SimWorld:
 	assert(res.ok, res.message)
 	w.add_player(0, 0, &"", PlayerTable.KIND_HUMAN)
 	w.add_player(2, 1, &"", PlayerTable.KIND_HUMAN)
+	if empty_field_a:
+		w.economy().harvest.fields.amount[w.economy().harvest.fields.field_at(FIELD_A)] = 0.0
 	assert(w.spawn_start_kit(0, SLOT0, FIELD_A))
 	return w
 
@@ -98,3 +100,12 @@ func test_save_restore_while_the_start_harvester_mines_is_byte_equal() -> void:
 	var _e3: Array[SimEvent] = EconomyTestKit.run(r, 20 * HZ)
 	assert_bool(r.serialize() == w.serialize()).is_true()
 	assert_float(r.store().cargo[_harvester(r)]).is_greater(0.0)
+
+
+func test_a_field_a_without_ore_gets_no_claim_h3() -> void:
+	var w: SimWorld = _cradle(true)   # H3's guard: a claim needs a free miner slot and at least 1 Ore
+	var h: int = _harvester(w)
+	var ref: int = EconomyTestKit.find(w, &"refinery")
+	assert_int(w.store().link[h]).is_equal(0)
+	var eco: EconomyDef = WorldTestKit.content().economy
+	assert_float(_arc(w.store().pos[h], w.store().pos[ref])).is_equal_approx(eco.start_adjacent_dist_m, 5.0)   # the TA-19 placement

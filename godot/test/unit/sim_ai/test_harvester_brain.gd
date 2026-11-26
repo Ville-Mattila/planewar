@@ -356,6 +356,30 @@ func test_while_the_sim_holds_it_the_unit_turns_to_its_next_stop() -> void:
 	assert_float(_heading_err_deg(h, Ai16Kit.dir_at(450.0) * Ai16Kit.R)).is_less(5.0)   # turned while it unloaded
 
 
+func test_a_held_unit_turned_by_a_pilot_faces_its_next_stop_again_after_release() -> void:
+	var h: int = _world([450.0])
+	var hs: int = EntityId.slot(h)
+	var ref: Vector3 = Ai16Kit.dir_at(0.0) * Ai16Kit.R
+	assert_bool(_until(h, AiTag.Tag.MINE, 120 * HZ)).is_true()
+	for _k: int in 10 * HZ:
+		if (_d.state.bflags[hs] & HarvesterBrain.B_FACED) != 0:
+			break
+		Ai16Kit.step(_w)
+	assert_int(_d.state.bflags[hs] & HarvesterBrain.B_FACED).is_not_equal(0)
+	OverlayKit.ok(_w, Command.possess(0, h))
+	_run(2)
+	for _k: int in 2 * HZ:                                                     # the pilot turns it in place
+		var inp: PilotInput = PilotInput.new()
+		inp.yaw = 1.0
+		OverlayKit.ok(_w, Command.pilot(0, _w.tick() + 1, inp))
+		Ai16Kit.step(_w)
+	assert_float(_heading_err_deg(h, ref)).is_greater(45.0)
+	OverlayKit.ok(_w, Command.release(0))
+	_run(4 * HZ)
+	assert_int(_tag(h)).is_equal(AiTag.Tag.MINE)
+	assert_float(_heading_err_deg(h, ref)).is_less(5.0)                       # re-faced: B_FACED dropped while piloted
+
+
 # --- S4 -----------------------------------------------------------------------------------------------------------------
 
 func test_a_restored_world_continues_byte_for_byte() -> void:
