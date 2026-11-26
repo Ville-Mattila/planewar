@@ -1,10 +1,8 @@
 class_name SnapshotCodec extends RefCounted
-## Server half of the SNAPSHOT codec (04 s3.4-s3.5, R0 C1-02, C1-18). prepare_tick(frame) quantises every entity once per
-## tick into the shared cache (indexed by roster index, Roster.index_of_slot; projectile entities in the block, R0 B.22
-## A-112) and the per-team visible lists; encode() does per-client work only: gap ids, FULL / A-DELTA / B-DELTA / C-BLIP
-## records against that client's acked baseline (gravity-aware dead reckoning), the 15-byte pilot block, splitting at
-## 1,200 B into <= 4 indexed packets (A-36). Records reach the client's mirror through the BaselineFrame calls the decoder
-## makes, so both stay identical. FULL / C-BLIP bytes come from SnapshotByteCache (A-40); no allocation per entity.
+## Server half of the SNAPSHOT codec (04 s3.4-s3.5, R0 C1-02, C1-18). prepare_tick(frame) quantises every entity once per tick
+## into the shared cache (by roster index; projectile block R0 B.22 A-112) and the per-team visible lists; encode() does per-client
+## work only: FULL / A-DELTA / B-DELTA / C-BLIP records against the client's acked baseline (+ barrel byte, NET-61, R0 B.31 A-152),
+## the pilot block, <= 4 packets of <= 1,200 B (A-36), mirror via the decoder's BaselineFrame calls; byte cache A-40, no allocation.
 
 const HEADER_BYTES: int = 10
 const MAX_PACKET_BYTES: int = Protocol.MAX_UNRELIABLE_BYTES
@@ -18,13 +16,12 @@ const MASK_ORI: int = SnapshotMasks.MASK_ORI
 const MASK_VEL: int = SnapshotMasks.MASK_VEL
 const MASK_HP: int = SnapshotMasks.MASK_HP
 const MASK_FLAGS: int = SnapshotMasks.MASK_FLAGS
-const MASK_CELL_CHANGED: int = 0x40         # never set in a DELTA (a cell change is a FULL record)
+const MASK_BARREL: int = SnapshotMasks.MASK_BARREL   # A-DELTA of a barrel def only (bit 6, was CELL_CHANGED; NET-61)
 const MASK_FULL: int = 0xFF
 const GAP_MAX: int = 254
 const GAP_ESCAPE: int = 0xFF
 const SMALL_SHIFT: int = SnapshotMasks.SMALL_SHIFT
 const SMALL_MAX: int = SnapshotMasks.SMALL_MAX
-## Residuals under one POS_SMALL step (4 quanta per axis) are not sent: smaller ones chatter on the +-2 quanta it leaves.
 const POS_SEND_MIN: int = SnapshotMasks.POS_SEND_MIN
 const LARGE_MAX: int = SnapshotMasks.LARGE_MAX
 const FULL_BODY_BYTES: int = 1 + Codec.POS_BYTES + Codec.QUAT_BYTES + Codec.VEL_BYTES + 2   # mask .. flags = 18
@@ -35,8 +32,7 @@ var gravity: float = 0.0
 var dt: float = 0.0
 var prepare_count: int = 0
 var cache_tick: int = -1
-## Packets per tick per client (1..MAX_PACKETS_PER_TICK); records past it are deferred (not in the mirror, re-planned
-## later). Default 4 (A-36): a split tick is a baseline once complete and acked.
+## Packets per tick per client (1..4; A-36: a split tick is a baseline once complete and acked); records past it are deferred.
 var max_packets: int = MAX_PACKETS_PER_TICK
 var deferred: int = 0                       # records deferred by the packet cap in the last encode()
 var cache_bytes: bool = true                # false: the pre-NET-49 FULL / C-BLIP path (same bytes, more cost)
@@ -60,6 +56,7 @@ var c_grav: PackedByteArray = PackedByteArray()
 var c_blip: PackedInt32Array = PackedInt32Array()        # lazy
 var c_vmask: PackedInt32Array = PackedInt32Array()       # team bits incl. own; projectile: + shooter's, target's (A-112)
 var c_gen: PackedInt32Array = PackedInt32Array()         # generation last seen per index (SnapshotFrame.gen; 0 unknown)
+var c_barrel: PackedInt32Array = PackedInt32Array()      # SnapshotFrame.barrel: 0 no barrel, else BARREL_KNOWN | byte
 var _born: PackedInt32Array = PackedInt32Array()         # projectile block: first tick of the current generation
 var _prow: PackedInt32Array = PackedInt32Array()         # projectile rows of this frame (second prepare pass)
 var _lazy: PackedInt32Array = PackedInt32Array()         # == cache_tick: c_ori / c_fine not yet quantised (projectile rows)
@@ -91,7 +88,7 @@ func _init(gravity_mps2: float, tick_hz: int) -> void:
 	var e: int = c_tick.resize(n) | c_coarse.resize(n) | c_vel.resize(n) | c_blip.resize(n) | c_fine.resize(n)
 	e |= _coarse_tick.resize(n) | _blip_tick.resize(n) | _row.resize(n) | _force.resize(n) | c_pos.resize(n) | c_ori.resize(n)
 	e |= c_hp.resize(n) | c_flags.resize(n) | c_ai.resize(n) | c_team.resize(n) | c_grav.resize(n) | c_vmask.resize(n)
-	e |= c_gen.resize(n) | _born.resize(n) | _prow.resize(n) | _pidx.resize(n) | _lazy.resize(n)
+	e |= c_gen.resize(n) | _born.resize(n) | _prow.resize(n) | _pidx.resize(n) | _lazy.resize(n) | c_barrel.resize(n)
 	assert(e == OK)
 	_force.fill(0)
 	_coarse_tick.fill(-1)
@@ -172,6 +169,7 @@ func _cache_entity(frame: SnapshotFrame, i: int, s: int, full: bool) -> void:
 	c_ai[s] = frame.ai_tag[i]
 	c_team[s] = frame.team[i]
 	c_grav[s] = frame.gravity[i]
+	c_barrel[s] = frame.barrel[i]
 
 
 ## Coarse orientation (17 bits) with the A-24 tier-B flags in its spare bits, for roster index `s` this tick.
@@ -264,8 +262,8 @@ func _plan(s: int, tier: int, base: BaselineFrame, own: bool) -> bool:
 	if base == null or base.present[s] == 0 or Codec.pos_cell(base.pos[s]) != Codec.pos_cell(c_pos[s]) \
 			or _force[s] == _enc_id or (s >= Roster.PROJECTILE_INDEX_MIN and base.etick[s] < _born[s]):
 		return _plan_full(s, own)
-	if tier == Tier.C:
-		if blip_of(s) == base.shown_blip(s, _tick, c_grav[s] != 0, gravity, dt):    # NET-54: DR'd when unknown
+	if tier == Tier.C:                      # NET-54 skip (DR'd when unknown), unless it must drop a held barrel (NET-61)
+		if blip_of(s) == base.shown_blip(s, _tick, c_grav[s] != 0, gravity, dt) and base.barrel[s] == 0:
 			return false
 		_k_kind = Kind.BLIP
 		_k_body = 3
@@ -276,8 +274,7 @@ func _plan(s: int, tier: int, base: BaselineFrame, own: bool) -> bool:
 func _plan_full(s: int, own: bool) -> bool:
 	ensure_full(s)
 	_k_kind = Kind.FULL
-	_k_mask = MASK_FULL
-	_k_body = FULL_BODY_BYTES + (Codec.AI_TAG_BYTES if own else 0)
+	_k_body = FULL_BODY_BYTES + (Codec.AI_TAG_BYTES if own else 0) + (Codec.BARREL_BYTES if c_barrel[s] != 0 else 0)
 	_k_pos = c_pos[s]
 	_k_vel = c_vel[s]
 	return true
@@ -305,6 +302,7 @@ func _plan_delta(s: int, tier: int, base: BaselineFrame, own: bool) -> bool:
 	if c_hp[s] != base.hp[s]:
 		mask |= MASK_HP
 	mask |= _plan_ori_flags(s, tier, base, own)
+	mask |= MASK_HP if mask == 0 and tier == Tier.B and base.barrel[s] != 0 else 0   # NET-61: a B record drops a held barrel
 	if mask == 0:
 		return false
 	_k_kind = Kind.DELTA
@@ -337,6 +335,7 @@ func _plan_ori_flags(s: int, tier: int, base: BaselineFrame, own: bool) -> int:
 			m |= MASK_ORI
 		if c_flags[s] != base.flags[s] or (own and c_ai[s] != base.ai[s]):
 			m |= MASK_FLAGS
+		m |= MASK_BARREL if c_barrel[s] != 0 and c_barrel[s] != base.barrel[s] else 0   # changed or not held (NET-61)
 	else:
 		if (coarse_of(s) & 0x1FFFF) != base.ori_c[s] \
 				or Codec.flags_to_spare(c_flags[s]) != Codec.flags_to_spare(base.flags[s]):
@@ -357,31 +356,32 @@ func _count() -> void:
 
 func _apply(frame: BaselineFrame, s: int, tier: int, own: bool) -> void:
 	var ai_tag: int = c_ai[s] if own else -1
+	var bar: int = c_barrel[s] if tier == Tier.A else 0      # held only from section A (A-152)
 	if _k_kind == Kind.FULL and cache_bytes:
 		_bc.full(s, cache_tick, c_pos[s], c_ori[s], c_vel[s], c_hp[s] | (c_flags[s] << 8) | (c_ai[s] << 16))
-		frame.set_full_cached(s, _tick, c_pos[s], c_ori[s], _bc.oc[s], c_fine[s], c_hp[s], c_flags[s], ai_tag)
+		frame.set_full_cached(s, _tick, c_pos[s], c_ori[s], _bc.oc[s], c_fine[s], c_hp[s], c_flags[s], ai_tag, bar)
 	elif _k_kind == Kind.FULL:
-		frame.set_full(s, _tick, c_pos[s], c_ori[s], c_vel[s], c_hp[s], c_flags[s], ai_tag)
+		frame.set_full(s, _tick, c_pos[s], c_ori[s], c_vel[s], c_hp[s], c_flags[s], ai_tag, bar)
 	elif _k_kind == Kind.BLIP and cache_bytes:
 		frame.set_blip_at(s, _tick, c_blip[s], _bc.blip_pos(s, cache_tick, c_pos[s], c_blip[s]))
 	elif _k_kind == Kind.BLIP:
 		frame.set_blip(s, _tick, c_blip[s])
 	else:
 		var ori_bits: int = c_coarse[s] if tier == Tier.B else c_ori[s]
-		frame.set_delta(s, _tick, tier == Tier.B, _k_mask, _k_pos, _k_vel, ori_bits, c_hp[s], c_flags[s], ai_tag)
+		frame.set_delta(s, _tick, tier == Tier.B, _k_mask, _k_pos, _k_vel, ori_bits, c_hp[s], c_flags[s], ai_tag, bar)
 
 
 func _write_body(s: int, tier: int, own: bool) -> void:
 	if _k_kind == Kind.FULL and cache_bytes:
-		_w.put_full_words(_bc.w0[s], _bc.w1[s], _bc.w2[s], own)
+		_w.put_full_words(_bc.w0[s], _bc.w1[s], _bc.w2[s], own, c_barrel[s])
 	elif _k_kind == Kind.FULL:
-		_w.put_full(c_pos[s], c_ori[s], c_vel[s], c_hp[s], c_flags[s], c_ai[s] if own else -1)
+		_w.put_full(c_pos[s], c_ori[s], c_vel[s], c_hp[s], c_flags[s], c_ai[s] if own else -1, c_barrel[s])
 	elif _k_kind == Kind.BLIP:
 		_w.put_u24(c_blip[s])
 	else:
 		var b: bool = tier == Tier.B
 		_w.put_delta(_k_mask, _k_res, c_coarse[s] if b else c_ori[s], b, c_vel[s], c_hp[s], c_flags[s],
-				c_ai[s] if own else -1)
+				c_ai[s] if own else -1, c_barrel[s])
 
 
 static func pos_mask(res: Vector3i) -> int:

@@ -8,8 +8,12 @@ const MASK_ORI: int = 0x04
 const MASK_VEL: int = 0x08
 const MASK_HP: int = 0x10
 const MASK_FLAGS: int = 0x20                # A: flags (+ ai_tag own team); B: AI_TAG (own team)
+## A only, defs with a barrel only: barrel u8 after the FLAGS group (NET-61, R0 B.31 A-152). Was CELL_CHANGED, never
+## sent (a cell change is a FULL record); anywhere else the bit is MALFORMED.
+const MASK_BARREL: int = 0x40
 const SMALL_SHIFT: int = 2
 const SMALL_MAX: int = 127
+## Residuals under one POS_SMALL step (4 quanta per axis) are not sent: smaller ones chatter on the +-2 quanta it leaves.
 const POS_SEND_MIN: int = 1 << SMALL_SHIFT
 const LARGE_MAX: int = 32767
 
@@ -53,4 +57,4 @@ static func delta_body_bytes(mask: int, tier_b: bool, own: bool) -> int:
 	n += Codec.HP_BYTES if mask & MASK_HP else 0
 	if mask & MASK_FLAGS:
 		n += Codec.AI_TAG_BYTES if tier_b else Codec.FLAGS_BYTES + (Codec.AI_TAG_BYTES if own else 0)
-	return n
+	return n + (Codec.BARREL_BYTES if mask & MASK_BARREL else 0)

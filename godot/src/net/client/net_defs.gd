@@ -13,6 +13,11 @@ var possessable: PackedByteArray = PackedByteArray()
 var pad: PackedByteArray = PackedByteArray()              ## 1 = structure with a service pad (pads > 0 and pad_radius_m > 0)
 var gravity_def: PackedByteArray = PackedByteArray()      ## 1 = projectile def with gravity (SnapshotDecoder.gravity_def)
 var kind: PackedInt32Array = PackedInt32Array()           ## NetSimView.K_* or -1
+## Ground barrel (NET-61, R0 B.31 A-151 / A-152), BarrelSlew's rule from the raw `barrel_*` keys: 1 = the def has a barrel
+## (slew > 0 or a non-zero limit; SnapshotDecoder.barrel_def), limits in radians with min <= max.
+var barrel_def: PackedByteArray = PackedByteArray()
+var barrel_lo: PackedFloat64Array = PackedFloat64Array()
+var barrel_hi: PackedFloat64Array = PackedFloat64Array()
 var _requires: Array[PackedInt32Array] = []
 
 
@@ -25,6 +30,8 @@ func _init(content: ContentSet = null) -> void:
 	var _e: int = pad.resize(n)
 	var _f: int = gravity_def.resize(n)
 	var _g: int = kind.resize(n)
+	var e: int = barrel_def.resize(n) | barrel_lo.resize(n) | barrel_hi.resize(n)
+	assert(e == OK)
 	kind.fill(-1)
 	var _h: int = _requires.resize(n)
 	for i: int in n:
@@ -41,6 +48,7 @@ func _init(content: ContentSet = null) -> void:
 	for k: int in content.ground_units.size():
 		var g: GroundUnitDef = content.ground_units[k]
 		_unit(content, DefRanges.GROUND_BASE + k, NetSimView.K_GROUND, float(g.hp), g.bounding_radius, g.possessable, g.requires)
+		_barrel(DefRanges.GROUND_BASE + k, g.raw)
 	for k: int in content.structures.size():
 		_structure(content, DefRanges.STRUCTURE_BASE + k, content.structures[k])
 	for k: int in content.projectiles.size():
@@ -54,6 +62,14 @@ func _unit(content: ContentSet, d: int, k: int, hp_max: float, r: float, poss: b
 	radius[d] = r
 	possessable[d] = 1 if poss else 0
 	_requires[d] = _resolve(content, req)
+
+
+func _barrel(d: int, r: Dictionary) -> void:
+	var lo: float = deg_to_rad(Def.num(r.get("barrel_min_deg", 0.0)))
+	var hi: float = deg_to_rad(Def.num(r.get("barrel_max_deg", 0.0)))
+	barrel_lo[d] = minf(lo, hi)
+	barrel_hi[d] = maxf(lo, hi)
+	barrel_def[d] = 1 if Def.num(r.get("barrel_slew_dps", 0.0)) > 0.0 or lo != 0.0 or hi != 0.0 else 0
 
 
 func _structure(content: ContentSet, d: int, sd: StructureDef) -> void:
@@ -83,6 +99,21 @@ func kind_of(def_id: int, slot: int) -> int:
 	if slot >= EntityId.WRECK_SLOT_MIN and slot < EntityId.WRECK_SLOT_END:
 		return NetSimView.K_WRECK
 	return kind[def_id] if valid(def_id) else -1
+
+
+## The barrel wire byte for elevation `e` (radians) of def `def_id` (Codec.quantize_barrel), -1 for a def without a
+## barrel (SnapshotFrame.set_barrel takes either).
+func barrel_byte(def_id: int, e: float) -> int:
+	if not valid(def_id) or barrel_def[def_id] == 0:
+		return -1
+	return Codec.quantize_barrel(e, barrel_lo[def_id], barrel_hi[def_id])
+
+
+## The elevation (radians) a held barrel value (BaselineFrame.barrel) of def `def_id` decodes to; 0.0 when not held.
+func barrel_rad(def_id: int, held: int) -> float:
+	if held == 0 or not valid(def_id) or barrel_def[def_id] == 0:
+		return 0.0
+	return Codec.dequantize_barrel(held, barrel_lo[def_id], barrel_hi[def_id])
 
 
 ## The def ids a unit or structure def requires (resolved `requires[]`; -1 for an unknown name).

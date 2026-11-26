@@ -51,7 +51,7 @@ var header: ReplayHeader; var roster: Roster; var decoder: SnapshotDecoder; var 
 var result_hash: PackedByteArray; var ended_tick: int; var has_footer: bool; var index_tick: PackedInt32Array; var index_offset: PackedInt32Array
 var packets: Array[PackedByteArray]; var events: Array[WireEvent]; var shots: ShotBuffer; var chat_id: PackedInt64Array; var chat_sender: PackedInt32Array
 var chat_scope: PackedInt32Array; var chat_text: PackedStringArray; var input_slot: PackedInt32Array; var input_entity: PackedInt32Array; var input_bytes: PackedByteArray
-func _init(gravity_mps2: float = 0.0, tick_hz: int = 30) -> void   # set decoder.gravity_def[def_id] = 1 for gravity-bearing defs
+func _init(gravity_mps2: float = 0.0, tick_hz: int = 30) -> void   # set decoder.gravity_def[def_id] = 1 for gravity-bearing defs, decoder.barrel_def[def_id] = 1 for barrel defs (NET-61)
 func open(path: String) -> int;  func open_bytes(file: PackedByteArray) -> int;  func open_raw(raw: PackedByteArray, cut: bool = false) -> int
 func rewind() -> void;  func frames_begin() -> int;  func frames_end() -> int;  func at_end() -> bool;  func peek_tick() -> int
 func next_frame(apply: bool = true) -> int                       # frame type, NO_FRAME at the end or on a bad frame (status CORRUPT)

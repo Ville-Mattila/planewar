@@ -56,7 +56,7 @@ func index_of(id: int) -> int;  func entry_of(id: int) -> int;  func live(i: int
 func alive(id: int) -> bool;  func pos(id: int) -> Vector3;  func vel(id: int) -> Vector3;  func basis(id: int) -> Basis;  func def_id(id: int) -> int;  func owner(id: int) -> int;  func team(id: int) -> int
 func hp01(id: int) -> float;  func fuel01(id: int) -> float;  func ammo(id: int) -> int;  func bombs(id: int) -> int;  func rockets(id: int) -> int;  func control_state(id: int) -> int;  func possessor(id: int) -> int
 func ai_tag(id: int) -> int;  func flags(id: int) -> int;  func radius(id: int) -> float;  func def_kind(id: int) -> int;  func boost_state(id: int) -> int;  func flip_cooldown01(id: int) -> float;  func dock_state(id: int) -> int
-func service_progress(id: int) -> Vector3;  func service_state(id: int) -> int;  func incoming_rockets(id: int) -> int;  func tick() -> int;  func match_clock_s() -> float;  func terrain_height(dir: Vector3) -> float
+func service_progress(id: int) -> Vector3;  func service_state(id: int) -> int;  func barrel_elevation(id: int) -> float;  func incoming_rockets(id: int) -> int;  func tick() -> int;  func match_clock_s() -> float;  func terrain_height(dir: Vector3) -> float
 func ships() -> PackedInt32Array;  func structures() -> PackedInt32Array;  func wrecks() -> PackedInt32Array;  func visible_ids(t: int) -> PackedInt32Array;  func visible_to(t: int, id: int) -> bool
 func visible_enemy_ships(t: int, out: PackedInt32Array) -> int;  func ids_in_cell(cell: int) -> PackedInt32Array;  func ids_near(p: Vector3, r: float, mask: int) -> PackedInt32Array;  func projectiles_near(p: Vector3, r: float, team_mask: int) -> PackedInt32Array
 func nearest_friendly_pad(id: int) -> int;  func tech_available(t: int, d: int) -> bool;  func stockpile(t: int) -> Vector3;  func stockpile_cap(t: int) -> Vector2i;  func power_balance(t: int) -> Vector2;  func unit_count(player: int) -> int
@@ -86,6 +86,8 @@ static func fine_to_world(fine: int, cell: int) -> Vector3;  static func canonic
 
 class_name NetDefs extends RefCounted                 # net/client/net_defs.gd: per-def tables from a ContentSet (base defs)
 var tick_hz: int; var gravity: float; var hp: PackedFloat32Array; var fuel_s: PackedFloat32Array; var radius: PackedFloat32Array; var possessable: PackedByteArray; var pad: PackedByteArray; var gravity_def: PackedByteArray; var kind: PackedInt32Array
+var barrel_def: PackedByteArray; var barrel_lo: PackedFloat64Array; var barrel_hi: PackedFloat64Array   # NET-61: BarrelSlew's def rule, radians
+func barrel_byte(def_id: int, e: float) -> int;  func barrel_rad(def_id: int, held: int) -> float   # -1 no barrel (SnapshotFrame.set_barrel); 0.0 when not held
 func _init(content: ContentSet = null) -> void;  func valid(def_id: int) -> bool;  func kind_of(def_id: int, slot: int) -> int;  func requires_of(def_id: int) -> PackedInt32Array
 
 class_name TeamStateWire extends RefCounted           # net/client/team_state_wire.gd: one TEAM_STATE as wire integers
@@ -149,7 +151,7 @@ bits 4-7 zero), member_count u8 (0-8), members[] x (slot u8 0-7 unique, unit_cou
   nothing between its ENTITY_META and that FULL: a recycled slot's previous occupant is never shown (NET-58).
 - CS8: `field_unknown(id, accessor)` is true exactly for what the client does not receive (`NetUnknown`: never-carried
   accessors, pilot-block fields off the own possessed unit, C-tier basis / vel, other teams' ai_tag, a wreck's radius,
-  which shows the def radius per A-114);
+  which shows the def radius per A-114, a barrel def's barrel_elevation while no tier-A value is held: NET-61, R0 B.31 A-152);
   such an accessor returns the SimView default. `unknown(id)` = any field unknown: true for every entity while
   `NetUnknown.NEVER` is non-empty. Late / reordered snapshots and reliable KEYFRAMEs never feed the clock.
 - CS6: `NetSimView` passes TEST-02 (`factories/net_sim_view_factory.gd`); its `exempt()` names exactly the failing clauses,

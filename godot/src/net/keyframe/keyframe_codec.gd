@@ -1,6 +1,7 @@
 class_name KeyframeCodec extends RefCounted
 ## KEYFRAME (0x86, channel 3, reliable; 04 s2.3, s3.1, s4.3). The message is a list of SNAPSHOT FULL records (gap chain,
-## 0xFF, vec3q, quat_s3, vel, hp, flags, +ai_tag for the client's own team) for the client's interest set, with no
+## 0xFF, vec3q, quat_s3, vel, hp, flags, +ai_tag for the client's own team, +barrel for a def with a barrel: NET-61, R0 B.31
+## A-152; a KEYFRAME leaves the barrel not held, the next A record re-sends it) for the client's interest set, with no
 ## baseline. The gap chain runs over sim slots (0-1,535, projectile slots 4,096-6,143; R0 B.22 A-112): the API and the
 ## mirror use roster indices (Roster.index_of_slot), and a slot no roster holds (1,536-4,095, >= 6,144) is MALFORMED. `encode` (server) builds it from SnapshotCodec's per-tick cache and resets the client's BaselineStore mirror
 ## to exactly those records; `decode` (client) validates the whole message, then applies it through
@@ -11,12 +12,12 @@ class_name KeyframeCodec extends RefCounted
 
 const HEADER_BYTES: int = 10                # id, seq u16, tick u32, scope u8, count u16
 const COUNT_MAX: int = Roster.CAPACITY
-## Largest record: a 3-byte escape gap, the FULL mask and body, the own-team ai_tag byte.
-const RECORD_WORST_BYTES: int = 3 + _BODY_AFTER_MASK_WITH_MASK + Codec.AI_TAG_BYTES   # 22
-## 04 s2.3 row 0x86 / R0 B.25 A-134: roster_count <= 2,848 = (65,535 - 10) / 23 (RECORD_WORST_BYTES + 1 spare byte per
-## record), so a KEYFRAME stays under Protocol.MAX_RELIABLE_BYTES. The interest caps (1,240) stay far below it; an encode
-## over more is refused (a caps bug, not a message to split) and a larger count is MALFORMED on decode.
-const RECORDS_MAX: int = int(float(Protocol.MAX_RELIABLE_BYTES - HEADER_BYTES) / float(RECORD_WORST_BYTES + 1))
+## Largest record: a 3-byte escape gap, the FULL mask and body, the own-team ai_tag byte, the barrel byte (NET-61).
+const RECORD_WORST_BYTES: int = 3 + _BODY_AFTER_MASK_WITH_MASK + Codec.AI_TAG_BYTES + Codec.BARREL_BYTES   # 23
+## 04 s2.3 row 0x86 / R0 B.25 A-134: roster_count <= 2,848 = (65,535 - 10) / 23 (A-134's spare byte per record is the
+## NET-61 barrel byte), so a KEYFRAME stays under Protocol.MAX_RELIABLE_BYTES. The interest caps (1,240) stay far below it;
+## an encode over more is refused (a caps bug, not a message to split) and a larger count is MALFORMED on decode.
+const RECORDS_MAX: int = int(float(Protocol.MAX_RELIABLE_BYTES - HEADER_BYTES) / float(RECORD_WORST_BYTES))
 const OFF_SEQ: int = 1
 const OFF_TICK: int = 3
 const OFF_SCOPE: int = 7
@@ -42,6 +43,7 @@ var _vel: PackedInt32Array = PackedInt32Array()
 var _hp: PackedByteArray = PackedByteArray()
 var _fl: PackedByteArray = PackedByteArray()
 var _ai: PackedInt32Array = PackedInt32Array()       # -1 = no ai_tag byte (not the client's team)
+var _br: PackedInt32Array = PackedInt32Array()       # 0 = no barrel byte, else BaselineFrame.BARREL_KNOWN | byte
 
 
 func _init() -> void:
@@ -52,11 +54,12 @@ func _init() -> void:
 	var _e: int = _hp.resize(COUNT_MAX)
 	var _f: int = _fl.resize(COUNT_MAX)
 	var _g: int = _ai.resize(COUNT_MAX)
+	var _h: int = _br.resize(COUNT_MAX)
 
 
-## Message size: header + `records` x 19 B + 1 per own-team record + 2 per 0xFF-escaped gap.
-static func size_for(records: int, own_records: int, escapes: int) -> int:
-	return HEADER_BYTES + records * _RECORD_MIN + own_records + 2 * escapes
+## Message size: header + `records` x 19 B + 1 per own-team record + 2 per 0xFF-escaped gap + 1 per barrel record.
+static func size_for(records: int, own_records: int, escapes: int, barrel_records: int = 0) -> int:
+	return HEADER_BYTES + records * _RECORD_MIN + own_records + 2 * escapes + barrel_records
 
 
 static func seq_of(bytes: PackedByteArray) -> int:
@@ -103,6 +106,7 @@ func encode(codec: SnapshotCodec, store: BaselineStore, at_tick: int, keyframe_s
 		_hp[n] = codec.c_hp[s]
 		_fl[n] = codec.c_flags[s]
 		_ai[n] = codec.c_ai[s] if codec.c_team[s] == store.team else -1
+		_br[n] = codec.c_barrel[s]
 		n += 1
 	count = n
 	seq = keyframe_seq
@@ -187,14 +191,15 @@ func _parse(b: PackedByteArray, kcount: int, dec: SnapshotDecoder) -> int:
 			var _m: bool = missing.push_back(idx)
 			return -2
 		var own: bool = roster.team_of(idx) == dec.store.team
-		at = _parse_body(b, at, k, idx, own)
+		var d: int = roster.def_of(idx)
+		at = _parse_body(b, at, k, idx, own, d >= 0 and d < dec.barrel_def.size() and dec.barrel_def[d] != 0)
 		if at < 0:
 			return -1
 	return at
 
 
-func _parse_body(b: PackedByteArray, at: int, k: int, idx: int, own: bool) -> int:
-	var body: int = 1 + _BODY_AFTER_MASK + (Codec.AI_TAG_BYTES if own else 0)
+func _parse_body(b: PackedByteArray, at: int, k: int, idx: int, own: bool, bar: bool) -> int:
+	var body: int = 1 + _BODY_AFTER_MASK + (Codec.AI_TAG_BYTES if own else 0) + (Codec.BARREL_BYTES if bar else 0)
 	if at + body > b.size() or b[at] != SnapshotCodec.MASK_FULL:
 		return -1
 	var q: int = Codec.read_pos(b, at + 1)
@@ -207,6 +212,7 @@ func _parse_body(b: PackedByteArray, at: int, k: int, idx: int, own: bool) -> in
 	_hp[k] = b[at + 16]
 	_fl[k] = b[at + 17]
 	_ai[k] = b[at + 18] if own else -1
+	_br[k] = BaselineFrame.BARREL_KNOWN | b[at + body - 1] if bar else 0
 	return at + body
 
 
@@ -219,15 +225,17 @@ func _fill(f: BaselineFrame, at_tick: int) -> void:
 func _write() -> PackedByteArray:
 	var escapes: int = 0
 	var own: int = 0
+	var bars: int = 0
 	var prev: int = 0
 	for k: int in count:
 		var d: int = Roster.slot_of_index(_idx[k]) - prev
 		if not ((d >= 1 and d <= SnapshotCodec.GAP_MAX) or (k == 0 and d == 0)):
 			escapes += 1
 		own += 1 if _ai[k] >= 0 else 0
+		bars += 1 if _br[k] != 0 else 0
 		prev = Roster.slot_of_index(_idx[k])
 	var out: PackedByteArray = PackedByteArray()
-	var _r: int = out.resize(size_for(count, own, escapes))
+	var _r: int = out.resize(size_for(count, own, escapes, bars))
 	out[0] = Protocol.KEYFRAME
 	out.encode_u16(OFF_SEQ, seq)
 	out.encode_u32(OFF_TICK, tick)
@@ -255,5 +263,8 @@ func _write() -> PackedByteArray:
 		at += 2
 		if _ai[k] >= 0:
 			out[at] = _ai[k]
+			at += 1
+		if _br[k] != 0:
+			out[at] = _br[k] & 0xFF
 			at += 1
 	return out

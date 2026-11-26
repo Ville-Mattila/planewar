@@ -5,7 +5,7 @@ class_name Protocol
 ## (04 s2.2: bump PROTOCOL_VERSION on any layout change). Enumerations are append-only (R0 B.3).
 
 ## 04 s2.2. A mismatch is REFUSE(VERSION); there is no negotiation in v1.
-const PROTOCOL_VERSION: int = 1
+const PROTOCOL_VERSION: int = 2             # 2: NET-61 barrel u8 in FULL / A-DELTA records (R0 B.31 A-152)
 
 # region message ids (04 s2.3). < 0x80 client -> server, >= 0x80 server -> client.
 const HELLO: int = 0x01

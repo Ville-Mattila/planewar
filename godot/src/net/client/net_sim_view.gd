@@ -1,15 +1,11 @@
 class_name NetSimView extends SimView
-## SimView over replicated state (04 s5.6, s3.7): the client's roster, its SnapshotDecoder frames sampled at a
-## fractional render tick (NetPose), the pilot block of its own possessed unit, POSSESSED / RELEASED events and its
-## team's TEAM_STATE. `sample(render_tick)` (R0 C2-12) must be called before reads; reads stay valid until the next
-## sample. Ids are EntityIds (roster index = Roster.index_of_slot(slot), generation from ENTITY_META). A field the client does not
-## receive returns the SimView default and is reported by `field_unknown` (NetUnknown: 04 s3.7 table): C-tier basis /
-## vel, the pilot-block fields of every entity but the own possessed unit, the ai_tag of other teams, a wreck's radius,
-## and accessors no wire carries yet (overlay, cargo, cargo_kind, link, TEAM_DETAIL rows of NET-39, shield01 / wreck_ore
-## at -1.0 per GD-38 / GD-41, landing_grade_last); `unknown(id)` is any of them. team_state / player_state / order_head /
-## pending_order stay the SimView default until NET-39 (R0 B.22 A-111; `team_flags` carries TEAM_STATE.flags incl.
-## CORE_SHIELD_UP meanwhile). Constants below mirror EntityStore /
-## Spatial / SimView enums; test_net_sim_view.gd pins them.
+## SimView over replicated state (04 s5.6, s3.7): roster, SnapshotDecoder frames sampled at a fractional render tick
+## (NetPose; call `sample` before reads, R0 C2-12), the own possessed unit's pilot block, POSSESSED / RELEASED events, the
+## team's TEAM_STATE. Ids are EntityIds (roster index = Roster.index_of_slot(slot), generation from ENTITY_META). A field
+## not received returns the SimView default with `field_unknown` (NetUnknown, 04 s3.7): C-tier basis / vel, pilot fields
+## off the own possessed unit, other teams' ai_tag, a wreck's radius, a barrel not held from tier A (NET-61), accessors no
+## wire carries yet (overlay, cargo, cargo_kind, link, NET-39 rows, shield01 / wreck_ore -1.0, landing_grade_last). NET-39:
+## team_state / player_state / order_head / pending_order (A-111). Constants mirror EntityStore / Spatial / SimView (pinned).
 
 const K_STRUCTURE: int = 0                  ## EntityStore.K_* (def_kind)
 const K_SHIP: int = 1
@@ -51,13 +47,14 @@ func _init(roster_ref: Roster, decoder_ref: SnapshotDecoder) -> void:
 	var _b: int = _possessor_gen.resize(Roster.CAPACITY)
 
 
-## Defs (gravity table, radii, hp) and the map's terrain; the decoder's gravity and dt follow.
+## Defs (gravity and barrel tables, radii, hp) and the map's terrain; the decoder's gravity, dt and barrel table follow.
 func bind(net_defs: NetDefs, map_terrain: Terrain) -> void:
 	defs = net_defs
 	terrain = map_terrain
 	decoder.gravity = defs.gravity
 	decoder.dt = 1.0 / float(defs.tick_hz)
 	decoder.gravity_def = defs.gravity_def
+	decoder.barrel_def = defs.barrel_def
 	pose.gravity = defs.gravity
 	pose.dt = decoder.dt
 	pose.gravity_def = defs.gravity_def
@@ -87,14 +84,12 @@ func set_team_state(w: TeamStateWire) -> void:
 		team_wire.copy_from(w)
 
 
-## TEAM_STATE.flags (TeamStateView bits: CORE_EXPOSURE 1, LOW_POWER 2, CORE_SHIELD_UP 4, SPEND_LOCK_ACTIVE 8) of
-## the own team; 0 for other teams and before the first TEAM_STATE.
+## TEAM_STATE.flags (TeamStateView bits 1, 2, 4 CORE_SHIELD_UP, 8) of the own team; 0 otherwise / before the first.
 func team_flags(t: int) -> int:
 	return team_wire.flags if t == team_id and team_wire.tick > 0 else 0
 
 
-## True when some SimView field of `id` is not received by this client (04 s3.7 / s5.6 "unknown" bit), or `id` is not
-## live. While NetUnknown.NEVER is non-empty (CQ-5, NET-39, GD-38, GD-41) that holds for every entity: ask field_unknown.
+## Any SimView field of `id` not received (04 s3.7 / s5.6 bit) or `id` not live; every entity while NetUnknown.NEVER is non-empty.
 func unknown(id: int) -> bool:
 	var i: int = index_of(id)
 	return i < 0 or not NetUnknown.NEVER.is_empty() or NetUnknown.field(self, i, &"basis") or i != _own()
@@ -116,9 +111,8 @@ func index_of(id: int) -> int:
 	return i
 
 
-## Roster index of any live replicated EntityId, projectile entities included (the block, R0 B.22 A-112), else -1.
-## alive / pos / vel / basis / def_id / owner / team / radius / def_kind / read_poses / the cell and proximity lists
-## resolve through it; every other accessor answers a projectile id as LocalSimView does (its default).
+## Roster index of any live replicated EntityId incl. projectile entities (A-112), else -1: alive / pos / vel / basis / def_id /
+## owner / team / radius / def_kind / read_poses / cell and proximity lists; other accessors answer a projectile id's default.
 func entry_of(id: int) -> int:
 	if id <= 0 or not EntityId.is_projectile(id):
 		return index_of(id)
@@ -128,7 +122,6 @@ func entry_of(id: int) -> int:
 	return i
 
 
-## The own possessed unit's index while a pilot block has arrived, else -1.
 ## True when roster index `i` has an entry and a replicated state (the live set every list accessor walks).
 func live(i: int) -> bool:
 	return roster.has(i) and pose.present(i)
@@ -299,6 +292,14 @@ func service_state(id: int) -> int:
 	return SERVICE_DOCKED if i >= 0 and (_flags_byte(i) & Codec.FLAG_DOCKED) != 0 else 0
 
 
+## R0 B.31 A-152 (NET-61): the barrel byte held from tier A (BaselineFrame.barrel); 0.0 + field_unknown at tier B / C or after a
+## KEYFRAME, 0.0 known without a barrel. The possessing client shows this replicated value too (no barrel prediction).
+func barrel_elevation(id: int) -> float:
+	var i: int = index_of(id)
+	var f: BaselineFrame = pose.frame()
+	return defs.barrel_rad(roster.def_of(i), f.barrel[i]) if i >= 0 and f != null else 0.0
+
+
 func incoming_rockets(id: int) -> int:
 	var i: int = index_of(id)
 	return decoder.pilot.incoming_rockets if i >= 0 and i == _own() else 0
@@ -390,8 +391,7 @@ func team_flags_known(t: int) -> bool:
 	return t == team_id and team_wire.tick > 0
 
 
-## R0 B.11 A-56 over the sampled mirror: pos / basis element-wise, ZERO + identity for dead or unknown ids (projectile
-## entities through the block, A-112). The walk is NetRosterQueries.read_poses (the EntityViewPool.sync hot path).
+## R0 B.11 A-56 over the sampled mirror (projectiles A-112): NetRosterQueries.read_poses, the EntityViewPool.sync hot path.
 func read_poses(ids: PackedInt32Array, out_pos: PackedVector3Array, out_rot: PackedVector4Array) -> int:
 	return NetRosterQueries.read_poses(self, ids, out_pos, out_rot)
 

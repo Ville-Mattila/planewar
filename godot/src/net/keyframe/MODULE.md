@@ -19,7 +19,7 @@ A change to "Public API", "Wire layout" or "Invariants" is a contract change: co
 
 ```gdscript
 class_name KeyframeCodec extends RefCounted           # net/keyframe/keyframe_codec.gd; scratch arrays sized once (1,536 entries)
-const HEADER_BYTES: int; const COUNT_MAX: int; const OFF_SEQ: int; const OFF_TICK: int; const OFF_SCOPE: int; const OFF_COUNT: int; const RECORDS_MAX: int; const RECORD_WORST_BYTES: int   # 10 3584 1 3 7 8; 2848 = (65,535 - 10) / 23, the 04 s2.3 roster_count bound (R0 B.25 A-134); 22
+const HEADER_BYTES: int; const COUNT_MAX: int; const OFF_SEQ: int; const OFF_TICK: int; const OFF_SCOPE: int; const OFF_COUNT: int; const RECORDS_MAX: int; const RECORD_WORST_BYTES: int   # 10 3584 1 3 7 8; 2848 = (65,535 - 10) / 23, the 04 s2.3 roster_count bound (R0 B.25 A-134); 23 (22 + the NET-61 barrel byte)
 enum Status { OK, MALFORMED, STALE, MISSING_ROSTER }
 var seq: int; var tick: int; var scope: int; var count: int; var malformed: int; var missing: PackedInt32Array
 func encode(codec: SnapshotCodec, store: BaselineStore, at_tick: int, keyframe_seq: int, key_scope: int, indices: PackedInt32Array) -> PackedByteArray   # empty when prepare_tick(at_tick) was not run, scope or seq invalid; resets `store`, mirror frame at_tick = the records
@@ -27,7 +27,7 @@ func decode(bytes: PackedByteArray, dec: SnapshotDecoder) -> int   # validate th
 func forget() -> void                              # reconnect: the next keyframe_seq is accepted whatever the last one was
 func reencode() -> PackedByteArray                    # bytes of the last OK decode, rebuilt from its raw fields (invariant K3)
 static func seq_of(bytes: PackedByteArray) -> int;  static func tick_of(bytes: PackedByteArray) -> int;  static func scope_of(bytes: PackedByteArray) -> int   # -1 when too short
-static func size_for(records: int, own_records: int, escapes: int) -> int   # header + records x 19 + own + 2 per escape
+static func size_for(records: int, own_records: int, escapes: int, barrel_records: int = 0) -> int   # header + records x 19 + own + 2 per escape + 1 per barrel def
 
 class_name KeyframePolicy extends RefCounted          # net/keyframe/keyframe_policy.gd; one per client, server side
 const STALE_TICKS: int; const REQUEST_MIN_TICKS: int; const NONE: int   # 33 (older than DEPTH 32); 150 (5 s); -1
@@ -54,7 +54,7 @@ KEYFRAME (04 s2.3 0x86): id u8, keyframe_seq u16, tick u32, scope u8 (`Protocol.
 then `count` records in ascending roster index; <= 65,535 B (Protocol.MAX_RELIABLE_BYTES): roster_count <= RECORDS_MAX (2,848; R0 B.25 A-134): an encode over more returns empty, a larger count is MALFORMED.
 A record is the SNAPSHOT FULL record (04 s3.5): gap (u8 1-254 from the previous record, the first record's gap is its index, 0 only
 for index 0; else 0xFF + u16 index) then 0xFF, vec3q 8, quat_s3 4, vel 3, hp 1, flags 1, ai_tag 1 for an entry of the client's own
-team = 19 B (+1). Canonical gaps only (an escape where a u8 gap fits is MALFORMED). All FULLs: the keyframe has no baseline.
+team, barrel 1 for a def with a barrel (`SnapshotDecoder.barrel_def`; NET-61, R0 B.31 A-152; the mirror holds no barrel after a keyframe) = 19 B (+1, +1). Canonical gaps only (an escape where a u8 gap fits is MALFORMED). All FULLs: the keyframe has no baseline.
 The gap chain runs over sim slots, not roster indices (R0 B.22 A-112, NET-58): 0-1,535 and projectile slots 4,096-6,143 map to
 indices through `Roster.index_of_slot`; a slot in 1,536-4,095 or >= 6,144 is MALFORMED. Entity-only keyframes keep their bytes.
 ENTITY_META for every record's index is sent before the KEYFRAME on channel 3 (ordered); the doc's sequence diagram lists it after,

@@ -107,8 +107,9 @@ func put_u24(v: int) -> void:
 	_at = Codec.write_u24(_buf, _at, v)
 
 
-## FULL body: mask 0xFF, vec3q, quat_s3, vel, hp, flags, [ai_tag when >= 0].
-func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int) -> void:
+## FULL body: mask 0xFF, vec3q, quat_s3, vel, hp, flags, [ai_tag when >= 0], [barrel byte when `barrel` != 0: a def with a
+## barrel, BaselineFrame.BARREL_KNOWN | byte; NET-61, R0 B.31 A-152].
+func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int, barrel: int = 0) -> void:
 	_buf[_at] = SnapshotCodec.MASK_FULL
 	_at = Codec.write_pos(_buf, _at + 1, pos_q)
 	_at = Codec.write_u32(_buf, _at, ori)
@@ -119,11 +120,12 @@ func put_full(pos_q: int, ori: int, vel: int, hp: int, flags: int, ai_tag: int) 
 	if ai_tag >= 0:
 		_buf[_at] = ai_tag
 		_at += 1
+	_put_barrel(barrel)
 
 
 ## FULL body from SnapshotCodec's per-tick byte cache (A-40): w0 = bytes 0-7, w1 = bytes 8-15, w2 = hp |
-## flags << 8 | ai_tag << 16; the ai_tag byte only when `own`. Same bytes as put_full.
-func put_full_words(w0: int, w1: int, w2: int, own: bool) -> void:
+## flags << 8 | ai_tag << 16; the ai_tag byte only when `own`, the barrel byte when `barrel` != 0. Same bytes as put_full.
+func put_full_words(w0: int, w1: int, w2: int, own: bool, barrel: int = 0) -> void:
 	_buf.encode_s64(_at, w0)
 	_buf.encode_s64(_at + 8, w1)
 	_buf.encode_u16(_at + 16, w2 & 0xFFFF)
@@ -131,10 +133,14 @@ func put_full_words(w0: int, w1: int, w2: int, own: bool) -> void:
 	if own:
 		_buf[_at] = (w2 >> 16) & 0xFF
 		_at += 1
+	if barrel != 0:
+		_buf[_at] = barrel & 0xFF
+		_at += 1
 
 
-## DELTA body in mask-bit order; `res` is the wire residual.
-func put_delta(mask: int, res: Vector3i, ori: int, tier_b: bool, vel: int, hp: int, flags: int, ai_tag: int) -> void:
+## DELTA body in mask-bit order; `res` is the wire residual; MASK_BARREL (tier A) writes the low byte of `barrel`.
+func put_delta(mask: int, res: Vector3i, ori: int, tier_b: bool, vel: int, hp: int, flags: int, ai_tag: int,
+		barrel: int = 0) -> void:
 	_buf[_at] = mask
 	_at += 1
 	if mask & SnapshotCodec.MASK_POS_SMALL:
@@ -161,3 +167,11 @@ func put_delta(mask: int, res: Vector3i, ori: int, tier_b: bool, vel: int, hp: i
 		if ai_tag >= 0:
 			_buf[_at] = ai_tag
 			_at += 1
+	if mask & SnapshotCodec.MASK_BARREL:
+		_put_barrel(barrel)
+
+
+func _put_barrel(barrel: int) -> void:
+	if barrel != 0:
+		_buf[_at] = barrel & 0xFF
+		_at += 1
