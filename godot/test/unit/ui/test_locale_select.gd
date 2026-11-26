@@ -38,6 +38,17 @@ func test_override_persists_and_clears() -> void:
 	assert_str(LocaleSelect.resolve("en_US", LocaleSelect.saved_override(TMP_SETTINGS))).is_equal("en")
 
 
+func test_unavailable_storage_gives_default_locale_without_crash() -> void:
+	Saves.simulate_unavailable = true
+	var saved: String = LocaleSelect.saved_override(TMP_SETTINGS)
+	var err: Error = LocaleSelect.save_override(TMP_SETTINGS, "fi")
+	var code: String = LocaleSelect.resolve("en_US", saved)
+	Saves.simulate_unavailable = false
+	assert_str(saved).is_equal("")
+	assert_int(err).is_equal(ERR_UNAVAILABLE)
+	assert_str(code).is_equal("en")
+
+
 func test_registered_po_translates_en_and_fi() -> void:
 	assert_int(LocaleSelect.register_translations(Fmt.param_str("po_dir"))).is_equal(2)
 	LocaleSelect.apply("en")

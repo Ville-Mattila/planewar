@@ -27,18 +27,29 @@ static func register_translations(dir: String) -> int:
 
 
 static func saved_override(path: String) -> String:
-	var cfg: ConfigFile = ConfigFile.new()
-	if cfg.load(path) != OK:
-		return ""
+	var cfg: ConfigFile = _load_cfg(path)
 	return str(cfg.get_value(Fmt.param_str("settings_section"), Fmt.param_str("settings_key"), ""))
 
 
-## Persists the Settings / age-screen choice ("auto" clears the override). Returns OK or a Godot error code.
+## Persists the Settings / age-screen choice ("auto" clears the override). Returns OK, ERR_UNAVAILABLE when
+## user:// storage is blocked (the choice then lasts for the session only), or another Godot error code.
 static func save_override(path: String, code: String) -> Error:
-	var cfg: ConfigFile = ConfigFile.new()
-	var _loaded: Error = cfg.load(path)
+	var cfg: ConfigFile = _load_cfg(path)
 	cfg.set_value(Fmt.param_str("settings_section"), Fmt.param_str("settings_key"), code)
-	return cfg.save(path)
+	var dir: Result = Saves.try_make_dir(path.get_base_dir())
+	var wr: Result = dir if not dir.ok else Saves.try_write_text(path, cfg.encode_to_text())
+	if wr.ok:
+		return OK
+	return ERR_UNAVAILABLE if wr.error == Saves.ERR_UNAVAILABLE else ERR_CANT_CREATE
+
+
+## The settings file through Saves.try_*; an empty ConfigFile when absent, unreadable or storage is unavailable.
+static func _load_cfg(path: String) -> ConfigFile:
+	var cfg: ConfigFile = ConfigFile.new()
+	var rd: Result = Saves.try_read_text(path)
+	if rd.ok:
+		var _e: Error = cfg.parse(str(rd.value))
+	return cfg
 
 
 ## Switches the active locale and returns the resolved code.
