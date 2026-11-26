@@ -39,7 +39,7 @@ func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPee
 Barrel defs (GD-50, optional per `ground_units.json` entry, absent = 0; schema `tools/schemas/ground_units.schema.json`):
 `barrel_slew_dps` (elevation rate at full pitch), `barrel_min_deg`, `barrel_max_deg` (elevation limits above the local
 horizontal; reversed limits are swapped). A def has a barrel when any of the three is non-zero. Siege Crawler: 10 deg/s,
-0-45 deg. Read from `GroundUnitDef.raw` of the base defs (doctrines do not touch them; typed fields: `needs content:`).
+0-45 deg. Typed `GroundUnitDef` fields of the base defs (R0 B.31 A-151, CONTENT-5; doctrines do not touch them); `BarrelSlew` reads the fields, not `raw`.
 
 Constants come from the `ground_common` block of `ground_units.json` (A-63, like `flight_common`: `ground_turn_rate_dps` 40,
 `ground_reverse_speed_mps` 3, `ground_reverse_hold_s` 0.5, `ground_slope_speed_loss` 0.6; `GroundCommonDef`) and `ground_units.json` (`ground_speed`, `ground_speed_loaded`, `max_slope_deg`, `bounding_radius`).

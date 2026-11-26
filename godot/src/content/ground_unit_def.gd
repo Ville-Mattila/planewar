@@ -20,9 +20,12 @@ var bounding_radius: float = 0.0
 var score_value: int = 0
 var possessable: bool = false
 var autopilot: StringName = &""
+var barrel_slew_dps: float = 0.0  ## R0 B.31 A-151 (CONTENT-5): elevation rate at full pitch, deg/s; 0 when absent
+var barrel_min_deg: float = 0.0  ## R0 B.31 A-151: lowest elevation above the local horizontal, deg; 0 when absent
+var barrel_max_deg: float = 0.0  ## R0 B.31 A-151: highest elevation, deg; 0 when absent
 
 const SPEC: Dictionary = {
-	"f": "build_time_s ground_speed ground_speed_loaded max_slope_deg mine_rate unload_time_s sensor_radius bounding_radius",
+	"f": "build_time_s ground_speed ground_speed_loaded max_slope_deg mine_rate unload_time_s sensor_radius bounding_radius barrel_slew_dps barrel_min_deg barrel_max_deg",
 	"i": "hp cost_ore cost_ice cargo_ore ammo score_value",
 	"b": "possessable",
 	"n": "produced_at autopilot",
