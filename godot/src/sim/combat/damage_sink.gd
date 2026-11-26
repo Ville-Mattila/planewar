@@ -52,12 +52,12 @@ func destroy(s: int, attacker: int, tick: int) -> bool:
 	return true
 
 
-# Damage dealt to a finished structure by an attacker of another team still in the store (a shooter that died first is lost to the tie-break).
+# Damage dealt to a finished structure by an attacker of another team: the shooter's team is found even when it died first.
 func _report(s: int, dealt: float, attacker: int) -> void:
-	if judge == null or _store.kind[s] != EntityStore.K_STRUCTURE or (_store.flags[s] & EntityStore.F_BUILDING) != 0 			or not _store.alive(attacker):
+	if judge == null or _store.kind[s] != EntityStore.K_STRUCTURE or (_store.flags[s] & EntityStore.F_BUILDING) != 0:
 		return
-	var t: int = _store.team[EntityId.slot(attacker)]
-	if t != _store.team[s]:
+	var t: int = judge.shooter_team(attacker)
+	if t >= 0 and t != _store.team[s]:
 		judge.note_damage(t, dealt)
 
 

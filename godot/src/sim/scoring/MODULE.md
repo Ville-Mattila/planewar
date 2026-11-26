@@ -159,3 +159,5 @@ float operations); the per-landing cost is `Touchdown`'s (sim/docking/MODULE.md)
 - `ice_delivered` / `ore_mined` (GD-12, GD-14) and `relay_captured` / `relay_held` (GD-23) are called by those tasks when
   they land; nothing in the sim calls them yet. `medals[]` is filled by GD-28's evaluator.
 - `MATCH_END`'s per-player tail is encoded by NET-22 (`server/`) from `SimWorld.match_result()`.
+- `ScoreKeeper.structure_value` (cost sum) is deprecated in favour of `MatchJudge.values_by_team` (02 s12.1) for match results:
+  `SimWorld.match_result()` overwrites `MatchResult.structure_value` with the latter.
