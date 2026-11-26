@@ -55,6 +55,14 @@ func _init(store: EntityStore, players: PlayerTable, defs: WorldDefs, rules: Mat
 	validator.production = production
 
 
+## BUG-5 (S18): cuts the back-pointers this hub wired (validator -> Build / Production, AutoReplenish -> Production),
+## so no RefCounted cycle outlives the world; `SimWorld` calls it from NOTIFICATION_PREDELETE.
+func unlink() -> void:
+	_validator.build = null
+	_validator.production = null
+	production.replenish.unlink()
+
+
 ## True for the command kinds step 1 routes here instead of `CommandApplier`.
 static func handles(kind: Command.Kind) -> bool:
 	return kind == Command.Kind.BUILD or kind == Command.Kind.CANCEL_BUILD or kind == Command.Kind.PRODUCE \
