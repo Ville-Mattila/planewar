@@ -26,7 +26,7 @@ func test_sc40_commander_opening_vanguard() -> void:
 		if airborne_tick < 0:
 			for s: int in st.ships:
 				if st.def_id[s] == dart and st.owner[s] == 0 and (st.flags[s] & (EntityStore.F_DOCKED | EntityStore.F_LANDED)) == 0 \
-						and Sphere.altitude(st.pos[s]) > 20.0:
+						and Sphere.altitude(st.pos[s]) - w.terrain().height_at(st.pos[s]) > 20.0:   # above the ground (BUG-3: cradle's terrain)
 					airborne_tick = tick
 		if placed_dist < 0.0:
 			for s: int in st.structures:

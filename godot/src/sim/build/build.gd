@@ -2,7 +2,8 @@ class_name Build extends RefCounted
 ## The one placement validator (02 s6.2, 03 s3.6, R0 C2-12): server, client preview and bots all call
 ## `can_place`. Checks run in `Reject` order and the first failure wins. Reads the store (only `place` writes it) and
 ## reuses one footprint array. Deterministic: no RNG, no clock other than `set_clock`. Vision is approximated by
-## friendly sensor discs until TA-37 lands (footprint centre only).
+## friendly sensor discs until TA-37 lands (footprint centre only). A structure stands on the terrain at its footprint
+## centre (`_site_point`, 03 s7.6; BUG-3), and every 3-D check of `can_place` measures from that same point.
 
 enum Reject { OK, ELIMINATED, PREREQ, CAP, OCCUPIED, SLOPE, NODE, NOT_VISIBLE, ENEMY_RADIUS, NO_RADIUS,
 		NO_PRESENCE, SPACING, FUNDS, SPEND_LOCKED }
@@ -19,6 +20,7 @@ var _store: EntityStore
 var _players: PlayerTable
 var _rules: MatchRules
 var _fp: BuildFootprint
+var _terrain: Terrain
 var _tick: int = 0
 var _core_def: int = -1
 var _outpost_def: int = -1
@@ -35,6 +37,7 @@ func _init(defs: WorldDefs, store: EntityStore, players: PlayerTable, terrain: T
 	_store = store
 	_players = players
 	_rules = rules
+	_terrain = terrain
 	grid = BuildGrid.new(terrain, grid_n)
 	_fp = BuildFootprint.new(grid_n)
 	var e: int = spent_ore.resize(PlayerTable.SLOTS) | delivered_ore.resize(PlayerTable.SLOTS) | rot.resize(EntityId.WRECK_SLOT_MIN)
@@ -90,7 +93,7 @@ func can_place(player: int, def_id: int, cell: int, rotation: int) -> Build.Reje
 	var r: Reject = _check_cells(cells, sd)
 	if r != Reject.OK:
 		return r
-	r = _check_vision_and_radius(team, def_id, _fp.centre_dir() * Sphere.PLANET_RADIUS)
+	r = _check_vision_and_radius(team, def_id, _site_point())
 	if r != Reject.OK:
 		return r
 	return _check_funds(player, team, sd)
@@ -115,7 +118,7 @@ func stamp(player: int, def_id: int, cell: int, rotation: int, finished: bool) -
 	if id == EntityId.NULL_ID:
 		return 0
 	var s: int = EntityId.slot(id)
-	var p: Vector3 = _fp.centre_dir() * Sphere.PLANET_RADIUS
+	var p: Vector3 = _site_point()
 	_store.def_id[s] = def_id
 	_store.owner[s] = player
 	_store.team[s] = _players.team[player]
@@ -130,6 +133,14 @@ func stamp(player: int, def_id: int, cell: int, rotation: int, finished: bool) -
 	rot[s] = rotation
 	grid.occupy(cells)
 	return id
+
+
+# B10 (BUG-3): the ground point of the footprint `_fp` built last: its centre direction at the terrain height there,
+# `Terrain.surface_point` of 03 s7.6 (the renderer flattens the footprint to it). The same unit vector scales, so the
+# flat datum (height 0.0) gives the datum placement bit for bit.
+func _site_point() -> Vector3:
+	var c: Vector3 = _fp.centre_dir()
+	return c * (Sphere.PLANET_RADIUS + _terrain.height_at(c))
 
 
 ## Frees the footprint of structure slot `s` (death or cancelled site); the entity itself is the caller's.
