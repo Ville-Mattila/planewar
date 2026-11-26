@@ -76,10 +76,12 @@ Enforced by review; mechanically by `check_deps.py` where possible. Applies to `
 python tools/check_deps.py                                  # D1-D10, < 10 s
 python tools/validate_content.py                            # schemas, dangling refs, docs/examples
 "$GODOT_BIN" --headless --path godot -s tools/validate_scenes.gd   # every .tscn instantiates
-godot/addons/gdUnit4/runtest.sh -a res://test/unit -c -rd reports   # exit 0 ok, 100 failures, 101 warnings
-godot/addons/gdUnit4/runtest.sh -a res://test/unit/<lane>/test_x.gd  # one file
+tools/gdunit_headless.sh -a res://test/unit -c -rd reports     # exit 0 ok, 100 failures, 101 warnings
+tools/gdunit_headless.sh -a res://test/unit/<lane>/test_x.gd    # one file
 python tools/gen_module_api.py --check                      # MODULE.md vs code
 ```
+
+Run gdUnit4 only through `tools/gdunit_headless.sh` (headless, as CI does). Calling `addons/gdUnit4/runtest.sh` directly opens a "PLANEWAR (DEBUG)" window on the owner's desktop for every run; don't. Open a windowed Godot only for a screenshot your brief asks for, once, in one short run.
 
 Never run `"$GODOT_BIN" -d` (or any debug-enabled headless run) without `--remote-debug tcp://127.0.0.1:0`; otherwise a parse error drops into an interactive `debug>` prompt and your run hangs forever. The gdUnit4 runner does this for you. Screenshots need a windowed build under Xvfb + llvmpipe (CI does it nightly); attach a local screenshot to PRs that touch `presentation/` or `ui/`. Cap CI-fix loops at three rounds, then report.
 
