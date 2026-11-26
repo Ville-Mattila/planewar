@@ -8616,8 +8616,10 @@
       "docs/reviews/R0-amendments-25.md",
       "R0 B.1"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-26",
+    "pr": 192,
+    "notes": "needs net: net/client/net_defs.gd still reads the three barrel keys raw."
   },
   {
     "id": "UX-48",
