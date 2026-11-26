@@ -26,6 +26,10 @@ static func cradle() -> Terrain:
 	return _terrain
 
 
+func after() -> void:
+	_terrain = null   # the shared cradle sampler (~25 MB) does not outlive the suite
+
+
 func before_test() -> void:
 	_content = WorldTestKit.content()
 	_defs = WorldDefs.new(_content)

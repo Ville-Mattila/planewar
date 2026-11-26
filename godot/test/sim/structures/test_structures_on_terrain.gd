@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
-## BUG-3 on cradle's real terrain (sim/build B10, sim/harvest H-reach): the start kit of slot 0 stands on the ground, so
-## its Harvester, which `GroundMotion` keeps on the ground, reaches the Refinery (`Harvest._refinery_near`, 3-D
+## BUG-3 on cradle's real terrain (sim/build B10; scenario layer, as every test runs a cradle SimWorld): the start kit
+## of slot 0 stands on the ground, so its Harvester, which `GroundMotion` keeps on the ground, reaches the Refinery (`Harvest._refinery_near`, 3-D
 ## `radius + salvage_deliver_m`), mines a home field and delivers. The unit is moved by teleport here (no autopilot: the
 ## sim's reach rules only); the driven cycle is `test/sim/ai/test_bug3_cradle_cycle.gd`. A save/restore of the
 ## world on terrain is byte-equal.
