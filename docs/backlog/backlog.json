@@ -8641,8 +8641,10 @@
       "06 s2",
       "godot/src/input/MODULE.md I12"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-26",
+    "pr": 188,
+    "notes": "I12 per mode set (A-154) implemented verbatim; GroundMapper (+reset), steer_*/barrel_* actions, remap.json sets, I14 FREE_LOOK orbit. needs app: assign the shared BindingStore to ground_mapper.bindings. needs ui (UX-06): touch barrel buttons. Doc owner: drop \"[planned: UX-48]\" in 06 s3.2."
   },
   {
     "id": "UX-49",
