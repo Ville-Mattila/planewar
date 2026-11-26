@@ -8675,5 +8675,37 @@
     ],
     "status": "todo",
     "merged": null
+  },
+  {
+    "id": "TA-71",
+    "title": "CI: split the gdUnit4 unit-sim shard so it stays well under its job time limit (cancellations on PRs #169, #182, #186)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [],
+    "milestone": "M3",
+    "acceptance": "unit-sim is split into >= 2 shards via gdunit_shard.sh SHARD_DIRS (every test dir covered by exactly one shard, TA-67 guard kept); each shard's p95 runtime over 5 runs is < 50 % of its timeout; total CI wall time does not grow; the 19-check count change is reflected in docs/10 and any merge scripts",
+    "docs": [
+      ".github/workflows/ci.yml",
+      ".github/scripts/gdunit_shard.sh"
+    ],
+    "status": "todo",
+    "merged": null,
+    "notes": "unit-sim was cancelled at its time limit with no failing test on several PRs (GD-20 #169, GD-50 #182, AI-18b #186 twice); runner contention plus growing sim tests (AI-33 SC-47 ~45 s)."
+  },
+  {
+    "id": "TA-72",
+    "title": "tools: lint_commits.py accepts task ids with a lowercase suffix (AI-18b, AI-33b)",
+    "lane": "tools",
+    "tier": "Haiku",
+    "size_days": 0.1,
+    "depends_on": [],
+    "milestone": "M3",
+    "acceptance": "tools/lint_commits.py accepts subjects starting with ids like AI-18b: and AI-33b: (backlog ids with a lowercase letter suffix) and still rejects malformed ids; unit tests for both; CI green",
+    "docs": [
+      "tools/lint_commits.py"
+    ],
+    "status": "todo",
+    "merged": null
   }
 ]
