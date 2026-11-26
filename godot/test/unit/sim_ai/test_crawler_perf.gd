@@ -4,7 +4,8 @@ extends GdUnitTestSuite
 ## (they drive to a ring spot), with a friendly Sensor Mast; after 30 s every mode of an attack is in play. The per-call
 ## cost of `think_one`, of an `act_batch` over all of them and of one lofted solve (`SiegeAim.loft`, run once per spot) is
 ## timed, best of several batches. Timing bounds are report-only on hosted runners (R0 B.17 A-97, `PerfGate`); the work
-## counters are hard: a solve per spot, not per think; no spot search on a steady siege think.
+## counters are hard: a solve per spot, not per think; no spot search on a steady siege think. AI-18b: the act also lays
+## the barrel (one `SimView.barrel_elevation` read per think while laid, dead-beat `pitch`).
 
 const HZ: int = 30
 const UNITS: int = 24
@@ -18,6 +19,7 @@ const ACT_LOOPS: int = 30
 func _world() -> Array:
 	var w: SimWorld = Ai16Kit.world(23)
 	var t: int = Ai16Kit.put(w, &"refinery", DartKit.FOE, 0.0)
+	w.store().hp[EntityId.slot(t)] = 1.0e7                                   # AI-18b: the shells land on it now; it must outlive the run
 	var _m: int = Ai16Kit.put(w, &"sensor_mast", 0, 600.0, 300.0)
 	var ids: PackedInt32Array = PackedInt32Array()
 	for i: int in UNITS:
@@ -62,13 +64,12 @@ func _act_us(b: CrawlerBrain, w: SimWorld, st: AiState, sink: CommandSink, ids: 
 func _loft_us(b: CrawlerBrain, w: SimWorld, c: int, t: int) -> float:
 	var p: CrawlerParams = b.prm
 	var st: ProjectileState = ProjectileState.new()
-	var muzzle: Vector3 = w.view().pos(c)
+	var pos: Vector3 = w.view().pos(c)
 	var aim: Vector3 = w.view().pos(t)
 	var best: float = INF
 	for _k: int in BATCHES:
 		var t0: int = Time.get_ticks_usec()
-		var _e: float = SiegeAim.loft(muzzle, aim, p.speed, p.shell, p.rules, w.terrain(), 2.0 * p.dt, p.max_steps,
-			CrawlerParams.LOFT_ITERS, p.loft_tol_m, st)
+		var _e: float = SiegeAim.loft(pos, aim, p, w.terrain(), st)
 		best = minf(best, float(Time.get_ticks_usec() - t0))
 	return best
 
