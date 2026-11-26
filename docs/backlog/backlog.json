@@ -8593,9 +8593,10 @@
       "04 s3.4",
       "04 s3.7"
     ],
-    "status": "todo",
-    "merged": null,
-    "notes": "Ruling R0-amendments-26 (B.32 A-156): bit 6 = MASK_BARREL is covered by A-152; SnapshotCodec.MASK_CELL_CHANGED stays as a deprecated symbol (10 s4.1); net/MODULE.md gains N11; the trailing optional parameters are Appends."
+    "status": "done",
+    "merged": "2026-11-26",
+    "notes": "Ruling R0-amendments-26 (B.32 A-156): bit 6 = MASK_BARREL is covered by A-152; SnapshotCodec.MASK_CELL_CHANGED stays as a deprecated symbol (10 s4.1); net/MODULE.md gains N11; the trailing optional parameters are Appends. PROTOCOL_VERSION 2: barrel u8 in FULL records, A-DELTA mask bit 6 MASK_BARREL (MASK_CELL_CHANGED kept as deprecated alias per A-156). Known only while the last record was tier A. +1 B per Crawler FULL; barrel-less scenes byte-identical. tools/replay_inspect.py version 2 + --barrel-def. For NET-15: server sets the barrel byte (set_barrel after set_entity, N11); NetViewRig now sends ground units.",
+    "pr": 187
   },
   {
     "id": "CONTENT-5",
