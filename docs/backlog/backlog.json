@@ -8500,8 +8500,9 @@
       "docs/reviews/R0-amendments-24.md",
       "R0 B.1"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-26",
+    "pr": 191
   },
   {
     "id": "UX-47",
