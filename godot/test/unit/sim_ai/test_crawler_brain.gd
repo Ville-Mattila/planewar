@@ -121,3 +121,82 @@ func test_a_restored_world_continues_byte_for_byte_mid_siege() -> void:
 		var _b2: Array[SimEvent] = w2.drain_events()
 	assert_bool(w2.serialize() == _w.serialize()).is_true()
 	assert_int(w2.view().ammo(c)).is_equal(_w.view().ammo(c))
+
+
+# AI-18b (R0 B.31 A-153): the brain reads SimView.barrel_elevation and slews dead-beat: every tick the barrel moves by at
+# most the def rate x dt toward the solve, monotone, and lands exactly on it; FIRE1 is held only on ticks that end with
+# the barrel on the solve, so no shell leaves during the slew; the heading ends on the bearing (dead-beat yaw).
+func test_the_barrel_is_slewed_dead_beat_onto_the_solve_and_fire1_waits_for_it() -> void:
+	var c: int = _world(1075.0)
+	var s: int = EntityId.slot(c)
+	_attack(c)
+	var step: float = _b.prm.barrel_rate / float(HZ)
+	var prev: float = _w.view().barrel_elevation(c)
+	assert_float(prev).is_equal(0.0)                                              # at rest: level
+	var laid: int = -1
+	for k: int in 10 * HZ:
+		Ai16Kit.step(_w)
+		var e: float = _w.view().barrel_elevation(c)
+		assert_float(e - prev).is_between(-1e-12, step + 1e-12)                     # rate-limited, never back down
+		var fired: bool = Ai18Kit.shells(_w, 0).size() > 0
+		if fired and laid < 0:
+			laid = k
+			assert_float(e).is_equal_approx(float(_d.state.tti[s]), 1e-12)          # the first shell leaves on the solve
+		prev = e
+	assert_int(laid).is_greater(0)
+	assert_float(_w.view().barrel_elevation(c)).is_equal_approx(float(_d.state.tti[s]), 1e-12)
+	var err: float = SiegeAim.heading_error(_w.view().pos(c), -_w.view().basis(c).z, _w.view().pos(_t))
+	assert_float(absf(err)).is_less(1e-4)                                         # dead-beat traverse: on the bearing
+	assert_int(_b.stats_solves).is_equal(1)
+
+
+# Saves with a near-bomb relocation pending and checks that the restored world relocates and continues byte for byte:
+# (a) the tick the bomb landed (BOMB_IMPACT queued in the sim for the hook, A-71), (b) the woken think's RELOCATE route
+# being driven (B_BLAST taken, the spot moved, the Crawler under way).
+func test_a_restored_world_with_a_pending_near_bomb_relocation_continues_byte_for_byte() -> void:
+	for phase: int in 2:
+		var c: int = _world(1075.0)
+		var s: int = EntityId.slot(c)
+		_attack(c)
+		Ai16Kit.step(_w, 8 * HZ)                                                    # sieging, firing
+		assert_int(_tag(c)).is_equal(AiTag.Tag.SIEGE)
+		var _h: int = Ai18Kit.bomb(_w, Ai16Kit.dir_at(1075.0, 40.0), DartKit.FOE, 1, 0)
+		var landed: bool = false
+		for _k: int in 3 * HZ:
+			_w.step()
+			for ev: SimEvent in _w.drain_events():
+				landed = landed or ev.kind == SimEvent.Kind.BOMB_IMPACT
+			if landed:
+				break
+		assert_bool(landed).is_true()
+		assert_int(_b.stats_relocations).is_equal(0)                                # not heard yet: queued for the hook
+		if phase == 1:
+			Ai16Kit.step(_w, HZ)
+			assert_int(_tag(c)).is_equal(AiTag.Tag.RELOCATE)
+			assert_int(_b.stats_relocations).is_equal(1)
+			assert_int(_d.state.bflags[s] & CrawlerBrain.B_ARRIVED).is_equal(0)       # under way to the new spot
+		var w2: SimWorld = _restore()
+		var b2: CrawlerBrain = _b2
+		for _k: int in 20 * HZ:
+			Ai16Kit.step(_w)
+			Ai16Kit.step(w2)
+		assert_bool(w2.serialize() == _w.serialize()).override_failure_message("phase %d" % phase).is_true()
+		assert_int(b2.stats_relocations).is_equal(1 - phase)                       # the restored brain did the pending one
+		assert_int(_b.stats_relocations).is_equal(1)
+		assert_int(w2.view().ai_tag(c)).is_equal(_tag(c))
+
+
+var _b2: CrawlerBrain
+
+
+# A restored copy of `_w` with a fresh driver configured before `deserialize` (`_b2` its brain); bytes equal at once.
+func _restore() -> SimWorld:
+	var bytes: PackedByteArray = _w.serialize()
+	var d2: AiDriver = AiDriver.new(Rng.new(3))
+	_b2 = Ai18Kit.brain(_w.terrain())
+	Ai18Kit.configure(d2, _b2)
+	var w2: SimWorld = SimWorld.deserialize(bytes, Ai18Kit.content(), d2)
+	assert_object(w2).is_not_null()
+	d2.set_terrain(w2.terrain())
+	assert_bool(w2.serialize() == bytes).is_true()
+	return w2

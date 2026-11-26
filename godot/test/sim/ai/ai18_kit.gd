@@ -2,7 +2,8 @@ class_name Ai18Kit extends RefCounted
 ## AI-18 fixtures: the shipped defs (`ap_crawler` with its required `follow` block, R0 B.29 A-145), a SimWorld on them
 ## (`Ai16Kit.world`: players 0 and 2 on team 0, 1 on team 1), an AiDriver whose Siege Crawler class runs `CrawlerBrain`
 ## with the ground SAFETY overlay, and probes for the shells the sim spawns. Placement is `Ai16Kit.put` (metres of arc
-## along +Y from +X).
+## along +Y from +X). AI-18b: a world on the shipped defs with `siege_gun.spread_deg` 0 (`BarrelTestKit.no_spread_content`:
+## the 1.5 deg spread moves an impact ~90 m, so the on-target scenario turns it off) and the impact point of every shell.
 
 
 static func content() -> ContentSet:
@@ -68,3 +69,39 @@ static func bomb(w: SimWorld, dir: Vector3, team: int, owner: int, shooter: int)
 	var wi: int = c.weapon_index.get(&"bomb", -1)
 	return w.projectiles().spawn(ProjectileStore.BOMB, w.tick(), p, -dir * 20.0, 10.0, pi - DefRanges.PROJECTILE_BASE,
 		wi - DefRanges.WEAPON_BASE, owner, team, shooter, 0, 0)
+
+
+## `Ai16Kit.world` on `c` (the shipped defs when null; `BarrelTestKit.no_spread_content()` for the on-target scenario).
+static func world(c: ContentSet, seed_value: int, map_id: StringName) -> SimWorld:
+	if c == null:
+		return Ai16Kit.world(seed_value, map_id)
+	var w: SimWorld = SimWorld.new(c)
+	var map: MapDef = MapDef.new()
+	map.id = map_id
+	var res: Result = w.load_map(map, seed_value, DartKit.rules())
+	assert(res.ok, res.message)
+	w.add_player(0, 0, &"", PlayerTable.KIND_HUMAN)
+	w.add_player(1, DartKit.FOE, &"vanguard", PlayerTable.KIND_HUMAN)
+	w.add_player(2, 0, &"", PlayerTable.KIND_BOT)
+	return w
+
+
+## The index of this tick's first collision contact of projectile `pid` (GROUND or a hit), or -1.
+static func contact(w: SimWorld, pid: int) -> int:
+	var col: Collision = w.collision
+	for c: int in col.contact_count:
+		if col.c_a[c] == pid:
+			return c
+	return -1
+
+
+## Where a shell spawned at `at` with velocity `v` meets the ground, flown at the sim's one-tick step for its lifetime
+## (`Ballistics.predict_impact`, which GD-50 checked against the sim within 3 m): its ballistic landing point, also for a
+## shell that struck a body on the way. ZERO without an impact.
+static func ground_point(w: SimWorld, at: Vector3, v: Vector3) -> Vector3:
+	var c: ContentSet = content()
+	var pd: ProjectileDef = c.projectiles[int(c.projectile_index[&"siege_shell"]) - DefRanges.PROJECTILE_BASE]
+	var dt: float = 1.0 / float(c.rules.tick_hz)
+	var r: Vector4 = Ballistics.predict_impact(at, v, pd, c.rules, w.terrain(), dt, dt, 0.0,
+		ceili(pd.lifetime_s * float(c.rules.tick_hz)), ProjectileState.new())
+	return Vector3(r.x, r.y, r.z) if Ballistics.has_impact(r) else Vector3.ZERO

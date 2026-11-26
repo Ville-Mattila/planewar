@@ -2,11 +2,12 @@ class_name CrawlerBrain extends AiBrain
 ## The Siege Crawler autopilot (05 s6.7, s5.7; AI-18). AUTO = HOLD (01 s4.3): it stands, no BRAKE. MOVE drives to the
 ## point and stands. ATTACK (mode SIEGE): a firing spot 1,000-1,150 m from the target's last seen position on ground no
 ## steeper than 10 degrees (its own position when that qualifies, else the ring point nearest its approach), the route
-## there (GroundFollower), then traverse in place onto the target's bearing and hold FIRE1 (the sim fires per def
-## cadence) while the lofted solve (`SiegeAim.loft`, A-74) has a solution. An enemy bomb landing within 60 m
+## there (GroundFollower), then traverse in place onto the target's bearing (dead-beat yaw) while the barrel slews to the
+## lofted solve (`SiegeAim.loft`, A-74; AI-18b: dead-beat `pitch`, R0 B.31 A-153), and hold FIRE1 (the sim fires per def
+## cadence) only on a tick whose slew ends on the solved elevation. An enemy bomb landing within 60 m
 ## (BOMB_IMPACT through `on_impact`, which the driver turns into a wake) moves it `relocate_step_m` along the ring away
 ## from the impact (mode RELOCATE), then SIEGE again. Ammo 0 = NO_AMMO: it holds (05 s6.7; the order failure itself
-## needs a sink call, brains/MODULE.md Open). Vision only: the target is read only while the team sees it; never seen
+## needs a sink call, brains/MODULE.md Open; so does UNREACHABLE). Vision only: the target is read only while the team sees it; never seen
 ## under this order = no spot, HOLD; a ground-unit target out of sight is not fired at. State is AiState only: mode,
 ## `order_tick`, `target`, `home` = target's last seen position, `seen_tick`, `goal` = the spot, `aux_id` = spot search
 ## index, `bflags`, `fire_mask` (1 = solved), `tti` = the solved elevation, `aim_lead` = own position at the last act,
@@ -18,6 +19,7 @@ const B_BLAST: int = 4     ## bflags: an enemy bomb landed within relocate_m (se
 const B_EMPTY: int = 8     ## bflags: NO_AMMO already counted for this empty magazine
 const B_GAVE_UP: int = 16  ## bflags: no spot / route on this order: hold until a new order (cleared by it)
 const B_AIMED: int = 32    ## bflags: the act found the heading on the bearing: hold it without a view read (cleared by every think)
+const B_LAID: int = 64     ## bflags: AI-18b: the barrel ends this act's tick on `tti`: hold it without a view read (cleared by every think)
 
 var prm: CrawlerParams
 var terrain: Terrain
@@ -86,12 +88,15 @@ func _act(id: int, s: int, view: SimView, st: AiState, sink: CommandSink, tick: 
 	var f: int = st.bflags[s]
 	if not moving(m):
 		GroundFollower.stop(_inp)
+	elif (f & (B_AIMED | B_LAID)) == (B_AIMED | B_LAID):
+		GroundFollower.stop(_inp)                # on the bearing, barrel laid (fire_mask set: only a think clears either)
+		_inp.buttons = PilotInput.FIRE1 if m == AiTag.Tag.SIEGE else 0
 	elif (f & B_AIMED) != 0:
-		_fire(s, m, st)                          # standing on the bearing: nothing to read until the next think
+		_fire(id, s, m, view, st)                # standing on the bearing: no pose read until the next think
 	elif (f & B_ARRIVED) != 0:
 		var q: Vector3 = view.pos(id)
 		st.aim_lead[s] = q
-		_traverse(s, q, -view.basis(id).z, m, st)
+		_traverse(id, s, q, -view.basis(id).z, m, view, st)
 	else:
 		var p: Vector3 = view.pos(id)
 		st.aim_lead[s] = p
@@ -108,23 +113,47 @@ func _act(id: int, s: int, view: SimView, st: AiState, sink: CommandSink, tick: 
 		GroundFollower.book_brake(s, _inp.buttons, st)
 
 
-# At the spot: turn in place onto the target's bearing; within `aim_tol` stop turning (B_AIMED) and fire.
-func _traverse(s: int, p: Vector3, fwd: Vector3, m: int, st: AiState) -> void:
+# At the spot: turn in place onto the target's bearing, dead-beat (`yaw` = error / (turn rate x dt), clamped: the tick whose
+# turn fits ends exactly on the bearing); within `aim_tol` that last turn is written, B_AIMED set, and it fires this tick
+# (step 5 turns before step 9 fires). The barrel slews meanwhile.
+func _traverse(id: int, s: int, p: Vector3, fwd: Vector3, m: int, view: SimView, st: AiState) -> void:
 	var err: float = SiegeAim.heading_error(p, fwd, st.home[s])
-	if absf(err) <= prm.aim_tol_rad:
+	var yaw: float = clampf(err / (prm.turn_rate * prm.dt), -1.0, 1.0)
+	if absf(err) <= prm.aim_tol_rad and absf(yaw) < 1.0:
 		st.bflags[s] |= B_AIMED
-		_fire(s, m, st)
+		_fire(id, s, m, view, st)
+		_inp.yaw = yaw
 		return
 	_inp.thrust = 0.0
-	_inp.yaw = clampf(prm.ground.kp_yaw * err, -1.0, 1.0)
+	_inp.yaw = yaw
 	_inp.buttons = 0
+	var _l: bool = _lay(id, s, view, st)
 
 
-# Stand still on the bearing; FIRE1 while solved (SIEGE only): the sim fires at the def cadence.
-func _fire(s: int, m: int, st: AiState) -> void:
+# Stand still on the bearing; FIRE1 while solved (SIEGE only) and the barrel ends this tick on the solved elevation: the
+# sim fires at the def cadence.
+func _fire(id: int, s: int, m: int, view: SimView, st: AiState) -> void:
 	_inp.thrust = 0.0
 	_inp.yaw = 0.0
-	_inp.buttons = PilotInput.FIRE1 if m == AiTag.Tag.SIEGE and st.fire_mask[s] != 0 else 0
+	var laid: bool = _lay(id, s, view, st)
+	_inp.buttons = PilotInput.FIRE1 if laid and m == AiTag.Tag.SIEGE else 0
+
+
+# AI-18b (R0 B.31 A-153): dead-beat barrel slew to `tti` while solved: pitch = clamp((e* - e) / (rate x dt), -1, 1) from
+# `SimView.barrel_elevation`; an unclamped pitch lands this tick's step-5 slew on e* exactly (B_LAID: hold, pitch 0, no
+# read until the next think). Not solved: hold. True when the barrel ends this tick on e*.
+func _lay(id: int, s: int, view: SimView, st: AiState) -> bool:
+	if st.fire_mask[s] == 0:
+		st.bflags[s] &= ~B_LAID
+		return false
+	if (st.bflags[s] & B_LAID) != 0:
+		return true
+	var x: float = (st.tti[s] - view.barrel_elevation(id)) / (prm.barrel_rate * prm.dt)
+	_inp.pitch = clampf(x, -1.0, 1.0)
+	if absf(x) > 1.0:
+		return false
+	st.bflags[s] |= B_LAID
+	return true
 
 
 # --- think -----------------------------------------------------------------------------------------------------------
@@ -137,7 +166,7 @@ func think_one(id: int, view: SimView, st: AiState, sink: CommandSink, tick: int
 	var team: int = view.team(id)
 	st.sub[s] = team + 1
 	st.aim_lead[s] = p
-	st.bflags[s] &= ~B_AIMED                     # the act re-checks the bearing after every think
+	st.bflags[s] &= ~(B_AIMED | B_LAID)          # the act re-checks the bearing and the barrel after every think
 	var head: OrderSpec = view.order_head(id)
 	var kind: int = head.kind if head != null else -1
 	var issued: int = head.issue_tick if head != null else -1
@@ -243,9 +272,7 @@ func _at_spot(id: int, s: int, p: Vector3, can_fire: bool, st: AiState, sink: Co
 		return
 	if st.fire_mask[s] == 0:
 		stats_solves += 1
-		var muzzle: Vector3 = p + SiegeAim.tangent_to(p, st.home[s]) * prm.radius
-		var e: float = SiegeAim.loft(muzzle, st.home[s], prm.speed, prm.shell, prm.rules, terrain, 2.0 * prm.dt,
-			prm.max_steps, CrawlerParams.LOFT_ITERS, prm.loft_tol_m, _ps)
+		var e: float = SiegeAim.loft(p, st.home[s], prm, terrain, _ps)   # from the sim's muzzle (AI-18b)
 		if is_nan(e):
 			st.aux_id[s] += 1                    # masked from here: the next ring candidate
 			_spot(s, p, st.goal[s], sink, st, tick)
