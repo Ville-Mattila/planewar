@@ -262,6 +262,7 @@ default +) over the first `flip_duration_s / 2`, then a half loop; ends upright,
 - S15: the def JSON the sim reads validates against `tools/schemas/*.schema.json` (`tools/validate_content.py`); field names are R0 B.1's.
 - S16: after `Spatial.rebuild()` every live entity and projectile is in exactly its `Sphere.cell_of(pos, GRID_HASH)` cell; `ids_near` equals the brute-force set at any radius; `Spatial` holds no Dictionary (test_spatial.gd).
 - S17: `Collision` emits one classified `TERRAIN` contact per contact episode (A-30; kill speed destroys at any tick) and a `PAD` contact on every tick a not-DOCKED ship is inside a friendly pad's volume (A-31) (test_collision.gd).
+- S18: a freed `SimWorld` releases every RefCounted part it built; no reference cycle outlives it (BUG-5). Its `NOTIFICATION_PREDELETE` cuts the back-pointers the wiring made: `CommandValidator.judge`, then `EconomyHub.unlink()` (validator -> `Build` / `Production`, `AutoReplenish` -> `Production`). A new back-pointer between subsystems is cut there too.
 
 ## Data owned
 
@@ -285,8 +286,7 @@ Existing (checked by check_deps D10): `godot/test/sim/` (scenario layer), `godot
 `godot/test/soak/`, `tools/tests/test_validate_content.py` (CONTRACT-0: the def schemas the sim reads).
 TA-12/48: `godot/test/unit/sim/test_kinematics.gd` (lift law, test_slug_hits_coaltitude_target), `godot/test/unit/sim/test_kinematics_purity.gd`
 (S8), `godot/test/unit/sim/test_kinematics_flip_fuel.gd`, `godot/test/sim/test_flight.gd`, `godot/test/perf/perf_kinematics.gd`. TA-14:
-`godot/test/unit/sim/test_spatial.gd` (S16), `godot/test/unit/sim/test_collision.gd` (S17), `godot/test/sim/test_collision_sweeps.gd`, `godot/test/perf/perf_collision.gd`.
-TEST-02: `godot/test/unit/sim/contract/test_simview_contract.gd` (shared SimView contract, factories/*.gd per view).
+`godot/test/unit/sim/test_spatial.gd` (S16), `godot/test/unit/sim/test_collision.gd` (S17), `godot/test/sim/test_collision_sweeps.gd`, `godot/test/perf/perf_collision.gd`. TEST-02: `godot/test/unit/sim/contract/test_simview_contract.gd` (shared SimView contract, factories/*.gd per view). BUG-5: `godot/test/unit/sim/test_world_release.gd` (S18).
 TA-18: `godot/test/unit/sim/test_sim_world.gd` (S1, S3, S5, S11, hook, profile, steps 5-10), `godot/test/unit/sim/test_command_validator.gd`
 (S10, S12), `godot/test/unit/sim/test_serialize.gd` + `test_serialize_all.gd` (S4 over all subsystems, version refusal, size, determinism; TA-21), `godot/test/unit/sim/combat/test_fire_s4_exact.gd` (S4 mid-burst, AI-driven and possessed, FORMAT 12; TA-65, GD-10), `godot/test/perf/bench_serialize.tscn`, `godot/test/unit/sim/test_enums.gd` (S14), `godot/test/unit/sim/test_local_sim_view.gd`,
 `godot/test/unit/sim/test_match_rules.gd`, `godot/test/unit/sim/test_command_payload.gd`, `godot/test/sim/test_tick_scenario.gd` (100-tick event sequence), `godot/test/perf/perf_tick_world.gd`.

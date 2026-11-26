@@ -8699,7 +8699,7 @@
     ],
     "status": "todo",
     "merged": null,
-    "notes": "unit-sim was cancelled at its time limit with no failing test on several PRs (GD-20 #169, GD-50 #182, AI-18b #186 twice); runner contention plus growing sim tests (AI-33 SC-47 ~45 s)."
+    "notes": "unit-sim was cancelled at its time limit with no failing test on several PRs (GD-20 #169, GD-50 #182, AI-18b #186 twice); runner contention plus growing sim tests (AI-33 SC-47 ~45 s). Root cause of the shutdowns is the BUG-5 memory leak; split is still useful for wall time."
   },
   {
     "id": "TA-72",
@@ -8753,5 +8753,23 @@
     "status": "todo",
     "merged": null,
     "notes": "Found by the AI-24 Opus review: ~49 of the 55 s first-delivery gap is the empty driving spawn (economy_hub.gd:151-154); steady cycle 148.7 s vs 136 s (+9 %) from the id-keyed spot. GD-12's cycle test used a test driver and missed it. AI-24 (PR #193) refits its book tails after this lands."
+  },
+  {
+    "id": "BUG-5",
+    "title": "sim: SimWorld leaks ~15 MB per load_map world through reference cycles (MatchJudge <-> CommandApplier <-> CommandValidator and more), pushing the CI unit-sim shard to ~18 GB",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [],
+    "milestone": "M3",
+    "acceptance": "A freed SimWorld releases all its RefCounted parts (store, terrain, validator, applier, control, judge, ...): a test creates and frees N load_map worlds and asserts memory returns to baseline within a small bound (or that each part's weakref is dead); every back-pointer cycle is broken on free (NOTIFICATION_PREDELETE or an explicit dispose()); CI unit-sim peak memory drops from ~18 GB to well under the runner limit (report before/after); determinism and save/restore unchanged; no behaviour change",
+    "docs": [
+      "godot/src/sim/MODULE.md",
+      "godot/src/sim/world/sim_world.gd"
+    ],
+    "status": "done",
+    "merged": "2026-11-26",
+    "notes": "Diagnosed on GD-49 PR #194 (2026-11-26): main's unit-sim shard peaks 18.3 GB private / 11.4 GB working set; every load_map world keeps ~14.8 MB alive after free; confirmed cycle MatchJudge._applier -> CommandApplier._validator -> CommandValidator.judge -> MatchJudge (sim_world.gd:334), at least one more remains. Runner shutdowns on unit-sim (PRs #169, #182, #186, #190, #194) are this, not flakiness. Blocks GD-49 merge. Fixed: 6-class cycle broken at SimWorld PREDELETE (EconomyHub.unlink, AutoReplenish.unlink); MapPathing extracted. Shard peak 18.3 GB -> 1.1 GB; CI unit-sim 7m25s -> 6m03s. Nits: S18 wording (parts unusable after world freed); load_map twice on one world still leaks the first links; follow-up idea: static cycle check in tools/.",
+    "pr": 196
   }
 ]

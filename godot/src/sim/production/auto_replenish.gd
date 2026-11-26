@@ -69,6 +69,12 @@ func target_of(player: int, def_id: int) -> int:
 	return target[player * SPAN + def_id] if def_id >= 0 and def_id < SPAN and player >= 0 and player < PlayerTable.SLOTS else 0
 
 
+## BUG-5 (S18): drops the back-pointer to the owning `Production` so the pair is freed with its world; called once
+## by `EconomyHub.unlink` when the `SimWorld` goes. `step` must not run afterwards.
+func unlink() -> void:
+	_prod = null
+
+
 ## Step 10 (before the queues run): every period, top up the players whose roster is short.
 func step(t: int) -> void:
 	if _any <= 0 or t % _period != 0:

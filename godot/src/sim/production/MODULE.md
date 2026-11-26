@@ -40,6 +40,7 @@ class_name AutoReplenish extends RefCounted                                  # G
 const SPAN: int;  const PAYLOAD_PAIR: int;  const PAYLOAD_PAIRS_MAX: int;  var target: PackedByteArray   # [player * SPAN + def_id]
 func payload_ok(payload: PackedByteArray) -> bool;  func apply(player: int, payload: PackedByteArray) -> void;  func target_of(player: int, def_id: int) -> int
 func step(t: int) -> void;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
+func unlink() -> void                                                         # (BUG-5, S18) drops the Production back-pointer when the SimWorld is freed; no step afterwards
 ```
 
 Queue items are `[factory_slot * queue_max + i]`; head progress is the factory's `timer_a` (seconds of work).
