@@ -31,7 +31,7 @@ class_name PadQueries extends RefCounted                                      # 
 static func occupant(store: EntityStore, defs: WorldDefs, pad: int) -> int;  static func serves(store: EntityStore, defs: WorldDefs, s: int) -> bool
 static func nearest_friendly(store: EntityStore, defs: WorldDefs, id: int) -> int
 class_name ShipReads extends RefCounted                                       # (GD-15, A-73) LocalSimView ship reads; static, allocation-free
-static func boost_state(store: EntityStore, sd: ShipDef, id: int) -> int;  static func flip_cooldown01(store: EntityStore, sd: ShipDef, id: int) -> float
+static func boost_state(store: EntityStore, sd: ShipDef, id: int) -> int;  static func boost_cooldown01(store: EntityStore, sd: ShipDef, id: int) -> float;  static func flip_cooldown01(store: EntityStore, sd: ShipDef, id: int) -> float
 static func dock_state(store: EntityStore, id: int) -> int;  static func service_state(store: EntityStore, id: int) -> int
 class_name ContactMath extends RefCounted                                     # (GD-15, A-73) Collision's pure math; Collision.classify_terrain / landing_band / sweep_sphere delegate
 static func classify_terrain(hit_normal_speed: float, common: FlightCommonDef) -> int;  static func landing_band(v_vert: float, v_hor: float, tilt_deg: float, common: FlightCommonDef) -> int

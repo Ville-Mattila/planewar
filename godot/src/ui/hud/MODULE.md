@@ -79,12 +79,12 @@ class_name StatusMath extends RefCounted   # pure statics (UX-18): Core shield t
 enum Boost { READY, ACTIVE, COOLING }
 static func shield_remaining_s(until_s: float, clock_s: float) -> float; static func shield_ring01(until_s: float, clock_s: float) -> float
 static func shield_visible(team_flags: int, until_s: float, clock_s: float) -> bool; static func ring_fill(cooldown01: float) -> float; static func ring_ready(cooldown01: float) -> bool
-static func boost_fill(state: int) -> float; static func share01(count: int, capacity: int) -> float
+static func boost_fill(state: int, cooldown01: float) -> float; static func share01(count: int, capacity: int) -> float
 class_name LandingHudData extends RefCounted   # plain data, read only through SimView
 var ship: int; var pad: int; var pad_dist_m: float; var pad_radius_m: float; var agl_m: float
 var v_vert: float; var v_horiz: float; var nose_deg: float; var phase: LandingMath.Phase
 var visible: bool; var pad_occupied: bool; var drift: Vector2; var docked: bool; var service: Vector3; var waiting: int
-var fuel01: float; var ammo: int; var bombs: int; var rockets: int; var flip_cd01: float; var boost: int
+var fuel01: float; var ammo: int; var bombs: int; var rockets: int; var flip_cd01: float; var boost: int; var boost_cd01: float
 static func from_view(v: SimView, id: int, agl: float, radius_m: float) -> LandingHudData
 class_name HudText extends RefCounted   # shared HUD text, bar and ring drawing
 static func font_size(profile: UiScale.Profile) -> int

@@ -127,6 +127,7 @@ func ships() -> PackedInt32Array;  func structures() -> PackedInt32Array;  func 
 func flags(id: int) -> int;  func radius(id: int) -> float;  func def_kind(id: int) -> int      # (03); projectile id: radius_m, def_kind -1 (A-133)
 func cargo(id: int) -> float;  func cargo_kind(id: int) -> int;  func link(id: int) -> int                       # (03)
 func boost_state(id: int) -> int;  func flip_cooldown01(id: int) -> float;  func rockets(id: int) -> int
+func boost_cooldown01(id: int) -> float                                      # GD-46: share of the boost cooldown to run, 1 boosting / just used, 0 ready (as flip_cooldown01)
 func dock_state(id: int) -> int                                              # Dock state enum below
 func service_progress(id: int) -> Vector3                                    # fuel, ammo, repair 0..1
 func service_state(id: int) -> int                                           # Service state enum below

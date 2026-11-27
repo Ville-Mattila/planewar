@@ -55,7 +55,7 @@ func _draw() -> void:
 			UiTokens.UI_OK if StatusMath.ring_ready(data.flip_cd01) else UiTokens.UI_WARN)
 	HudText.text(self, c + Vector2(-r, r + float(fs)), tr(&"hud.cd.flip"), UiTokens.UI_TEXT_DIM, fs)
 	var c2: Vector2 = c + Vector2(r * 3.5, 0.0)
-	HudText.ring(self, c2, r, StatusMath.boost_fill(data.boost), _boost_color())
+	HudText.ring(self, c2, r, StatusMath.boost_fill(data.boost, data.boost_cd01), _boost_color())
 	HudText.text(self, c2 + Vector2(-r, r + float(fs)), tr(&"hud.cd.boost"), UiTokens.UI_TEXT_DIM, fs)
 	if shield_shown:
 		var sr: float = HudMath.param("shield_ring_du")

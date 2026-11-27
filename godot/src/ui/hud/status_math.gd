@@ -30,10 +30,10 @@ static func ring_ready(cooldown01: float) -> bool:
 	return cooldown01 <= 0.0
 
 
-## Boost has no fraction in SimView (needs sim: boost_cooldown01); the ring shows full while READY or ACTIVE and
-## empty while COOLING.
-static func boost_fill(state: int) -> float:
-	return 0.0 if state == Boost.COOLING else 1.0
+## Arc fill of the boost ring (SimView.boost_cooldown01, GD-46): full while READY or ACTIVE, rising from empty
+## while COOLING. `cooldown01` is the share of the cooldown still to run.
+static func boost_fill(state: int, cooldown01: float) -> float:
+	return 1.0 if state == Boost.ACTIVE else ring_fill(cooldown01)
 
 
 ## Fraction of a consumable left against its capacity; 0 for a zero capacity.
