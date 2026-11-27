@@ -30,9 +30,14 @@ static func ring_ready(cooldown01: float) -> bool:
 	return cooldown01 <= 0.0
 
 
+## Deprecated (GD-46, no caller): the 3-state fill. Use `boost_ring_fill`.
+static func boost_fill(state: int) -> float:
+	return 0.0 if state == Boost.COOLING else 1.0
+
+
 ## Arc fill of the boost ring (SimView.boost_cooldown01, GD-46): full while READY or ACTIVE, rising from empty
 ## while COOLING. `cooldown01` is the share of the cooldown still to run.
-static func boost_fill(state: int, cooldown01: float) -> float:
+static func boost_ring_fill(state: int, cooldown01: float) -> float:
 	return 1.0 if state == Boost.ACTIVE else ring_fill(cooldown01)
 
 

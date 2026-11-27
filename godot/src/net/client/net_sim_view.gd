@@ -2,7 +2,7 @@ class_name NetSimView extends SimView
 ## SimView over replicated state (04 s5.6, s3.7): roster, SnapshotDecoder frames sampled at a fractional render tick
 ## (NetPose; call `sample` before reads, R0 C2-12), the own possessed unit's pilot block, POSSESSED / RELEASED events, the
 ## team's TEAM_STATE. Ids are EntityIds (roster index = Roster.index_of_slot(slot), generation from ENTITY_META). A field not
-## received returns the SimView default with `field_unknown` (NetUnknown, 04 s3.7). Constants mirror EntityStore / Spatial.
+## received returns the SimView default with `field_unknown` (NetUnknown, 04 s3.7). Constants mirror EntityStore / Spatial / SimView.
 
 const K_STRUCTURE: int = 0                  ## EntityStore.K_* (def_kind)
 const K_SHIP: int = 1

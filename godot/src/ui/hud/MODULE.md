@@ -79,7 +79,7 @@ class_name StatusMath extends RefCounted   # pure statics (UX-18): Core shield t
 enum Boost { READY, ACTIVE, COOLING }
 static func shield_remaining_s(until_s: float, clock_s: float) -> float; static func shield_ring01(until_s: float, clock_s: float) -> float
 static func shield_visible(team_flags: int, until_s: float, clock_s: float) -> bool; static func ring_fill(cooldown01: float) -> float; static func ring_ready(cooldown01: float) -> bool
-static func boost_fill(state: int, cooldown01: float) -> float; static func share01(count: int, capacity: int) -> float
+static func boost_fill(state: int) -> float;  static func boost_ring_fill(state: int, cooldown01: float) -> float; static func share01(count: int, capacity: int) -> float
 class_name LandingHudData extends RefCounted   # plain data, read only through SimView
 var ship: int; var pad: int; var pad_dist_m: float; var pad_radius_m: float; var agl_m: float
 var v_vert: float; var v_horiz: float; var nose_deg: float; var phase: LandingMath.Phase
@@ -176,6 +176,7 @@ func lines() -> PackedStringArray; func font_size() -> int
 `godot/test/unit/ui/test_threat_hud.gd` (U13, U14), `test_hud_social.gd` (U15, U16), `test_threat_overlay_scene.gd`; scripted views in `hud_scenario_view.gd`.
 
 ## Open items
+- `StatusMath.boost_fill(state)` deprecated by GD-46 (no caller); delete at a major version, by ADR (10 s4.1).
 
 needs app: refresh `ThreatData`, `TowerHint.from_view` (agl from terrain), `PilotedBadges` and the pip list at their rates, feed `SimEvent`s to `HandoverToast` / `BeaconTracker`, project badge positions through the camera, submit `HandoverToast.accept`; the roster names come from the lobby.
 needs sim: `Command.handover(player, entity, to_slot)` builder (UX-19 builds the Command by hand); the `ids_near` mask for hostiles is a kind bitmask, there is no HOSTILE team mask.

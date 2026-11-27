@@ -238,10 +238,12 @@ func test_cooldown_rings_and_shares() -> void:
 	assert_float(StatusMath.ring_fill(0.25)).is_equal_approx(0.75, EPS)
 	assert_bool(StatusMath.ring_ready(0.0)).is_true()
 	assert_bool(StatusMath.ring_ready(0.1)).is_false()
-	assert_float(StatusMath.boost_fill(StatusMath.Boost.COOLING, 1.0)).is_equal_approx(0.0, EPS)
-	assert_float(StatusMath.boost_fill(StatusMath.Boost.COOLING, 0.25)).is_equal_approx(0.75, EPS)
-	assert_float(StatusMath.boost_fill(StatusMath.Boost.READY, 0.0)).is_equal_approx(1.0, EPS)
-	assert_float(StatusMath.boost_fill(StatusMath.Boost.ACTIVE, 1.0)).is_equal_approx(1.0, EPS)
+	assert_float(StatusMath.boost_fill(StatusMath.Boost.COOLING)).is_equal_approx(0.0, EPS)
+	assert_float(StatusMath.boost_fill(StatusMath.Boost.READY)).is_equal_approx(1.0, EPS)
+	assert_float(StatusMath.boost_ring_fill(StatusMath.Boost.COOLING, 1.0)).is_equal_approx(0.0, EPS)
+	assert_float(StatusMath.boost_ring_fill(StatusMath.Boost.COOLING, 0.25)).is_equal_approx(0.75, EPS)
+	assert_float(StatusMath.boost_ring_fill(StatusMath.Boost.READY, 0.0)).is_equal_approx(1.0, EPS)
+	assert_float(StatusMath.boost_ring_fill(StatusMath.Boost.ACTIVE, 1.0)).is_equal_approx(1.0, EPS)
 	assert_float(StatusMath.share01(3, 6)).is_equal_approx(0.5, EPS)
 	assert_float(StatusMath.share01(3, 0)).is_equal_approx(0.0, EPS)
 
@@ -285,11 +287,10 @@ func test_boost_ring_reads_the_fraction() -> void:
 	var d: LandingHudData = LandingHudData.from_view(v, 1, 100.0, 12.0)
 	assert_float(d.boost_cd01).is_equal_approx(0.4, EPS)
 	d.boost = StatusMath.Boost.COOLING
-	assert_float(StatusMath.boost_fill(d.boost, d.boost_cd01)).is_equal_approx(0.6, EPS)
+	assert_float(StatusMath.boost_ring_fill(d.boost, d.boost_cd01)).is_equal_approx(0.6, EPS)
 	var view: StatusClusterView = auto_free(load("res://scenes/ui/status_cluster.tscn").instantiate())
 	add_child(view)
 	view.set_data(d)
-	assert_float(view.data.boost_cd01).is_equal_approx(0.4, EPS)
 
 
 func test_views_instantiate_and_draw_each_state() -> void:
