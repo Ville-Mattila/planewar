@@ -2693,8 +2693,10 @@
       " R0 C2-14",
       " 05 AI-24"
     ],
-    "status": "todo",
-    "notes": "PR #193 on hold for BUG-4: t>=215 gates hid unrun book tails from SC-41 (SC-41 exempts t>= steps); remove BK1 (out-of-lane, records a bug-lowered income). Refit after BUG-4. BUG-4 merged 2026-11-26: refit book tails to the sim income now (first delivery 68 s on cradle)."
+    "status": "done",
+    "notes": "Six books on the post-BUG-4 income, no stall_s-derived gates; SC-41 runs the shipped build_orders.json: four books complete, vanguard/bulwark pending only on a trailing clock-waiting Expansion pair; foundry contested pair cut (PM-07 Q). Escalated to Opus for round 2. Follow-ups AI-51 (escort presence orbit, undocked pick), AI-52 (affordable counts owed Ore, after PM-07).",
+    "merged": "2026-11-27",
+    "pr": 193
   },
   {
     "id": "AI-25",
@@ -8887,7 +8889,7 @@
       "GD-40"
     ],
     "milestone": "M3",
-    "acceptance": "Ruling in R0-amendments-NN on: (Q1) after a DOCK press that hooks a wreck, may Assist.auto_dock start on a later tick while DOCK stays held (reviewer recommends no: latch per player until DOCK release, saved or derivable); (Q2) NET-18 prediction: recompute the W12 claim client-side from snapshot state and accept a reconciliation on mismatch, or have the server echo the claim (recommendation: recompute) - with the NET-18 acceptance append text; plus the AI-45 review's questions (docked-ship pause memory vs SimView.service_paused; RETURN order heads never completed on landing); each with a named follow-up; AI-45 C1: ratify the sticky paused-service reading in 05 s6.2 (OV_SVC_PAUSED kept until the ship flies) or append SimView.service_paused(id) -> bool (PadService BIT_WAIT_ICE | BIT_WAIT_ORE of the current stay) for DockedMode to read; AI-45 C2: which component completes a ship's RETURN head (05 s3.2 'completes when DOCKED and fully serviced'; nothing calls ControlOrders.complete_head): (a) the brain on leaving DOCKED via an appended CommandSinkBase.complete_head(id) routed by SimSink, or (b) Docking pops a RETURN head at SERVICED or LAUNCHED; BUG-7 implements it",
+    "acceptance": "Ruling in R0-amendments-NN on: (Q1) after a DOCK press that hooks a wreck, may Assist.auto_dock start on a later tick while DOCK stays held (reviewer recommends no: latch per player until DOCK release, saved or derivable); (Q2) NET-18 prediction: recompute the W12 claim client-side from snapshot state and accept a reconciliation on mismatch, or have the server echo the claim (recommendation: recompute) - with the NET-18 acceptance append text; plus the AI-45 review's questions (docked-ship pause memory vs SimView.service_paused; RETURN order heads never completed on landing); each with a named follow-up; AI-45 C1: ratify the sticky paused-service reading in 05 s6.2 (OV_SVC_PAUSED kept until the ship flies) or append SimView.service_paused(id) -> bool (PadService BIT_WAIT_ICE | BIT_WAIT_ORE of the current stay) for DockedMode to read; AI-45 C2: which component completes a ship's RETURN head (05 s3.2 'completes when DOCKED and fully serviced'; nothing calls ControlOrders.complete_head): (a) the brain on leaving DOCKED via an appended CommandSinkBase.complete_head(id) routed by SimSink, or (b) Docking pops a RETURN head at SERVICED or LAUNCHED; BUG-7 implements it; AI-24 review: (Q3) foundry_standard's contested Expansion pair (05 s7.3 t>=270, before book_end_s) cannot pass A-163 - move it to a deferred gate (e.g. t>=330 like bulwark) in 05 or keep 4:30 and re-add after AI-51; (Q4) does affordable mean Ore on hand, or Ore not yet committed to the slot's own unpaid sites and queue items (AI-52)",
     "docs": [
       "https://github.com/Ville-Mattila/planewar/pull/203",
       "https://github.com/Ville-Mattila/planewar/pull/204",
@@ -9074,5 +9076,44 @@
     "merged": "2026-11-27",
     "pr": 206,
     "notes": "OpeningBook: absent when on build/produce = affordable, funds wait never SKIPPED_STALL; BookCondition.waits_on_clock appended; SC-41 judges each slot on its own hand-over snapshot and exempts only a clock-waiting Expansion pair move. Fixture ai23_books.json: dead vanguard raid step removed (A-163 3c)."
+  },
+  {
+    "id": "AI-51",
+    "title": "sim_ai Commander: a book order move keeps its escort inside Outpost presence reach, and the retry picks an undocked unit (AI-24 review F1)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-24",
+      "AI-50"
+    ],
+    "milestone": "M3",
+    "acceptance": "For a book order move to an Outpost-site token, the nominal MOVE hold orbit lies within presence reach minus one build cell: the 3-D distance from the resolved site's ground point to the orbit is <= outpost_presence_radius_m - 3 build cells, values read from defs and params (a new constant goes in the opening_book params with a _doc); _pick_unit for a book move prefers an own unit that is not DOCKED and falls back to a docked one only when no undocked one exists; tests: (1) unit test of the orbit-vs-reach inequality from the shipped values; (2) on the SC-41 world a Dart ordered by a book move to outpost_site:home_trap reports presence on >= 95 % of Commander thinks from arrival to RTB; (3) with one docked and one airborne Dart, _retry_move orders the airborne one and its head becomes MOVE; SC-40, SC-41, SC-43 pass; perf note (test_commander_perf.gd); then name a content follow-up: bulwark_standard's home-trap move back to 05's form (no ore>=520) and foundry_standard's contested pair re-added if SC-41 passes (per PM-07's foundry ruling)",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/193#issuecomment-7225502421",
+      "05 s7.3",
+      "godot/src/sim_ai/commander/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "AI-52",
+    "title": "sim_ai Commander: affordable counts Ore and Ice already owed to the slot's own unpaid sites and queue items (AI-24 review F2)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-50",
+      "PM-07"
+    ],
+    "milestone": "M3",
+    "acceptance": "Per PM-07's ruling on the definition of affordable: CommanderHost.affordable subtracts the doctrine-resolved Ore and Ice of the slot's own QUEUED construction sites and unstarted factory queue items placed by this Commander; test: with Ore = one Outpost's cost, a book's build outpost closes DONE and the next build step stays PENDING (not stalled) until the site starts assembling and the remaining Ore covers it; SC-41 passes on the shipped books or the books are refit by a named content task; commander/MODULE.md OB1 reworded citing the ruling; perf note",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/193#issuecomment-7225502421",
+      "05 s7.3"
+    ],
+    "status": "todo",
+    "merged": null
   }
 ]
