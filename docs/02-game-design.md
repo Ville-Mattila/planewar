@@ -472,11 +472,13 @@ Trip time for a Harvester on a field `d` metres (one way) from its Refinery dock
 
 `ore_per_min = 60 * cargo_ore / T_trip`
 
+**How `d` is measured (R0 B.33 A-160).** `d` is the one-way leg the Harvester drives: from its dock stop at the Refinery to its mining spot, which lies inside the field on the Refinery side (`spot_frac x radius_m` from the field centre; BUG-4). It is not the centre-to-centre distance and not the distance to the field edge. On `cradle` the starting Refinery and Home Field A are 600 m centre to centre (Section 9.2), a driven leg of about 470 m; the 450 m row below is that case, rounded (T_trip 112.5 s at 472 m, +3.7 %).
+
 | One-way distance d | Typical case | T_trip | Ore/min per Harvester | Payback of a 250-Ore Harvester |
 |---|---|---|---|---|
 | 200 m | Refinery placed at a field edge | 62.7 s | 287 | 0.9 min |
 | 250 m | Outpost + Refinery beside a contested field | 71.8 s | 251 | 1.0 min |
-| 450 m | starting Refinery to Home Field A | 108.5 s | 166 | 1.5 min |
+| 450 m | starting Refinery to Home Field A (600 m centre to centre on `cradle`) | 108.5 s | 166 | 1.5 min |
 | 600 m | second Refinery at the Core edge to Home Field B | 136.0 s | 132 | 1.9 min |
 | 1,000 m | Field B from the starting Refinery | 209.3 s | 86 | 2.9 min |
 | 1,500 m | no forward Refinery | 301.0 s | 60 | 4.2 min |
@@ -509,7 +511,7 @@ Ice does not regenerate. Home traps last about 42 minutes, so they never run out
 
 `power_ratio(team) = min(1, supply / demand)` (1 when demand is 0). Supply: Core +20, Outpost +5, Reactor +40, Solar Array `+12 * solar_factor`.
 
-`solar_factor = clamp((elev_deg + solar_band_deg) / (2 * solar_band_deg), 0, 1) * (solar_plateau_mult if within the Plateau else 1)`, where `elev_deg = rad_to_deg(asin(up.dot(sun_dir)))` at the structure. With the fixed sun along +Z, `elev_deg` equals latitude, so a Solar Array must sit at least 52 m north of the equator for full output; the Core straddles the terminator and every base has a "solar side" and an "ice side". Under the moving-sun rule the same formula makes arrays fade as night arrives.
+`solar_factor = clamp((elev_deg + solar_band_deg) / (2 * solar_band_deg), 0, 1) * (solar_plateau_mult if within the Plateau else 1)`, where `elev_deg = rad_to_deg(asin(up.dot(sun_dir)))` at the structure and `up` is radial for every structure, whatever the slope under it (R0 B.33 A-157). With the fixed sun along +Z, `elev_deg` equals latitude, so a Solar Array must sit at least 52 m north of the equator for full output; the Core straddles the terminator and every base has a "solar side" and an "ice side". Under the moving-sun rule the same formula makes arrays fade as night arrives.
 
 | Power ratio | Production speed | Tower rate of fire | Towers | Shield Projector |
 |---|---|---|---|---|
@@ -1340,3 +1342,4 @@ Contracts shared with other docs are frozen in R0 Part B (field names B.1, maps 
 | R0 B.25 A-128..A-131, A-135 (CONTRACT-0 amendments 19, 2026-10-27) | GD-15 (PR #128) CQ-8: a pad crash is unshielded contact damage (s2.2 loses "so shields apply"). GD-09 (PR #132): C-06 moves to GD-26 with a GD-34 fallback; the Aim bullet names the sim fire permission for gun / flak / rail towers (held envelope target per fire window, possessed alike); the Missile lock bullet names the `projectiles.json` lock-break keys and scopes the AGL clause to a ship in flight | 2.2, 4.4, 18.3, 19 |
 | R0 B.26 A-137 (CONTRACT-0 amendments 20, 2026-10-28) | GD-09 (PR #132) review round 2: the Aim bullet's fire permission names the idle-held retry (once per due tick, at most one scan per tower per tick) | 4.4 |
 | R0 B.27 A-138..A-140 (CONTRACT-0 amendments 21, 2026-11-05) | GD-26 (PR #144): the C-06 row names the pinned 600 m setup, the shipped-band control leg (the Deck dive under a known Flak is 05 s6.3 counterplay) and "measured 0 / 98 %, band open: GD-34"; the s10.4 row marks "~50 % hits" as the assumption GD-34 restores by `spread_deg`; the C-08 row reads over decided duels with the A-140 setup and "measured 199 / 200 draw, open: AI-46" | 10.4, 18.3 |
+| R0 B.33 A-157, A-160 (CONTRACT-0 amendments 27, 2026-11-27) | PM-06: s8.2 states how the harvest distance `d` is measured (the driven leg, dock stop to mining spot; `cradle` 600 m centre to centre = about 470 m, the 450 m row); s8.4 names the radial `up` behind "`elev_deg` equals latitude"; no value changes | 8.2, 8.4 |

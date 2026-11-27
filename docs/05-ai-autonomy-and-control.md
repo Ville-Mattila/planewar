@@ -675,7 +675,7 @@ The R1 band rule is canonical for the autopilot Bomber's attack altitude (R0 B.2
 
 ### 6.7 Siege Crawler (v1, `status: core`, owner decision O-4)
 
-AUTO = HOLD (01 s4.3). ATTACK: path to a firing spot at 1,000-1,150 m from the target (inside `siege_gun` `range_m` 1,200, outside its 300 m minimum) with slope <= 10 degrees, stop, fire per def cadence (siege shells are ballistic, aimed with `Ballistics.predict_impact`); relocate if a bomb lands within 60 m; when its 20-shell `ammo` is empty the order fails with `NO_AMMO` and the Crawler holds; rearm rules are 02's (AI-18).
+AUTO = HOLD (01 s4.3). ATTACK: path to a firing spot at 1,000-1,150 m from the target (inside `siege_gun` `range_m` 1,200, outside its 300 m minimum) with slope <= 10 degrees, stop, fire per def cadence (siege shells are ballistic, aimed with `Ballistics.predict_impact`); relocate if a bomb lands within 60 m; when its 20-shell `ammo` is empty the order fails with `NO_AMMO` and the Crawler holds; rearm rules are 02's (AI-18). The brain's numbers are the required `siege` block of `ap_crawler` in `autopilots.json`: `spot_min_m`, `spot_max_m`, `spot_slope_deg`, `relocate_bomb_m`, `relocate_step_m`, `aim_tol_deg`, `spot_samples`, `loft_tol_m`, `solve_tol_m`, `loft_iters`, `solve_step_ticks`, `relocate_tries` (R0 B.33 A-161, AI-49).
 
 ### 6.8 Towers
 
@@ -749,9 +749,11 @@ func deserialize(b: PackedByteArray) -> void
 
 `content/defs/build_orders.json` (`BuildOrderDef[]`). A book is a list of steps executed in order; a step waits until its `when` condition holds, then the bot issues the command (subject to the rate cap). Steps whose result already exists (`skip_if_have`) are skipped. Every book assumes the R0 B.6 start kit: Core, Refinery toward Field A, Shipyard with launch pad, Vehicle Bay, 1 Harvester mining, 800 Ore / 300 Ice, early share lock 800 Ore until 2:00 (02 s8.1, s8.7). After the last step, or at 5:00 match time, the bot switches to reactive planning (s7.5). Def ids are 02's canonical ids (R0 B.1); `storage_silo` does not exist (O-4).
 
-Condition grammar (evaluated by `opening_book.gd`): `"t>=60"`, `"ore>=X"`, `"ice>=X"`, `"have:<def>>=N"`, `"power01<1.1"`, `"enemy_seen"`, `"affordable"` (default), `"presence"` (a friendly unit is within `presence_radius` 300 m of the step's resolved site, 02 AR-1), combined with `&` (and) and `|` (or, lower precedence).
+Condition grammar (evaluated by `opening_book.gd`): `"t>=60"`, `"ore>=X"`, `"ice>=X"`, `"have:<def>>=N"`, `"power01<1.1"`, `"enemy_seen"`, `"affordable"` (the default: an absent `when` is `affordable`), `"presence"` (a friendly unit is within `presence_radius` 300 m of the step's resolved site, 02 AR-1), combined with `&` (and) and `|` (or, lower precedence).
 
 Step kinds: `build` (`def`, `near`, `n`), `produce` (`def`, `n`, optional `then_order`), `set_replenish` (`def`, `n`), `order` (`kind`, `unit` = class list `a|b`, `to` = location token; picks the nearest available own unit of those classes that is not POSSESSED and not under a human order lock), `raid` (`target`, `with`). **Every `build outpost` step is preceded by an `order move` step to the same site and carries `"when": "presence"`** (Outposts need presence, not a build radius).
+
+**Funds, stall and hand-over (R0 B.33 A-162, A-163).** A `build` or `produce` step is due only while it is also affordable, whatever its `when` says, so a wait for funds is never a stall: the step blocks the steps behind it until the funds arrive or the book ends. A due step that still cannot complete for `stall_s` (a missing prerequisite, a cap, a full queue) is skipped. At 5:00 (`book_end_s`) the interpreter drops whatever has not run. One kind of step may be gated at or after 5:00: the **Expansion pair** (`order move` + `build outpost`) at the end of a book, whose gate the reactive Expansion rule reads as "the book's time" (s7.5). Any other step gated at or after 5:00 can never run and does not belong in a book; after the hand-over raids are the military manager's (s7.6) and Reactors the Power rule's (s7.5). The listing below is the doctrine intent; the shipped `build_orders.json` (AI-24) is the data, with gates fitted to the sim's measured income.
 
 ```json
 {
@@ -773,7 +775,6 @@ Step kinds: `build` (`def`, `near`, `n`), `produce` (`def`, `n`, optional `then_
       { "do": "build", "def": "pad", "near": "core" },
       { "do": "produce", "def": "scout", "n": 1, "then_order": "scout_auto" },
       { "do": "set_replenish", "def": "dart", "n": 3 },
-      { "do": "raid", "target": "harvester_line", "with": "dart:3", "when": "t>=300&have:dart>=3" },
       { "do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field", "when": "t>=420|ore>=900" },
       { "do": "build", "def": "outpost", "near": "contested_field", "when": "presence" }
     ]
@@ -786,8 +787,9 @@ Step kinds: `build` (`def`, `near`, `n`), `produce` (`def`, `n`, optional `then_
       { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
       { "do": "produce", "def": "dart", "n": 1 },
       { "do": "build", "def": "solar_array", "near": "core", "skip_if_have": "solar_array>=2" },
-      { "do": "build", "def": "relay_pylon", "near": "toward:cold_trap:home", "n": 2 },
-      { "do": "build", "def": "ice_extractor", "near": "cold_trap:home" },
+      { "do": "order", "kind": "move", "unit": "dart|lancer", "to": "outpost_site:home_trap" },
+      { "do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence" },
+      { "do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1" },
       { "do": "produce", "def": "hauler", "n": 1 },
       { "do": "build", "def": "flak_battery", "near": "core" },
       { "do": "build", "def": "pad", "near": "core" },
@@ -815,14 +817,13 @@ Step kinds: `build` (`def`, `near`, `n`), `produce` (`def`, `n`, optional `then_
       { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
       { "do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field", "when": "t>=270" },
       { "do": "build", "def": "outpost", "near": "contested_field", "when": "presence" },
-      { "do": "set_replenish", "def": "harvester", "n": 6 },
-      { "do": "build", "def": "reactor", "near": "outpost", "when": "t>=600" }
+      { "do": "set_replenish", "def": "harvester", "n": 6 }
     ]
   }
 }
 ```
 
-Foundry gets its storage headroom from the second Refinery (+1,500 Ore / +500 Ice, O-4) instead of a Silo.
+Foundry gets its storage headroom from the second Refinery (+1,500 Ore / +500 Ice, O-4) instead of a Silo. Every book reaches its home Cold Trap through the home-trap Outpost: the trap is 1,500-1,700 m from the Core on the three maps (02 s9.2), beyond a two-Pylon chain (R0 B.33 A-163).
 
 Location tokens (`core`, `approach:<x>`, `toward:<x>`, `cold_trap:home`, `ore_field:home_N`, `outpost_site:home_trap`, `contested_field`, `refinery`, `outpost`) are resolved by `BuildPlanner.resolve_site()` from the map feature list (`features.json`) and the slot layout (R0 B.6; in 1v1 the enemy base is 90 degrees away). For every structure it applies the ADR-05 radius rule; for Outposts it applies 02 AR-1 instead: no radius, `min_spacing_friendly` 800 m from every friendly Core/Outpost, `min_spacing_enemy` 1,500 m from every enemy Core/Outpost, outside enemy build radii, inside team vision. A `REJECTED_PLACEMENT` result (with its `Build.Reject`) makes the planner try the next candidate site on the next think; three rejections skip the step. Each doctrine may hold several books (`*_standard`, `*_rush`, `*_greedy`); the profile picks one by weighted random at match start (AI RNG), so bots are not identical.
 
@@ -1077,7 +1078,7 @@ Each scenario is one gdUnit4 test function named after its ID. "Survives" = not 
 | SC-38 | scout_explores_and_flees | Scout AUTO; enemy Dart patrol | visits >= 12 distinct interest cells in 3 min; survives first contact in >= 7/10 seeds |
 | SC-39 | escort_formation | Bomber MOVE 5 km with 2 Dart ESCORT | escorts within 80 m of slots >= 80 % of time; no collisions |
 | SC-40 | commander_opening_vanguard | 1 Normal bot, Vanguard book, R0 B.6 start kit, no enemy | Dart airborne by 0:45; all book steps up to the first Outpost executed by 6:00; Outpost placed with a friendly unit inside 300 m and >= 800 m from the Core; no `REJECTED_PLACEMENT` repeated for the same site; no `REJECTED_LOCKED` |
-| SC-41 | commander_opening_all_books | every book in `build_orders.json`, 1v1 slot layout (slots 0 and 2) | each completes without stall; first Outpost by 6:00 |
+| SC-41 | commander_opening_all_books | every book in `build_orders.json`, 1v1 slot layout (slots 0 and 2) | each completes without stall: at the hand-over every step is done or skipped by `skip_if_have`, and only an Expansion pair that waits on the clock may be pending (its `when` is false and either becomes true by advancing `t` alone or stays false at this `t` with every other term true; R0 B.33 A-163); first Outpost by 6:00 |
 | SC-42 | commander_rate_cap | Easy bot in 10-min match | never exceeds 20 commands/min (60 s sliding window; 02 promise) |
 | SC-43 | commander_fog_fairness | Brutal bot; enemy base never seen | no command targets an entity that was never `visible_to` its team |
 | SC-44 | commander_defends_raid | bot base attacked by 3 enemy Darts at 6:00 | builds or orders defence within 10 s (Hard); loses <= 2 structures |
@@ -1247,3 +1248,4 @@ Revised 2026-10-10 against `reviews/R0-resolution-register.md` and 01 v1.1.
 | R0 B.23 A-118 (CONTRACT-0 amendments 17, 2026-10-27) | AI-17 (PR #124) review: s6.8 points at the 02 s4.4 slew law; `TurretAim.slew` divides azimuth by cos(elevation) (AI-44); the tower candidate cap is AI-30's decision from a raid-over-a-base case | s6.8 |
 | R0 B.24 A-119, A-125 (CONTRACT-0 amendments 18, 2026-10-27) | GD-15 (PR #128) CQ-1 / CQ-5: the possess-while-DOCKED launch names its def fields and is the one sim rule for pilots and brains; DOCKED mode waits for `SERVICED` or `auto_launch_fuel01` while paused (AI-45); the L2b hold orbit lies inside the 500 m queue zone | s2.5, s5.5, s6.2 |
 | R0 B.27 A-138, A-140 (CONTRACT-0 amendments 21, 2026-11-05) | GD-26 (PR #144): s6.3's R1 band rule is named canonical for the Bomber's attack altitude (02 s18.3 C-06's 600 m is a pinned scenario setup); SC-53 `bomber_deck_under_flak` appended to the catalogue (BUG-2 re-scoped); the symmetric Dart-vs-Dart AUTO duel finding (199 / 200 draws) is AI-46's | s6.3, s11.2 |
+| R0 B.33 A-161..A-163 (CONTRACT-0 amendments 27, 2026-11-27) | PM-06 (AI-24 PR #193 review; AI-49): s6.7 names the required `ap_crawler` `siege` block (12 keys); s7.3: an absent `when` is `affordable` and a funds wait is never a stall; only an Expansion pair may be gated at or after 5:00; `bulwark_standard` reaches its Extractor through the home-trap Outpost pair, the vanguard raid step (`t>=300`) and the foundry Reactor step (`t>=600`) leave the listing; SC-41's "without stall" is defined | s6.7, s7.3, s11.2 |
