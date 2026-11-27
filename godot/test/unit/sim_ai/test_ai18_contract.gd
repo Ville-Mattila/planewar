@@ -194,3 +194,57 @@ func test_loft_on_cradle_relief_lands_within_loft_tol_of_the_aim_point() -> void
 	assert_int(solved).is_greater_equal(9)
 	assert_float(worst).is_less_equal(p.loft_tol_m)
 	print("AI-18b loft on cradle: %d of 12 aims solved, worst miss %.2f m" % [solved, worst])
+
+
+# R0 B.33 A-161: the three solver / relocation keys are read from the def, not from literals. Each test builds the
+# params through from_content with a changed key and fails if the code still used the old literal (6 / 2 ticks / 6).
+func _with(over: Dictionary) -> CrawlerParams:
+	var ap: Dictionary = _ap()
+	(ap["siege"] as Dictionary).merge(over, true)
+	var p: CrawlerParams = CrawlerParams.from_content(Ai18Kit.content(), ap, Ai18Kit.def())
+	assert_object(p).is_not_null()
+	return p
+
+
+func test_loft_iters_bounds_the_secant_steps_of_the_solve() -> void:
+	var t: Terrain = Terrain.new()
+	var st: ProjectileState = ProjectileState.new()
+	var pos: Vector3 = Ai16Kit.dir_at(0.0) * (R + 7.0)
+	var one: CrawlerParams = _with({"loft_iters": 1})
+	var six: CrawlerParams = _with({"loft_iters": 6})
+	var cut: int = 0
+	for want: float in [400.0, 600.0, 800.0, 1000.0, 1075.0, 1150.0]:
+		var aim: Vector3 = Ai16Kit.dir_at(want) * R
+		var e6: float = SiegeAim.loft(pos, aim, six, t, st)
+		var e1: float = SiegeAim.loft(pos, aim, one, t, st)
+		assert_bool(is_nan(e6)).is_false()
+		if is_nan(e1):
+			cut += 1                                                                # one step was not enough
+		else:
+			assert_float(e1).is_equal_approx(e6, 1e-6)                             # it converged inside the budget
+	assert_int(cut).override_failure_message("loft_iters 1 never ran out of steps").is_greater(0)
+
+
+func test_solve_step_ticks_sets_the_predict_impact_step_and_max_steps() -> void:
+	var c: ContentSet = Ai18Kit.content()
+	var t: Terrain = Terrain.new()
+	var st: ProjectileState = ProjectileState.new()
+	var pos: Vector3 = Ai16Kit.dir_at(0.0) * (R + 7.0)
+	var aim: Vector3 = Ai16Kit.dir_at(1075.0) * R
+	var one: CrawlerParams = _with({"solve_step_ticks": 1})
+	var four: CrawlerParams = _with({"solve_step_ticks": 4})
+	assert_int(one.max_steps).is_equal(ceili(one.shell.lifetime_s / one.dt))
+	assert_int(four.max_steps).is_equal(ceili(four.shell.lifetime_s / (4.0 * four.dt)))
+	var e1: float = SiegeAim.loft(pos, aim, one, t, st)
+	var e4: float = SiegeAim.loft(pos, aim, four, t, st)
+	assert_bool(is_nan(e1) or is_nan(e4)).is_false()
+	# The solve's own impact at its elevation, at the step it was told to use, lands within solve_tol_m of the aim.
+	for pr: Array in [[one, e1, 1], [four, e4, 4]]:
+		var k: CrawlerParams = pr[0] as CrawlerParams
+		var dir: Vector3 = BarrelSlew.muzzle_dir(pos, SiegeAim.tangent_to(pos, aim), float(pr[1]))
+		var step: float = float(pr[2]) * k.dt
+		var r: Vector4 = Ballistics.predict_impact(pos + dir * k.radius, dir * k.speed, k.shell, c.rules, t, step, step, 0.0,
+			k.max_steps, st)
+		var miss: float = SiegeAim.arc(pos.normalized(), Vector3(r.x, r.y, r.z)) - SiegeAim.arc(pos.normalized(), aim)
+		assert_float(absf(miss)).is_less_equal(k.solve_tol_m)
+	assert_float(e1).is_not_equal(e4)                                              # a coarser step is a different solve

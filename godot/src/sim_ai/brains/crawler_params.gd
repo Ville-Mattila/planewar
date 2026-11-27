@@ -27,7 +27,7 @@ var relocate_step_m: float = 0.0   ## a relocation moves this far along the ring
 var aim_tol_rad: float = 0.0       ## the trigger is held while the heading is within this of the target bearing
 var samples: int = 1               ## ring candidates (every 360 / samples degrees) a spot search may try
 var loft_tol_m: float = 0.0        ## the promised impact accuracy: a target that moved farther than this is re-solved
-var solve_tol_m: float = 0.0       ## AI-18b: the lofted solve stops at this along-track miss (<= loft_tol_m, 2 m default)
+var solve_tol_m: float = 0.0       ## AI-18b: the lofted solve stops at this along-track miss (<= loft_tol_m)
 var range_m: float = 0.0           ## siege_gun range_m
 var range_min_m: float = 0.0       ## siege_gun range_min_m
 var shell: ProjectileDef = null    ## siege_shell
@@ -57,6 +57,8 @@ static func from_content(c: ContentSet, ap: Dictionary, def: GroundUnitDef) -> C
 	var v: PackedFloat32Array = PackedFloat32Array()
 	for i: int in SIEGE_KEYS.size():
 		var x: float = TargetParams.num(sg, SIEGE_KEYS[i], 0.0)           # no default: a missing key reads 0 and refuses
+		if i == 6 or i >= 9:
+			x = float(roundi(x))                                             # the integer keys: the rule holds on the rounded value
 		if x <= 0.0:
 			return null
 		var _a: bool = v.append(x)

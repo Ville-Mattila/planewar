@@ -9,7 +9,7 @@ class_name SiegeAim extends RefCounted
 ## at `p` and facing the great-circle bearing of `aim` within `k.solve_tol_m` of `aim` along the great circle. Each trial
 ## flies the shell the sim spawns (sim/ground B4, sim/combat CB15; AI-18b): direction `BarrelSlew.muzzle_dir(p, h, e)`, from
 ## the muzzle `p + dir x k.radius`, at `k.speed`, with `Ballistics.predict_impact` (terrain on the way, CF transport,
-## gravity) at the 2-tick step for `k.max_steps` steps (the shell's lifetime). Start: the flat vacuum angle
+## gravity) at the `solve_step_ticks` step for `k.max_steps` steps (the shell's lifetime). Start: the flat vacuum angle
 ## 0.5 asin(g d / v^2); the second point is a Newton step on the flat vacuum range slope dR/de = 2 v^2 cos(2e) / g; then
 ## at most `CrawlerParams.loft_iters` secant steps on the along-track miss, inside the barrel's [`barrel_lo`, `barrel_hi`]. NAN when `aim` is beyond reach (g d >= v^2), the shell finds no impact inside its lifetime
 ## (a ridge, the horizon, too high an arc), the solve leaves the barrel's limits or the miss stays above `solve_tol_m`.
