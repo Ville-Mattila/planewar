@@ -18,13 +18,14 @@ var p_pitch: PackedFloat64Array = PackedFloat64Array()
 var p_yaw: PackedFloat64Array = PackedFloat64Array()
 var p_roll: PackedFloat64Array = PackedFloat64Array()
 var p_buttons: PackedByteArray = PackedByteArray()
+var dock_edge: PackedByteArray = PackedByteArray()  ## per player: DOCK went down at this tick's step-2 copy (derived, not saved; GD-40)
 
 
 func _init() -> void:
 	var n: int = ENTITY_SLOTS
 	var m: int = PlayerTable.SLOTS
 	var e: int = e_thrust.resize(n) | e_pitch.resize(n) | e_yaw.resize(n) | e_roll.resize(n) | e_buttons.resize(n)
-	e |= p_thrust.resize(m) | p_pitch.resize(m) | p_yaw.resize(m) | p_roll.resize(m) | p_buttons.resize(m)
+	e |= p_thrust.resize(m) | p_pitch.resize(m) | p_yaw.resize(m) | p_roll.resize(m) | p_buttons.resize(m) | dock_edge.resize(m)
 	assert(e == OK)
 	for s: int in n:
 		clear_entity(s)
@@ -70,6 +71,7 @@ func clear_player(player: int) -> void:
 	p_yaw[player] = 0.0
 	p_roll[player] = 0.0
 	p_buttons[player] = 0
+	dock_edge[player] = 0
 
 
 ## Step 2: the player's stored input becomes the possessed entity's input for this tick.
@@ -78,6 +80,7 @@ func copy_player_to_entity(player: int, slot: int) -> void:
 	e_pitch[slot] = p_pitch[player]
 	e_yaw[slot] = p_yaw[player]
 	e_roll[slot] = p_roll[player]
+	dock_edge[player] = 1 if (p_buttons[player] & PilotInput.DOCK) != 0 and (e_buttons[slot] & PilotInput.DOCK) == 0 else 0
 	e_buttons[slot] = p_buttons[player]
 
 
