@@ -7717,8 +7717,11 @@
       "02 s13",
       "05 s5.5"
     ],
-    "status": "todo",
-    "note": "OWNER default: DOCK reuse; alternative: a new PilotInput bit7 HOOK (wire and 06 s4.3 button budget change, not recommended)."
+    "status": "done",
+    "note": "OWNER default: DOCK reuse; alternative: a new PilotInput bit7 HOOK (wire and 06 s4.3 button budget change, not recommended).",
+    "merged": "2026-11-27",
+    "pr": 203,
+    "notes": "DOCK edge claims a wreck once in step 4 (Salvage.claim_docks, dock_claimed(p) is the seam fact) and step 10 hooks exactly that wreck (W12). auto_dock is not wired yet: follow-up GD-55 carries the guard; Architect questions in PM-07; HUD prompt UX-52."
   },
   {
     "id": "GD-41",
@@ -8758,6 +8761,26 @@
     "merged": null
   },
   {
+    "id": "UX-52",
+    "title": "ui/hud: prompt to hook a wreck with DOCK when one is in reach (GD-40 needs ui)",
+    "lane": "ui/hud",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-40",
+      "UX-51"
+    ],
+    "milestone": "M3",
+    "acceptance": "While the possessed ship has a free tow slot and a free wreck is within economy.salvage_hook_m, the Chase HUD shows a localised prompt naming the DOCK binding (from the input map, all three input classes) to hook the wreck; hidden otherwise and while the needed fields are not received; reads only SimView (any needed accessor is a contract question, not added here); unit test for the visibility rule; windowed screenshot",
+    "docs": [
+      "02 s13",
+      "06 s3.2",
+      "godot/src/sim/salvage/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
     "id": "ART-40",
     "title": "presentation: the view of a ground unit with a barrel pitches its Barrel node by SimView.barrel_elevation (R0 B.31 A-155)",
     "lane": "presentation",
@@ -8849,6 +8872,25 @@
     "merged": "2026-11-27",
     "pr": 201,
     "notes": "Ruling R0-amendments-27 (B.33 A-157..A-163): radial up; terrain-following landing band; basin vision intended; d = driven leg; siege block required (12 keys); default when = affordable; SC-41 exemption and the 05 s7.3 book patch. OWNER questions A-158 (landing band follows terrain) and A-161 (siege required) have defaults applied."
+  },
+  {
+    "id": "PM-07",
+    "title": "Architect: DOCK hold after a wreck hook, client-side claim in prediction (GD-40), and AI-45 review questions",
+    "lane": "architect",
+    "tier": "Fable",
+    "size_days": 0.25,
+    "depends_on": [
+      "GD-40"
+    ],
+    "milestone": "M3",
+    "acceptance": "Ruling in R0-amendments-NN on: (Q1) after a DOCK press that hooks a wreck, may Assist.auto_dock start on a later tick while DOCK stays held (reviewer recommends no: latch per player until DOCK release, saved or derivable); (Q2) NET-18 prediction: recompute the W12 claim client-side from snapshot state and accept a reconciliation on mismatch, or have the server echo the claim (recommendation: recompute) - with the NET-18 acceptance append text; plus the AI-45 review's questions (docked-ship pause memory vs SimView.service_paused; RETURN order heads never completed on landing); each with a named follow-up",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/203",
+      "https://github.com/Ville-Mattila/planewar/pull/204",
+      "docs/reviews/R0-amendments-14.md"
+    ],
+    "status": "todo",
+    "merged": null
   },
   {
     "id": "BUG-4",
@@ -8962,6 +9004,28 @@
       "docs/reviews/R0-amendments-27.md",
       "02 s8.2",
       "02 s8.7"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "GD-55",
+    "title": "sim/steer: wire Assist.auto_dock into AssistStep, skipping a player whose DOCK press claimed a wreck (GD-40 review follow-up)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1.0,
+    "depends_on": [
+      "GD-40",
+      "AI-10",
+      "GD-15",
+      "PM-07"
+    ],
+    "milestone": "M3",
+    "acceptance": "AssistStep.run calls Assist.auto_dock (sim/steer MODULE.md) for each player whose possessed ship holds DOCK, is not under LINK_BRIDGE and is not DOCKED, with one LandingState per player slot (saved in S4 or derived; byte-exact save/restore mid-assist); it skips player p on any tick where Salvage.dock_claimed(p) is true (read after claim_docks, which stays the first line of SimWorld._assist_substitution) and, per PM-07's ruling on a held DOCK after a hook, while that press stays held; it does not clear DOCK from the entity input slot (W12 edge invariant); acting ticks call PilotTrack.note_assist so a landing with an assist tick in the last 150 m grades AUTO; tests: (a) a possessed Hauler with a free tow slot holding DOCK within auto_dock_radius_m of a free friendly pad and a free wreck within salvage_hook_m: on the edge tick the wreck is TETHERED and no assist tick is recorded; (b) the same without the wreck: auto_dock acts on the edge tick (SC-16 green); (c) a Dart in setup (a): auto_dock acts, nothing hooked; (d) S4 save/restore mid-assist byte-exact; perf note on the 03 s4.2 step-4 row",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/203",
+      "godot/src/sim/salvage/MODULE.md",
+      "godot/src/sim/steer/MODULE.md"
     ],
     "status": "todo",
     "merged": null
