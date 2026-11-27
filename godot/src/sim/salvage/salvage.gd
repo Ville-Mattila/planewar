@@ -12,6 +12,8 @@ var orders: OrderQueue = null  ## set by SimWorld: the head standing order of a 
 var cap: int = 0               ## live wreck cap (`caps.wrecks`); 0 = the whole wreck range
 var players: PlayerTable = null  ## GD-40: set by SimWorld with `inputs`: the possessed ship's DOCK edge hooks a wreck (W12)
 var inputs: InputSlots = null
+var dock_wreck: PackedInt64Array = PackedInt64Array()  ## per player: wreck EntityId claimed by this tick's DOCK edge (step 4), 0 none; scratch, never saved
+var dock_ship: PackedInt64Array = PackedInt64Array()   ## per player: the possessed ship id the claim was made for
 var paths: WreckPaths = null   ## GD-39: path weight 255 under resting wrecks; SimWorld sets `paths.pathing`
 
 var _store: EntityStore
@@ -104,6 +106,7 @@ func on_death(s: int, tick: int) -> int:
 ## Step 10: expiry (W4), release and delivery of tows (W7, W8), then the auto-hook (W6).
 func step(t: int) -> void:
 	if _store.wrecks.is_empty():
+		_clear_claims()
 		return
 	_refresh_refineries()
 	for h: int in _loaded:
@@ -125,10 +128,9 @@ func step(t: int) -> void:
 	paths.settle()
 	for h: int in _touched:
 		_sync_flag(h)
+	_dock_pass()
 	if not _store.wrecks.is_empty() and orders != null:
 		_hook_pass()
-	if inputs != null and players != null:
-		_dock_pass()
 
 
 func towed_count(hauler: int) -> int:
@@ -294,23 +296,54 @@ func _hook_pass() -> void:
 			_hook_neighbours(h, slots)
 
 
-# W12 (GD-40, A-108): the possessed ship of a player whose DOCK went down this tick hooks the nearest free wreck in reach.
+# W12 (GD-40, A-108), step 10: honours the claims `claim_docks` took in step 4, before the W6 auto-hook, then clears them.
 func _dock_pass() -> void:
+	for p: int in dock_wreck.size():
+		var wid: int = dock_wreck[p]
+		var sid: int = dock_ship[p]
+		dock_wreck[p] = 0
+		dock_ship[p] = 0
+		if wid == 0 or players.possessed[p] != sid or not _store.alive(sid) or not _store.alive(wid):
+			continue
+		var h: int = EntityId.slot(sid)
+		var w: int = EntityId.slot(wid)
+		if (_store.flags[w] & EntityStore.F_TETHERED) == 0 and (_store.flags[h] & EntityStore.F_DOCKED) == 0 				and towed_count(h) < tow_slots_of(h):
+			_link(h, w)
+
+
+func _clear_claims() -> void:
+	dock_wreck.fill(0)
+	dock_ship.fill(0)
+
+
+## W12, step 4 (once per tick, `SimWorld._assist_substitution`): decides every player's DOCK claim from the state of that
+## moment: wreck EntityId of the nearest free wreck within `reach_m()` of the possessed ship (lowest slot on a tie) when the
+## DOCK edge went down this tick, the ship has a free tow slot and is not DOCKED; else 0. The `Assist.auto_dock` seam skips
+## player p exactly when `dock_claimed(p)`.
+func claim_docks() -> void:
+	if inputs == null or players == null:
+		return
+	if dock_wreck.size() != PlayerTable.SLOTS:
+		var _e: int = dock_wreck.resize(PlayerTable.SLOTS) | dock_ship.resize(PlayerTable.SLOTS)
+	_clear_claims()
+	if _store.wrecks.is_empty():
+		return
 	for p: int in PlayerTable.SLOTS:
-		var w: int = dock_target(p)
+		var id: int = players.possessed[p]
+		if inputs.dock_edge[p] == 0 or id == 0 or not _store.alive(id):
+			inputs.dock_edge[p] = 0
+			continue
+		var w: int = _nearest_free_wreck(EntityId.slot(id))
 		if w != 0:
-			_link(EntityId.slot(players.possessed[p]), w)
+			dock_wreck[p] = _store.id_of(w)
+			dock_ship[p] = id
 
 
-## W12: the wreck slot player `p`'s DOCK press claims, 0 when it is none (then DOCK keeps its auto-dock meaning). Pure
-## query: Step 4 may ask it to hold `Assist.auto_dock` back, step 10 hooks what it names. Nearest centre, lowest slot on a tie.
-func dock_target(p: int) -> int:
-	if inputs == null or players == null or inputs.dock_edge[p] == 0:
-		return 0
-	var id: int = players.possessed[p]
-	if id == 0 or not _store.alive(id):
-		return 0
-	var h: int = EntityId.slot(id)
+func dock_claimed(p: int) -> bool:
+	return p >= 0 and p < dock_wreck.size() and dock_wreck[p] != 0
+
+
+func _nearest_free_wreck(h: int) -> int:
 	var slots: int = tow_slots_of(h)
 	if slots <= 0 or (_store.flags[h] & EntityStore.F_DOCKED) != 0 or towed_count(h) >= slots:
 		return 0

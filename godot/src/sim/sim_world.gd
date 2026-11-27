@@ -354,6 +354,7 @@ func _wire(rules: MatchRules) -> void:
 # Step 4 (R0 B.5): assist substitution (`AssistStep`, sim/steer): LINK_BRIDGE (05 C10, C13; AI-08) through
 # `Assist.link_bridge`. Assist.auto_dock() joins with AI-10.
 func _assist_substitution() -> void:
+	_econ.salvage.claim_docks()                               # GD-40 W12: the DOCK claims are decided once, here, before auto_dock
 	AssistStep.run(_store, _players, _inputs, _terrain, _bridge, _assist_probe, _assist_in)
 	_econ.docking.track(_inputs)                              # GD-15: the manual-landing record, DOCK held
 

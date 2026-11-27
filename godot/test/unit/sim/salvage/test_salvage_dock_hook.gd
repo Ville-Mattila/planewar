@@ -33,6 +33,7 @@ func test_dock_edge_hooks_the_free_wreck_without_salvaging_it() -> void:
 	var ev: Array[SimEvent] = _press(_world, DOCK)
 	assert_bool(K.tethered(_world, p.x) and K.tethered(_world, p.y)).is_true()
 	assert_int(_world.store().link[p.y]).is_equal(_world.store().id_of(p.x))
+	assert_bool(_world.economy().salvage.dock_claimed(0)).is_false()      # the claim is spent inside the tick (never saved)
 	assert_int(K.of_kind(ev, SimEvent.Kind.WRECK_SALVAGED).size()).is_equal(0)
 
 
@@ -106,8 +107,8 @@ func test_the_claimed_wreck_is_hooked_before_the_auto_hook_of_a_tow_order() -> v
 	var h: int = K.put(w, &"hauler", 0, 0, 20.0, 3000.0)
 	var wr: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3015.0))
 	var other: int = K.put(w, &"hauler", 2, 0, 20.0, 3030.0)
-	K.haul(w, other, OrderSpec.HaulMode.TOW, w.store().id_of(wr))
 	assert_bool(DockingTestKit.possess(w, w.store().id_of(h), 0)).is_true()
+	K.haul(w, other, OrderSpec.HaulMode.TOW, w.store().id_of(wr))
 	assert_int(w.store().link[wr]).is_equal(0)
 	var _e: Array[SimEvent] = _press(w, DOCK)
 	assert_int(w.store().link[wr]).is_equal(w.store().id_of(h))
@@ -126,8 +127,11 @@ func test_a_ship_that_closes_into_reach_after_the_claim_hooks_nothing() -> void:
 	var h: int = K.put(w, &"hauler", 0, 0, 20.0, 3000.0)
 	var wr: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3026.4))
 	assert_bool(DockingTestKit.possess(w, w.store().id_of(h), 0)).is_true()
+	var dir: Vector3 = (K.at(0.0, 3030.0) - K.at(0.0, 3000.0)).normalized()
+	w.store().vel[h] = Vector3.ZERO
+	w.store().pos[wr] = w.store().pos[h] + dir * 33.1      # 0.1 m out of reach
 	assert_float(w.store().pos[h].distance_to(w.store().pos[wr])).is_greater(w.economy().salvage.reach_m())
-	_fly(w, h, 3000.0, 3026.4, 90.0)
+	w.store().vel[h] = dir * 90.0
 	var _e: Array[SimEvent] = _press(w, DOCK)
 	assert_float(w.store().pos[h].distance_to(w.store().pos[wr])).is_less(w.economy().salvage.reach_m())
 	assert_bool(K.tethered(w, wr)).is_false()
