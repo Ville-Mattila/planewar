@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## AI-18 contract tests (sim_ai/brains/MODULE.md CR1-CR5, sim_ai/MODULE.md AiBrain): `CrawlerParams` from the shipped
-## `ap_crawler` (the required `follow` block, R0 B.29 A-145; the optional `siege` block and its band check), the
+## `ap_crawler` (the required `follow` block, R0 B.29 A-145; the required 12-key `siege` block, R0 B.33 A-161, and its band check), the
 ## `AiBrain` impact hooks' defaults, and `SiegeAim` (the lofted solve of R0 B.25 A-74, the ring, the heading error).
 
 const R: float = Sphere.PLANET_RADIUS
@@ -27,7 +27,7 @@ func test_the_shipped_ap_crawler_builds_the_params_with_the_05_band() -> void:
 	assert_bool(p.in_band(999.0)).is_false()
 
 
-func test_follow_is_required_and_the_siege_block_is_optional_but_checked() -> void:
+func test_follow_and_the_full_siege_block_are_required_and_checked() -> void:
 	var c: ContentSet = Ai18Kit.content()
 	var no_follow: Dictionary = _ap()
 	var _e: bool = no_follow.erase("follow")
@@ -35,15 +35,34 @@ func test_follow_is_required_and_the_siege_block_is_optional_but_checked() -> vo
 	var bad_follow: Dictionary = _ap()
 	var _e2: bool = (bad_follow["follow"] as Dictionary).erase("arrive_m")
 	assert_object(CrawlerParams.from_content(c, bad_follow, Ai18Kit.def())).is_null()
+	var no_block: Dictionary = _ap()                                               # R0 B.33 A-161: the block is required
+	var _e3: bool = no_block.erase("siege")
+	assert_object(CrawlerParams.from_content(c, no_block, Ai18Kit.def())).is_null()
 	var own: Dictionary = _ap()
-	own["siege"] = {"spot_min_m": 900, "spot_max_m": 1100, "relocate_bomb_m": 80}
+	own["siege"] = {"spot_min_m": 900, "spot_max_m": 1100, "spot_slope_deg": 8, "relocate_bomb_m": 80, "relocate_step_m": 120,
+		"aim_tol_deg": 2, "spot_samples": 12, "loft_tol_m": 10, "solve_tol_m": 3, "loft_iters": 5, "solve_step_ticks": 1,
+		"relocate_tries": 4}
 	var p: CrawlerParams = CrawlerParams.from_content(c, own, Ai18Kit.def())
 	assert_float(p.spot_mid_m).is_equal(1000.0)
 	assert_float(p.relocate_m).is_equal(80.0)
-	assert_float(p.slope_max_deg).is_equal(10.0)                                # absent keys keep the default
+	assert_float(p.slope_max_deg).is_equal(8.0)
+	assert_int(p.samples).is_equal(12)
+	assert_int(p.loft_iters).is_equal(5)
+	assert_int(p.solve_step_ticks).is_equal(1)
+	assert_int(p.relocate_tries).is_equal(4)
+	assert_int(p.max_steps).is_equal(ceili(p.shell.lifetime_s / p.dt))              # one-tick step
+	var full: Dictionary = (own["siege"] as Dictionary)
+	for key: String in CrawlerParams.SIEGE_KEYS:                                   # a missing key, or a key <= 0, refuses
+		var miss: Dictionary = own.duplicate(true)
+		var _e4: bool = (miss["siege"] as Dictionary).erase(key)
+		assert_object(CrawlerParams.from_content(c, miss, Ai18Kit.def())).override_failure_message("missing " + key).is_null()
+		var zero: Dictionary = own.duplicate(true)
+		(zero["siege"] as Dictionary)[key] = 0
+		assert_object(CrawlerParams.from_content(c, zero, Ai18Kit.def())).override_failure_message("zero " + key).is_null()
+	assert_int(full.size()).is_equal(CrawlerParams.SIEGE_KEYS.size())
 	for bad: Dictionary in [{"spot_max_m": 1300}, {"spot_min_m": 200}, {"spot_min_m": 1100, "spot_max_m": 1000}, {"aim_tol_deg": 0}]:
-		var ap: Dictionary = _ap()
-		ap["siege"] = bad
+		var ap: Dictionary = own.duplicate(true)
+		(ap["siege"] as Dictionary).merge(bad, true)
 		assert_object(CrawlerParams.from_content(c, ap, Ai18Kit.def())).is_null()
 
 
@@ -116,16 +135,18 @@ func test_the_params_carry_the_barrel_and_turn_rate_and_refuse_a_def_without_a_b
 	assert_float(p.turn_rate).is_equal_approx(deg_to_rad(c.ground_common.ground_turn_rate_dps), 1e-12)
 	assert_float(p.solve_tol_m).is_equal(2.0)
 	var orig: GroundUnitDef = Ai18Kit.def()
-	var bare: GroundUnitDef = GroundUnitDef.new()
+	var bare: GroundUnitDef = GroundUnitDef.new()                                  # the typed barrel fields (CONTENT-5), not raw
 	bare.weapon = orig.weapon
 	bare.max_slope_deg = orig.max_slope_deg
 	bare.bounding_radius = orig.bounding_radius
-	bare.raw = orig.raw.duplicate(true)
+	bare.barrel_slew_dps = orig.barrel_slew_dps
+	bare.barrel_min_deg = orig.barrel_min_deg
+	bare.barrel_max_deg = orig.barrel_max_deg
 	assert_object(CrawlerParams.from_content(c, _ap(), bare)).is_not_null()
-	var _e: bool = bare.raw.erase("barrel_slew_dps")
+	bare.barrel_slew_dps = 0.0
 	assert_object(CrawlerParams.from_content(c, _ap(), bare)).is_null()
 	var loose: Dictionary = _ap()
-	loose["siege"] = {"solve_tol_m": 20}                                           # above loft_tol_m 15
+	(loose["siege"] as Dictionary)["solve_tol_m"] = 20                             # above loft_tol_m 15
 	assert_object(CrawlerParams.from_content(c, loose, Ai18Kit.def())).is_null()
 
 
