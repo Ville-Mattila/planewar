@@ -37,7 +37,7 @@ enum Atom { T, ORE, ICE, HAVE, POWER01, ENEMY_SEEN, AFFORDABLE, PRESENCE }
 enum Cmp { GE, GT, LE, LT, EQ }
 var src: String; var uses_presence: bool; var uses_affordable: bool
 static func compile(text: String, def_index: Dictionary, count_sites: bool = false) -> BookCondition   # null when not in the grammar
-func eval(c: BookContext) -> bool
+func eval(c: BookContext) -> bool;  func waits_on_clock(c: BookContext) -> bool
 
 class_name SiteToken extends RefCounted              # core, approach:nearest_enemy, toward:<t>, cold_trap:home, ore_field:home_N, outpost_site:home_trap, contested_field, refinery, outpost
 enum Kind { CORE, APPROACH, TOWARD, COLD_TRAP, ORE_FIELD, OUTPOST_SITE, CONTESTED, REFINERY, OUTPOST }
@@ -109,9 +109,9 @@ func run_of(slot: int) -> BookRun;  func book_of(slot: int) -> OpeningBook;  fun
 
 ## Invariants
 
-- OB1 (05 s7.3): steps run in order; a step waits for its `when`; a `when` that is false blocks the steps behind it. `skip_if_have` counts sites (`have_all`); a `when` `have:` counts finished entities (`have_done`).
+- OB1 (05 s7.3): steps run in order; a step waits for its `when`; a `when` that is false blocks the steps behind it. A `build` or `produce` step is due only while its `when` holds (absent = `affordable`) and it is affordable; a step that costs nothing (`order`, `raid`, `set_replenish`) with no `when` is due at once (R0 B.33 A-162). `BookCondition.compile("")` stays always true; the default is applied in `OpeningBook`. `skip_if_have` counts sites (`have_all`); a `when` `have:` counts finished entities (`have_done`).
 - OB2: a REJECTED_PLACEMENT for geometry makes the next think try the next candidate (`BookHost.next_k`); `max_rejects` (3) skip the step. Funds, prerequisites, caps, locks, presence, vision and queue space are WAIT, never a rejection. A site the map does not have (UNRESOLVED) skips at once.
-- OB3: a due step that cannot complete for `stall_s` is skipped (SKIPPED_STALL); the stall clock starts when the `when` first holds, a long wait on `when` is not a stall.
+- OB3: a due step that cannot complete for `stall_s` is skipped (SKIPPED_STALL); the stall clock counts a due step's waits for prerequisites, caps, queue space and locks, never a wait on `when` or for funds (A-162; it restarts when the step stops being due). SC-41 leaves a step PENDING at the hand-over only as the `order move` of an Expansion pair that `BookCondition.waits_on_clock` (A-163).
 - OB4 (02 AR-1): `OpeningBook.compile` refuses a `build outpost` without `when: presence` or without an `order move` to the same site as the step before it. An Outpost step with no unit in place for `presence_retry_s` re-issues that `order move`.
 - OB5: the book hands over to the reactive planner after the last step or at `book_end_s` (`BookRun.done`); a handed-over run issues nothing.
 - BP1 (ADR-05, 02 AR-1): `resolve_site` returns only candidates that pass the pre-check: footprint centre inside a finished friendly build radius, outside every known enemy build radius, clear of own footprints; an anchor outside every radius is pulled to the edge of the nearest one, except a structure on a node (Ice Extractor). Outposts: no radius; >= 800 m from friendly and >= 1,500 m from enemy Cores / Outposts (sites included); candidates within half the presence radius's horizontal reach of the anchor. The planner is a pure function of its loaded lists; the sim stays the judge.

@@ -11,6 +11,8 @@ class FakeHost extends BookHost:
 	var calls: Array[String] = []
 	var answers: Dictionary = {}   # "build:solar_array" -> Array[int] of outcomes, consumed front first; default DONE
 	var near: bool = false
+	var funds: bool = true
+	var asked: int = 0
 	var ks: Array[int] = []
 
 	func _next(key: String) -> int:
@@ -22,7 +24,8 @@ class FakeHost extends BookHost:
 		return near
 
 	func affordable(_kind: int, _def_id: int, _n: int) -> bool:
-		return true
+		asked += 1
+		return funds
 
 	func build(def_id: int, _tok: SiteToken, k: int, _issued: int) -> int:
 		ks.append(k)
@@ -330,3 +333,72 @@ func test_run_refuses_bytes_of_another_book() -> void:
 	var other: BookRun = BookRun.new(Ai23Kit.book(&"vanguard_rush"))
 	assert_bool(other.deserialize(r.serialize())).is_false()
 	assert_bool(other.deserialize(PackedByteArray())).is_false()
+
+
+func test_a_funds_wait_is_never_a_stall_and_blocks_the_steps_behind() -> void:
+	var b: OpeningBook = _book([{"do": "produce", "def": "dart", "n": 1}, {"do": "produce", "def": "harvester", "n": 1}])
+	var r: BookRun = BookRun.new(b)
+	var h: FakeHost = FakeHost.new()
+	h.funds = false
+	var stall: int = int(Ai23Kit.params().stall_s) * HZ
+	for k: int in 3:
+		var _a: int = _think(b, r, _ctx(), h, k * stall)   # up to 2 x stall_s of waiting for funds
+	assert_int(r.cursor).is_equal(0)
+	assert_int(r.outcome[0]).is_equal(BookRun.PENDING)
+	assert_array(h.calls).is_empty()   # the Harvester behind did not jump the queue
+	h.funds = true
+	var _n: int = _think(b, r, _ctx(), h, 2 * stall + HZ)
+	assert_bool(r.done).is_true()
+	assert_int(r.outcome[0]).is_equal(BookRun.DONE)
+
+
+func test_an_explicit_when_is_also_affordable() -> void:
+	var b: OpeningBook = _book([{"do": "produce", "def": "dart", "n": 1, "when": "t>=10"}])
+	var r: BookRun = BookRun.new(b)
+	var h: FakeHost = FakeHost.new()
+	h.funds = false
+	assert_int(_think(b, r, _ctx(), h, 20 * HZ)).is_equal(0)
+	h.funds = true
+	assert_int(_think(b, r, _ctx(), h, 21 * HZ)).is_equal(1)
+
+
+func test_a_step_without_a_cost_never_asks_for_funds() -> void:
+	var b: OpeningBook = _book([
+		{"do": "order", "kind": "move", "unit": "dart", "to": "contested_field"},
+		{"do": "set_replenish", "def": "dart", "n": 2},
+		{"do": "raid", "target": "harvester_line", "with": "dart:3"}])
+	var r: BookRun = BookRun.new(b)
+	var h: FakeHost = FakeHost.new()
+	h.funds = false
+	assert_int(_think(b, r, _ctx(), h, 0)).is_equal(3)
+	assert_int(h.asked).is_equal(0)
+
+
+func test_a_due_affordable_step_blocked_by_a_prerequisite_still_stalls() -> void:
+	var b: OpeningBook = _book([{"do": "produce", "def": "dart", "n": 1}])
+	var r: BookRun = BookRun.new(b)
+	var h: FakeHost = FakeHost.new()
+	var waits: Array = []
+	for i: int in 60:
+		waits.append(OpeningBook.Out.WAIT)
+	h.answers["produce:%d:1" % _def(&"dart")] = waits
+	var stall: int = int(Ai23Kit.params().stall_s) * HZ
+	var _a: int = _think(b, r, _ctx(), h, 0)
+	var _b: int = _think(b, r, _ctx(), h, stall + HZ)
+	assert_int(r.outcome[0]).is_equal(BookRun.SKIPPED_STALL)
+
+
+func test_the_presence_retry_stops_while_presence_holds_and_funds_are_short() -> void:
+	var b: OpeningBook = _book([
+		{"do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field"},
+		{"do": "build", "def": "outpost", "near": "contested_field", "when": "presence"}])
+	var r: BookRun = BookRun.new(b)
+	var h: FakeHost = FakeHost.new()
+	h.funds = false
+	h.near = true
+	var retry: int = int(Ai23Kit.params().presence_retry_s) * HZ
+	var _a: int = _think(b, r, _ctx(), h, 0)
+	var _b: int = _think(b, r, _ctx(), h, retry + HZ)
+	var _c: int = _think(b, r, _ctx(), h, 3 * retry)
+	assert_int(h.calls.size()).is_equal(1)   # the move went once; no re-send while the unit is in place
+	assert_int(r.cursor).is_equal(1)

@@ -51,6 +51,32 @@ func eval(c: BookContext) -> bool:
 	return false
 
 
+## True when this condition is false at `c` only because of the clock (R0 B.33 A-163; SC-41's verdict on a step left pending
+## at the hand-over): advancing `t_s` alone would make it true (`t_s` = +INF, the other terms kept), or it stays false at this
+## `t_s` even with every other term true. Pure: reads `c`, writes nothing.
+func waits_on_clock(c: BookContext) -> bool:
+	if eval(c):
+		return false
+	return _eval_clock(c, true) or not _eval_clock(c, false)
+
+
+# `later`: t at +INF, the other atoms as in `c`; otherwise t as in `c`, every other atom true.
+func _eval_clock(c: BookContext, later: bool) -> bool:
+	var i: int = 0
+	for e: int in _clause_end:
+		var ok: bool = true
+		while i < e:
+			if ok:
+				if _atom[i] == Atom.T:
+					ok = _cmp_holds(i, INF if later else c.t_s)
+				elif later:
+					ok = _holds(i, c)
+			i += 1
+		if ok:
+			return true
+	return _clause_end.is_empty()
+
+
 func _holds(i: int, c: BookContext) -> bool:
 	var a: int = _atom[i]
 	if a == Atom.ENEMY_SEEN:
@@ -73,6 +99,10 @@ func _holds(i: int, c: BookContext) -> bool:
 			var d: int = _def[i]
 			var arr: PackedInt32Array = c.have_all if _all else c.have_done
 			x = float(arr[d]) if d >= 0 and d < arr.size() else 0.0
+	return _cmp_holds(i, x)
+
+
+func _cmp_holds(i: int, x: float) -> bool:
 	var v: float = _val[i]
 	match _cmp[i]:
 		Cmp.GE:
