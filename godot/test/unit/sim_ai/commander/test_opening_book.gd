@@ -402,3 +402,34 @@ func test_the_presence_retry_stops_while_presence_holds_and_funds_are_short() ->
 	var _c: int = _think(b, r, _ctx(), h, 3 * retry)
 	assert_int(h.calls.size()).is_equal(1)   # the move went once; no re-send while the unit is in place
 	assert_int(r.cursor).is_equal(1)
+
+
+func test_an_explicit_affordable_on_a_costless_step_does_not_ask_the_host() -> void:
+	var b: OpeningBook = _book([{"do": "order", "kind": "move", "unit": "dart", "to": "contested_field", "when": "affordable"}])
+	var r: BookRun = BookRun.new(b)
+	var h: FakeHost = FakeHost.new()
+	h.funds = false
+	assert_int(_think(b, r, _ctx(), h, 0)).is_equal(1)
+	assert_int(h.asked).is_equal(0)
+
+
+func test_the_stall_clock_restarts_when_a_step_stops_being_due() -> void:
+	var b: OpeningBook = _book([{"do": "produce", "def": "dart", "n": 1}])
+	var r: BookRun = BookRun.new(b)
+	var h: FakeHost = FakeHost.new()
+	var waits: Array = []
+	for i: int in 60:
+		waits.append(OpeningBook.Out.WAIT)
+	h.answers["produce:%d:1" % _def(&"dart")] = waits
+	var stall: int = int(Ai23Kit.params().stall_s) * HZ
+	var _a: int = _think(b, r, _ctx(), h, 0)                       # due, WAIT on a prerequisite: the clock starts
+	var _b: int = _think(b, r, _ctx(), h, stall - HZ)
+	h.funds = false
+	var _c: int = _think(b, r, _ctx(), h, stall)                   # a funds dip: not due, the clock is discarded
+	h.funds = true
+	var _d: int = _think(b, r, _ctx(), h, stall + HZ)              # due again: the clock restarts here
+	assert_int(r.outcome[0]).is_equal(BookRun.PENDING)
+	var _e: int = _think(b, r, _ctx(), h, 2 * stall)               # more than stall_s after the first start, less after the restart
+	assert_int(r.outcome[0]).is_equal(BookRun.PENDING)
+	var _f: int = _think(b, r, _ctx(), h, 2 * stall + 2 * HZ)
+	assert_int(r.outcome[0]).is_equal(BookRun.SKIPPED_STALL)

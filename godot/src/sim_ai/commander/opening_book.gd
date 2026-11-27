@@ -137,9 +137,11 @@ func _due(i: int, run: BookRun, ctx: BookContext, host: BookHost) -> bool:
 	if w.uses_presence:
 		ctx.presence = host.presence(_tok[i], _def[i])
 	var costs: bool = _do[i] == Do.BUILD or _do[i] == Do.PRODUCE
-	if costs or w.uses_affordable:
+	if costs:
 		var n: int = _count[i] - run.issued
 		ctx.affordable = host.affordable(_do[i], _def[i], 1 if _do[i] == Do.BUILD else clampi(n, 1, 5))
+	elif w.uses_affordable:
+		ctx.affordable = true   # nothing to pay: the host is never asked about a step without a def
 	return w.eval(ctx) and (ctx.affordable or not costs)
 
 
