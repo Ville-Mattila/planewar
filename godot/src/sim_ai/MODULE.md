@@ -37,7 +37,7 @@ const LAND_BUSY: int; const LAND_THREAT: int; const LAND_FOREIGN: int       # la
 # AI-08 (FORMAT 3): overlay / ov_flags (u8) per slot after fire_mask; the overlays use `integ`
 # AI-11 (FORMAT 4): form_slot / form_state / sep_age (u8) per slot after ov_flags, form_order (i32) after last_wake, sep_push (Vector3) after land_ga_dir; NO_SLOT = 255; form_slot k + ROSTER_WIDTH = overflow escort; sep_age = Separation.AGE_* flags
 const NO_SLOT: int; const ROSTER_WIDTH: int      # form_roster (by escortee slot * ROSTER_WIDTH + class slot -> escort EntityId) is derived: rebuilt by deserialize, not in the bytes
-const OV_PULL_UP: int; const OV_RTB_SENT: int; const OV_POSSESSED: int      # ov_flags bits
+const OV_PULL_UP: int; const OV_RTB_SENT: int; const OV_POSSESSED: int; const OV_SVC_PAUSED: int      # ov_flags bits (OV_SVC_PAUSED: AI-45, an ALERT WAITING_FOR_ICE / WAITING_FOR_ORE named this docked ship; no new bytes; `AiBrain.hears_service_pause()` false by default, true for the Dart family; the `_scan_overlays` fast skip ignores the bit)
 # AI-13 (FORMAT 5): sub / passes / prev_mode / wp / bflags (u8) after land_flags, seen_tick / mark_tick / burst_tick / order_tick (i32) after form_order, home / goal (Vector3) after sep_push, hp_mark / clear_m / aim_err (f32) after lift
 # AI-14 (FORMAT 6): lock_tick (i32) after order_tick: the start tick of the Lancer's current rocket lock hold (0 = none); FORMAT 5 bytes are refused
 # AI-17 (FORMAT 7): the AiHitLog record (21 bytes: tick i32, victim i32, team u8, pos 3 x f32) per slot after rtb_floor, before the path; FORMAT 6 bytes are refused
@@ -58,6 +58,7 @@ func bind_rng(rng: Rng) -> void                    # AI-13: AiDriver binds its R
 func counts_targets() -> bool                      # AI-17: true for the tower brain: AiState.tower_target_count counts its class (the 05 s6.8 crowd term)
 func bind_intel(_intel: TeamIntel) -> void          # AI-14: AiDriver binds its TeamIntel on set_brain and set_intel (null: none); brains only read it
 func serialize() -> PackedByteArray;  func deserialize(bytes: PackedByteArray) -> bool   # AI-23: S4 bytes of a brain with state of its own (the Commander); AiDriver writes the bot brain's after the intel section
+func hears_service_pause() -> bool   # AI-45: true for ship brains that dock (DockedMode.note_alert records their pauses)
 func hears_impacts() -> bool;  func on_impact(_id: int, _ev: SimEvent, _st: AiState) -> bool   # AI-18: BOMB_IMPACT per registered id of a hearing class, before the thinks; true = wake (the Crawler's relocation)
 class_name LandingPilot extends RefCounted         # AI-09: RETURN landing of one ship class over LandingController (05 s5.5)
 const RTB_KEYS: PackedStringArray;  const DOCKED: int
@@ -144,6 +145,10 @@ var bridge: BridgeParams; var ground: bool; var clear_tti_s: float; var min_hold
 var force_rtb_fuel01: float; var rc_gamma_rad: float; var rc_exit_alt_m: float; var ceiling_hard_m: float; var v_cruise: float
 static func for_ship(ap: Dictionary, def: ShipDef, rules: RulesDef, tick_hz: int, flight_common: FlightCommonDef) -> OverlayParams   # null on a missing key; R0 B.15 A-90
 static func for_ground(ap: Dictionary, rules: RulesDef, tick_hz: int) -> OverlayParams              # safety_min_hold_s only
+class_name DockedMode extends RefCounted           # AI-45: DOCKED mode against the real Docking (R0 B.24 A-119), static
+static func note_alert(st: AiState, ev: SimEvent, brains: Array[AiBrain]) -> void   # ALERT WAITING_FOR_ICE / ORE (a = kind, b = ship of a class whose brain `hears_service_pause`) -> OV_SVC_PAUSED, kept across Overlays.enter / clear; AiDriver.on_event feeds it
+static func leaves(id: int, s: int, view: SimView, st: AiState, needs_order: bool, auto_launch01: float) -> bool   # service_progress full, or paused and fuel01 >= auto_launch01; the Bomber: an order head
+static func clear(st: AiState, s: int) -> void             # ends the pause memory (the ship flew)
 class_name Overlays extends RefCounted             # AI-08: 05 s2.4 overlays executed in step 3, static
 const NONE: int; const SAFETY: int; const RECOVER_CEILING: int   # = ControlMachine.Overlay ordinals
 static func enter(id: int, v: SimView, st: AiState, p: OverlayParams, tick: int) -> void   # release edge: RECOVER_CEILING at >= ceiling_hard_m, else SAFETY
@@ -221,6 +226,7 @@ does not think; at the end it is woken. LINK_BRIDGE is `Assist.link_bridge` in `
 
 ## Enumerations (append-only; ordinals frozen; R0 B.3)
 
+- **DOCKED mode (AI-45, A-119).** `DartBrain` (and Lancer / Bomber / Scout) think a docked ship at its class slice: AiTag.DOCKED and no input while `DockedMode.leaves` is false; true (service complete, i.e. SERVICED, or a service pause with `fuel01 >= landing.auto_launch_fuel01`, 0.5 in `autopilots.json`; the Bomber: only when `order_head` exists, 05 s2.5 row 3) -> LAUNCH, driven every tick with thrust 1.0 along the pad normal (`basis(link).y`) until the sim's thrust hold (`flight_common.launch_thrust_min` / `launch_hold_s`) launches it; the next think after `LAUNCHED` leaves LAUNCH for PATROL above `launch_climb_agl_m`. `landing.auto_launch_fuel01` is optional in the schema (the Bomber has none: `DartParams.auto_launch_fuel01` -1). The pause memory is sticky until the ship flies. No Hauler brain exists yet (its def value is in place). SC-17 / SC-18: `test/sim/ai/test_docked_mode.gd`.
 - `AiTag.Tag` (`sim_ai/ai_tag.gd`; R0 B.17 A-94; the replicated `ai_tag` u8, 05 s6.1): 0 NONE, 1 LAUNCH, 2 PATROL, 3 INTERCEPT, 4 ENGAGE, 5 EXTEND, 6 EVADE, 7 BOMB, 8 RETURN, 9 DOCKED, 10 PULL_UP, 11 MOVE, 12 HOLD, 13 GUARD, 14 ESCORT, 15 LOITER, 16 FLEE, 17 SEARCH, 18 FERRY_PICK, 19 LOAD, 20 FERRY_DROP, 21 TOW, 22 CAPTURE, 23 PICK_FIELD, 24 TO_FIELD, 25 MINE, 26 TO_REFINERY, 27 QUEUE, 28 UNLOAD, 29 SIEGE, 30 RELOCATE, 31 TRACK, 32 OFFLINE, 33 IDLE (0-15 the Dart, AI-13; 16-33 reserved for AI-14 / AI-16 / AI-17 / AI-18; a new word is appended at the end).
 
 ## Invariants

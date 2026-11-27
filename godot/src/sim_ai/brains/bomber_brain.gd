@@ -45,3 +45,7 @@ func _needs_rtb(id: int, s: int, view: SimView, st: AiState, tick: int) -> bool:
 
 func _return_after_attack() -> bool:
 	return true
+
+
+func _docked_needs_order() -> bool:
+	return true

@@ -29,7 +29,7 @@ static func enter(id: int, v: SimView, st: AiState, p: OverlayParams, tick: int)
 	var pos: Vector3 = v.pos(id)
 	st.overlay[s] = RECOVER_CEILING if not p.ground and pos.length() - Sphere.PLANET_RADIUS >= p.ceiling_hard_m else SAFETY
 	st.overlay_since[s] = tick
-	st.ov_flags[s] = 0
+	st.ov_flags[s] &= AiState.OV_SVC_PAUSED   # the docked pause memory (AI-45) survives a release edge
 	st.guidance_vel[s] = v.vel(id)
 	st.integ[s] = Vector2.ZERO
 	if p.ground:
@@ -41,7 +41,7 @@ static func enter(id: int, v: SimView, st: AiState, p: OverlayParams, tick: int)
 ## Ends the overlay of slot `s` (also when the entity is possessed again).
 static func clear(st: AiState, s: int) -> void:
 	st.overlay[s] = NONE
-	st.ov_flags[s] = st.ov_flags[s] & AiState.OV_POSSESSED
+	st.ov_flags[s] = st.ov_flags[s] & (AiState.OV_POSSESSED | AiState.OV_SVC_PAUSED)
 	st.integ[s] = Vector2.ZERO
 
 

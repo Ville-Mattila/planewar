@@ -17,6 +17,7 @@ const NO_SLOT: int = 255                ## form_slot: no formation slot assigned
 const OV_PULL_UP: int = 1               ## `ov_flags` bits (AI-08): PULL_UP running,
 const OV_RTB_SENT: int = 2              ## system RETURN already requested,
 const OV_POSSESSED: int = 4             ## POSSESSED at the last check
+const OV_SVC_PAUSED: int = 8            ## AI-45: an ALERT WAITING_FOR_ICE / WAITING_FOR_ORE named this docked ship (DockedMode)
 
 var mode: PackedInt32Array = PackedInt32Array()           ## brain-specific enum value
 var mode_since: PackedInt32Array = PackedInt32Array()     ## tick

@@ -182,7 +182,8 @@
         "bearing_clear_m": 60.0,
         "bearing_terrain_weight": 0.05,
         "pitch_over_agl_m": 20,
-        "launch_climb_agl_m": 80
+        "launch_climb_agl_m": 80,
+        "auto_launch_fuel01": 0.5
       },
       "guidance": {
         "kp_alt": 0.5,
