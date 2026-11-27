@@ -14,7 +14,7 @@ later. A change to "Public API" or "Invariants" is a contract change: contract t
 | May depend on | `core`, `content`, `sim`, `sim_ai` (Perception) (`tools/deps.json` row `sim_ai`) |
 | Must never touch | Nodes, `net`, `presentation`, `ui`; no `await`, signals, `Thread`, autoloads; never an entity the team does not see |
 | Autoloads used | None |
-| Status | implemented (AI-23). Constants: `godot/test/sim/ai/ai23_params.json` until `bot_profiles.json` carries the `opening_book` block (needs content); books: `godot/test/sim/ai/ai23_books.json` until AI-24 ships `build_orders.json`. |
+| Status | implemented (AI-23). Constants: `godot/test/sim/ai/ai23_params.json` until `bot_profiles.json` carries the `opening_book` block (needs content); books: `godot/content/defs/build_orders.json` (AI-24: 3 doctrines x 2 books, schema `tools/schemas/build_orders.schema.json`, cross-file rules in `tools/validate_content.py` `check_books`); `godot/test/sim/ai/ai23_books.json` stays the interpreter's unit fixture. |
 
 ## Public API
 

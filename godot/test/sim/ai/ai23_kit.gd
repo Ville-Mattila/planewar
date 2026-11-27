@@ -6,6 +6,7 @@ class_name Ai23Kit extends RefCounted
 
 const PARAMS: String = "res://test/sim/ai/ai23_params.json"
 const BOOKS: String = "res://test/sim/ai/ai23_books.json"
+const SHIPPED: String = "res://content/defs/build_orders.json"   # AI-24: the books the game ships; SC-41 runs these
 const MAPS: String = "res://content/maps/"
 const HZ: int = 30
 
@@ -48,6 +49,19 @@ static func books() -> Array[OpeningBook]:
 			assert(b != null, "book %s: %s" % [str((e as Dictionary).get("id", "?")), str(errs)])
 			_books.append(b)
 	return _books
+
+
+## The shipped books (content/defs/build_orders.json, AI-24) compiled against the shipped defs.
+static func shipped_books() -> Array[OpeningBook]:
+	var out: Array[OpeningBook] = []
+	var v: Variant = JSON.parse_string(FileAccess.get_file_as_string(SHIPPED))
+	assert(v is Dictionary, "build_orders.json must parse")
+	for e: Variant in (v as Dictionary)["build_orders"]:
+		var errs: Array[String] = []
+		var b: OpeningBook = OpeningBook.compile(e, content(), errs)
+		assert(b != null, "book %s: %s" % [str((e as Dictionary).get("id", "?")), str(errs)])
+		out.append(b)
+	return out
 
 
 static func book(id: StringName) -> OpeningBook:
