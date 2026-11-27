@@ -2363,7 +2363,7 @@
       "ART-28"
     ],
     "milestone": "M3",
-    "acceptance": "Validator passes; cradle totals equal 02 s9.3 (dependency edited: ART-29/30 dropped, they carry their own blocks)",
+    "acceptance": "Validator passes; cradle totals equal 02 s9.3 (dependency edited: ART-29/30 dropped, they carry their own blocks); R0 B.33 A-157 / A-158: the Noon Pole relay_station entry sits on ground whose slope over its pad_radius_m is <= build_max_slope_deg (the bound A-158's band assumes); the PR states the measured slope",
     "docs": [
       "02 s9",
       " 02 GD-22"
@@ -2683,10 +2683,11 @@
     "depends_on": [
       "AI-23",
       "GD-05",
-      "BUG-4"
+      "BUG-4",
+      "AI-50"
     ],
     "milestone": "M3",
-    "acceptance": "Schema-valid; no storage_silo; every build outpost preceded by an order move with when: presence; each book passes SC-41",
+    "acceptance": "Schema-valid; no storage_silo; every build outpost preceded by an order move with when: presence; each book passes SC-41; R0 B.33 A-162 / A-163: no gate is derived from stall_s and commander BK1 is not added; under AI-50's SC-41 every book either completes or is pending at 5:00 only on an Expansion pair that waits on the clock; a step gated at or after 5:00 appears only as that pair at the end of a book; bulwark_standard reaches its Extractor through the home-trap Outpost pair (05 s7.3 as patched); gates are fitted to the sim's income after BUG-4 (first delivery 68 s on cradle)",
     "docs": [
       "05 s7.3",
       " R0 C2-14",
@@ -2705,7 +2706,7 @@
       "AI-23"
     ],
     "milestone": "M3",
-    "acceptance": "10-min solo bot keeps power01 in [1.0, 1.6] >= 90 % of time; SC-44 passes",
+    "acceptance": "10-min solo bot keeps power01 in [1.0, 1.6] >= 90 % of time; SC-44 passes; R0 B.33 A-163: at the hand-over the Expansion rule (05 s7.5 'at the book's time') reads the gate of the book's deferred Expansion pair, if it has one, through OpeningBook.when_of; no other unexecuted book step is carried over",
     "docs": [
       "05 s7.4-7.5",
       " 05 AI-25"
@@ -8476,20 +8477,24 @@
   {
     "id": "AI-49",
     "title": "content: ratified siege block for ap_crawler (8 keys + solver tuning) in the autopilots schema and def",
-    "lane": "content",
-    "tier": "Haiku",
-    "size_days": 0.25,
+    "lane": "sim_ai+content",
+    "tier": "Sonnet",
+    "size_days": 0.5,
     "depends_on": [
-      "AI-18"
+      "AI-18",
+      "AI-18b",
+      "CONTENT-5"
     ],
     "milestone": "M3",
-    "acceptance": "After the Architect rules on the siege block: tools/schemas/autopilots.schema.json gains the siege property (optional/required as ruled) incl. the solver tuning numbers now hard-coded in siege_aim.gd; autopilots.json ap_crawler carries it with _doc (05 s6.7); negative test; CrawlerBrain/SiegeAim read the def instead of literals",
+    "acceptance": "R0 B.33 A-161: tools/schemas/autopilots.schema.json gains $defs.siege (object, additionalProperties false, all 12 keys required) and a siege property on the autopilot, required on the ap_crawler branch beside follow: spot_min_m, spot_max_m (number, > 0, <= 5000); spot_slope_deg (number, > 0, <= 45); relocate_bomb_m, relocate_step_m (number, > 0, <= 1000); aim_tol_deg (number, > 0, <= 10); spot_samples (integer 1..64); loft_tol_m, solve_tol_m (number, > 0, <= 100); loft_iters (integer 1..16); solve_step_ticks (integer 1..4); relocate_tries (integer 1..16); autopilots.json ap_crawler and the canonical fixture carry the block with the values 1000, 1150, 10, 60, 150, 1, 24, 15, 2, 6, 2, 6 and a _doc citing 05 s6.7 (the first four), AI-18 and AI-18b; validate_content cross-field rules: spot_min_m < spot_max_m, solve_tol_m <= loft_tol_m, [spot_min_m, spot_max_m] inside the Crawler weapon's [range_min_m, range_m]; negative cases in test_validate_content.py: ap_crawler without siege, a siege block missing one key, and one per cross-field rule; CrawlerParams.from_content reads all 12 keys from the def with no default and returns null when the block or a key is missing or <= 0; SiegeAim.loft loops prm.loft_iters and steps solve_step_ticks x dt, max_steps = max(ceil(lifetime_s / (solve_step_ticks x dt)), 1), CrawlerBrain._relocate tries prm.relocate_tries; CrawlerParams gains var loft_iters, solve_step_ticks, relocate_tries (appends), SIEGE_KEYS gains the three names at the end, SIEGE_DEFAULTS and LOFT_ITERS stay with their values, deprecated in MODULE.md Open items and read by nothing (10 s4.1); the barrel limits are read from the typed GroundUnitDef fields (CONTENT-5), not raw; brains/MODULE.md CR5 rewritten; contract tests rewritten to the required rule in an earlier commit of the same PR (ADR-14): in godot/test/unit/sim_ai/test_ai18_contract.gd, test_follow_is_required_and_the_siege_block_is_optional_but_checked (:30-47; a partial siege block is now refused, the full block builds params), the one-key {solve_tol_m: 20} case (:128; now a full block with solve_tol_m > loft_tol_m) and the barrel refusal case (:118-126; set through the typed GroundUnitDef barrel fields, not raw); nothing else changes: the impact numbers and the AI-18 / AI-18b scenario suites (test_sc_crawler.gd, test_sc_crawler_ceiling.gd, test_crawler_brain.gd, test_crawler_perf.gd) pass unchanged; the task also edits tools/validate_content.py and tools/tests (CONTENT-5 precedent); PR flagged 'Contract impact: change (R0 B.33 A-161)'",
     "docs": [
+      "docs/reviews/R0-amendments-27.md",
       "05 s6.7",
-      "docs/reviews/R0-amendments-23.md"
+      "godot/src/sim_ai/brains/MODULE.md"
     ],
     "status": "todo",
-    "merged": null
+    "merged": null,
+    "notes": "Re-scoped by R0 B.33 A-161: it edits sim_ai code and its contract tests as well as the schema, the def and validate_content, so Sonnet 0.5 d with an Opus review (brains)."
   },
   {
     "id": "GD-51",
@@ -8821,8 +8826,10 @@
       "https://github.com/Ville-Mattila/planewar/pull/190#issuecomment-7198733100",
       "03 s7.6"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 201,
+    "notes": "Ruling R0-amendments-27 (B.33 A-157..A-163): radial up; terrain-following landing band; basin vision intended; d = driven leg; siege block required (12 keys); default when = affordable; SC-41 exemption and the 05 s7.3 book patch. OWNER questions A-158 (landing band follows terrain) and A-161 (siege required) have defaults applied."
   },
   {
     "id": "BUG-4",
@@ -8862,5 +8869,101 @@
     "merged": "2026-11-26",
     "notes": "Diagnosed on GD-49 PR #194 (2026-11-26): main's unit-sim shard peaks 18.3 GB private / 11.4 GB working set; every load_map world keeps ~14.8 MB alive after free; confirmed cycle MatchJudge._applier -> CommandApplier._validator -> CommandValidator.judge -> MatchJudge (sim_world.gd:334), at least one more remains. Runner shutdowns on unit-sim (PRs #169, #182, #186, #190, #194) are this, not flakiness. Blocks GD-49 merge. Fixed: 6-class cycle broken at SimWorld PREDELETE (EconomyHub.unlink, AutoReplenish.unlink); MapPathing extracted. Shard peak 18.3 GB -> 1.1 GB; CI unit-sim 7m25s -> 6m03s. Nits: S18 wording (parts unusable after world freed); load_map twice on one world still leaks the first links; follow-up idea: static cycle check in tools/.",
     "pr": 196
+  },
+  {
+    "id": "GD-52",
+    "title": "sim: map-spawned Relay Stations get a radial up, as every built structure (R0 B.33 A-157)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "GD-51",
+      "BUG-3"
+    ],
+    "milestone": "M3",
+    "acceptance": "MapRelays.spawn sets up = the entry's dir (radial), fwd = the facing projected on the tangent plane at dir (default Sphere.tangent_frame(dir).x) and pos = Terrain.surface_point(dir), as Build.stamp does (sim/build B10); a test on a sloped fixture asserts up == pos.normalized() within 1e-6 for every structure spawned by spawn_start_kit, Build.place and MapRelays; on a fixture map whose relay site slopes 10 degrees a Hauler lands tail-down and captures; Economy.solar_factor of a solar structure placed on a 15 degree slope equals the value at its latitude on level ground; sim/relay/MODULE.md and sim/build/MODULE.md B10 cite A-157; S4 round trip byte-exact, no FORMAT change (no shipped bake has a relay entry); no def or schema change",
+    "docs": [
+      "docs/reviews/R0-amendments-27.md",
+      "03 s7.6",
+      "02 s8.4"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "BUG-6",
+    "title": "sim: a ship resting off-centre on a sloped pad never docks: the landing band follows the terrain where it rises above the deck (R0 B.33 A-158)",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "BUG-3"
+    ],
+    "milestone": "M3",
+    "acceptance": "Collision._ship_structure: for a not-DOCKED ship the landing volume of a pad-friendly structure is offset <= pad_radius_m and -(r + 0.5) <= alt <= r + 0.5 + g, alt = altitude above the pad plane, g = max(0, (Terrain.surface_point(ship direction) - pos[pad]) . up[pad]); g = 0 on level ground, so every existing collision, docking and landing test passes unchanged; the deck half-space (A-109), the capturer exception (A-146), the lower bound and the docked position are unchanged; terrain is sampled only for a ship inside a pad column above the plain band (at most one height_at per such ship per tick); new tests on a sloped fixture with pad_radius_m 10: a ship settling 8 m uphill of the pad centre on 5 degree and on 15 degree ground gets C_PAD, is graded and DOCKED at pos[pad] + up x r; the same ship 8 m downhill docks; a ship hovering r + 1 above a level deck gets no C_PAD; the landing autopilot (05 L4-L6) docks on the 15 degree pad; S4 byte-equal, no FORMAT change; sim/MODULE.md Collision line, sim/docking/MODULE.md and sim/relay/MODULE.md R10 cite A-158; perf note with a perf_tick A/B",
+    "docs": [
+      "docs/reviews/R0-amendments-27.md",
+      "03 s6.1",
+      "03 s6.4"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "GD-53",
+    "title": "sim: test pin for basin vision (ADR-05 horizon rule on cradle slot 0; R0 B.33 A-159)",
+    "lane": "sim+core",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "BUG-3"
+    ],
+    "milestone": "M3",
+    "acceptance": "Tests only, no godot/src change. On cradle slot 0 (floor about -335 m) with the start kit: (1) an enemy Siege Crawler standing on the floor is visible to the Core's team at 200 m and not visible at 600 m (horizon sqrt(2 x |p_core| x 7) = about 282 m); (2) an enemy Dart 600 m from the Core and 40 m above the floor is visible; (3) with a finished Sensor Mast the Crawler at 1,150 m from the Mast is visible (deck_reveal_radius 1,200); (4) the same three cases on the flat datum give the same answers; test/unit/core/test_sphere.gd gains two vectors for is_occluded_by_datum: two points at R - 335 and 300 m apart: true; the second point raised 10 m: false; sim/vision/MODULE.md cites A-159 in one line",
+    "docs": [
+      "docs/reviews/R0-amendments-27.md",
+      "03 s3.7",
+      "03 s2.8"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "GD-54",
+    "title": "tools: econ_model.py prices Harvester trips with d as the driven leg and starts the kit Harvester mining (R0 B.33 A-160, BUG-4)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "BUG-4"
+    ],
+    "milestone": "M3",
+    "acceptance": "tools/econ_model.py takes each trip's d as the driven leg (centre-to-centre distance - spot_frac x radius_m - the dock stop offset, read from the defs and the map recipe, none typed in the script) and starts the kit Harvester mining at the field's near edge (R0 B.6); on cradle it reproduces the sim: first start-kit delivery 68 s +- 5 s and a steady cycle within 5 % of test_bug4_harvest_cycle.gd; a 02 s8.7 checkpoint that moves by more than 5 s is reported in the PR as a 02 s8.7 revision request ('needs docs:' with the old and new value; the tools lane does not edit docs/02, 10 s4.3); the 02 s8.2 table is unchanged; tools tests green",
+    "docs": [
+      "docs/reviews/R0-amendments-27.md",
+      "02 s8.2",
+      "02 s8.7"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "AI-50",
+    "title": "sim_ai: OpeningBook default when = affordable, a funds wait is never a stall; SC-41 exempts only an Expansion pair that waits on the clock (R0 B.33 A-162, A-163)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-23"
+    ],
+    "milestone": "M3",
+    "acceptance": "OpeningBook applies the default where it compiles a step: a build or produce step is due only while its when holds and BookHost.affordable is true, with or without an explicit when (05 s7.3); an order, raid or set_replenish step with no when is due at once and BookHost.affordable is never called for a step without a cost; BookCondition.compile of an empty source stays always true (test_empty_condition_is_true unchanged, no Public API change); the presence retry of an Outpost step (_retry_move) re-sends the order move only while presence is false, not while presence holds and funds are short; tests: a step that waits for funds longer than stall_s is not SKIPPED_STALL and runs when the funds arrive, and it blocks the steps behind it; a due, affordable step blocked by a missing prerequisite is still SKIPPED_STALL after stall_s; SC-41 _assert_no_stall: a PENDING outcome at the hand-over passes only when the cursor step is the order move of an Expansion pair and waits on the clock (its when is false at the hand-over and either becomes true with t_s = +INF and the other terms kept, or stays false at this t_s with every other term forced true), through an appended pure BookCondition helper; a build outpost left pending on presence at the hand-over fails; the begins_with t>= test is gone; unit cases: t>=330 passes, t>=420|ore>=900 with Ore short passes, t>=270&ore>=900 with Ore short fails, an absent when with funds short fails; SC-40, SC-43, SC-47 still pass; no BookRun layout or AiDriver FORMAT change; commander/MODULE.md OB1 and OB3 reworded and citing A-162; perf note (test_commander_perf.gd)",
+    "docs": [
+      "docs/reviews/R0-amendments-27.md",
+      "05 s7.3",
+      "godot/src/sim_ai/commander/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
   }
 ]
