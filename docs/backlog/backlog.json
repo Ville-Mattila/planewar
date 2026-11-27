@@ -8717,8 +8717,10 @@
     "docs": [
       "tools/lint_commits.py"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 198,
+    "notes": "lint_commits PREFIX_RE accepts one lowercase letter right after the id's final digit (AI-18b); review nits: regex alone accepts AI-1a-2b (backlog lookup rejects it)."
   },
   {
     "id": "PM-06",
