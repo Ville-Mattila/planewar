@@ -42,7 +42,7 @@ border_width_bottom = 2
 content_margin_bottom = 8
 
 [sub_resource type="StyleBoxFlat" id="btn_pressed"]
-bg_color = Color(0.031373, 0.043137, 0.062745, 1.000000)
+bg_color = Color(0.360784, 0.784314, 1.000000, 1.000000)
 border_color = Color(0.360784, 0.784314, 1.000000, 1.000000)
 border_width_left = 2
 content_margin_left = 8
@@ -90,6 +90,15 @@ Panel/styles/panel = SubResource("panel")
 Button/styles/normal = SubResource("btn")
 Button/styles/hover = SubResource("btn_hover")
 Button/styles/pressed = SubResource("btn_pressed")
+Button/styles/hover_pressed = SubResource("btn_pressed")
+Button/colors/font_pressed_color = Color(0.031373, 0.043137, 0.062745, 1.000000)
+Button/colors/font_hover_pressed_color = Color(0.031373, 0.043137, 0.062745, 1.000000)
+TabBar/styles/tab_selected = SubResource("btn_pressed")
+TabBar/styles/tab_unselected = SubResource("btn")
+TabBar/styles/tab_hovered = SubResource("btn_hover")
+TabBar/colors/font_selected_color = Color(0.031373, 0.043137, 0.062745, 1.000000)
+TabBar/colors/font_unselected_color = Color(0.901961, 0.921569, 0.949020, 1.000000)
+TabBar/font_sizes/font_size = 12
 Button/styles/disabled = SubResource("btn_disabled")
 Button/styles/focus = SubResource("focus")
 Button/colors/font_color = Color(0.901961, 0.921569, 0.949020, 1.000000)
