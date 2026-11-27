@@ -75,12 +75,6 @@
           "do": "set_replenish"
         },
         {
-          "target": "harvester_line",
-          "with": "dart:3",
-          "when": "t>=300&have:dart>=3",
-          "do": "raid"
-        },
-        {
           "kind": "move",
           "unit": "dart|scout",
           "to": "contested_field",

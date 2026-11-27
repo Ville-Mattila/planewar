@@ -84,7 +84,7 @@ func test_shipped_fixture_books_compile() -> void:
 
 func test_vanguard_standard_steps_are_read() -> void:
 	var b: OpeningBook = Ai23Kit.book(&"vanguard_standard")
-	assert_int(b.n_steps).is_equal(15)
+	assert_int(b.n_steps).is_equal(14)
 	assert_int(b.kind_of(0)).is_equal(OpeningBook.Do.BUILD)
 	assert_int(b.def_of(0)).is_equal(_def(&"solar_array"))
 	assert_int(b.kind_of(1)).is_equal(OpeningBook.Do.PRODUCE)
@@ -94,7 +94,7 @@ func test_vanguard_standard_steps_are_read() -> void:
 	assert_str(b.token_of(4).src).is_equal("outpost_site:home_trap")
 	assert_bool(b.when_of(4).uses_presence).is_true()
 	assert_int(b.kind_of(11)).is_equal(OpeningBook.Do.SET_REPLENISH)
-	assert_int(b.kind_of(12)).is_equal(OpeningBook.Do.RAID)
+	assert_int(b.kind_of(12)).is_equal(OpeningBook.Do.ORDER)   # the dead raid step is gone (A-163 3c)
 	assert_float(b.weight).is_equal(2.0)
 
 
