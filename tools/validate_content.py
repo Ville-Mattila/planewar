@@ -138,6 +138,7 @@ def check_cross(rep: Report, defs: dict[str, Any]) -> None:
     if "bot_promises" in defs:
         check_profiles(rep, rules.get("tick_hz", 30), defs)
     check_amendments_02(rep, defs)
+    check_barrel(rep, defs)
     check_landing_grade(rep, defs)
     check_quality_tiers(rep, defs)
 
@@ -193,6 +194,22 @@ def check_amendments_02(rep: Report, defs: dict[str, Any]) -> None:
             elif has_cap and not (s.get("pads", 0) >= 1 and s.get("pad_radius_m", 0) > 0):
                 rep.add(f"godot/content/defs/{stem}.json:/{stem}/{n}/pads",
                         "a capturable structure needs pads >= 1 and pad_radius_m > 0 (R0 B.30 A-148)")
+
+
+BARREL_KEYS = ("barrel_slew_dps", "barrel_min_deg", "barrel_max_deg")
+
+
+def check_barrel(rep: Report, defs: dict[str, Any]) -> None:
+    """CONTENT-5 (R0 B.31 A-151, GD-50): the barrel keys come only on a ground unit whose weapon is not null,
+    and barrel_min_deg <= barrel_max_deg."""
+    for n, unit in enumerate(collection(defs.get("ground_units"), "ground_units")):
+        where = f"godot/content/defs/ground_units.json:/ground_units/{n}"
+        present = [k for k in BARREL_KEYS if k in unit]
+        if present and unit.get("weapon") is None:
+            rep.add(where, f"barrel key(s) {', '.join(present)} need a weapon; this entry's weapon is null (R0 B.31 A-151)")
+        lo, hi = unit.get("barrel_min_deg"), unit.get("barrel_max_deg")
+        if isinstance(lo, (int, float)) and isinstance(hi, (int, float)) and lo > hi:
+            rep.add(f"{where}/barrel_min_deg", f"barrel_min_deg {lo} must be <= barrel_max_deg {hi} (R0 B.31 A-151)")
 
 
 def check_landing_grade(rep: Report, defs: dict[str, Any]) -> None:

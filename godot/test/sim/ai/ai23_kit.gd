@@ -2,7 +2,7 @@ class_name Ai23Kit extends RefCounted
 ## AI-23 fixtures: the shipped defs plus the AI-14 autopilots (`Ai14Kit`), `ai23_params.json` (the book constants until
 ## bot_profiles.json carries them) and `ai23_books.json` (six books on the R0 B.6 start kit, 3 doctrines x 2 variants,
 ## in the 05 s7.3 grammar; AI-24 ships the real ones), the cradle map's feature list, and a 1v1 world on cradle (slots 0
-## and 2, 90 degrees apart, O-5; the cradle's start slots, Ore Fields and Cold Traps on the flat datum) with both players' start kits and a Commander driver.
+## and 2, 90 degrees apart, O-5; the cradle's baked terrain since BUG-3, its start slots, Ore Fields and Cold Traps) with both players' start kits and a Commander driver.
 
 const PARAMS: String = "res://test/sim/ai/ai23_params.json"
 const BOOKS: String = "res://test/sim/ai/ai23_books.json"
@@ -87,18 +87,19 @@ static func planner(map_id: StringName = &"cradle") -> BuildPlanner:
 	return BuildPlanner.new(content(), params(), sites(map_id))
 
 
-## Ground point under unit direction `d` (datum height; the planner's own clearance maths is height-free).
+## Ground point under unit direction `d` (the terrain height; the planner's own clearance maths is height-free).
 static func ground(w: SimWorld, d: Vector3) -> Vector3:
 	return w.terrain().surface_point(d.normalized())
 
 
 ## A cradle world with bots on slots 0 (team 0) and 2 (team 1), each with the start kit, Ice nodes marked in the build grid
 ## (the stand-in for the sim marking them, see the PR), and a driver running the four ship brains and the intel of
-## teams 0 and 1; `with_enemy` false leaves slot 2 empty (SC-40).
-static func world(seed_value: int = 7, map_id: StringName = &"cradle", with_enemy: bool = true, doctrine0: StringName = &"vanguard", doctrine2: StringName = &"vanguard") -> SimWorld:
+## teams 0 and 1; `with_enemy` false leaves slot 2 empty (SC-40). `on_terrain` loads the map's baked terrain (BUG-3: the
+## start kit stands on the ground; the default since BUG-3); false keeps the flat datum with the map's own geometry.
+static func world(seed_value: int = 7, map_id: StringName = &"cradle", with_enemy: bool = true, doctrine0: StringName = &"vanguard", doctrine2: StringName = &"vanguard", on_terrain: bool = true) -> SimWorld:
 	var w: SimWorld = SimWorld.new(content())
 	var map: MapDef = MapDef.new()
-	map.id = &""   # the flat datum with the map's own geometry: Harvesters stop 340 m short of the start-kit Refinery on cradle's terrain (needs AI-16, see the PR)
+	map.id = map_id if on_terrain else &""
 	var res: Result = w.load_map(map, seed_value, DartKit.rules())
 	assert(res.ok, res.message)
 	w.add_player(0, 0, doctrine0, PlayerTable.KIND_BOT)

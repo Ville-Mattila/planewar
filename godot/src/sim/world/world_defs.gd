@@ -76,12 +76,12 @@ func _init(cs: ContentSet) -> void:
 		var sd: StructureDef = cs.structures[k]
 		pad_radius_by_def[DefRanges.STRUCTURE_BASE + k] = sd.pad_radius_m if sd.pads > 0 else 0.0
 		launch_pad_by_def[DefRanges.STRUCTURE_BASE + k] = 1 if sd.raw.get("launch_pad", false) == true else 0   # needs content: typed field
-		capture_s_by_def[DefRanges.STRUCTURE_BASE + k] = Def.num(sd.raw.get("capture_s", 0.0))               # needs content: typed field
-		contest_radius_by_def[DefRanges.STRUCTURE_BASE + k] = Def.num(sd.raw.get("contest_radius_m", 0.0))   # needs content: typed field
+		capture_s_by_def[DefRanges.STRUCTURE_BASE + k] = sd.capture_s
+		contest_radius_by_def[DefRanges.STRUCTURE_BASE + k] = sd.contest_radius_m
 		open_pad_by_def[DefRanges.STRUCTURE_BASE + k] = 1 if capture_s_by_def[DefRanges.STRUCTURE_BASE + k] > 0.0 else 0
 		bomb_mult_by_def[DefRanges.STRUCTURE_BASE + k] = Def.num(sd.raw.get("structure_bomb_mult", 1.0))   # needs content: typed field
 	for k: int in cs.ships.size():
-		capturer_by_def[DefRanges.SHIP_BASE + k] = 1 if cs.ships[k].raw.get("captures", false) == true else 0   # needs content: typed field
+		capturer_by_def[DefRanges.SHIP_BASE + k] = 1 if cs.ships[k].captures else 0
 	if economy != null:
 		unsupplied_rate_mult = Def.num(economy.raw.get("unsupplied_rate_mult", 1.0))
 	if rules != null:

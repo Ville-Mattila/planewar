@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## AI-23: `BuildPlanner.resolve_site` agrees with the real `Build.can_place` (02 s6.2). On a real world with both start kits
-## (cradle's slots 0 and 2, flat datum): every site the planner returns for the tokens and defs of the books is accepted by
+## (cradle's slots 0 and 2 on its baked terrain, BUG-3): every site the planner returns for the tokens and defs of the books is accepted by
 ## the sim's validator (the only other answers allowed are funds, prerequisites and caps: they are not geometry), and the
 ## sites it refuses for Outpost spacing and for an enemy build radius are refused by the sim for the same reason.
 
@@ -38,7 +38,7 @@ func _verdict(def: StringName, dir: Vector3) -> int:
 
 
 func _dart_at(dir: Vector3) -> void:
-	var _id: int = IntelKit.spawn(_w, &"dart", 0, 0, dir * (R + 120.0))
+	var _id: int = IntelKit.spawn(_w, &"dart", 0, 0, Ai23Kit.ground(_w, dir) + dir.normalized() * 120.0)   # 120 m above the ground (BUG-3: cradle's terrain)
 	_load()
 
 

@@ -74,6 +74,7 @@ func test_harvester_params_read_the_autopilot_def_the_unit_def_and_economy() -> 
 	assert_float(p.queue_m).is_equal(20.0 * Ai16Kit.ground_def().ground_speed)   # queue_len x 20 s x 12 m/s
 	assert_float(p.deliver_m).is_equal(c.economy.salvage_deliver_m)
 	assert_float(p.cargo_ore).is_equal(300.0)
+	assert_float(p.face_tol_rad).is_equal_approx(deg_to_rad(40.0) / 30.0, 0.000001)   # BUG-4: one tick of ground_turn_rate_dps
 	assert_int(p.mask).is_equal(Pathing.mask_for(25.0))                      # the Harvester's max_slope_deg
 	assert_int(p.vision_period).is_greater(0)
 	assert_object(p.ground).is_not_null()
@@ -168,10 +169,27 @@ func _sites() -> Array:
 	return [w, b.sites, b]
 
 
-func test_the_mining_spot_is_inside_the_field_at_spot_frac_of_the_radius() -> void:
+func test_approach_spot_is_inside_the_field_at_spot_frac_of_the_radius_on_the_approach_side() -> void:
 	var rig: Array = _sites()
 	var sites: HarvestSites = rig[1]
 	assert_int(sites.field_count()).is_equal(2)
+	var centre: Vector3 = Ai16Kit.dir_at(450.0) * R
+	for from: Vector3 in [Ai16Kit.dir_at(0.0) * R, Ai16Kit.dir_at(450.0, 600.0) * R, Ai16Kit.dir_at(1200.0, -300.0) * R]:
+		var sp: Vector3 = sites.approach_spot(0, from)
+		assert_float(GroundFollower.flat(centre, sp)).is_equal_approx(75.0, 0.5)                  # 0.5 x 150 m
+		var arc_c: float = acos(clampf(from.normalized().dot(centre.normalized()), -1.0, 1.0)) * R
+		var arc_s: float = acos(clampf(from.normalized().dot(sp.normalized()), -1.0, 1.0)) * R
+		assert_float(arc_s).is_equal_approx(arc_c - 75.0, 0.5)                                     # BUG-4: the near side
+	var west: Vector3 = sites.approach_spot(0, Ai16Kit.dir_at(0.0) * R)
+	assert_float(west.distance_to(sites.approach_spot(0, Ai16Kit.dir_at(100.0) * R))).is_less(0.01)    # same side: same spot
+	assert_float(GroundFollower.flat(Ai16Kit.dir_at(1500.0) * R, sites.approach_spot(1, Ai16Kit.dir_at(0.0) * R))).is_equal_approx(50.0, 0.5)
+	var c2: Vector3 = Ai16Kit.dir_at(1500.0) * R
+	assert_float(GroundFollower.flat(c2, sites.approach_spot(1, c2))).is_equal_approx(50.0, 0.5)         # from the centre: any side, still inside
+
+
+func test_the_deprecated_slot_spot_is_unchanged() -> void:
+	var rig: Array = _sites()
+	var sites: HarvestSites = rig[1]
 	var spots: PackedVector3Array = PackedVector3Array()
 	for s: int in 6:
 		var sp: Vector3 = sites.spot(0, s)
@@ -179,6 +197,7 @@ func test_the_mining_spot_is_inside_the_field_at_spot_frac_of_the_radius() -> vo
 		var _p: bool = spots.push_back(sp)
 	assert_float(spots[0].distance_to(spots[1])).is_greater(10.0)            # slots are spread, not stacked
 	assert_float(GroundFollower.flat(Ai16Kit.dir_at(1500.0) * R, sites.spot(1, 0))).is_equal_approx(50.0, 0.5)
+	assert_float(HarvestSites.GOLDEN_RAD).is_equal_approx(PI * (3.0 - sqrt(5.0)), 0.000001)
 
 
 func test_nearest_field_of_a_point() -> void:

@@ -149,6 +149,7 @@ func capture(event: InputEvent) -> bool       # Esc / Start cancel, Delete / Vie
 func clear(action: StringName, slot: int) -> void; func reset_device() -> void
 func label(action: StringName, slot: int, glyph_set: StringName) -> String
 func conflict_of(action: StringName, slot: int) -> StringName; func has_conflicts() -> bool
+func section_of(action: StringName) -> StringName   # UX-48: the first mode set that reads the action; the screen draws one heading per set (ui.remap.set.*)
 class_name RemapScreen extends ScreenBase    # scenes/ui/screens/remap.tscn; enter({store: BindingStore, glyph_set: StringName})
 signal done_requested
 var model: RemapModel

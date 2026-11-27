@@ -84,6 +84,8 @@ func test_sc33_harvester_flee_and_return() -> void:
 	var h: int = _cycle(600.0)
 	var tower: int = Ai16Kit.put(_w, &"autocannon_turret", 0, 600.0, 800.0)
 	assert_int(_until(h, AiTag.Tag.MINE, 120 * HZ)).is_greater(0)
+	Ai16Kit.step(_w, 5 * HZ)   # mining, settled: BUG-4 turns the unit in place toward its Refinery for the first ~4.5 s of MINE
+	assert_int(Harvest.state_of(_w.view().link(h))).is_equal(Harvest.State.MINING)
 	var hs: int = EntityId.slot(h)
 	var lancer: int = _lancer(600.0, -300.0)
 	var lp: Vector3 = _w.view().pos(lancer)

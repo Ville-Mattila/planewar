@@ -584,3 +584,34 @@ class B30Capture(Tree):
         self.assertIn("1 violations", out)
         self.assertIn("needs pads >= 1", out)
 
+
+class B31Barrel(Tree):
+    """CONTENT-5 (R0 B.31 A-151): the real ground_units.json passes; each negative trips exactly one rule."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        shutil.copy(REPO / "godot" / "content" / "defs" / "ground_units.json", self.root / "godot" / "content" / "defs")
+
+    def _edit_unit(self, unit_id: str, mutate: Any) -> None:
+        f = self.root / "godot" / "content" / "defs" / "ground_units.json"
+        data = json.loads(f.read_text(encoding="utf-8"))
+        mutate([x for x in data["ground_units"] if x["id"] == unit_id][0])
+        f.write_text(json.dumps(data), encoding="utf-8")
+
+    def test_the_shipped_units_pass(self) -> None:
+        code, out = run(self.root)
+        self.assertEqual(code, 0, out)
+
+    def test_barrel_min_above_max_fails(self) -> None:
+        self._edit_unit("siege_crawler", lambda u: u.update({"barrel_min_deg": 50}))
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+        self.assertIn("must be <= barrel_max_deg", out)
+
+    def test_barrel_key_on_a_weaponless_unit_fails(self) -> None:
+        self._edit_unit("harvester", lambda u: u.update({"barrel_slew_dps": 10}))
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+        self.assertIn("need a weapon", out)

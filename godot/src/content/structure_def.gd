@@ -17,6 +17,8 @@ var storage_ice: int = 0
 var construction_slots: int = 0
 var pads: int = 0
 var pad_radius_m: float = 0.0
+var capture_s: float = 0.0  ## open pad: seconds a capturer stays DOCKED uncontested (02 s5.3, R0 B.30 A-148); absent = 0 = not capturable
+var contest_radius_m: float = 0.0  ## open pad: an enemy this close pauses the capture (02 s5.3, A-148); absent = 0
 var pad_roofed: bool = false
 var max_per_player: int = 0  ## 0 = unlimited
 var buildable: bool = true
@@ -36,7 +38,7 @@ var shield: Dictionary = {}
 var tower: Dictionary = {}  ## empty for non-towers
 
 const SPEC: Dictionary = {
-	"f": "build_time_s power build_radius sensor_radius deck_reveal_radius pad_radius_m upgrade_time_s pipe_radius_m",
+	"f": "build_time_s power build_radius sensor_radius deck_reveal_radius pad_radius_m upgrade_time_s pipe_radius_m capture_s contest_radius_m",
 	"i": "hp cost_ore cost_ice storage_ore storage_ice construction_slots pads max_per_player upgrade_cost_ore buffer_ice docks",
 	"b": "pad_roofed buildable invulnerable possessable solar",
 	"n": "upgrade_from on_node",

@@ -20,12 +20,13 @@ var queue_m: float = 0.0           ## one queued Harvester at a Refinery costs t
 var claim_wait_ticks: int = 0      ## stopped in a field without a mining slot this long: another field
 var unload_wait_ticks: int = 0     ## stopped at a Refinery with cargo but no dock claim this long: another Refinery
 var count_margin_m: float = 0.0    ## own Harvesters within field radius + this count as assigned
-var spot_frac: float = 0.0         ## mining spots lie at this fraction of the field radius from its centre (by slot)
+var spot_frac: float = 0.0         ## mining spots lie at this fraction of the field radius from its centre (approach side, BUG-4)
 var dock_frac: float = 0.0         ## the dock stop lies at Refinery radius + this x salvage_deliver_m from its centre
 var scan_ticks: int = 0            ## the per-team Refinery list is rebuilt at most this often
 var deliver_m: float = 0.0         ## economy.salvage_deliver_m
 var vision_period: int = 1         ## ticks between two Vision passes (TeamPicture epoch)
 var cargo_ore: float = 0.0         ## the Harvester def's base capacity
+var face_tol_rad: float = 0.0      ## BUG-4: a held unit has faced its next stop within one tick of full-rate turn (ground_turn_rate_dps / tick_hz)
 var dock: PackedByteArray = PackedByteArray()          ## by structure index: 1 = a Refinery (docks > 0)
 var tower_min: PackedFloat32Array = PackedFloat32Array()   ## by structure index: envelope h_rel_min (towers)
 var tower_max: PackedFloat32Array = PackedFloat32Array()   ## ... h_rel_max; NAN = not a tower
@@ -63,6 +64,7 @@ static func from_content(c: ContentSet, ap: Dictionary, def: GroundUnitDef) -> H
 	p.scan_ticks = roundi(TargetParams.num(hv, "refinery_scan_s", 0.0) * float(p.tick_hz))
 	p.deliver_m = c.economy.salvage_deliver_m
 	p.cargo_ore = float(def.cargo_ore)
+	p.face_tol_rad = deg_to_rad(c.ground_common.ground_turn_rate_dps) / float(p.tick_hz) if c.ground_common != null else 0.0
 	var vhz: float = TargetParams.as_num(c.rules.raw.get("vision_hz"), -1.0)
 	if vhz <= 0.0:
 		return null

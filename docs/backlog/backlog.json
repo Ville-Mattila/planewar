@@ -2565,7 +2565,7 @@
       " 05 AI-18"
     ],
     "status": "done",
-    "notes": "AI-18 edits tools/schemas/autopilots.schema.json and autopilots.json for the follow block only, under A-145 (10 s4.3: Architect for required fields; defs: fields its task adds). Orchestrator: launch at Opus (brain; CLAUDE.md tier guidance) despite Haiku tier here. PARTIAL: approved with the clause \"shells reach the target from 1,000-1,150 m\" DEFERRED to GD-50 (sim barrel elevation) + AI-18b (wiring). Until then the AI Crawler fires 150-216 m ahead (possibly onto own units): land GD-50/AI-18b before M3 playtests. siege block (8 optional keys) read with 05 s6.7 defaults, schema property pending Architect (AI-49). Solver tuning (0.02 rad, +-pi/4, 6 iterations) hard-coded. Nit: restore test never saves with a near-bomb relocation pending.",
+    "notes": "AI-18 edits tools/schemas/autopilots.schema.json and autopilots.json for the follow block only, under A-145 (10 s4.3: Architect for required fields; defs: fields its task adds). Orchestrator: launch at Opus (brain; CLAUDE.md tier guidance) despite Haiku tier here. PARTIAL: approved with the clause \"shells reach the target from 1,000-1,150 m\" DEFERRED to GD-50 (sim barrel elevation) + AI-18b (wiring). Until then the AI Crawler fires 150-216 m ahead (possibly onto own units): land GD-50/AI-18b before M3 playtests. siege block (8 optional keys) read with 05 s6.7 defaults, schema property pending Architect (AI-49). Solver tuning (0.02 rad, +-pi/4, 6 iterations) hard-coded. Nit: restore test never saves with a near-bomb relocation pending. Deferred clause closed by GD-50 + AI-18b (2026-11-26).",
     "pr": 176,
     "merged": "2026-11-17"
   },
@@ -2672,7 +2672,7 @@
     "acceptance_append": "; SC-43 fog fairness re-run with the real Commander through AI-22's AuditDriver (every AI command checked against the per-tick visible_to record)",
     "pr": 183,
     "merged": "2026-11-19",
-    "notes": "PARTIAL: SC-40/41 run on the flat datum carrying cradle slots/fields/traps; re-run on cradle terrain after BUG-3 closes it. New sim_ai/commander/ module, AiDriver FORMAT 3. Fixed in-PR: doctrine-resolved step costs, Outpost presence at candidate with current positions. Fixture books trimmed to fit 300 s income (originals stall on funds): AI-24/GD-21 must check the 05 s7.3 books fit 300 s of income. needs content: bot_profiles.json opening_book constants (required? Architect). needs sim: map nodes not marked in the build grid (Ice Extractor gets NODE). Stand-ins: raid/non-move orders wait for AI-27; per-think cap stands in for AI-28. Nits: Outpost slack comment says 2 cells, code subtracts 4 (~37 m); SC-41 time-gated check looks only at t>= prefix."
+    "notes": "PARTIAL: SC-40/41 run on the flat datum carrying cradle slots/fields/traps; re-run on cradle terrain after BUG-3 closes it. New sim_ai/commander/ module, AiDriver FORMAT 3. Fixed in-PR: doctrine-resolved step costs, Outpost presence at candidate with current positions. Fixture books trimmed to fit 300 s income (originals stall on funds): AI-24/GD-21 must check the 05 s7.3 books fit 300 s of income. needs content: bot_profiles.json opening_book constants (required? Architect). needs sim: map nodes not marked in the build grid (Ice Extractor gets NODE). Stand-ins: raid/non-move orders wait for AI-27; per-think cap stands in for AI-28. Nits: Outpost slack comment says 2 cells, code subtracts 4 (~37 m); SC-41 time-gated check looks only at t>= prefix. Partial closed by BUG-3 (PR #190): SC-40/41 pass on cradle terrain."
   },
   {
     "id": "AI-24",
@@ -2682,7 +2682,8 @@
     "size_days": 1,
     "depends_on": [
       "AI-23",
-      "GD-05"
+      "GD-05",
+      "BUG-4"
     ],
     "milestone": "M3",
     "acceptance": "Schema-valid; no storage_silo; every build outpost preceded by an order move with when: presence; each book passes SC-41",
@@ -2691,7 +2692,8 @@
       " R0 C2-14",
       " 05 AI-24"
     ],
-    "status": "todo"
+    "status": "todo",
+    "notes": "PR #193 on hold for BUG-4: t>=215 gates hid unrun book tails from SC-41 (SC-41 exempts t>= steps); remove BK1 (out-of-lane, records a bug-lowered income). Refit after BUG-4. BUG-4 merged 2026-11-26: refit book tails to the sim income now (first delivery 68 s on cradle)."
   },
   {
     "id": "AI-25",
@@ -8402,8 +8404,10 @@
       "02 s12.1",
       "godot/src/sim/match/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-26",
+    "pr": 194,
+    "notes": "MatchResult.structure_value = MatchJudge.values_by_team() (02 s12.1); PLAYER_ELIMINATED b = last attacker team via MatchJudge.shooter_team; tie-break keeps dead shooters damage. ScoreKeeper.structure_value kept, deprecated. Matches the 0x8E u32 per-team field."
   },
   {
     "id": "GD-50",
@@ -8440,8 +8444,10 @@
     "docs": [
       "05 s6.7"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-26",
+    "pr": 186,
+    "notes": "Shells land within loft_tol_m (CI Linux: 3.37 m tiny_test, <=3.65 m cradle). Useful ceiling ~18.6 deg flat, 18.6-21.9 deg on cradle (12 s shell lifetime) - for GD-34. ORDER_FAILED still needs CommandSinkBase.fail_order. AI-49 must list siege.solve_tol_m and LOFT_ITERS. crawler_brain.gd at 389/400 lines. One loft solve ~330 us per firing spot."
   },
   {
     "id": "AI-49",
@@ -8498,8 +8504,9 @@
       "docs/reviews/R0-amendments-24.md",
       "R0 B.1"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-26",
+    "pr": 191
   },
   {
     "id": "UX-47",
@@ -8572,9 +8579,10 @@
       "03 build/terrain sections",
       "https://github.com/Ville-Mattila/planewar/pull/183#issuecomment-7015327581"
     ],
-    "status": "todo",
-    "merged": null,
-    "notes": "Found by the AI-23 Opus review: cradle slot 0's start kit sits ~335 m below datum; the 3-D reach check (Harvest._refinery_near) and the 300 m Outpost presence check (Build._check_vision_and_radius) can never pass. Likely affects every real map. High priority before M3 playtests. After the fix: re-run AI-23 SC-40/41 on cradle terrain (closes AI-23 partial)."
+    "status": "done",
+    "merged": "2026-11-26",
+    "notes": "Found by the AI-23 Opus review: cradle slot 0's start kit sits ~335 m below datum; the 3-D reach check (Harvest._refinery_near) and the 300 m Outpost presence check (Build._check_vision_and_radius) can never pass. Likely affects every real map. High priority before M3 playtests. After the fix: re-run AI-23 SC-40/41 on cradle terrain (closes AI-23 partial). Structures on terrain at footprint centre (03 s7.6), up radial; invariant B10; no FORMAT bump. AI-23 SC-40/41/43/47 pass on cradle. Architect questions filed as PM-06. Nits: place/can_place test relies on its Core precondition; Ice pipe uses 3-D distance vs build radius arc distance.",
+    "pr": 190
   },
   {
     "id": "NET-61",
@@ -8613,8 +8621,10 @@
       "docs/reviews/R0-amendments-25.md",
       "R0 B.1"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-26",
+    "pr": 192,
+    "notes": "needs net: net/client/net_defs.gd still reads the three barrel keys raw."
   },
   {
     "id": "UX-48",
@@ -8633,8 +8643,10 @@
       "06 s2",
       "godot/src/input/MODULE.md I12"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-26",
+    "pr": 188,
+    "notes": "I12 per mode set (A-154) implemented verbatim; GroundMapper (+reset), steer_*/barrel_* actions, remap.json sets, I14 FREE_LOOK orbit. needs app: assign the shared BindingStore to ground_mapper.bindings. needs ui (UX-06): touch barrel buttons. Doc owner: drop \"[planned: UX-48]\" in 06 s3.2."
   },
   {
     "id": "UX-49",
@@ -8675,5 +8687,94 @@
     ],
     "status": "todo",
     "merged": null
+  },
+  {
+    "id": "TA-71",
+    "title": "CI: split the gdUnit4 unit-sim shard so it stays well under its job time limit (cancellations on PRs #169, #182, #186)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [],
+    "milestone": "M3",
+    "acceptance": "unit-sim is split into >= 2 shards via gdunit_shard.sh SHARD_DIRS (every test dir covered by exactly one shard, TA-67 guard kept); each shard's p95 runtime over 5 runs is < 50 % of its timeout; total CI wall time does not grow; the 19-check count change is reflected in docs/10 and any merge scripts",
+    "docs": [
+      ".github/workflows/ci.yml",
+      ".github/scripts/gdunit_shard.sh"
+    ],
+    "status": "todo",
+    "merged": null,
+    "notes": "unit-sim was cancelled at its time limit with no failing test on several PRs (GD-20 #169, GD-50 #182, AI-18b #186 twice); runner contention plus growing sim tests (AI-33 SC-47 ~45 s). Root cause of the shutdowns is the BUG-5 memory leak; split is still useful for wall time."
+  },
+  {
+    "id": "TA-72",
+    "title": "tools: lint_commits.py accepts task ids with a lowercase suffix (AI-18b, AI-33b)",
+    "lane": "tools",
+    "tier": "Haiku",
+    "size_days": 0.1,
+    "depends_on": [],
+    "milestone": "M3",
+    "acceptance": "tools/lint_commits.py accepts subjects starting with ids like AI-18b: and AI-33b: (backlog ids with a lowercase letter suffix) and still rejects malformed ids; unit tests for both; CI green",
+    "docs": [
+      "tools/lint_commits.py"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "PM-06",
+    "title": "Architect: structure orientation and terrain follow-ups from BUG-3 (pad up vector, sloped decks, basin occlusion)",
+    "lane": "architect",
+    "tier": "Fable",
+    "size_days": 0.25,
+    "depends_on": [
+      "BUG-3"
+    ],
+    "milestone": "M3",
+    "acceptance": "Ruling in R0-amendments-NN on: (1) built structures keep a radial up while GD-51 Relay Stations tilt to the terrain normal - pick one rule (solar output on slopes); (2) on a sloped pad the ground rises above the deck, so an off-centre landing misses the landing band at ~1.9 m from centre on 15 deg, 5.7 m on 5 deg - flatten footprint, limit build slope, or widen the band; (3) A-10 datum occlusion now hides enemy ground units in a basin from structures there (cradle slot 0) - intended or fix; each with a named follow-up task; (4) 02 s8.2 harvest distance d: state how d is measured (02 s9.2 cradle gives 600 m centre-to-centre, 02 s8.2 uses 450 m = 600 - field radius)",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/190#issuecomment-7198733100",
+      "03 s7.6"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "BUG-4",
+    "title": "sim+sim_ai: start-kit Harvester spawns empty 500 m from Field A instead of already mining (R0 B.6), and the AI-16 brain picks a far-side mining spot (AI-24 finding)",
+    "lane": "sim+sim_ai",
+    "tier": "Opus",
+    "size_days": 1.0,
+    "depends_on": [
+      "BUG-3"
+    ],
+    "milestone": "M3",
+    "acceptance": "EconomyHub.spawn_start_kit spawns the start Harvester already mining in Field A per R0 B.6 (as tools/econ_model.py:95 models); HarvestSites.spot() picks the near-side (approach-side) mining spot, not one keyed on unit id; a cycle test driven through the AI-16 brain (not a test driver) stays within 5 % of 02 s8.2 at 450 m and 600 m; the first start-kit delivery lands within 95 s on cradle; determinism and save/restore byte-equal; AI-23 SC-40/41 still pass",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/193#issuecomment-7198753244",
+      "R0 B.6",
+      "02 s8.2"
+    ],
+    "status": "done",
+    "merged": "2026-11-26",
+    "notes": "Found by the AI-24 Opus review: ~49 of the 55 s first-delivery gap is the empty driving spawn (economy_hub.gd:151-154); steady cycle 148.7 s vs 136 s (+9 %) from the id-keyed spot. GD-12's cycle test used a test driver and missed it. AI-24 (PR #193) refits its book tails after this lands. Start Harvester spawns mining (W10), counts its claim; brain uses new HarvestSites.approach_spot (spot/GOLDEN_RAD kept, deprecated) and turns in place to face its next stop. Cycle through the brain: 450 m 110.3 s (+1.7 %), 600 m 137.7 s (+1.2 %); cradle first delivery 68.2 s (was 144.2). Follow-ups: Harvesters from one Refinery share one spot (visual stacking); first delivery now earlier than econ_model 86 s - AI-24 refits to the sim.",
+    "pr": 195
+  },
+  {
+    "id": "BUG-5",
+    "title": "sim: SimWorld leaks ~15 MB per load_map world through reference cycles (MatchJudge <-> CommandApplier <-> CommandValidator and more), pushing the CI unit-sim shard to ~18 GB",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [],
+    "milestone": "M3",
+    "acceptance": "A freed SimWorld releases all its RefCounted parts (store, terrain, validator, applier, control, judge, ...): a test creates and frees N load_map worlds and asserts memory returns to baseline within a small bound (or that each part's weakref is dead); every back-pointer cycle is broken on free (NOTIFICATION_PREDELETE or an explicit dispose()); CI unit-sim peak memory drops from ~18 GB to well under the runner limit (report before/after); determinism and save/restore unchanged; no behaviour change",
+    "docs": [
+      "godot/src/sim/MODULE.md",
+      "godot/src/sim/world/sim_world.gd"
+    ],
+    "status": "done",
+    "merged": "2026-11-26",
+    "notes": "Diagnosed on GD-49 PR #194 (2026-11-26): main's unit-sim shard peaks 18.3 GB private / 11.4 GB working set; every load_map world keeps ~14.8 MB alive after free; confirmed cycle MatchJudge._applier -> CommandApplier._validator -> CommandValidator.judge -> MatchJudge (sim_world.gd:334), at least one more remains. Runner shutdowns on unit-sim (PRs #169, #182, #186, #190, #194) are this, not flakiness. Blocks GD-49 merge. Fixed: 6-class cycle broken at SimWorld PREDELETE (EconomyHub.unlink, AutoReplenish.unlink); MapPathing extracted. Shard peak 18.3 GB -> 1.1 GB; CI unit-sim 7m25s -> 6m03s. Nits: S18 wording (parts unusable after world freed); load_map twice on one world still leaks the first links; follow-up idea: static cycle check in tools/.",
+    "pr": 196
   }
 ]

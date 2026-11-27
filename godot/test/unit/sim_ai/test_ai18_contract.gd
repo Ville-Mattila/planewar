@@ -82,25 +82,51 @@ func test_on_impact_marks_only_an_enemy_bomb_within_relocate_m_of_a_sieging_craw
 
 
 func test_loft_lands_a_siege_shell_on_the_aim_point_on_the_datum() -> void:
+	# AI-18b: the solve flies the shell the sim fires (BarrelSlew.muzzle_dir, muzzle at p + dir x radius); checked here at
+	# the sim's 1-tick step from that muzzle, so the old 1.7-2.1 m muzzle bias would show.
 	var c: ContentSet = Ai18Kit.content()
 	var p: CrawlerParams = CrawlerParams.from_content(c, _ap(), Ai18Kit.def())
 	var t: Terrain = Terrain.new()
 	var st: ProjectileState = ProjectileState.new()
-	var muzzle: Vector3 = Ai16Kit.dir_at(0.0) * (R + 7.0)
+	var pos: Vector3 = Ai16Kit.dir_at(0.0) * (R + 7.0)
 	for want: float in [400.0, 1000.0, 1075.0, 1150.0]:
 		var aim: Vector3 = Ai16Kit.dir_at(want) * R
-		var e: float = SiegeAim.loft(muzzle, aim, p.speed, p.shell, c.rules, t, 2.0 * p.dt, p.max_steps,
-			CrawlerParams.LOFT_ITERS, p.loft_tol_m, st)
+		var e: float = SiegeAim.loft(pos, aim, p, t, st)
 		assert_bool(is_nan(e)).is_false()
-		assert_float(e).is_between(0.0, 0.25 * PI)                                 # the low arc
-		var h: Vector3 = SiegeAim.tangent_to(muzzle, aim)
-		var n: Vector3 = muzzle.normalized()
-		var v: Vector3 = (h * cos(e) + n * sin(e)) * p.speed
-		var r: Vector4 = Ballistics.predict_impact(muzzle, v, p.shell, c.rules, t, p.dt, p.dt, 0.0, 4 * p.max_steps, st)
-		assert_float(absf(SiegeAim.arc(n, Vector3(r.x, r.y, r.z)) - want)).is_less(p.loft_tol_m + 3.0)   # + the solve's 2-tick step
+		assert_float(e).is_between(p.barrel_lo, p.barrel_hi)                        # inside the barrel's limits
+		var n: Vector3 = pos.normalized()
+		var dir: Vector3 = BarrelSlew.muzzle_dir(pos, SiegeAim.tangent_to(pos, aim), e)
+		var r: Vector4 = Ballistics.predict_impact(pos + dir * p.radius, dir * p.speed, p.shell, c.rules, t, p.dt, p.dt, 0.0,
+			4 * p.max_steps, st)
+		var miss: float = absf(SiegeAim.arc(n, Vector3(r.x, r.y, r.z)) - want)
+		assert_float(miss).override_failure_message("%.0f m: miss %.2f m" % [want, miss]).is_less(p.solve_tol_m + 2.0)   # + the 2-tick step
 	var far: Vector3 = Ai16Kit.dir_at(3000.0) * R                                  # g d > v^2: beyond any elevation
-	assert_bool(is_nan(SiegeAim.loft(muzzle, far, p.speed, p.shell, c.rules, t, 2.0 * p.dt, p.max_steps,
-		CrawlerParams.LOFT_ITERS, p.loft_tol_m, st))).is_true()
+	assert_bool(is_nan(SiegeAim.loft(pos, far, p, t, st))).is_true()
+	var low: CrawlerParams = CrawlerParams.from_content(c, _ap(), Ai18Kit.def())
+	low.barrel_hi = deg_to_rad(5.0)                                                # a 5 deg barrel cannot reach 1,075 m
+	assert_bool(is_nan(SiegeAim.loft(pos, Ai16Kit.dir_at(1075.0) * R, low, t, st))).is_true()
+
+
+func test_the_params_carry_the_barrel_and_turn_rate_and_refuse_a_def_without_a_barrel() -> void:
+	var c: ContentSet = Ai18Kit.content()
+	var p: CrawlerParams = CrawlerParams.from_content(c, _ap(), Ai18Kit.def())
+	assert_float(p.barrel_rate).is_equal_approx(deg_to_rad(10.0), 1e-12)          # ground_units.json (R0 B.31 A-151)
+	assert_float(p.barrel_lo).is_equal(0.0)
+	assert_float(p.barrel_hi).is_equal_approx(deg_to_rad(45.0), 1e-12)
+	assert_float(p.turn_rate).is_equal_approx(deg_to_rad(c.ground_common.ground_turn_rate_dps), 1e-12)
+	assert_float(p.solve_tol_m).is_equal(2.0)
+	var orig: GroundUnitDef = Ai18Kit.def()
+	var bare: GroundUnitDef = GroundUnitDef.new()
+	bare.weapon = orig.weapon
+	bare.max_slope_deg = orig.max_slope_deg
+	bare.bounding_radius = orig.bounding_radius
+	bare.raw = orig.raw.duplicate(true)
+	assert_object(CrawlerParams.from_content(c, _ap(), bare)).is_not_null()
+	var _e: bool = bare.raw.erase("barrel_slew_dps")
+	assert_object(CrawlerParams.from_content(c, _ap(), bare)).is_null()
+	var loose: Dictionary = _ap()
+	loose["siege"] = {"solve_tol_m": 20}                                           # above loft_tol_m 15
+	assert_object(CrawlerParams.from_content(c, loose, Ai18Kit.def())).is_null()
 
 
 func test_ring_point_and_heading_error() -> void:
@@ -115,3 +141,35 @@ func test_ring_point_and_heading_error() -> void:
 	var fwd: Vector3 = SiegeAim.tangent_to(p, Ai16Kit.dir_at(100.0) * R)
 	assert_float(SiegeAim.heading_error(p, fwd, Ai16Kit.dir_at(100.0, 100.0) * R)).is_equal_approx(0.25 * PI, 0.01)   # left = +
 	assert_float(SiegeAim.heading_error(p, fwd, Ai16Kit.dir_at(100.0, -100.0) * R)).is_equal_approx(-0.25 * PI, 0.01)
+
+
+# AI-18b on relief (cradle, the GD-50 spot): from a snapped Crawler, the solve's elevation flown at the sim's one-tick step
+# from the sim's muzzle lands within loft_tol_m of aim points 1,000-1,150 m out on four bearings; a NAN (a ridge in the
+# way, the lifetime) is allowed but most aims solve.
+func test_loft_on_cradle_relief_lands_within_loft_tol_of_the_aim_point() -> void:
+	var c: ContentSet = Ai18Kit.content()
+	var p: CrawlerParams = CrawlerParams.from_content(c, _ap(), Ai18Kit.def())
+	var w: SimWorld = BarrelTestKit.world(null, &"cradle")
+	var id: int = BarrelTestKit.crawler(w, Sphere.from_lat_lon(0.1, 0.2, 1.0))
+	var s: int = EntityId.slot(id)
+	var pos: Vector3 = w.store().pos[s]
+	var n: Vector3 = pos.normalized()
+	var st: ProjectileState = ProjectileState.new()
+	var solved: int = 0
+	var worst: float = 0.0
+	for k: int in 4:
+		var fwd: Vector3 = Quaternion(n, 0.5 * PI * float(k)) * w.store().fwd[s]
+		for d: float in [1000.0, 1075.0, 1150.0]:
+			var a: Vector3 = BarrelTestKit.ahead(pos, fwd, d)
+			var aim: Vector3 = a * (R + w.terrain().height_at(a))
+			var e: float = SiegeAim.loft(pos, aim, p, w.terrain(), st)
+			if is_nan(e):
+				continue
+			solved += 1
+			var dir: Vector3 = BarrelSlew.muzzle_dir(pos, SiegeAim.tangent_to(pos, aim), e)
+			var r: Vector4 = BarrelTestKit.predict_from(w, pos + dir * p.radius, dir * p.speed)
+			assert_bool(Ballistics.has_impact(r)).is_true()
+			worst = maxf(worst, SiegeAim.arc(a, Vector3(r.x, r.y, r.z)))
+	assert_int(solved).is_greater_equal(9)
+	assert_float(worst).is_less_equal(p.loft_tol_m)
+	print("AI-18b loft on cradle: %d of 12 aims solved, worst miss %.2f m" % [solved, worst])

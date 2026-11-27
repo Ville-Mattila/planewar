@@ -5,7 +5,7 @@ class_name MatchResult extends RefCounted
 
 var winner_team: int = -1                                              ## -1 = none decided
 var tick: int = 0                                                      ## tick MATCH_END fired, or the last completed tick while running
-var structure_value: PackedInt32Array = PackedInt32Array()             ## per team: cost_ore + cost_ice of its finished structures
+var structure_value: PackedInt32Array = PackedInt32Array()             ## per team: the 02 s12.1 value of its finished structures (`MatchJudge.values_by_team`)
 var players: Array[PlayerResult] = []
 
 

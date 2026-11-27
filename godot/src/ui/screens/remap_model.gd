@@ -21,6 +21,13 @@ func actions() -> Array[StringName]:
 	return store.actions(device)
 
 
+## Mode set whose heading lists `action`: the first set that reads it (an action read by both, as W, S and R, sits
+## under `flight`, so each row appears once). &"" when no set reads it.
+func section_of(action: StringName) -> StringName:
+	var sets: Array[StringName] = store.sets_of(device, action)
+	return sets[0] if not sets.is_empty() else &""
+
+
 func slot_count() -> int:
 	return 1 if device == BindingStore.PAD else store.slots()
 
@@ -107,7 +114,7 @@ func label(action: StringName, slot: int, glyph_set: StringName) -> String:
 	return Glyphs.binding_label(glyph_set, device, store.code(device, action, slot))
 
 
-## The other action sharing this slot's code, or &"" (drives the per-row conflict flag).
+## The other action sharing this slot's code in a common mode set, or &"" (drives the per-row conflict flag).
 func conflict_of(action: StringName, slot: int) -> StringName:
 	return store.conflict_of(device, action, slot)
 
