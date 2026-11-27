@@ -8709,8 +8709,10 @@
       "06 s3.2",
       "06 s6.1"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 202,
+    "notes": "BarrelReadoutData/View + HudMath.barrel_deg/barrel_fill01; not received via NetSimView.field_unknown (has_method; SimView has no typed field_unknown - Architect nit). Not hosted in the Chase HUD yet: follow-up UX-51."
   },
   {
     "id": "UX-50",
@@ -8727,6 +8729,25 @@
       "07 A11Y-13",
       "godot/assets/ui/theme_pw.tres",
       "https://github.com/Ville-Mattila/planewar/pull/199#issuecomment-7222925519"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "UX-51",
+    "title": "ui+app: host the Chase HUD widgets (StatusClusterView, BarrelReadoutView) in the live Chase HUD layout",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "UX-49",
+      "GD-46"
+    ],
+    "milestone": "M3",
+    "acceptance": "The Chase HUD scene used in a match instantiates status_cluster.tscn and barrel_readout.tscn at their 06 s3.2 anchors and feeds them each frame from the active SimView for the possessed entity (BarrelReadoutData.from_view with the host-looked-up GroundUnitDef; StatusClusterView via its data class); both hide when nothing is possessed; a scene test possesses a Siege Crawler and a Dart in a LocalSimView world and asserts the barrel readout shows only for the Crawler; windowed screenshot in a running match",
+    "docs": [
+      "06 s3.2",
+      "godot/src/ui/hud/MODULE.md"
     ],
     "status": "todo",
     "merged": null
