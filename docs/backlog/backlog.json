@@ -8498,9 +8498,10 @@
       "05 s6.7",
       "godot/src/sim_ai/brains/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null,
-    "notes": "Re-scoped by R0 B.33 A-161: it edits sim_ai code and its contract tests as well as the schema, the def and validate_content, so Sonnet 0.5 d with an Opus review (brains)."
+    "status": "done",
+    "merged": "2026-11-27",
+    "notes": "siege block (12 required keys, R0 B.33 A-161) in the schema, autopilots.json and fixture; validate_content cross-field rules; CrawlerParams reads it with no defaults; SIEGE_DEFAULTS/LOFT_ITERS deprecated and unread. Impact numbers unchanged (15.79 deg / 3.375 m).",
+    "pr": 205
   },
   {
     "id": "GD-51",
