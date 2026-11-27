@@ -11,7 +11,7 @@ class_name SiegeAim extends RefCounted
 ## the muzzle `p + dir x k.radius`, at `k.speed`, with `Ballistics.predict_impact` (terrain on the way, CF transport,
 ## gravity) at the 2-tick step for `k.max_steps` steps (the shell's lifetime). Start: the flat vacuum angle
 ## 0.5 asin(g d / v^2); the second point is a Newton step on the flat vacuum range slope dR/de = 2 v^2 cos(2e) / g; then
-## at most `CrawlerParams.LOFT_ITERS` secant steps on the along-track miss, inside the barrel's [`barrel_lo`, `barrel_hi`]. NAN when `aim` is beyond reach (g d >= v^2), the shell finds no impact inside its lifetime
+## at most `CrawlerParams.loft_iters` secant steps on the along-track miss, inside the barrel's [`barrel_lo`, `barrel_hi`]. NAN when `aim` is beyond reach (g d >= v^2), the shell finds no impact inside its lifetime
 ## (a ridge, the horizon, too high an arc), the solve leaves the barrel's limits or the miss stays above `solve_tol_m`.
 static func loft(p: Vector3, aim: Vector3, k: CrawlerParams, terrain: Terrain, st: ProjectileState) -> float:
 	var n: Vector3 = p.normalized()
@@ -30,7 +30,7 @@ static func loft(p: Vector3, aim: Vector3, k: CrawlerParams, terrain: Terrain, s
 	if is_inf(m0) or slope <= 0.0:
 		return NAN                               # no impact at the vacuum angle, or past the maximum-range angle
 	var e1: float = clampf(e0 - m0 / slope, k.barrel_lo, k.barrel_hi)
-	for _i: int in CrawlerParams.LOFT_ITERS:
+	for _i: int in k.loft_iters:
 		var m1: float = _miss(p, n, h, e1, want, k, terrain, st)
 		if absf(m1) <= k.solve_tol_m:
 			return e1
@@ -83,7 +83,7 @@ static func heading_error(p: Vector3, fwd: Vector3, q: Vector3) -> float:
 static func _miss(p: Vector3, n: Vector3, h: Vector3, e: float, want: float, k: CrawlerParams, terrain: Terrain,
 		st: ProjectileState) -> float:
 	var dir: Vector3 = BarrelSlew.muzzle_dir(p, h, e)
-	var step: float = 2.0 * k.dt
+	var step: float = float(k.solve_step_ticks) * k.dt
 	var r: Vector4 = Ballistics.predict_impact(p + dir * k.radius, dir * k.speed, k.shell, k.rules, terrain, step, step,
 		0.0, k.max_steps, st)
 	if not Ballistics.has_impact(r):
