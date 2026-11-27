@@ -140,6 +140,10 @@ func boost_state(_id: int) -> int:
 	return _i(&"boost_state", _inner.boost_state(_id))
 
 
+func boost_cooldown01(_id: int) -> float:
+	return _f(&"boost_cooldown01", _inner.boost_cooldown01(_id))
+
+
 func flip_cooldown01(_id: int) -> float:
 	return _f(&"flip_cooldown01", _inner.flip_cooldown01(_id))
 

@@ -180,7 +180,7 @@ func pilot_for(slot: int) -> PilotBlock:
 			p.rockets = local.rockets(id)
 			p.hull = roundi(local.hp01(id) * float(sd.hp))
 			p.incoming_rockets = local.incoming_rockets(id)
-			p.boost_state = PilotBlock.boost_byte(local.boost_state(id), 0.0)
+			p.boost_state = PilotBlock.boost_byte(local.boost_state(id), local.boost_cooldown01(id))
 			p.flip_cooldown = roundi(local.flip_cooldown01(id) * 255.0)
 			p.dock_state = local.dock_state(id)
 			return p

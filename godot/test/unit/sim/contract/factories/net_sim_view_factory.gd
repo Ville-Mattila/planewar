@@ -9,6 +9,7 @@ class_name NetSimViewFactory extends SimViewFactory
 ## part of every exempt clause is asserted in test/unit/net/test_net_sim_view.gd and test/net/test_client_session.gd.
 
 const U8_QUANTUM: float = 1.0 / 255.0
+const BOOST_QUANTUM: float = 1.0 / 63.0   # GD-46: pilot block boost byte, bits 2-7
 const U8_FIELDS: PackedStringArray = ["hp01", "flip_cooldown01", "supply01", "production_progress01"]
 var _barrel_quantum: float = SimViewContract.EPS   # NET-61: (max - min) / 255 of the widest barrel def in the scene's content
 const _EXEMPT: PackedStringArray = [
@@ -61,6 +62,8 @@ func make(scene: SimViewScene) -> SimView:
 func tolerance(accessor: StringName) -> float:
 	if accessor == &"barrel_elevation":
 		return _barrel_quantum
+	if accessor == &"boost_cooldown01":
+		return BOOST_QUANTUM
 	return U8_QUANTUM if U8_FIELDS.has(String(accessor)) else SimViewContract.EPS
 
 

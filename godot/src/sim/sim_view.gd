@@ -128,6 +128,10 @@ func boost_state(_id: int) -> int:
 	return 0
 
 
+func boost_cooldown01(_id: int) -> float:
+	return 0.0
+
+
 func flip_cooldown01(_id: int) -> float:
 	return 0.0
 
