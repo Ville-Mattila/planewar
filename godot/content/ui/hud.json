@@ -17,6 +17,8 @@
   "tape_deg_span": 90,
   "tape_tick_deg": 10,
   "readout_width_du": 96,
+  "barrel_bar_du": 96,
+  "barrel_bar_h_du": 6,
   "font_du": 12,
   "font_du_min": 9,
   "line_du": 1.5,

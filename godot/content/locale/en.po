@@ -172,6 +172,9 @@ msgstr "HIGH"
 msgid "hud.band.low"
 msgstr "LOW"
 
+msgid "hud.barrel"
+msgstr "ELEV"
+
 msgid "hud.beacon.canister"
 msgstr "SUPPLY"
 
