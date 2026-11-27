@@ -191,3 +191,36 @@ func test_launch_mode_holds_on_the_pad_until_the_sim_hold_passes() -> void:
 		launch_ticks += 1 if _docked_flag(id) and _w.view().ai_tag(id) == AiTag.Tag.LAUNCH else 0
 	assert_int(launch_ticks).override_failure_message("LAUNCH never held while docked").is_greater(0)
 	assert_int(_count(SimEvent.Kind.LAUNCHED, id)).is_equal(1)
+
+
+func test_possess_and_release_mid_pause_still_launches_at_half_fuel() -> void:
+	_w._players.team_ice[0] = 0
+	var id: int = _docked(&"dart", 0.55)
+	assert_int(_run(id, 4 * _hz, SimEvent.Kind.ALERT)).is_greater(0)
+	assert_bool(DockingTestKit.possess(_w, id, 0)).is_true()
+	for _k: int in _hz:
+		DockingTestKit.step_piloted(_w, 0)
+	var _r: CommandResult = _w.apply_command(Command.release(0))
+	assert_int(_run(id, 6 * _hz)).override_failure_message("the pause memory was wiped by possess / release").is_greater(0)
+	assert_int(_count(SimEvent.Kind.SERVICED, id)).is_equal(0)
+
+
+func test_launch_timing_and_thrust_along_the_pad_normal() -> void:
+	var id: int = _docked(&"dart", 0.99)
+	var first: int = -1
+	var launched: int = -1
+	var worst: float = 1.0
+	var n: Vector3 = _w.store().up[EntityId.slot(_pad)]
+	for k: int in 6 * _hz:
+		_w.step()
+		for e: SimEvent in _w.drain_events():
+			launched = k if e.kind == SimEvent.Kind.LAUNCHED and e.a == id and launched < 0 else launched
+		if first < 0 and _docked_flag(id) and _w.view().ai_tag(id) == AiTag.Tag.LAUNCH:
+			first = k
+		if first >= 0 and _docked_flag(id):
+			worst = minf(worst, _w.store().fwd[EntityId.slot(id)].dot(n))
+	var hold: int = ceili(Def.num(DockingTestKit.common().raw.get("launch_hold_s", 0.0)) * float(_hz))
+	assert_int(first).is_greater_equal(0)
+	assert_int(launched - first).is_less_equal(hold + 1)
+	var min_thrust: float = Def.num(DockingTestKit.common().raw.get("launch_thrust_min", 0.0))
+	assert_float(worst).is_greater(min_thrust)   # the nose stays on the pad normal, so the commanded thrust stays above the sim's minimum

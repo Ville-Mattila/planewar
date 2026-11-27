@@ -26,6 +26,7 @@ var stats_longest_pull_up: int; var stats_sinking_acts: int; var stats_thinks: i
 static func from_content(c: ContentSet, ap: Dictionary, def: ShipDef, t: Terrain, ring2_m: float = INF) -> DartBrain   # null on a missing key; FlightCommonDef from c (A-90)
 static func fill(b: DartBrain, c: ContentSet, ap: Dictionary, def: ShipDef, t: Terrain, ring2_m: float = INF, escorts: bool = true, targets: bool = true) -> bool   # AI-14: the shared build of every class brain
 func bind_intel(intel: TeamIntel) -> void          # AI-14: DartModes.intel and AttackRun.intel (the driver binds it)
+func hears_service_pause() -> bool   # AI-45: true for the Dart family (AiBrain base false)
 func bind_rng(rng: Rng) -> void;  func think_batch(ids: PackedInt32Array, n: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -> void;  func act_batch(ids: PackedInt32Array, view: SimView, st: AiState, sink: CommandSink) -> void   # the AiBrain contract
 func think_one(id: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -> void   # one think (rigs, perf)
 class_name DartModes extends RefCounted            # AI-13: the per-order thinks (RETURN, ESCORT, ATTACK, MOVE, PATROL / HOLD / GUARD / AUTO) and the choice point

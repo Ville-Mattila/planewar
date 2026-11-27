@@ -3,6 +3,11 @@ extends GdUnitTestSuite
 ## a registered ship (OV_SVC_PAUSED), other alerts and unregistered or stale ids do nothing, `clear` ends the memory, the
 ## flag does not shift the S4 record size; the envelope literals stay out of sim_ai (the grep check).
 
+class ShipBrain extends AiTestKit.CountBrain:
+	func hears_service_pause() -> bool:
+		return true
+
+
 func _alert(kind: int, id: int) -> SimEvent:
 	var e: SimEvent = SimEvent.new()
 	e.kind = SimEvent.Kind.ALERT
@@ -13,6 +18,7 @@ func _alert(kind: int, id: int) -> SimEvent:
 
 func test_a_service_pause_alert_marks_a_registered_ship_only() -> void:
 	var d: AiDriver = AiTestKit.driver(5)
+	d.set_brain(0, ShipBrain.new(), true)
 	var id: int = EntityId.make(2, 1)
 	d.on_event(_alert(AlertKind.Kind.WAITING_FOR_ICE, id))
 	assert_int(d.state.ov_flags[2] & AiState.OV_SVC_PAUSED).is_equal(AiState.OV_SVC_PAUSED)
@@ -39,3 +45,18 @@ func test_no_launch_envelope_literal_in_the_new_source() -> void:
 	var src: String = FileAccess.get_file_as_string("res://src/sim_ai/autopilot/docked_mode.gd")
 	for lit: String in ["0.3", "0.5", "launch_hold", "launch_thrust"]:
 		assert_bool(src.contains(lit)).override_failure_message(lit).is_false()
+
+
+func test_an_alert_naming_a_structure_class_sets_nothing() -> void:
+	var d: AiDriver = AiTestKit.driver(5)   # CountBrain does not hear service pauses (a tower, say)
+	d.on_event(_alert(AlertKind.Kind.WAITING_FOR_ORE, EntityId.make(2, 1)))
+	assert_int(d.state.ov_flags[2]).is_equal(0)
+
+
+func test_overlay_enter_and_clear_keep_the_pause_memory() -> void:
+	var st: AiState = AiState.new()
+	st.ov_flags[3] = AiState.OV_SVC_PAUSED | AiState.OV_PULL_UP | AiState.OV_POSSESSED
+	Overlays.clear(st, 3)
+	assert_int(st.ov_flags[3]).is_equal(AiState.OV_SVC_PAUSED | AiState.OV_POSSESSED)
+	var src: String = FileAccess.get_file_as_string("res://src/sim_ai/autopilot/overlays.gd")
+	assert_bool(src.contains("OV_SVC_PAUSED")).is_true()   # enter() masks to it too (scenario test: possess / release mid-pause)

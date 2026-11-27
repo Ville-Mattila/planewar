@@ -344,6 +344,11 @@ func _think_docked(id: int, s: int, view: SimView, st: AiState, sink: CommandSin
 	_mode(id, s, AiTag.Tag.LAUNCH, st, sink, tick)
 
 
+## AI-45: a ship that docks on service pads records the pause ALERTs of its stay.
+func hears_service_pause() -> bool:
+	return true
+
+
 ## AI-45 hook: the Bomber leaves its pad only on an order (05 s2.5 row 3).
 func _docked_needs_order() -> bool:
 	return false

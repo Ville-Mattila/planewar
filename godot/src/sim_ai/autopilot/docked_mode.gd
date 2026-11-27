@@ -7,12 +7,16 @@ class_name DockedMode extends RefCounted
 ## drives full thrust along the pad normal; the sim's thrust hold (flight_common, A-119) does the rest. The Bomber leaves only on an order (05 s2.5 row 3). All numbers are defs; static, no allocation.
 
 
-## ALERT event (a = AlertKind, b = ship): remembers a service pause for a registered ship.
-static func note_alert(st: AiState, ev: SimEvent) -> void:
+## ALERT event (a = AlertKind, b = ship): remembers a service pause for a registered ship of a class that hears it
+## (`AiBrain.hears_service_pause`); the memory survives Overlays.enter / clear and ends when the ship flies (`clear`).
+static func note_alert(st: AiState, ev: SimEvent, brains: Array[AiBrain]) -> void:
 	if ev.a != AlertKind.Kind.WAITING_FOR_ICE and ev.a != AlertKind.Kind.WAITING_FOR_ORE:
 		return
 	var s: int = EntityId.slot(ev.b)
-	if s > 0 and s < st.capacity and st.cls[s] != AiState.NO_CLASS and st.eid[s] == ev.b:
+	if s <= 0 or s >= st.capacity or st.cls[s] == AiState.NO_CLASS or st.eid[s] != ev.b:
+		return
+	var br: AiBrain = brains[st.cls[s]] if st.cls[s] < brains.size() else null
+	if br != null and br.hears_service_pause():   # ships only: construction / production alerts name structures
 		st.ov_flags[s] |= AiState.OV_SVC_PAUSED
 
 
