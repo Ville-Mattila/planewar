@@ -18,6 +18,7 @@ change: contract tests first, same PR (ADR-11); `tools/gen_module_api.py --check
 ```gdscript
 class_name Salvage extends RefCounted
 enum Hook { OK, NOT_HAULER, NO_SLOT, BAD_WRECK, TOO_FAR }                    # try_attach outcomes
+var players: PlayerTable;  var inputs: InputSlots                             # GD-40 W12: set by SimWorld; the possessed ship's DOCK edge
 var orders: OrderQueue                                                       # set by SimWorld; the head standing order of a ship decides the auto-hook
 var paths: WreckPaths                                                        # GD-39 W11: set by SimWorld (`paths.pathing`); path weight 255 under resting wrecks
 var cap: int                                                                 # live wreck cap (`caps.wrecks`; 0 = the whole wreck range)
@@ -28,6 +29,7 @@ static func pod_value(value: int, pods: int, i: int) -> int                  # W
 func reach_m() -> float;  func deliver_m() -> float                          # W6 / W8: economy.json salvage_hook_m, salvage_deliver_m (33 m each, R0 B.20 A-105)
 func on_death(s: int, tick: int) -> int                                      # step 9, before the deferred free of slot `s`: spawns its wrecks, returns how many
 func step(t: int) -> void                                                    # step 10: expiry, release, delivery, then the auto-hook
+func dock_target(p: int) -> int                                              # W12: wreck slot player p's DOCK edge claims (nearest free in reach), 0 = none; pure query
 func towed_count(hauler: int) -> int                                         # wrecks whose link is this ship (slot) and flagged TETHERED
 func tow_slots_of(hauler: int) -> int                                        # resolved ShipDef.tow_slots of a live ship slot, else 0
 func try_attach(hauler: int, wreck: int) -> Hook                             # slots; sets link and F_TETHERED on both
@@ -97,6 +99,7 @@ per owner so the Foundry doctrine gives 2). Slots in the API are entity slots; `
   cache follow. No saved state: the weights are in the S4 path section, so `SimSerialize.FORMAT` is unchanged and a restore gives
   the same expiry restores. Cost per wreck event only (counters `sets`, `scans`, `reads`); no per-tick scan. Open: when Build
   blocks cells under structures (TA-19), the restore must not unblock a structure footprint.
+- W12 DOCK hook (GD-40; R0 B.20 A-108; 02 s13). In step 10, after the auto-hook, a player whose possessed ship is a ship with a free tow slot, not DOCKED, and whose DOCK button went down this tick (the edge: set by `InputSlots.copy_player_to_entity` in step 2, `InputSlots.dock_edge`, derived and not saved, so a restore continues byte-exact) hooks the nearest free wreck within `reach_m()` (centre distance, lowest slot on a tie) through the same `_link` as W6; WRECK_SALVAGED is not emitted until delivery (W8). `dock_target(p)` is the same decision as a pure query: it is non-zero exactly when the press hooks, so step 4's `Assist.auto_dock` seam (not wired yet, AI-10 / NET-18) must skip that player on a tick where `dock_target(p) != 0`; with no wreck in reach, no free slot (Dart: `tow_slots` 0) or no edge it is 0 and DOCK keeps its auto-dock meaning (SC-16). A held DOCK is one edge. Not a predicted effect: the client sees F_TETHERED from the snapshot. HUD prompt: `needs ui:`.
 
 ## Data owned
 
@@ -119,6 +122,7 @@ TOW order: 62 us per `step` on a dev laptop, debug build (`test_salvage_perf.gd`
 `godot/test/unit/sim/salvage/test_salvage_values.gd` (W1, W2, W3: the 02 s13 table, pod split, Shipyard 2 x 80, Core 7
 pods, Foundry-independent value, sites and Relay Station leave nothing, ground placement, WRECK_SPAWNED fields),
 `test_salvage_life.gd` (W4, W5: expiry at tick 2,700 exactly, DEATH cause, cap),
+`test_salvage_dock_hook.gd` (W12: edge hook, nearest, no salvage event, Foundry second press, Dart, restore),
 `test_salvage_tow.gd` (W6, W7, W8: slots 1 / 2, hook order and reach, auto-hook by order, release on death, delivery
 credit, cap clamp, events, no hook without order),
 `test_wreck_paths.gd` (W11: block / lift / restore, two on one cell, map bake restore, route before / after, S4), `test_wreck_paths_perf.gd` (W11 counters; PerfGate),
@@ -132,4 +136,4 @@ changed FORMAT), `test_salvage_perf.gd` (W10 counters; PerfGate).
 
 ## Open items
 
-- Ruled by R0 B.20 (`docs/reviews/R0-amendments-14.md`): A-104 tow state, A-105 reach fields, A-106 `SimEvent.DeathCause`, A-107 the step-9 event order (W3). Follow-up tasks (A-108): path weight 255 under wrecks (GD-39, done: W11), the possessed Hauler's hook on DOCK (GD-40), `SimView` wreck Ore value (GD-41), ORDER_DONE for HAUL/TOW (AI-15).
+- Ruled by R0 B.20 (`docs/reviews/R0-amendments-14.md`): A-104 tow state, A-105 reach fields, A-106 `SimEvent.DeathCause`, A-107 the step-9 event order (W3). Follow-up tasks (A-108): path weight 255 under wrecks (GD-39, done: W11), the possessed Hauler's hook on DOCK (GD-40, done: W12), `SimView` wreck Ore value (GD-41), ORDER_DONE for HAUL/TOW (AI-15).

@@ -10,6 +10,8 @@ enum Hook { OK, NOT_HAULER, NO_SLOT, BAD_WRECK, TOO_FAR }
 
 var orders: OrderQueue = null  ## set by SimWorld: the head standing order of a ship decides the auto-hook
 var cap: int = 0               ## live wreck cap (`caps.wrecks`); 0 = the whole wreck range
+var players: PlayerTable = null  ## GD-40: set by SimWorld with `inputs`: the possessed ship's DOCK edge hooks a wreck (W12)
+var inputs: InputSlots = null
 var paths: WreckPaths = null   ## GD-39: path weight 255 under resting wrecks; SimWorld sets `paths.pathing`
 
 var _store: EntityStore
@@ -125,6 +127,8 @@ func step(t: int) -> void:
 		_sync_flag(h)
 	if not _store.wrecks.is_empty() and orders != null:
 		_hook_pass()
+	if inputs != null and players != null:
+		_dock_pass()
 
 
 func towed_count(hauler: int) -> int:
@@ -288,6 +292,36 @@ func _hook_pass() -> void:
 			_link(h, EntityId.slot(_spec.target))
 		if _load[h] > 0 and _load[h] < slots:
 			_hook_neighbours(h, slots)
+
+
+# W12 (GD-40, A-108): the possessed ship of a player whose DOCK went down this tick hooks the nearest free wreck in reach.
+func _dock_pass() -> void:
+	for p: int in PlayerTable.SLOTS:
+		var w: int = dock_target(p)
+		if w != 0:
+			_link(EntityId.slot(players.possessed[p]), w)
+
+
+## W12: the wreck slot player `p`'s DOCK press claims, 0 when it is none (then DOCK keeps its auto-dock meaning). Pure
+## query: Step 4 may ask it to hold `Assist.auto_dock` back, step 10 hooks what it names. Nearest centre, lowest slot on a tie.
+func dock_target(p: int) -> int:
+	if inputs == null or players == null or inputs.dock_edge[p] == 0:
+		return 0
+	var id: int = players.possessed[p]
+	if id == 0 or not _store.alive(id):
+		return 0
+	var h: int = EntityId.slot(id)
+	var slots: int = tow_slots_of(h)
+	if slots <= 0 or (_store.flags[h] & EntityStore.F_DOCKED) != 0 or towed_count(h) >= slots:
+		return 0
+	var best: int = 0
+	var best_d: float = _reach * _reach
+	for w: int in _store.wrecks:
+		var d: float = _store.pos[h].distance_squared_to(_store.pos[w])
+		if (_store.flags[w] & EntityStore.F_TETHERED) == 0 and (d < best_d or (best == 0 and d <= best_d)):
+			best = w
+			best_d = d
+	return best
 
 
 func _can_hook(h: int, w: int) -> bool:

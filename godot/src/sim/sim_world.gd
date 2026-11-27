@@ -324,6 +324,8 @@ func _wire(rules: MatchRules) -> void:
 	_combat.shields.bind(_econ.economy, _econ.supply)
 	_intake.economy = _econ
 	_econ.salvage.orders = _orders           # GD-19: the head HAUL / TOW order of a ship hooks wrecks in step 10
+	_econ.salvage.players = _players         # GD-40: the possessed ship's DOCK edge hooks a wreck in step 10
+	_econ.salvage.inputs = _inputs
 	_pathing = Pathing.from_rules(_defs.rules)
 	_pathing.set_terrain(_terrain)
 	_econ.salvage.paths.pathing = _pathing   # GD-39: a resting wreck blocks its path cell (255)
