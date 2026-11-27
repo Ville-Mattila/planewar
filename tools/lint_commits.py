@@ -23,7 +23,8 @@ REPO = TOOLS.parent
 BACKLOG = REPO / "docs" / "backlog" / "backlog.json"
 
 SPECIAL_PREFIXES = frozenset({"WAVE"})
-PREFIX_RE = re.compile(r"^(?P<prefix>[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+|WAVE): (?P<text>\S.*)$")
+# A segment may end in one lowercase letter, but only right after a digit (backlog ids `AI-18b`, `AI-33b`).
+PREFIX_RE = re.compile(r"^(?P<prefix>[A-Z][A-Z0-9]*(?:-[A-Z0-9]+(?:(?<=[0-9])[a-z])?)+|WAVE): (?P<text>\S.*)$")
 
 
 def load_ids(backlog: Path) -> frozenset[str]:
