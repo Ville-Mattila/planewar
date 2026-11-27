@@ -32,6 +32,16 @@ static func ladder_marks(pitch_rad: float, step_deg: float, half_range_deg: floa
 static func limb_y(pitch_rad: float, h: float, px_per_deg: float) -> float; static func band(agl: float, alt: float) -> Band; static func uplink(alt: float) -> float
 static func uplink_visible(alt: float) -> bool; static func uplink_lost(alt: float) -> bool; static func uplink_pulse(alt: float, t: float) -> float
 static func tape_x(bearing: float, heading: float, width_du: float, span_deg: float) -> float
+static func barrel_deg(rad: float, min_deg: float, max_deg: float) -> int; static func barrel_fill01(deg: float, min_deg: float, max_deg: float) -> float   # UX-49
+class_name BarrelReadoutData extends RefCounted   # UX-49: plain data; shown = def has a barrel and the view receives the field
+var shown: bool; var deg: int; var min_deg: int; var max_deg: int; var fill01: float
+static func has_barrel(g: GroundUnitDef) -> bool; static func from_def(g: GroundUnitDef, rad: float, received: bool) -> BarrelReadoutData
+static func from_view(v: SimView, id: int, g: GroundUnitDef) -> BarrelReadoutData   # not received = field_unknown(id, &"barrel_elevation") where the view has it
+class_name BarrelReadoutView extends Control   # scenes/ui/barrel_readout.tscn; "ELEV n" + bar + min / max end marks, nothing when not shown
+var data: BarrelReadoutData
+var profile: UiScale.Profile
+func set_data(d: BarrelReadoutData) -> void
+func lines() -> PackedStringArray
 class_name FlightHudData extends RefCounted   # plain data for the instruments
 static func from_state(pos: Vector3, vel: Vector3, b: Basis, ground_radius: float, home_dir: Vector3) -> FlightHudData
 class_name FlightInstruments extends Control  # scenes/ui/flight_instruments.tscn; ladder, limb tick, tape, blocks, uplink
