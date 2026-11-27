@@ -269,8 +269,10 @@ def check_books(rep: Report, defs: dict[str, Any]) -> None:
                 rep.add(f"{where}/steps/{i}/def", f"unknown def '{ref}'")
             if st.get("do") != "build" or ref != "outpost":
                 continue
-            atoms = re.split(r"[&|]", str(st.get("when", "")).replace(" ", ""))
-            if "presence" not in atoms:
+            when = str(st.get("when", "")).replace(" ", "")
+            if "|" in when:   # `t>=60|presence` would place without presence: presence must be a conjunct
+                rep.add(f"{where}/steps/{i}/when", "build outpost when must not use | (presence is required, 05 s7.3)")
+            elif "presence" not in when.split("&"):
                 rep.add(f"{where}/steps/{i}/when", "build outpost needs when: presence (05 s7.3)")
             prev = steps[i - 1] if i > 0 else {}
             if prev.get("do") != "order" or prev.get("kind") != "move" or prev.get("to") != st.get("near"):

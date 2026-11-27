@@ -52,11 +52,16 @@ func test_every_outpost_follows_a_move_to_the_same_site_and_waits_for_presence()
 			if s["do"] != "build" or s["def"] != "outpost":
 				continue
 			n_outposts += 1
-			assert_str(str(s["when"])).contains("presence")
+			var when: String = str(s["when"]).replace(" ", "")
+			assert_str(when).not_contains("|")
+			assert_bool(when.split("&").has("presence")).override_failure_message("%s step %d: %s" % [str((e as Dictionary)["id"]), i, when]).is_true()
+			assert_int(i).override_failure_message("%s: an Outpost is step 0" % str((e as Dictionary)["id"])).is_greater(0)
+			if i == 0:
+				continue   # steps[-1] would wrap to the last step
 			var prev: Dictionary = steps[i - 1]
 			assert_str(str(prev["do"])).is_equal("order")
-			assert_str(str(prev["kind"])).is_equal("move")
-			assert_str(str(prev["to"])).is_equal(str(s["near"]))
+			assert_str(str(prev.get("kind", ""))).is_equal("move")
+			assert_str(str(prev.get("to", ""))).is_equal(str(s["near"]))
 	assert_int(n_outposts).is_greater_equal(6)
 
 
@@ -66,3 +71,19 @@ func test_the_commander_picks_one_of_the_doctrines_two_books() -> void:
 		var b: OpeningBook = cb.pick_book(doctrine)
 		assert_object(b).is_not_null()
 		assert_str(String(b.doctrine)).is_equal(String(doctrine))
+
+
+# AI-24 round 2: a shipped step gated on a time at or after the hand-over can never run inside the book (05 s7.3: the
+# book ends at book_end_s); such a step belongs to the reactive phase (05 s7.5) and is named in the book's _doc instead.
+func test_no_step_is_time_gated_at_or_after_the_hand_over() -> void:
+	var end_s: float = Ai23Kit.params().book_end_s
+	var re: RegEx = RegEx.create_from_string("t>=([0-9.]+)")
+	var n_gates: int = 0
+	for e: Variant in _raw():
+		var steps: Array = (e as Dictionary)["steps"]
+		for i: int in steps.size():
+			var when: String = str((steps[i] as Dictionary).get("when", ""))
+			for m: RegExMatch in re.search_all(when):
+				n_gates += 1
+				assert_float(m.get_string(1).to_float()).override_failure_message("%s step %d: %s" % [str((e as Dictionary)["id"]), i, when]).is_less(end_s)
+	assert_int(n_gates).is_greater(0)

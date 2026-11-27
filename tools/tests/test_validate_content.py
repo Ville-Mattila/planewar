@@ -194,8 +194,11 @@ class OpeningBooks(unittest.TestCase):
                 self.assertNotEqual(st.get("def"), "storage_silo", b["id"])
                 if st["do"] == "build" and st["def"] == "outpost":
                     outposts += 1
-                    self.assertIn("presence", st["when"], b["id"])
-                    self.assertEqual((b["steps"][i - 1]["do"], b["steps"][i - 1]["kind"], b["steps"][i - 1]["to"]), ("order", "move", st["near"]), b["id"])
+                    self.assertNotIn("|", st["when"], b["id"])
+                    self.assertIn("presence", st["when"].replace(" ", "").split("&"), b["id"])
+                    self.assertGreater(i, 0, b["id"])   # steps[-1] would wrap to the last step
+                    prev = b["steps"][i - 1]
+                    self.assertEqual((prev["do"], prev.get("kind"), prev.get("to")), ("order", "move", st["near"]), b["id"])
         self.assertGreaterEqual(outposts, 6)
 
     def test_a_clean_book_passes(self) -> None:
@@ -212,6 +215,22 @@ class OpeningBooks(unittest.TestCase):
         other = dict(self.MOVE, to="contested_field")
         self.assertIn("same site", self.findings([other, self.OUTPOST])[0])
         self.assertEqual(self.findings([self.MOVE, dict(self.OUTPOST, when="t>=60&presence")]), [])
+
+    def test_presence_must_be_a_conjunct(self) -> None:
+        for when in ("t>=60|presence", "presence|ore>=900", "presence&t>=60|enemy_seen"):
+            errs = self.findings([self.MOVE, dict(self.OUTPOST, when=when)])
+            self.assertEqual(len(errs), 1, when)
+            self.assertIn("must not use |", errs[0], when)
+        self.assertIn("presence", self.findings([self.MOVE, dict(self.OUTPOST, when="presences")])[0])
+        self.assertEqual(self.findings([self.MOVE, dict(self.OUTPOST, when="ore>=450 & presence")]), [])
+
+    def test_only_an_order_move_may_precede_an_outpost(self) -> None:
+        for kind in ("attack", "patrol", "guard"):
+            errs = self.findings([dict(self.MOVE, kind=kind), self.OUTPOST])
+            self.assertEqual(len(errs), 1, kind)
+            self.assertIn("order move", errs[0], kind)
+        errs = self.findings([{"do": "produce", "def": "dart", "n": 1}, self.OUTPOST])
+        self.assertIn("order move", errs[0])
 
     def test_unknown_def_and_doctrine_are_refused(self) -> None:
         self.assertIn("unknown def", self.findings([{"do": "produce", "def": "ghost", "n": 1}])[0])

@@ -35,6 +35,7 @@ func _run_book(book: OpeningBook) -> void:
 		assert_object(run).override_failure_message("%s slot %d: no run" % [book.id, slot]).is_not_null()
 		assert_bool(run.done).override_failure_message("%s slot %d: book not done" % [book.id, slot]).is_true()
 		_assert_no_stall(book, run, slot, cb.host.st_waits)
+		_assert_every_step_ran(book, run, slot)
 		assert_int(first[k]).override_failure_message("%s slot %d: no finished Outpost by 6:00" % [book.id, slot]).is_greater_equal(0)
 		assert_int(first[k]).is_less_equal(TOTAL_S * HZ)
 	assert_int(cb.host.st_locked).override_failure_message("%s: REJECTED_LOCKED" % book.id).is_equal(0)
@@ -52,3 +53,9 @@ func _assert_no_stall(book: OpeningBook, run: BookRun, slot: int, cb_waits: Pack
 		var gated: bool = run.cursor < book.n_steps and book.when_of(run.cursor).src.begins_with("t>=")   # the step the book waits at is time-gated; the ones behind it wait with it
 		var ok: bool = o == BookRun.DONE or o == BookRun.SKIPPED_HAVE or (o == BookRun.PENDING and gated)
 		assert_bool(ok).override_failure_message("%s slot %d step %d (%s): outcome %d, outcomes %s" % [book.id, slot, i, book.when_of(i).src, o, str(run.outcome) + " waits " + str(cb_waits)]).is_true()
+
+
+# AI-24 (round 2): the shipped books are fitted to the income of this world, so the cursor of each passes the last step
+# before the hand-over; a step left pending behind a time gate (the exemption above) is a book that does not fit.
+func _assert_every_step_ran(book: OpeningBook, run: BookRun, slot: int) -> void:
+	assert_int(run.cursor).override_failure_message("%s slot %d: steps %d..%d did not run before the hand-over, outcomes %s" % [book.id, slot, run.cursor, book.n_steps - 1, str(run.outcome)]).is_equal(book.n_steps)
