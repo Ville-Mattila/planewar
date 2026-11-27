@@ -2975,7 +2975,7 @@
       "NET-61"
     ],
     "milestone": "M3",
-    "acceptance": "Runs the canonical scene with 8 LocalTransport clients; AI never called outside step(); phase timings exported; snapshot_budget_test passes (dependency edited: ENet/WS transports plug in via NET-24); R0 B.32 A-156: ServerSession fills every SnapshotFrame row with set_entity and then set_barrel(i, NetDefs.barrel_byte(def_id, SimView.barrel_elevation(id))) (net/MODULE.md N11); a LocalTransport test whose scene holds a Siege Crawler with a slewed barrel asserts zero MALFORMED snapshot decodes on every client and NetSimView.barrel_elevation within one quantum of the server's value on a client that holds the Crawler at tier A",
+    "acceptance": "Runs the canonical scene with 8 LocalTransport clients; AI never called outside step(); phase timings exported; snapshot_budget_test passes (dependency edited: ENet/WS transports plug in via NET-24); R0 B.32 A-156: ServerSession fills every SnapshotFrame row with set_entity and then set_barrel(i, NetDefs.barrel_byte(def_id, SimView.barrel_elevation(id))) (net/MODULE.md N11); a LocalTransport test whose scene holds a Siege Crawler with a slewed barrel asserts zero MALFORMED snapshot decodes on every client and NetSimView.barrel_elevation within one quantum of the server's value on a client that holds the Crawler at tier A; GD-46 follow-up: ServerSession builds the own possessed unit's PilotBlock with boost_state = PilotBlock.boost_byte(phase, remaining01), remaining01 = the active timer's remaining fraction while ACTIVE and LocalSimView.boost_cooldown01 while COOLDOWN; a server/client test shows NetSimView.boost_cooldown01 within 1/63 of LocalSimView.boost_cooldown01 at 5 points of a boost-and-cooldown cycle and never 0 mid-COOLDOWN",
     "docs": [
       "04 s7",
       " R0 C2-04",
@@ -4606,7 +4606,8 @@
     "tier": "Sonnet",
     "size_days": 1.5,
     "depends_on": [
-      "NET-17"
+      "NET-17",
+      "NET-62"
     ],
     "milestone": "M4",
     "acceptance": "team_detail_test: contract test green for every accessor; deltas reconstruct the full state after 600 ticks; average <= 300 B/s on the canonical scene",
@@ -5928,6 +5929,26 @@
       " 01 s0.1"
     ],
     "status": "todo"
+  },
+  {
+    "id": "DOC-05",
+    "title": "docs: name SimView.boost_cooldown01 in 04 s3.7 replication map and the R0 B.5 / 06 accessor lists (GD-46 follow-up)",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 0.1,
+    "depends_on": [
+      "GD-46"
+    ],
+    "milestone": "M3",
+    "acceptance": "04:444 pilot-block row lists boost_cooldown01 beside boost_state (source: pilot block boost byte bits 2-7, own possessed unit; elsewhere default 0.0 with field_unknown); R0 Part B B.5 accessor table and 06:1040 (s9 contract list) name boost_cooldown01(id) -> float 0..1 (1 boosting / just used, 0 ready); 06:567 speed-block row reads boost_state(id), boost_cooldown01(id); no other text changed; Architect ack on the PR (Architect-owned files, 10 s4.3)",
+    "docs": [
+      "04 s3.3",
+      "04 s3.7",
+      "R0 B.5",
+      "06 s6.4"
+    ],
+    "status": "todo",
+    "merged": null
   },
   {
     "id": "QA-01",
@@ -8080,7 +8101,10 @@
       "docs/06-platforms-input-ux.md",
       "godot/src/sim/MODULE.md"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 200,
+    "notes": "SimView.boost_cooldown01 (Local: ShipReads; Net: pilot-block boost byte bits 2-7, 1/63 step, own possessed unit only); StatusMath.boost_ring_fill appended, boost_fill(state) deprecated. Follow-ups DOC-05, NET-62, NET-15 acceptance append (server boost byte)."
   },
   {
     "id": "PM-04",
@@ -8607,6 +8631,24 @@
     "merged": "2026-11-26",
     "notes": "Ruling R0-amendments-26 (B.32 A-156): bit 6 = MASK_BARREL is covered by A-152; SnapshotCodec.MASK_CELL_CHANGED stays as a deprecated symbol (10 s4.1); net/MODULE.md gains N11; the trailing optional parameters are Appends. PROTOCOL_VERSION 2: barrel u8 in FULL records, A-DELTA mask bit 6 MASK_BARREL (MASK_CELL_CHANGED kept as deprecated alias per A-156). Known only while the last record was tier A. +1 B per Crawler FULL; barrel-less scenes byte-identical. tools/replay_inspect.py version 2 + --barrel-def. For NET-15: server sets the barrel byte (set_barrel after set_entity, N11); NetViewRig now sends ground units.",
     "pr": 187
+  },
+  {
+    "id": "NET-62",
+    "title": "net: split NetSimView below the 400-line cap before the next accessor (pilot-block and TEAM_STATE reads into a helper)",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-46"
+    ],
+    "milestone": "M3",
+    "acceptance": "net_sim_view.gd <= 340 lines; pilot-block reads (fuel01, ammo, bombs, rockets, boost_state, boost_cooldown01, flip_cooldown01, dock_state, service_progress, incoming_rockets) and TEAM_STATE reads delegate to a new class_name helper under src/net/client/ with no public behaviour change; net/client/MODULE.md lists the helper (append); TEST-02 contract suite and test_net_sim_view.gd green unchanged",
+    "docs": [
+      "04 s3.7",
+      "godot/src/net/client/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
   },
   {
     "id": "CONTENT-5",
