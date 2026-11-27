@@ -172,6 +172,9 @@ msgstr ""
 msgid "hud.band.low"
 msgstr ""
 
+msgid "hud.barrel"
+msgstr ""
+
 msgid "hud.beacon.canister"
 msgstr ""
 
