@@ -55,7 +55,13 @@ func _assert_no_stall(book: OpeningBook, run: BookRun, slot: int, cb_waits: Pack
 		assert_bool(ok).override_failure_message("%s slot %d step %d (%s): outcome %d, outcomes %s" % [book.id, slot, i, book.when_of(i).src, o, str(run.outcome) + " waits " + str(cb_waits)]).is_true()
 
 
-# AI-24 (round 2): the shipped books are fitted to the income of this world, so the cursor of each passes the last step
-# before the hand-over; a step left pending behind a time gate (the exemption above) is a book that does not fit.
+# AI-24 (R0 B.33 A-163): the shipped books are fitted to the income of this world, so each cursor passes the last step
+# before the hand-over, or stops at the trailing Expansion pair (order move + build outpost) whose time gate is still
+# unmet; any other pending step is a book that does not fit. AI-50 replaces the `t>=` exemption above with this rule.
 func _assert_every_step_ran(book: OpeningBook, run: BookRun, slot: int) -> void:
-	assert_int(run.cursor).override_failure_message("%s slot %d: steps %d..%d did not run before the hand-over, outcomes %s" % [book.id, slot, run.cursor, book.n_steps - 1, str(run.outcome)]).is_equal(book.n_steps)
+	var n: int = book.n_steps
+	var src: String = book.when_of(n - 2).src.replace(" ", "") if n >= 2 else ""
+	var gate_s: float = src.substr(3).split("|")[0].split("&")[0].to_float() if src.begins_with("t>=") else 0.0
+	var deferred: bool = run.cursor == n - 2 and book.kind_of(n - 2) == OpeningBook.Do.ORDER and book.kind_of(n - 1) == OpeningBook.Do.BUILD \
+			and gate_s > Ai23Kit.params().book_end_s
+	assert_bool(run.cursor == n or deferred).override_failure_message("%s slot %d: steps %d..%d did not run before the hand-over, outcomes %s" % [book.id, slot, run.cursor, n - 1, str(run.outcome)]).is_true()

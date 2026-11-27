@@ -1,11 +1,11 @@
 {
-  "_doc": "Opening books (05 s7.3, R0 C2-14, AI-24) on the R0 B.6 start kit (Core, Refinery, Shipyard with launch pad, Vehicle Bay, 1 Harvester mining, 800 Ore / 300 Ice): 3 doctrines x 2 variants, picked by weighted draw on the AI RNG. Grammar and location tokens: 05 s7.3 (opening_book.gd, BuildPlanner.resolve_site). No storage_silo (O-4); every build outpost follows an order move to the same site and carries when: presence (AI-23 refuses a book that breaks it). A book hands over to the reactive planner (05 s7.5) after its last step, at the latest at book_end_s 300. Each *_standard is the 05 s7.3 text refit to the measured income of a Normal bot in the SC-41 world after BUG-4 (cradle, slots 0 and 2, seed 41): every step it keeps is executed before the hand-over in both slots, and no `when` is a time chosen around stall_s. Steps whose 05 time is at or after the hand-over, or which that income does not pay by 5:00, are cut and listed in the book's _doc as reactive phase after the hand-over (05 s7.5). Per-step times: the AI-24 PR.",
+  "_doc": "Opening books (05 s7.3 as patched by R0 B.33 A-162/A-163, R0 C2-14, AI-24) on the R0 B.6 start kit (Core, Refinery, Shipyard with launch pad, Vehicle Bay, 1 Harvester mining, 800 Ore / 300 Ice): 3 doctrines x 2 variants, picked by weighted draw on the AI RNG. Grammar and location tokens: 05 s7.3 (opening_book.gd, BuildPlanner.resolve_site). No storage_silo (O-4); every build outpost follows an order move to the same site and carries when: presence (AI-23 refuses a book that breaks it). A book hands over to the reactive planner (05 s7.5) after its last step, at the latest at book_end_s 300. Each *_standard is the 05 s7.3 listing with gates fitted to the measured income of a Normal bot in the SC-41 world after BUG-4 (cradle, slots 0 and 2, seed 41; first delivery 68 s): every step runs before the hand-over in both slots, except a deferred Expansion pair (order move + build outpost) at the end of a book, gated after 5:00, whose gate the reactive Expansion rule reads as the book's time (A-163). No gate is derived from stall_s. A 05 step that income or escort availability does not let run by 5:00 is cut and named in the book's _doc. Per-step times: the AI-24 PR.",
   "build_orders": [
     {
       "id": "vanguard_standard",
       "status": "core",
       "tags": [],
-      "_doc": "vanguard_standard: 05 s7.3 steps 1-15 verbatim. Measured (SC-41 world): home-trap Outpost placed 2:50, last step (set_replenish dart 3) 4:22 in both slots; longest funds wait 44 s (ice_extractor). Cut, reactive phase after the hand-over (05 s7.5): raid harvester_line with dart:3 when t>=300&have:dart>=3 (05's time is the hand-over itself; raids after it are the military manager's, AI-27); order move dart|scout to contested_field when t>=420|ore>=900 + build outpost when presence (05 time 7:00; s7.5 Expansion places the contested Outpost at the book's time).",
+      "_doc": "vanguard_standard: 05 s7.3 (as patched) verbatim. Measured (SC-41 world): home-trap Outpost placed 2:50, set_replenish dart 3 at 4:22 in both slots; longest funds wait 44 s (ice_extractor). The contested Expansion pair (t>=420|ore>=900; Ore stays below 900 before 5:00) is the deferred tail: pending at the hand-over, its gate is the reactive Expansion rule's time (A-163).",
       "doctrine": "vanguard",
       "weight": 2,
       "steps": [
@@ -23,7 +23,9 @@
         {"do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1"},
         {"do": "build", "def": "pad", "near": "core"},
         {"do": "produce", "def": "scout", "n": 1, "then_order": "scout_auto"},
-        {"do": "set_replenish", "def": "dart", "n": 3}
+        {"do": "set_replenish", "def": "dart", "n": 3},
+        {"do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field", "when": "t>=420|ore>=900"},
+        {"do": "build", "def": "outpost", "near": "contested_field", "when": "presence"}
       ]
     },
     {
@@ -48,7 +50,7 @@
       "id": "bulwark_standard",
       "status": "core",
       "tags": [],
-      "_doc": "bulwark_standard: 05 s7.3 text with 3 changes. (1) The 2 relay_pylon toward:cold_trap:home are replaced by order move + build outpost at outpost_site:home_trap: on the R0 B.6 layout the home Cold Trap is 1,700 m from the Core, 2 Pylons (450 + 220 m, 250 m radius) do not reach it and the ice_extractor of 05 waited on WAIT_SITE; the Outpost covers it (the Extractor waits have:outpost>=1). (2) The move goes out when ore>=520 (Outpost 450 x bulwark cost_ore 1.15, rounded to 5 by DoctrineResolver), so the escort finds the Outpost paid when it arrives: the escort Dart orbits the site and leaves on fuel (AI-24 PR), so a funds wait at the site loses presence. (3) The book ends at flak_battery. Measured (SC-41 world): Outpost placed 2:26, last step 3:12 in both slots; the Flak is paid from the 4:20 delivery, so the next 05 step (pad) would wait past stall_s. Cut, reactive phase after the hand-over (05 s7.5 Pads, Defence, Expansion): pad; hangar (have:pad>=1, C2-14); produce lancer 1; set_replenish dart 2; sensor_mast at approach:nearest_enemy; order move dart|lancer to contested_field when t>=330 + build outpost when presence (05 time 5:30).",
+      "_doc": "bulwark_standard: 05 s7.3 (as patched: the home-trap Outpost pair replaces the 2 Pylons, the Extractor waits have:outpost>=1) with 2 fits. (1) The home-trap move goes out when ore>=520 (Outpost 450 x bulwark cost_ore 1.15, rounded to 5 by DoctrineResolver), so the escort finds the Outpost paid when it arrives: the escort Dart orbits the site at 200-650 m and leaves on fuel (AI-24 PR), so a funds wait at the site loses presence. (2) The home steps end at flak_battery: measured, the Outpost is placed 2:26 and the Flak 3:12 in both slots, and the Flak is paid from the 4:20 delivery, so the next 05 steps cannot be paid by 5:00. Cut (reactive phase, 05 s7.5 Pads / Defence): pad, hangar (have:pad>=1, C2-14), produce lancer 1, set_replenish dart 2, sensor_mast. The contested Expansion pair (t>=330) is the deferred tail: pending at the hand-over, its gate is the reactive Expansion rule's time (A-163).",
       "doctrine": "bulwark",
       "weight": 2,
       "steps": [
@@ -61,7 +63,9 @@
         {"do": "build", "def": "outpost", "near": "outpost_site:home_trap", "when": "presence"},
         {"do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1"},
         {"do": "produce", "def": "hauler", "n": 1},
-        {"do": "build", "def": "flak_battery", "near": "core"}
+        {"do": "build", "def": "flak_battery", "near": "core"},
+        {"do": "order", "kind": "move", "unit": "dart|lancer", "to": "contested_field", "when": "t>=330"},
+        {"do": "build", "def": "outpost", "near": "contested_field", "when": "presence"}
       ]
     },
     {
@@ -87,7 +91,7 @@
       "id": "foundry_standard",
       "status": "core",
       "tags": [],
-      "_doc": "foundry_standard: 05 s7.3 steps 1-11 verbatim, then set_replenish harvester 6 (05 step 14; the kept steps keep their 05 order). Measured (SC-41 world): home-trap Outpost placed 3:08 / 3:12, last step 3:55 / 3:59. Cut, reactive phase after the hand-over (05 s7.5): order move dart|scout to contested_field when t>=270 + build outpost when presence (05 time 4:30: the only Dart has returned to refuel after escorting the home Outpost; measured, the move goes out at 4:29 and no unit is present at the 2,365 m site by 5:00; s7.5 Expansion places it at the book's time); build reactor near outpost when t>=600 (foundry reactor_unlock_s 600, after the hand-over).",
+      "_doc": "foundry_standard: 05 s7.3 (as patched) without its contested Expansion pair: steps 1-11 and set_replenish harvester 6, in 05 order. Measured (SC-41 world): home-trap Outpost placed 3:08 / 3:12, last step 3:55 / 3:59. Cut: order move dart|scout to contested_field when t>=270 + build outpost when presence. Measured, the move goes out at 4:29 and no unit is present at the 2,365 m site by 5:00 (the only Dart is back refuelling after escorting the home Outpost); a pair pending at 5:00 with its 4:30 gate met fails SC-41 (A-163), and a gate after 5:00 would be a time 05 does not give. The reactive Expansion rule (05 s7.5, home fields < 30 %) covers it until a gate is ruled.",
       "doctrine": "foundry",
       "weight": 2,
       "steps": [

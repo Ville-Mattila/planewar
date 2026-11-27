@@ -73,17 +73,24 @@ func test_the_commander_picks_one_of_the_doctrines_two_books() -> void:
 		assert_str(String(b.doctrine)).is_equal(String(doctrine))
 
 
-# AI-24 round 2: a shipped step gated on a time at or after the hand-over can never run inside the book (05 s7.3: the
-# book ends at book_end_s); such a step belongs to the reactive phase (05 s7.5) and is named in the book's _doc instead.
-func test_no_step_is_time_gated_at_or_after_the_hand_over() -> void:
+# R0 B.33 A-163: a step gated at or after the hand-over (book_end_s) can never run inside the book; it is legal only as
+# the Expansion pair at the end of a book (the `order move` of the last two steps, its `build outpost` after it).
+func test_a_gate_at_or_after_the_hand_over_is_only_a_trailing_expansion_pair() -> void:
 	var end_s: float = Ai23Kit.params().book_end_s
 	var re: RegEx = RegEx.create_from_string("t>=([0-9.]+)")
-	var n_gates: int = 0
+	var n_deferred: int = 0
 	for e: Variant in _raw():
+		var id: String = str((e as Dictionary)["id"])
 		var steps: Array = (e as Dictionary)["steps"]
-		for i: int in steps.size():
-			var when: String = str((steps[i] as Dictionary).get("when", ""))
-			for m: RegExMatch in re.search_all(when):
-				n_gates += 1
-				assert_float(m.get_string(1).to_float()).override_failure_message("%s step %d: %s" % [str((e as Dictionary)["id"]), i, when]).is_less(end_s)
-	assert_int(n_gates).is_greater(0)
+		var n: int = steps.size()
+		for i: int in n:
+			var s: Dictionary = steps[i]
+			for m: RegExMatch in re.search_all(str(s.get("when", ""))):
+				if m.get_string(1).to_float() < end_s:
+					continue
+				n_deferred += 1
+				var last: Dictionary = steps[n - 1]
+				var pair: bool = i == n - 2 and s["do"] == "order" and s.get("kind", "") == "move" \
+						and last["do"] == "build" and last.get("def", "") == "outpost" and last.get("near", "") == s.get("to", "")
+				assert_bool(pair).override_failure_message("%s step %d (%s): gated at or after %.0f s but not the trailing Expansion pair" % [id, i, str(s.get("when", "")), end_s]).is_true()
+	assert_int(n_deferred).is_equal(2)   # vanguard_standard t>=420|ore>=900, bulwark_standard t>=330
