@@ -153,3 +153,14 @@ static func run(w: SimWorld, n: int) -> Array[SimEvent]:
 		w.step()
 		out.append_array(w.drain_events())
 	return out
+
+
+## SC-41 (R0 B.33 A-163): step `i` is the `order move` of an Expansion pair (a `build outpost` to the same site follows)
+## and its `when` waits on the clock at `ctx`.
+static func expansion_waits_on_clock(book: OpeningBook, i: int, ctx: BookContext) -> bool:
+	if book.kind_of(i) != OpeningBook.Do.ORDER or book.order_kind_of(i) != OrderSpec.Kind.MOVE or i + 1 >= book.n_steps:
+		return false
+	var nxt: SiteToken = book.token_of(i + 1)
+	if book.kind_of(i + 1) != OpeningBook.Do.BUILD or nxt == null or book.token_of(i) == null or nxt.src != book.token_of(i).src:
+		return false
+	return book.when_of(i).waits_on_clock(ctx)

@@ -99,8 +99,9 @@ func think(run: BookRun, ctx: BookContext, host: BookHost, tick: int, hz: int, p
 		if _skip[i] != null and _skip[i].eval(ctx):
 			run.finish(BookRun.SKIPPED_HAVE)
 			continue
-		if not _due(i, ctx, host):
-			if run.cursor == i and _when[i].uses_presence and _retry_move(i, run, host, tick, hz, p):
+		if not _due(i, run, ctx, host):
+			run.due_tick = -1   # a wait for the clock or for funds is never a stall (A-162)
+			if _when[i].uses_presence and not ctx.presence and _retry_move(i, run, host, tick, hz, p):
 				sent += 1
 			break
 		if run.due_tick < 0:
@@ -128,14 +129,20 @@ func think(run: BookRun, ctx: BookContext, host: BookHost, tick: int, hz: int, p
 	return sent
 
 
-# `when` of step i against the context (the host fills `presence` / `affordable` when the condition reads them).
-func _due(i: int, ctx: BookContext, host: BookHost) -> bool:
+# `when` of step i against the context (the host fills `presence` / `affordable` when the condition reads them). A build or
+# produce step is due only while it is also affordable, with or without a `when` (05 s7.3, R0 B.33 A-162); a step that
+# costs nothing never asks the host.
+func _due(i: int, run: BookRun, ctx: BookContext, host: BookHost) -> bool:
 	var w: BookCondition = _when[i]
 	if w.uses_presence:
 		ctx.presence = host.presence(_tok[i], _def[i])
-	if w.uses_affordable:
-		ctx.affordable = host.affordable(_do[i], _def[i], _count[i])
-	return w.eval(ctx)
+	var costs: bool = _do[i] == Do.BUILD or _do[i] == Do.PRODUCE
+	if costs:
+		var n: int = _count[i] - run.issued
+		ctx.affordable = host.affordable(_do[i], _def[i], 1 if _do[i] == Do.BUILD else clampi(n, 1, 5))
+	elif w.uses_affordable:
+		ctx.affordable = true   # nothing to pay: the host is never asked about a step without a def
+	return w.eval(ctx) and (ctx.affordable or not costs)
 
 
 # An Outpost step with no unit in place after `presence_retry_s`: the `order move` before it goes out again.
