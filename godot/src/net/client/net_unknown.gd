@@ -15,7 +15,7 @@ const NEVER: PackedStringArray = [
 ]
 ## Pilot block fields (own possessed unit only, 04 s3.7); dock_state falls back to flags bit 2 elsewhere but is unknown.
 const PILOT: PackedStringArray = [
-	"fuel01", "ammo", "bombs", "rockets", "boost_state", "flip_cooldown01", "dock_state", "service_progress",
+	"fuel01", "ammo", "bombs", "rockets", "boost_state", "boost_cooldown01", "flip_cooldown01", "dock_state", "service_progress",
 	"incoming_rockets",
 ]
 

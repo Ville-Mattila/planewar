@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 ## AI-18 contract tests (sim_ai/brains/MODULE.md CR1-CR5, sim_ai/MODULE.md AiBrain): `CrawlerParams` from the shipped
-## `ap_crawler` (the required `follow` block, R0 B.29 A-145; the optional `siege` block and its band check), the
+## `ap_crawler` (the required `follow` block, R0 B.29 A-145; the required 12-key `siege` block, R0 B.33 A-161, and its band check), the
 ## `AiBrain` impact hooks' defaults, and `SiegeAim` (the lofted solve of R0 B.25 A-74, the ring, the heading error).
 
 const R: float = Sphere.PLANET_RADIUS
@@ -27,7 +27,7 @@ func test_the_shipped_ap_crawler_builds_the_params_with_the_05_band() -> void:
 	assert_bool(p.in_band(999.0)).is_false()
 
 
-func test_follow_is_required_and_the_siege_block_is_optional_but_checked() -> void:
+func test_follow_and_the_full_siege_block_are_required_and_checked() -> void:
 	var c: ContentSet = Ai18Kit.content()
 	var no_follow: Dictionary = _ap()
 	var _e: bool = no_follow.erase("follow")
@@ -35,15 +35,34 @@ func test_follow_is_required_and_the_siege_block_is_optional_but_checked() -> vo
 	var bad_follow: Dictionary = _ap()
 	var _e2: bool = (bad_follow["follow"] as Dictionary).erase("arrive_m")
 	assert_object(CrawlerParams.from_content(c, bad_follow, Ai18Kit.def())).is_null()
+	var no_block: Dictionary = _ap()                                               # R0 B.33 A-161: the block is required
+	var _e3: bool = no_block.erase("siege")
+	assert_object(CrawlerParams.from_content(c, no_block, Ai18Kit.def())).is_null()
 	var own: Dictionary = _ap()
-	own["siege"] = {"spot_min_m": 900, "spot_max_m": 1100, "relocate_bomb_m": 80}
+	own["siege"] = {"spot_min_m": 900, "spot_max_m": 1100, "spot_slope_deg": 8, "relocate_bomb_m": 80, "relocate_step_m": 120,
+		"aim_tol_deg": 2, "spot_samples": 12, "loft_tol_m": 10, "solve_tol_m": 3, "loft_iters": 5, "solve_step_ticks": 1,
+		"relocate_tries": 4}
 	var p: CrawlerParams = CrawlerParams.from_content(c, own, Ai18Kit.def())
 	assert_float(p.spot_mid_m).is_equal(1000.0)
 	assert_float(p.relocate_m).is_equal(80.0)
-	assert_float(p.slope_max_deg).is_equal(10.0)                                # absent keys keep the default
+	assert_float(p.slope_max_deg).is_equal(8.0)
+	assert_int(p.samples).is_equal(12)
+	assert_int(p.loft_iters).is_equal(5)
+	assert_int(p.solve_step_ticks).is_equal(1)
+	assert_int(p.relocate_tries).is_equal(4)
+	assert_int(p.max_steps).is_equal(ceili(p.shell.lifetime_s / p.dt))              # one-tick step
+	var full: Dictionary = (own["siege"] as Dictionary)
+	for key: String in CrawlerParams.SIEGE_KEYS:                                   # a missing key, or a key <= 0, refuses
+		var miss: Dictionary = own.duplicate(true)
+		var _e4: bool = (miss["siege"] as Dictionary).erase(key)
+		assert_object(CrawlerParams.from_content(c, miss, Ai18Kit.def())).override_failure_message("missing " + key).is_null()
+		var zero: Dictionary = own.duplicate(true)
+		(zero["siege"] as Dictionary)[key] = 0
+		assert_object(CrawlerParams.from_content(c, zero, Ai18Kit.def())).override_failure_message("zero " + key).is_null()
+	assert_int(full.size()).is_equal(CrawlerParams.SIEGE_KEYS.size())
 	for bad: Dictionary in [{"spot_max_m": 1300}, {"spot_min_m": 200}, {"spot_min_m": 1100, "spot_max_m": 1000}, {"aim_tol_deg": 0}]:
-		var ap: Dictionary = _ap()
-		ap["siege"] = bad
+		var ap: Dictionary = own.duplicate(true)
+		(ap["siege"] as Dictionary).merge(bad, true)
 		assert_object(CrawlerParams.from_content(c, ap, Ai18Kit.def())).is_null()
 
 
@@ -116,16 +135,18 @@ func test_the_params_carry_the_barrel_and_turn_rate_and_refuse_a_def_without_a_b
 	assert_float(p.turn_rate).is_equal_approx(deg_to_rad(c.ground_common.ground_turn_rate_dps), 1e-12)
 	assert_float(p.solve_tol_m).is_equal(2.0)
 	var orig: GroundUnitDef = Ai18Kit.def()
-	var bare: GroundUnitDef = GroundUnitDef.new()
+	var bare: GroundUnitDef = GroundUnitDef.new()                                  # the typed barrel fields (CONTENT-5), not raw
 	bare.weapon = orig.weapon
 	bare.max_slope_deg = orig.max_slope_deg
 	bare.bounding_radius = orig.bounding_radius
-	bare.raw = orig.raw.duplicate(true)
+	bare.barrel_slew_dps = orig.barrel_slew_dps
+	bare.barrel_min_deg = orig.barrel_min_deg
+	bare.barrel_max_deg = orig.barrel_max_deg
 	assert_object(CrawlerParams.from_content(c, _ap(), bare)).is_not_null()
-	var _e: bool = bare.raw.erase("barrel_slew_dps")
+	bare.barrel_slew_dps = 0.0
 	assert_object(CrawlerParams.from_content(c, _ap(), bare)).is_null()
 	var loose: Dictionary = _ap()
-	loose["siege"] = {"solve_tol_m": 20}                                           # above loft_tol_m 15
+	(loose["siege"] as Dictionary)["solve_tol_m"] = 20                             # above loft_tol_m 15
 	assert_object(CrawlerParams.from_content(c, loose, Ai18Kit.def())).is_null()
 
 
@@ -173,3 +194,57 @@ func test_loft_on_cradle_relief_lands_within_loft_tol_of_the_aim_point() -> void
 	assert_int(solved).is_greater_equal(9)
 	assert_float(worst).is_less_equal(p.loft_tol_m)
 	print("AI-18b loft on cradle: %d of 12 aims solved, worst miss %.2f m" % [solved, worst])
+
+
+# R0 B.33 A-161: the three solver / relocation keys are read from the def, not from literals. Each test builds the
+# params through from_content with a changed key and fails if the code still used the old literal (6 / 2 ticks / 6).
+func _with(over: Dictionary) -> CrawlerParams:
+	var ap: Dictionary = _ap()
+	(ap["siege"] as Dictionary).merge(over, true)
+	var p: CrawlerParams = CrawlerParams.from_content(Ai18Kit.content(), ap, Ai18Kit.def())
+	assert_object(p).is_not_null()
+	return p
+
+
+func test_loft_iters_bounds_the_secant_steps_of_the_solve() -> void:
+	var t: Terrain = Terrain.new()
+	var st: ProjectileState = ProjectileState.new()
+	var pos: Vector3 = Ai16Kit.dir_at(0.0) * (R + 7.0)
+	var one: CrawlerParams = _with({"loft_iters": 1})
+	var six: CrawlerParams = _with({"loft_iters": 6})
+	var cut: int = 0
+	for want: float in [400.0, 600.0, 800.0, 1000.0, 1075.0, 1150.0]:
+		var aim: Vector3 = Ai16Kit.dir_at(want) * R
+		var e6: float = SiegeAim.loft(pos, aim, six, t, st)
+		var e1: float = SiegeAim.loft(pos, aim, one, t, st)
+		assert_bool(is_nan(e6)).is_false()
+		if is_nan(e1):
+			cut += 1                                                                # one step was not enough
+		else:
+			assert_float(e1).is_equal_approx(e6, 1e-6)                             # it converged inside the budget
+	assert_int(cut).override_failure_message("loft_iters 1 never ran out of steps").is_greater(0)
+
+
+func test_solve_step_ticks_sets_the_predict_impact_step_and_max_steps() -> void:
+	var c: ContentSet = Ai18Kit.content()
+	var t: Terrain = Terrain.new()
+	var st: ProjectileState = ProjectileState.new()
+	var pos: Vector3 = Ai16Kit.dir_at(0.0) * (R + 7.0)
+	var aim: Vector3 = Ai16Kit.dir_at(1075.0) * R
+	var one: CrawlerParams = _with({"solve_step_ticks": 1})
+	var four: CrawlerParams = _with({"solve_step_ticks": 4})
+	assert_int(one.max_steps).is_equal(ceili(one.shell.lifetime_s / one.dt))
+	assert_int(four.max_steps).is_equal(ceili(four.shell.lifetime_s / (4.0 * four.dt)))
+	var e1: float = SiegeAim.loft(pos, aim, one, t, st)
+	var e4: float = SiegeAim.loft(pos, aim, four, t, st)
+	assert_bool(is_nan(e1) or is_nan(e4)).is_false()
+	# The solve's own impact at its elevation, at the step it was told to use, lands within solve_tol_m of the aim.
+	for pr: Array in [[one, e1, 1], [four, e4, 4]]:
+		var k: CrawlerParams = pr[0] as CrawlerParams
+		var dir: Vector3 = BarrelSlew.muzzle_dir(pos, SiegeAim.tangent_to(pos, aim), float(pr[1]))
+		var step: float = float(pr[2]) * k.dt
+		var r: Vector4 = Ballistics.predict_impact(pos + dir * k.radius, dir * k.speed, k.shell, c.rules, t, step, step, 0.0,
+			k.max_steps, st)
+		var miss: float = SiegeAim.arc(pos.normalized(), Vector3(r.x, r.y, r.z)) - SiegeAim.arc(pos.normalized(), aim)
+		assert_float(absf(miss)).is_less_equal(k.solve_tol_m)
+	assert_float(e1).is_not_equal(e4)                                              # a coarser step is a different solve

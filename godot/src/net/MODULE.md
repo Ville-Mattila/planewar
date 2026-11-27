@@ -194,7 +194,7 @@ const BYTES: int
 enum Boost { READY, ACTIVE, COOLDOWN }
 var fuel_ds: int;  var ammo: int;  var bombs: int;  var rockets: int;  var hull: int;  var incoming_rockets: int;  var boost_state: int;  var flip_cooldown: int
 var dock_state: int;  var service_refuel: int;  var service_rearm: int;  var service_repair: int;  static func boost_byte(phase: int, remaining01: float) -> int
-func write(buf: PackedByteArray, at: int) -> int;  func read(buf: PackedByteArray, at: int) -> bool;  func copy_from(o: PilotBlock) -> void;  func to_bytes() -> PackedByteArray
+func write(buf: PackedByteArray, at: int) -> int;  func read(buf: PackedByteArray, at: int) -> bool;  func boost_cooldown01() -> float;  func service01() -> Vector3;  func copy_from(o: PilotBlock) -> void;  func to_bytes() -> PackedByteArray
 
 class_name PilotWire                                  # net/pilot_wire.gd: 8-byte PilotInput wire form (04 s2.4, R0 C2-09); static, pure
 const BYTES: int; const THRUST_SCALE: float; const AXIS_SCALE: float; const BUTTONS_MASK: int; const OFF_RESERVED_A: int; const OFF_RESERVED_B: int; const OFF_TICK_LO: int

@@ -120,3 +120,16 @@ static func uplink_pulse(alt: float, t: float) -> float:
 ## Tape x offset (du from centre) of a bearing relative to the current heading.
 static func tape_x(bearing: float, heading: float, width_du: float, span_deg: float) -> float:
 	return delta_deg(heading, bearing) / span_deg * width_du
+
+
+## Barrel elevation in whole degrees (UX-49; 06 s3.2): `rad` from SimView.barrel_elevation, clamped to the def's limits
+## (reversed limits are swapped, as BarrelSlew does).
+static func barrel_deg(rad: float, min_deg: float, max_deg: float) -> int:
+	return roundi(clampf(rad_to_deg(rad), minf(min_deg, max_deg), maxf(min_deg, max_deg)))
+
+
+## Bar fill 0..1 of `deg` between the def's end marks; 0 for an empty range.
+static func barrel_fill01(deg: float, min_deg: float, max_deg: float) -> float:
+	var lo: float = minf(min_deg, max_deg)
+	var span: float = maxf(min_deg, max_deg) - lo
+	return clampf((deg - lo) / span, 0.0, 1.0) if span > 0.0 else 0.0

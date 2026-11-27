@@ -148,8 +148,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: unit-sim, layer: unit, shard: sim }
-          - { name: unit-rest, layer: unit, shard: rest }
+          # TA-71: test/unit/sim (~21k lines, 8.5 min on one runner) is three shards. unit-sim-a/b name subdirs;
+          # unit-sim-c is "rest:sim" minus those same dirs (SHARD_DIRS must list a + b), so new dirs land in c.
+          # unit-rest = every test/unit entry except sim (SHARD_DIRS default). Every dir is in exactly one shard.
+          - { name: unit-sim-a, layer: unit, shard: "sim/combat+sim/steer+sim/docking" }
+          - { name: unit-sim-b, layer: unit, shard: "sim/economy+sim/harvest+sim/salvage+sim/scoring+sim/production+sim/relay+sim/ground+sim/control+sim/orders+sim/vision" }
+          - { name: unit-sim-c, layer: unit, shard: "rest:sim", dirs: "combat steer docking economy harvest salvage scoring production relay ground control orders vision" }
+          - { name: unit-rest, layer: unit, shard: rest, dirs: "sim" }
           - { name: sim, layer: sim, shard: all }
           - { name: net, layer: net, shard: all }
     steps:
@@ -162,6 +167,8 @@ jobs:
       - name: Import
         run: godot --headless --path godot --import
       - name: gdUnit4 ${{ matrix.name }}
+        env:
+          SHARD_DIRS: ${{ matrix.dirs }}
         run: |
           # The layer must exist (TA-67): a layer with no test_*.gd is an error, never a silent skip.
           if [ -z "$(find "godot/test/${{ matrix.layer }}" -name 'test_*.gd' -print -quit 2>/dev/null)" ]; then

@@ -11,6 +11,15 @@ static func boost_state(store: EntityStore, sd: ShipDef, id: int) -> int:
 	return 1 if b > 0.0 else (0 if b <= -sd.boost_cooldown_s else 2)
 
 
+## Share of the boost cooldown still to run: 1 while boosting and right after, falling to 0 when BOOST is ready.
+## Consistent with `boost_state`: 0 exactly when the state is READY.
+static func boost_cooldown01(store: EntityStore, sd: ShipDef, id: int) -> float:
+	if sd == null or sd.boost_cooldown_s <= 0.0:
+		return 0.0
+	var b: float = store.boost_time[EntityId.slot(id)]
+	return 1.0 if b > 0.0 else clampf(1.0 + b / sd.boost_cooldown_s, 0.0, 1.0)
+
+
 ## Share of the flip cooldown still to run: 1 while flipping, 0 when FLIP is ready.
 static func flip_cooldown01(store: EntityStore, sd: ShipDef, id: int) -> float:
 	if sd == null or sd.flip_cooldown_s <= 0.0:

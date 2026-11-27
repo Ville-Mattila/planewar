@@ -28,6 +28,7 @@ func test_entity_accessors() -> void:
 	assert_float(v.radius(id)).is_equal(dart.bounding_radius)
 	assert_int(v.boost_state(id)).is_equal(0)
 	assert_float(v.flip_cooldown01(id)).is_equal(0.0)
+	assert_float(v.boost_cooldown01(id)).is_equal(0.0)
 	assert_int(v.dock_state(id)).is_equal(0)
 	assert_int(v.service_state(id)).is_equal(0)
 	assert_array(Array(v.ships())).contains([id])
@@ -191,3 +192,27 @@ func test_read_poses_dead_id_is_zero_and_identity_and_base_default() -> void:
 	assert_int(SimView.new().read_poses(ids, pos, rot)).is_equal(0)
 	assert_vector(pos[0]).is_equal(Vector3.ZERO)
 	assert_bool(rot[0] == Vector4(0.0, 0.0, 0.0, 1.0)).is_true()
+
+
+func test_boost_cooldown01_fraction() -> void:
+	var w: SimWorld = WorldTestKit.world()
+	var id: int = WorldTestKit.spawn(w, &"dart", 1, 1, WorldTestKit.at(500.0), Vector3(0, 40, 0))
+	var v: SimView = w.view()
+	var dart: ShipDef = WorldTestKit.content().ships[WorldTestKit.def_id(&"dart")]
+	var s: int = EntityId.slot(id)
+	w.store().boost_time[s] = dart.boost_duration_s                       # boosting: just used
+	assert_float(v.boost_cooldown01(id)).is_equal(1.0)
+	var prev: float = 1.0
+	for k: int in 11:                                  # cooling: 1 at the end of the boost, falling to 0, monotone
+		w.store().boost_time[s] = -dart.boost_cooldown_s * float(k) / 10.0
+		var f: float = v.boost_cooldown01(id)
+		assert_float(f).is_between(0.0, 1.0)
+		assert_float(f).is_less_equal(prev)
+		prev = f
+		assert_bool((f == 0.0) == (v.boost_state(id) == 0)).is_true()   # 0 exactly when READY
+	assert_float(prev).is_equal(0.0)
+	w.store().boost_time[s] = -dart.boost_cooldown_s * 0.5
+	assert_float(v.boost_cooldown01(id)).is_equal_approx(0.5, 0.0001)
+	w.store().boost_time[s] = -dart.boost_cooldown_s * 3.0   # clamped
+	assert_float(v.boost_cooldown01(id)).is_equal(0.0)
+	assert_float(v.boost_cooldown01(0)).is_equal(0.0)        # not a ship

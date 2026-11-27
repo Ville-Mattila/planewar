@@ -139,6 +139,7 @@ def check_cross(rep: Report, defs: dict[str, Any]) -> None:
         check_profiles(rep, rules.get("tick_hz", 30), defs)
     check_amendments_02(rep, defs)
     check_barrel(rep, defs)
+    check_siege(rep, defs)
     check_landing_grade(rep, defs)
     check_quality_tiers(rep, defs)
 
@@ -210,6 +211,30 @@ def check_barrel(rep: Report, defs: dict[str, Any]) -> None:
         lo, hi = unit.get("barrel_min_deg"), unit.get("barrel_max_deg")
         if isinstance(lo, (int, float)) and isinstance(hi, (int, float)) and lo > hi:
             rep.add(f"{where}/barrel_min_deg", f"barrel_min_deg {lo} must be <= barrel_max_deg {hi} (R0 B.31 A-151)")
+
+
+def check_siege(rep: Report, defs: dict[str, Any]) -> None:
+    """AI-49 (R0 B.33 A-161): the ap_crawler siege block's cross-field rules (the schema holds the per-key ranges):
+    spot_min_m < spot_max_m, solve_tol_m <= loft_tol_m, and [spot_min_m, spot_max_m] inside the Crawler weapon's
+    [range_min_m, range_m]."""
+    weapons = {w.get("id"): w for w in collection(defs.get("weapons"), "weapons")}
+    for n, ap in enumerate(collection(defs.get("autopilots"), "autopilots")):
+        sg = ap.get("siege")
+        if ap.get("id") != "ap_crawler" or not isinstance(sg, dict):
+            continue
+        where = f"godot/content/defs/autopilots.json:/autopilots/{n}/siege"
+        lo, hi, st, lt = (sg.get(k) for k in ("spot_min_m", "spot_max_m", "solve_tol_m", "loft_tol_m"))
+        if not all(isinstance(x, (int, float)) for x in (lo, hi, st, lt)):
+            continue
+        if lo >= hi:
+            rep.add(f"{where}/spot_min_m", f"spot_min_m {lo} must be < spot_max_m {hi} (R0 B.33 A-161)")
+        if st > lt:
+            rep.add(f"{where}/solve_tol_m", f"solve_tol_m {st} must be <= loft_tol_m {lt} (R0 B.33 A-161)")
+        for u in collection(defs.get("ground_units"), "ground_units"):
+            w = weapons.get(u.get("weapon")) if u.get("autopilot") == "ap_crawler" else None
+            if w is not None and (lo < w.get("range_min_m", 0) or hi > w.get("range_m", 0)):
+                rep.add(f"{where}/spot_max_m", f"[{lo}, {hi}] must lie inside the weapon's [range_min_m {w.get('range_min_m', 0)}, "
+                        f"range_m {w.get('range_m', 0)}] (R0 B.33 A-161)")
 
 
 def check_landing_grade(rep: Report, defs: dict[str, Any]) -> None:

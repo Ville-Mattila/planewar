@@ -21,6 +21,7 @@ const CARGO: float = 12.5
 const CARGO_KIND: int = 1
 const HP01: float = 0.5
 const FUEL01: float = 0.25
+const BOOST_CD01: float = 0.25           ## boost_time = -0.75 * boost_cooldown_s
 const FLIP_CD01: float = 0.5            ## flip_time = -0.5 * flip_cooldown_s
 const C_SERVICE: Vector3 = Vector3(0.4, 0.5, 0.8)   ## GD-15: docked `c`'s fuel01, rearm line (1 of 2 bombs), hp01
 const C_GRADE: int = LandingGrade.Grade.CLEAN   ## GD-15: `c`'s last landing
@@ -95,7 +96,7 @@ func _script_state() -> void:
 	st.cargo[sa] = CARGO
 	st.cargo_kind[sa] = CARGO_KIND
 	st.possessor[sa] = 0
-	st.boost_time[sa] = -0.1                 # neither boosting nor ready: cooling down (2)
+	st.boost_time[sa] = -(1.0 - BOOST_CD01) * dart.boost_cooldown_s   # neither boosting nor ready: cooling down (2)
 	st.flip_time[sa] = -FLIP_CD01 * dart.flip_cooldown_s
 	st.visible_mask[EntityId.slot(b)] = 1    # team 0 sees b
 	st.visible_mask[EntityId.slot(core)] |= 2   # team 1 also sees the core (a structure: never in visible_enemy_ships)

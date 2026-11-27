@@ -226,6 +226,7 @@ func test_replicable_part_of_exempt_clauses() -> void:
 	assert_bool(s.world.view().visible_to(0, s.wreck)).is_false()            # why the wreck is not received
 	assert_int(v.control_state(s.a)).is_equal(SimViewScene.CONTROL & Codec.FLAG_CONTROL_MASK)
 	assert_float(v.flip_cooldown01(s.a)).is_equal_approx(SimViewScene.FLIP_CD01, 0.5 / 255.0)
+	assert_float(v.boost_cooldown01(s.a)).is_equal_approx(SimViewScene.BOOST_CD01, 0.5 / 63.0)
 	assert_float(v.shield01(s.core)).is_equal(-1.0)
 	assert_float(v.wreck_ore(s.wreck)).is_equal(-1.0)
 	var out: PackedInt32Array = PackedInt32Array([-7, -7])
@@ -242,7 +243,7 @@ func test_replicable_part_of_exempt_clauses() -> void:
 	assert_int(v.team_flags(1)).is_equal(0)
 	# unknown: per field (NetUnknown); unknown(id) = any field, true for every entity while some accessor has no wire
 	assert_bool(v.unknown(s.a)).is_true()
-	for f: StringName in [&"fuel01", &"ammo", &"boost_state", &"basis", &"vel", &"ai_tag", &"radius", &"hp01", &"possessor"]:
+	for f: StringName in [&"fuel01", &"ammo", &"boost_state", &"boost_cooldown01", &"basis", &"vel", &"ai_tag", &"radius", &"hp01", &"possessor"]:
 		assert_bool(v.field_unknown(s.a, f)).override_failure_message("a %s" % f).is_false()   # own possessed unit
 	for f: StringName in [&"overlay", &"cargo", &"cargo_kind", &"link", &"order_issuer", &"supply01", &"shield01", &"wreck_ore"]:
 		assert_bool(v.field_unknown(s.a, f)).override_failure_message("a %s" % f).is_true()    # exempt as not received
@@ -333,3 +334,17 @@ func test_snap_world_reaches_a_fixed_point() -> void:
 	var up: PackedVector3Array = st.up.duplicate()
 	assert_bool(rig.snap_world()).is_true()
 	assert_bool(st.pos == pos and st.fwd == fwd and st.up == up).is_true()   # a second snap moves nothing
+
+
+func test_pilot_block_boost_cooldown01_and_service01() -> void:
+	var p: PilotBlock = PilotBlock.new()
+	assert_float(p.boost_cooldown01()).is_equal(0.0)                                           # READY
+	p.boost_state = PilotBlock.boost_byte(PilotBlock.Boost.ACTIVE, 0.3)
+	assert_float(p.boost_cooldown01()).is_equal(1.0)                                           # ACTIVE: just used
+	p.boost_state = PilotBlock.boost_byte(PilotBlock.Boost.COOLDOWN, 0.5)
+	assert_float(p.boost_cooldown01()).is_equal_approx(0.5, 0.5 / 63.0)
+	p.boost_state = PilotBlock.boost_byte(PilotBlock.Boost.COOLDOWN, 1.0)
+	assert_float(p.boost_cooldown01()).is_equal(1.0)
+	p.service_refuel = 255
+	p.service_rearm = 0
+	assert_vector(p.service01()).is_equal(Vector3(1.0, 0.0, 0.0))

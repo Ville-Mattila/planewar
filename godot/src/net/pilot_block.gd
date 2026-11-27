@@ -27,6 +27,21 @@ static func boost_byte(phase: int, remaining01: float) -> int:
 	return (phase & 3) | (clampi(roundi(clampf(remaining01, 0.0, 1.0) * 63.0), 0, 63) << 2)
 
 
+## SimView.boost_cooldown01 of this block: 1 while ACTIVE, the remaining cooldown fraction (1/63 steps) while COOLDOWN, else 0.
+func boost_cooldown01() -> float:
+	match boost_state & 3:
+		Boost.ACTIVE:
+			return 1.0
+		Boost.COOLDOWN:
+			return float(boost_state >> 2) / 63.0
+	return 0.0
+
+
+## SimView.service_progress of this block: refuel, rearm, repair as 0..1.
+func service01() -> Vector3:
+	return Vector3(float(service_refuel), float(service_rearm), float(service_repair)) / 255.0
+
+
 ## Writes BYTES at `at`; returns the next offset, or -1 (nothing written) when it does not fit.
 func write(buf: PackedByteArray, at: int) -> int:
 	if at < 0 or at + BYTES > buf.size():

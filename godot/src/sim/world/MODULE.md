@@ -31,7 +31,7 @@ class_name PadQueries extends RefCounted                                      # 
 static func occupant(store: EntityStore, defs: WorldDefs, pad: int) -> int;  static func serves(store: EntityStore, defs: WorldDefs, s: int) -> bool
 static func nearest_friendly(store: EntityStore, defs: WorldDefs, id: int) -> int
 class_name ShipReads extends RefCounted                                       # (GD-15, A-73) LocalSimView ship reads; static, allocation-free
-static func boost_state(store: EntityStore, sd: ShipDef, id: int) -> int;  static func flip_cooldown01(store: EntityStore, sd: ShipDef, id: int) -> float
+static func boost_state(store: EntityStore, sd: ShipDef, id: int) -> int;  static func boost_cooldown01(store: EntityStore, sd: ShipDef, id: int) -> float;  static func flip_cooldown01(store: EntityStore, sd: ShipDef, id: int) -> float
 static func dock_state(store: EntityStore, id: int) -> int;  static func service_state(store: EntityStore, id: int) -> int
 class_name ContactMath extends RefCounted                                     # (GD-15, A-73) Collision's pure math; Collision.classify_terrain / landing_band / sweep_sphere delegate
 static func classify_terrain(hit_normal_speed: float, common: FlightCommonDef) -> int;  static func landing_band(v_vert: float, v_hor: float, tilt_deg: float, common: FlightCommonDef) -> int
@@ -83,6 +83,7 @@ func is_active(slot: int) -> bool;  func cancel_delegable(slot: int) -> bool   #
 func members(t: int, out: PackedInt32Array) -> void;  func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool
 class_name InputSlots extends RefCounted                                     # per-entity (main range) and per-player PilotInput slots, f64 axes
 const ENTITY_SLOTS: int
+var dock_edge: PackedByteArray                                               # per player: DOCK went down at this tick's step-2 copy (GD-40 W12; derived, not saved)
 func set_entity(slot: int, input: PilotInput) -> void;  func read_entity(slot: int, out: PilotInput) -> void;  func clear_entity(slot: int) -> void
 func set_player(player: int, input: PilotInput) -> void;  func clear_player(player: int) -> void;  func copy_player_to_entity(player: int, slot: int) -> void
 func write_state(buf: StreamPeerBuffer) -> void;  func read_state(buf: StreamPeerBuffer) -> bool

@@ -94,6 +94,7 @@ var predict_steps: int = 0
 var dive_release_frac: float = 0.0
 var pitch_over_agl: float = 0.0
 var launch_climb_agl: float = 0.0
+var auto_launch_fuel01: float = -1.0                       ## AI-45 landing.auto_launch_fuel01 (A-119); negative: absent (the Bomber)
 var launch_max_speed: float = 0.0                          ## landing.approach_min_speed_mps: below it a fresh ship is launching
 var arrival: float = 0.0
 var move_agl: float = 0.0
@@ -221,6 +222,8 @@ func _guide(g: Dictionary, l: Dictionary) -> void:
 	pitch_over_agl = _f(l, "pitch_over_agl_m")
 	launch_climb_agl = _f(l, "launch_climb_agl_m")
 	launch_max_speed = _f(l, "approach_min_speed_mps")
+	if l.has("auto_launch_fuel01"):
+		auto_launch_fuel01 = _f(l, "auto_launch_fuel01")
 
 
 func _intercept(i: Dictionary) -> void:

@@ -112,3 +112,22 @@ func test_flags_report_what_a_condition_reads() -> void:
 func test_bad_conditions_do_not_compile() -> void:
 	for bad: String in ["t>=", "t>=x", "ore", "have:ghost>=1", "have:dart", "t>=3&", "|t>=3", "presence>=1", "wat>=3", "t=>3", "t>=3&&t>=4"]:
 		assert_object(BookCondition.compile(bad, _idx)).override_failure_message("'%s' must not compile" % bad).is_null()
+
+
+func _waits(src: String, t_s: float, ore: float) -> bool:
+	var c: BookContext = _ctx()
+	c.t_s = t_s
+	c.ore = ore
+	c.affordable = false
+	var cond: BookCondition = BookCondition.compile(src, Ai23Kit.content().entity_index)
+	return cond.waits_on_clock(c)
+
+
+func test_waits_on_clock_follows_the_a163_table() -> void:
+	assert_bool(_waits("t>=330", 300.0, 400.0)).is_true()
+	assert_bool(_waits("t>=420|ore>=900", 300.0, 400.0)).is_true()
+	assert_bool(_waits("t>=270&ore>=900", 300.0, 400.0)).is_false()   # the clock is met, the step waits for Ore
+	assert_bool(_waits("", 300.0, 400.0)).is_false()                   # absent when: funds short is the book's fault
+	assert_bool(_waits("presence", 300.0, 400.0)).is_false()
+	assert_bool(_waits("t>=330", 300.0, 1000.0)).is_true()
+	assert_bool(_waits("t>=100", 300.0, 400.0)).is_false()             # true already

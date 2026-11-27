@@ -41,6 +41,11 @@ func hears_impacts() -> bool:
 	return false
 
 
+## AI-45: true for the flying-ship brains: the driver records service-pause ALERTs (`DockedMode.note_alert`) for their entities only.
+func hears_service_pause() -> bool:
+	return false
+
+
 ## AI-18: one drained BOMB_IMPACT (`ev.pos`, `ev.team` = the bomb's team) for registered entity `id` of this class,
 ## before the tick's thinks; true = wake `id` (the driver's rate-limited wake). Per-entity effects go to AiState only.
 func on_impact(_id: int, _ev: SimEvent, _st: AiState) -> bool:

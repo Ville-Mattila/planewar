@@ -23,6 +23,7 @@ var bombs: int = 0
 var rockets: int = 0
 var flip_cd01: float = 0.0
 var boost: int = 0
+var boost_cd01: float = 0.0         ## SimView.boost_cooldown01: 1 boosting / just used, 0 ready
 
 
 ## `agl_m` comes from the caller (terrain height under the ship); `pad_radius_m` from the pad's def.
@@ -37,6 +38,7 @@ static func from_view(v: SimView, id: int, agl: float, radius_m: float) -> Landi
 	d.rockets = v.rockets(id)
 	d.flip_cd01 = v.flip_cooldown01(id)
 	d.boost = v.boost_state(id)
+	d.boost_cd01 = v.boost_cooldown01(id)
 	d.docked = v.dock_state(id) == 2
 	d.service = v.service_progress(id)
 	var pad_id: int = v.nearest_friendly_pad(id)

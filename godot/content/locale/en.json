@@ -1,6 +1,7 @@
 {
   "hud.heading.pole": "POLE",
   "hud.heading.north": "N",
+  "hud.barrel": "ELEV",
   "hud.speed": "SPD",
   "hud.alt": "ALT",
   "hud.agl": "AGL",

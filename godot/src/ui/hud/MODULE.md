@@ -32,6 +32,16 @@ static func ladder_marks(pitch_rad: float, step_deg: float, half_range_deg: floa
 static func limb_y(pitch_rad: float, h: float, px_per_deg: float) -> float; static func band(agl: float, alt: float) -> Band; static func uplink(alt: float) -> float
 static func uplink_visible(alt: float) -> bool; static func uplink_lost(alt: float) -> bool; static func uplink_pulse(alt: float, t: float) -> float
 static func tape_x(bearing: float, heading: float, width_du: float, span_deg: float) -> float
+static func barrel_deg(rad: float, min_deg: float, max_deg: float) -> int; static func barrel_fill01(deg: float, min_deg: float, max_deg: float) -> float   # UX-49
+class_name BarrelReadoutData extends RefCounted   # UX-49: plain data; shown = def has a barrel and the view receives the field
+var shown: bool; var deg: int; var min_deg: int; var max_deg: int; var fill01: float
+static func has_barrel(g: GroundUnitDef) -> bool; static func from_def(g: GroundUnitDef, rad: float, received: bool) -> BarrelReadoutData
+static func from_view(v: SimView, id: int, g: GroundUnitDef) -> BarrelReadoutData   # not received = field_unknown(id, &"barrel_elevation") where the view has it
+class_name BarrelReadoutView extends Control   # scenes/ui/barrel_readout.tscn; "ELEV n" + bar + min / max end marks, nothing when not shown
+var data: BarrelReadoutData
+var profile: UiScale.Profile
+func set_data(d: BarrelReadoutData) -> void
+func lines() -> PackedStringArray
 class_name FlightHudData extends RefCounted   # plain data for the instruments
 static func from_state(pos: Vector3, vel: Vector3, b: Basis, ground_radius: float, home_dir: Vector3) -> FlightHudData
 class_name FlightInstruments extends Control  # scenes/ui/flight_instruments.tscn; ladder, limb tick, tape, blocks, uplink
@@ -79,12 +89,12 @@ class_name StatusMath extends RefCounted   # pure statics (UX-18): Core shield t
 enum Boost { READY, ACTIVE, COOLING }
 static func shield_remaining_s(until_s: float, clock_s: float) -> float; static func shield_ring01(until_s: float, clock_s: float) -> float
 static func shield_visible(team_flags: int, until_s: float, clock_s: float) -> bool; static func ring_fill(cooldown01: float) -> float; static func ring_ready(cooldown01: float) -> bool
-static func boost_fill(state: int) -> float; static func share01(count: int, capacity: int) -> float
+static func boost_fill(state: int) -> float;  static func boost_ring_fill(state: int, cooldown01: float) -> float; static func share01(count: int, capacity: int) -> float
 class_name LandingHudData extends RefCounted   # plain data, read only through SimView
 var ship: int; var pad: int; var pad_dist_m: float; var pad_radius_m: float; var agl_m: float
 var v_vert: float; var v_horiz: float; var nose_deg: float; var phase: LandingMath.Phase
 var visible: bool; var pad_occupied: bool; var drift: Vector2; var docked: bool; var service: Vector3; var waiting: int
-var fuel01: float; var ammo: int; var bombs: int; var rockets: int; var flip_cd01: float; var boost: int
+var fuel01: float; var ammo: int; var bombs: int; var rockets: int; var flip_cd01: float; var boost: int; var boost_cd01: float
 static func from_view(v: SimView, id: int, agl: float, radius_m: float) -> LandingHudData
 class_name HudText extends RefCounted   # shared HUD text, bar and ring drawing
 static func font_size(profile: UiScale.Profile) -> int
@@ -176,6 +186,7 @@ func lines() -> PackedStringArray; func font_size() -> int
 `godot/test/unit/ui/test_threat_hud.gd` (U13, U14), `test_hud_social.gd` (U15, U16), `test_threat_overlay_scene.gd`; scripted views in `hud_scenario_view.gd`.
 
 ## Open items
+- `StatusMath.boost_fill(state)` deprecated by GD-46 (no caller); delete at a major version, by ADR (10 s4.1).
 
 needs app: refresh `ThreatData`, `TowerHint.from_view` (agl from terrain), `PilotedBadges` and the pip list at their rates, feed `SimEvent`s to `HandoverToast` / `BeaconTracker`, project badge positions through the camera, submit `HandoverToast.accept`; the roster names come from the lobby.
 needs sim: `Command.handover(player, entity, to_slot)` builder (UX-19 builds the Command by hand); the `ids_near` mask for hostiles is a kind bitmask, there is no HOSTILE team mask.

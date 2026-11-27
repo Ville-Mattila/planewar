@@ -2363,7 +2363,7 @@
       "ART-28"
     ],
     "milestone": "M3",
-    "acceptance": "Validator passes; cradle totals equal 02 s9.3 (dependency edited: ART-29/30 dropped, they carry their own blocks)",
+    "acceptance": "Validator passes; cradle totals equal 02 s9.3 (dependency edited: ART-29/30 dropped, they carry their own blocks); R0 B.33 A-157 / A-158: the Noon Pole relay_station entry sits on ground whose slope over its pad_radius_m is <= build_max_slope_deg (the bound A-158's band assumes); the PR states the measured slope",
     "docs": [
       "02 s9",
       " 02 GD-22"
@@ -2492,7 +2492,7 @@
       "GD-41"
     ],
     "milestone": "M3",
-    "acceptance": "SC-35, SC-36, SC-37 pass; R0 B.30 A-146 / A-147: the Hauler brain captures by landing on an open pad its team does not hold (only a def with captures: true may) and stays DOCKED until SimView.team(relay) is its own team or the order is replaced; it never waits for SERVICED on a pad of another team (D14: none comes) and aborts when the pad is occupied",
+    "acceptance": "SC-35, SC-36, SC-37 pass; R0 B.30 A-146 / A-147: the Hauler brain captures by landing on an open pad its team does not hold (only a def with captures: true may) and stays DOCKED until SimView.team(relay) is its own team or the order is replaced; it never waits for SERVICED on a pad of another team (D14: none comes) and aborts when the pad is occupied; AI-45 follow-up (R0 B.24 A-119): on a service pad the Hauler brain runs DockedMode: AiTag.DOCKED and thrust 0 until DockedMode.leaves (service_progress full, or OV_SVC_PAUSED and fuel01 >= ap_hauler landing.auto_launch_fuel01 0.5), then LAUNCH drives thrust 1.0 along basis(link).y; HaulerBrain.hears_service_pause() is true; tests in test/sim/ai/test_docked_mode.gd: a full-service case and a paused-Ice case for &\"hauler\"; a capture stay on an open pad of another team (A-147 D14: no service, no ALERT) never takes the paused-fuel exit",
     "docs": [
       "05 s6.5",
       " R0 C3-17",
@@ -2683,10 +2683,11 @@
     "depends_on": [
       "AI-23",
       "GD-05",
-      "BUG-4"
+      "BUG-4",
+      "AI-50"
     ],
     "milestone": "M3",
-    "acceptance": "Schema-valid; no storage_silo; every build outpost preceded by an order move with when: presence; each book passes SC-41",
+    "acceptance": "Schema-valid; no storage_silo; every build outpost preceded by an order move with when: presence; each book passes SC-41; R0 B.33 A-162 / A-163: no gate is derived from stall_s and commander BK1 is not added; under AI-50's SC-41 every book either completes or is pending at 5:00 only on an Expansion pair that waits on the clock; a step gated at or after 5:00 appears only as that pair at the end of a book; bulwark_standard reaches its Extractor through the home-trap Outpost pair (05 s7.3 as patched); gates are fitted to the sim's income after BUG-4 (first delivery 68 s on cradle)",
     "docs": [
       "05 s7.3",
       " R0 C2-14",
@@ -2705,7 +2706,7 @@
       "AI-23"
     ],
     "milestone": "M3",
-    "acceptance": "10-min solo bot keeps power01 in [1.0, 1.6] >= 90 % of time; SC-44 passes",
+    "acceptance": "10-min solo bot keeps power01 in [1.0, 1.6] >= 90 % of time; SC-44 passes; R0 B.33 A-163: at the hand-over the Expansion rule (05 s7.5 'at the book's time') reads the gate of the book's deferred Expansion pair, if it has one, through OpeningBook.when_of; no other unexecuted book step is carried over",
     "docs": [
       "05 s7.4-7.5",
       " 05 AI-25"
@@ -2975,7 +2976,7 @@
       "NET-61"
     ],
     "milestone": "M3",
-    "acceptance": "Runs the canonical scene with 8 LocalTransport clients; AI never called outside step(); phase timings exported; snapshot_budget_test passes (dependency edited: ENet/WS transports plug in via NET-24); R0 B.32 A-156: ServerSession fills every SnapshotFrame row with set_entity and then set_barrel(i, NetDefs.barrel_byte(def_id, SimView.barrel_elevation(id))) (net/MODULE.md N11); a LocalTransport test whose scene holds a Siege Crawler with a slewed barrel asserts zero MALFORMED snapshot decodes on every client and NetSimView.barrel_elevation within one quantum of the server's value on a client that holds the Crawler at tier A",
+    "acceptance": "Runs the canonical scene with 8 LocalTransport clients; AI never called outside step(); phase timings exported; snapshot_budget_test passes (dependency edited: ENet/WS transports plug in via NET-24); R0 B.32 A-156: ServerSession fills every SnapshotFrame row with set_entity and then set_barrel(i, NetDefs.barrel_byte(def_id, SimView.barrel_elevation(id))) (net/MODULE.md N11); a LocalTransport test whose scene holds a Siege Crawler with a slewed barrel asserts zero MALFORMED snapshot decodes on every client and NetSimView.barrel_elevation within one quantum of the server's value on a client that holds the Crawler at tier A; GD-46 follow-up: ServerSession builds the own possessed unit's PilotBlock with boost_state = PilotBlock.boost_byte(phase, remaining01), remaining01 = the active timer's remaining fraction while ACTIVE and LocalSimView.boost_cooldown01 while COOLDOWN; a server/client test shows NetSimView.boost_cooldown01 within 1/63 of LocalSimView.boost_cooldown01 at 5 points of a boost-and-cooldown cycle and never 0 mid-COOLDOWN",
     "docs": [
       "04 s7",
       " R0 C2-04",
@@ -4606,7 +4607,8 @@
     "tier": "Sonnet",
     "size_days": 1.5,
     "depends_on": [
-      "NET-17"
+      "NET-17",
+      "NET-62"
     ],
     "milestone": "M4",
     "acceptance": "team_detail_test: contract test green for every accessor; deltas reconstruct the full state after 600 ticks; average <= 300 B/s on the canonical scene",
@@ -5928,6 +5930,26 @@
       " 01 s0.1"
     ],
     "status": "todo"
+  },
+  {
+    "id": "DOC-05",
+    "title": "docs: name SimView.boost_cooldown01 in 04 s3.7 replication map and the R0 B.5 / 06 accessor lists (GD-46 follow-up)",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 0.1,
+    "depends_on": [
+      "GD-46"
+    ],
+    "milestone": "M3",
+    "acceptance": "04:444 pilot-block row lists boost_cooldown01 beside boost_state (source: pilot block boost byte bits 2-7, own possessed unit; elsewhere default 0.0 with field_unknown); R0 Part B B.5 accessor table and 06:1040 (s9 contract list) name boost_cooldown01(id) -> float 0..1 (1 boosting / just used, 0 ready); 06:567 speed-block row reads boost_state(id), boost_cooldown01(id); no other text changed; Architect ack on the PR (Architect-owned files, 10 s4.3)",
+    "docs": [
+      "04 s3.3",
+      "04 s3.7",
+      "R0 B.5",
+      "06 s6.4"
+    ],
+    "status": "todo",
+    "merged": null
   },
   {
     "id": "QA-01",
@@ -7695,8 +7717,11 @@
       "02 s13",
       "05 s5.5"
     ],
-    "status": "todo",
-    "note": "OWNER default: DOCK reuse; alternative: a new PilotInput bit7 HOOK (wire and 06 s4.3 button budget change, not recommended)."
+    "status": "done",
+    "note": "OWNER default: DOCK reuse; alternative: a new PilotInput bit7 HOOK (wire and 06 s4.3 button budget change, not recommended).",
+    "merged": "2026-11-27",
+    "pr": 203,
+    "notes": "DOCK edge claims a wreck once in step 4 (Salvage.claim_docks, dock_claimed(p) is the seam fact) and step 10 hooks exactly that wreck (W12). auto_dock is not wired yet: follow-up GD-55 carries the guard; Architect questions in PM-07; HUD prompt UX-52."
   },
   {
     "id": "GD-41",
@@ -7979,7 +8004,10 @@
       "05 s6.2",
       "05 s2.5"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 204,
+    "notes": "DockedMode (sim_ai/autopilot): leaves on service_progress full or OV_SVC_PAUSED (sticky, kept across overlays; Dart family only) with fuel01 >= 0.5; LAUNCH thrust 1.0 along the pad normal; Bomber needs a non-RETURN order head. Hauler deferred to AI-15 (F2). Stale RETURN head loop: BUG-7 after PM-07."
   },
   {
     "id": "CONTENT-2",
@@ -8080,7 +8108,10 @@
       "docs/06-platforms-input-ux.md",
       "godot/src/sim/MODULE.md"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 200,
+    "notes": "SimView.boost_cooldown01 (Local: ShipReads; Net: pilot-block boost byte bits 2-7, 1/63 step, own possessed unit only); StatusMath.boost_ring_fill appended, boost_fill(state) deprecated. Follow-ups DOC-05, NET-62, NET-15 acceptance append (server boost byte)."
   },
   {
     "id": "PM-04",
@@ -8452,20 +8483,25 @@
   {
     "id": "AI-49",
     "title": "content: ratified siege block for ap_crawler (8 keys + solver tuning) in the autopilots schema and def",
-    "lane": "content",
-    "tier": "Haiku",
-    "size_days": 0.25,
+    "lane": "sim_ai+content",
+    "tier": "Sonnet",
+    "size_days": 0.5,
     "depends_on": [
-      "AI-18"
+      "AI-18",
+      "AI-18b",
+      "CONTENT-5"
     ],
     "milestone": "M3",
-    "acceptance": "After the Architect rules on the siege block: tools/schemas/autopilots.schema.json gains the siege property (optional/required as ruled) incl. the solver tuning numbers now hard-coded in siege_aim.gd; autopilots.json ap_crawler carries it with _doc (05 s6.7); negative test; CrawlerBrain/SiegeAim read the def instead of literals",
+    "acceptance": "R0 B.33 A-161: tools/schemas/autopilots.schema.json gains $defs.siege (object, additionalProperties false, all 12 keys required) and a siege property on the autopilot, required on the ap_crawler branch beside follow: spot_min_m, spot_max_m (number, > 0, <= 5000); spot_slope_deg (number, > 0, <= 45); relocate_bomb_m, relocate_step_m (number, > 0, <= 1000); aim_tol_deg (number, > 0, <= 10); spot_samples (integer 1..64); loft_tol_m, solve_tol_m (number, > 0, <= 100); loft_iters (integer 1..16); solve_step_ticks (integer 1..4); relocate_tries (integer 1..16); autopilots.json ap_crawler and the canonical fixture carry the block with the values 1000, 1150, 10, 60, 150, 1, 24, 15, 2, 6, 2, 6 and a _doc citing 05 s6.7 (the first four), AI-18 and AI-18b; validate_content cross-field rules: spot_min_m < spot_max_m, solve_tol_m <= loft_tol_m, [spot_min_m, spot_max_m] inside the Crawler weapon's [range_min_m, range_m]; negative cases in test_validate_content.py: ap_crawler without siege, a siege block missing one key, and one per cross-field rule; CrawlerParams.from_content reads all 12 keys from the def with no default and returns null when the block or a key is missing or <= 0; SiegeAim.loft loops prm.loft_iters and steps solve_step_ticks x dt, max_steps = max(ceil(lifetime_s / (solve_step_ticks x dt)), 1), CrawlerBrain._relocate tries prm.relocate_tries; CrawlerParams gains var loft_iters, solve_step_ticks, relocate_tries (appends), SIEGE_KEYS gains the three names at the end, SIEGE_DEFAULTS and LOFT_ITERS stay with their values, deprecated in MODULE.md Open items and read by nothing (10 s4.1); the barrel limits are read from the typed GroundUnitDef fields (CONTENT-5), not raw; brains/MODULE.md CR5 rewritten; contract tests rewritten to the required rule in an earlier commit of the same PR (ADR-14): in godot/test/unit/sim_ai/test_ai18_contract.gd, test_follow_is_required_and_the_siege_block_is_optional_but_checked (:30-47; a partial siege block is now refused, the full block builds params), the one-key {solve_tol_m: 20} case (:128; now a full block with solve_tol_m > loft_tol_m) and the barrel refusal case (:118-126; set through the typed GroundUnitDef barrel fields, not raw); nothing else changes: the impact numbers and the AI-18 / AI-18b scenario suites (test_sc_crawler.gd, test_sc_crawler_ceiling.gd, test_crawler_brain.gd, test_crawler_perf.gd) pass unchanged; the task also edits tools/validate_content.py and tools/tests (CONTENT-5 precedent); PR flagged 'Contract impact: change (R0 B.33 A-161)'",
     "docs": [
+      "docs/reviews/R0-amendments-27.md",
       "05 s6.7",
-      "docs/reviews/R0-amendments-23.md"
+      "godot/src/sim_ai/brains/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-27",
+    "notes": "siege block (12 required keys, R0 B.33 A-161) in the schema, autopilots.json and fixture; validate_content cross-field rules; CrawlerParams reads it with no defaults; SIEGE_DEFAULTS/LOFT_ITERS deprecated and unread. Impact numbers unchanged (15.79 deg / 3.375 m).",
+    "pr": 205
   },
   {
     "id": "GD-51",
@@ -8524,8 +8560,10 @@
       "07",
       "godot/assets/ui/theme_pw.tres"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 199,
+    "notes": "project theme gui/theme/custom = theme_pw.tres; build_theme.py styles pressed toggles with ui_accent (8.7:1 vs unselected). Follow-up UX-50: focus ring on a selected toggle is 1.88:1 against the accent fill (A11Y-13)."
   },
   {
     "id": "TA-69",
@@ -8607,6 +8645,24 @@
     "pr": 187
   },
   {
+    "id": "NET-62",
+    "title": "net: split NetSimView below the 400-line cap before the next accessor (pilot-block and TEAM_STATE reads into a helper)",
+    "lane": "net",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-46"
+    ],
+    "milestone": "M3",
+    "acceptance": "net_sim_view.gd <= 340 lines; pilot-block reads (fuel01, ammo, bombs, rockets, boost_state, boost_cooldown01, flip_cooldown01, dock_state, service_progress, incoming_rockets) and TEAM_STATE reads delegate to a new class_name helper under src/net/client/ with no public behaviour change; net/client/MODULE.md lists the helper (append); TEST-02 contract suite and test_net_sim_view.gd green unchanged",
+    "docs": [
+      "04 s3.7",
+      "godot/src/net/client/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
     "id": "CONTENT-5",
     "title": "content+sim: typed GroundUnitDef.barrel_slew_dps / barrel_min_deg / barrel_max_deg; BarrelSlew reads them; cross-field rules (R0 B.31 A-151)",
     "lane": "content+sim",
@@ -8665,6 +8721,66 @@
       "06 s3.2",
       "06 s6.1"
     ],
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 202,
+    "notes": "BarrelReadoutData/View + HudMath.barrel_deg/barrel_fill01; not received via NetSimView.field_unknown (has_method; SimView has no typed field_unknown - Architect nit). Not hosted in the Chase HUD yet: follow-up UX-51."
+  },
+  {
+    "id": "UX-50",
+    "title": "ui: focus outline on a selected (pressed) toggle meets 3:1 against the accent fill (A11Y-13; UX-47 review follow-up)",
+    "lane": "ui",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "UX-47"
+    ],
+    "milestone": "M3",
+    "acceptance": "tools/art/build_theme.py gives the focus style of pressed toggles an outline colour with >= 3:1 contrast against ui_accent (and keeps >= 3:1 against the dark background); theme_pw.tres regenerated (--check green); test_theme_pw.gd asserts both ratios; the literal 12 in build_theme.py replaced by BODY_SIZE",
+    "docs": [
+      "07 A11Y-13",
+      "godot/assets/ui/theme_pw.tres",
+      "https://github.com/Ville-Mattila/planewar/pull/199#issuecomment-7222925519"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "UX-51",
+    "title": "ui+app: host the Chase HUD widgets (StatusClusterView, BarrelReadoutView) in the live Chase HUD layout",
+    "lane": "ui",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "UX-49",
+      "GD-46"
+    ],
+    "milestone": "M3",
+    "acceptance": "The Chase HUD scene used in a match instantiates status_cluster.tscn and barrel_readout.tscn at their 06 s3.2 anchors and feeds them each frame from the active SimView for the possessed entity (BarrelReadoutData.from_view with the host-looked-up GroundUnitDef; StatusClusterView via its data class); both hide when nothing is possessed; a scene test possesses a Siege Crawler and a Dart in a LocalSimView world and asserts the barrel readout shows only for the Crawler; windowed screenshot in a running match",
+    "docs": [
+      "06 s3.2",
+      "godot/src/ui/hud/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "UX-52",
+    "title": "ui/hud: prompt to hook a wreck with DOCK when one is in reach (GD-40 needs ui)",
+    "lane": "ui/hud",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-40",
+      "UX-51"
+    ],
+    "milestone": "M3",
+    "acceptance": "While the possessed ship has a free tow slot and a free wreck is within economy.salvage_hook_m, the Chase HUD shows a localised prompt naming the DOCK binding (from the input map, all three input classes) to hook the wreck; hidden otherwise and while the needed fields are not received; reads only SimView (any needed accessor is a contract question, not added here); unit test for the visibility rule; windowed screenshot",
+    "docs": [
+      "02 s13",
+      "06 s3.2",
+      "godot/src/sim/salvage/MODULE.md"
+    ],
     "status": "todo",
     "merged": null
   },
@@ -8701,9 +8817,10 @@
       ".github/workflows/ci.yml",
       ".github/scripts/gdunit_shard.sh"
     ],
-    "status": "todo",
-    "merged": null,
-    "notes": "unit-sim was cancelled at its time limit with no failing test on several PRs (GD-20 #169, GD-50 #182, AI-18b #186 twice); runner contention plus growing sim tests (AI-33 SC-47 ~45 s). Root cause of the shutdowns is the BUG-5 memory leak; split is still useful for wall time."
+    "status": "done",
+    "merged": "2026-11-27",
+    "notes": "unit-sim split into unit-sim-a (combat, steer, docking), unit-sim-b (economy..vision), unit-sim-c (rest:sim); p95 2:38/2:39/4:09 of 15 min; required checks 19 -> 21. Follow-up TA-73: split gdUnit4 sim (10-14 of 15 min).",
+    "pr": 197
   },
   {
     "id": "TA-72",
@@ -8716,6 +8833,26 @@
     "acceptance": "tools/lint_commits.py accepts subjects starting with ids like AI-18b: and AI-33b: (backlog ids with a lowercase letter suffix) and still rejects malformed ids; unit tests for both; CI green",
     "docs": [
       "tools/lint_commits.py"
+    ],
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 198,
+    "notes": "lint_commits PREFIX_RE accepts one lowercase letter right after the id's final digit (AI-18b); review nits: regex alone accepts AI-1a-2b (backlog lookup rejects it)."
+  },
+  {
+    "id": "TA-73",
+    "title": "CI: split the gdUnit4 sim (test/sim layer) shard; it runs 10-14 min of its 15 min limit (TA-71 review follow-up)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-71"
+    ],
+    "milestone": "M3",
+    "acceptance": "The gdUnit4 sim job is split into >= 2 shards with gdunit_shard.sh SHARD_DIRS (a+b / rest:<dir> forms), every test/sim test file selected exactly once (tools/tests/test_ci_shards.py extended to test/sim, and it also asserts every selected path exists); each shard's p95 over 5 runs < 50 % of its timeout; the run's job count stays within the free plan's 20 concurrent jobs or the PR states the queueing cost; the new required check names are listed in the PR body",
+    "docs": [
+      ".github/workflows/ci.yml",
+      ".github/scripts/gdunit_shard.sh"
     ],
     "status": "todo",
     "merged": null
@@ -8734,6 +8871,27 @@
     "docs": [
       "https://github.com/Ville-Mattila/planewar/pull/190#issuecomment-7198733100",
       "03 s7.6"
+    ],
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 201,
+    "notes": "Ruling R0-amendments-27 (B.33 A-157..A-163): radial up; terrain-following landing band; basin vision intended; d = driven leg; siege block required (12 keys); default when = affordable; SC-41 exemption and the 05 s7.3 book patch. OWNER questions A-158 (landing band follows terrain) and A-161 (siege required) have defaults applied."
+  },
+  {
+    "id": "PM-07",
+    "title": "Architect: DOCK hold after a wreck hook, client-side claim in prediction (GD-40), and AI-45 review questions",
+    "lane": "architect",
+    "tier": "Fable",
+    "size_days": 0.25,
+    "depends_on": [
+      "GD-40"
+    ],
+    "milestone": "M3",
+    "acceptance": "Ruling in R0-amendments-NN on: (Q1) after a DOCK press that hooks a wreck, may Assist.auto_dock start on a later tick while DOCK stays held (reviewer recommends no: latch per player until DOCK release, saved or derivable); (Q2) NET-18 prediction: recompute the W12 claim client-side from snapshot state and accept a reconciliation on mismatch, or have the server echo the claim (recommendation: recompute) - with the NET-18 acceptance append text; plus the AI-45 review's questions (docked-ship pause memory vs SimView.service_paused; RETURN order heads never completed on landing); each with a named follow-up; AI-45 C1: ratify the sticky paused-service reading in 05 s6.2 (OV_SVC_PAUSED kept until the ship flies) or append SimView.service_paused(id) -> bool (PadService BIT_WAIT_ICE | BIT_WAIT_ORE of the current stay) for DockedMode to read; AI-45 C2: which component completes a ship's RETURN head (05 s3.2 'completes when DOCKED and fully serviced'; nothing calls ControlOrders.complete_head): (a) the brain on leaving DOCKED via an appended CommandSinkBase.complete_head(id) routed by SimSink, or (b) Docking pops a RETURN head at SERVICED or LAUNCHED; BUG-7 implements it",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/203",
+      "https://github.com/Ville-Mattila/planewar/pull/204",
+      "docs/reviews/R0-amendments-14.md"
     ],
     "status": "todo",
     "merged": null
@@ -8776,5 +8934,145 @@
     "merged": "2026-11-26",
     "notes": "Diagnosed on GD-49 PR #194 (2026-11-26): main's unit-sim shard peaks 18.3 GB private / 11.4 GB working set; every load_map world keeps ~14.8 MB alive after free; confirmed cycle MatchJudge._applier -> CommandApplier._validator -> CommandValidator.judge -> MatchJudge (sim_world.gd:334), at least one more remains. Runner shutdowns on unit-sim (PRs #169, #182, #186, #190, #194) are this, not flakiness. Blocks GD-49 merge. Fixed: 6-class cycle broken at SimWorld PREDELETE (EconomyHub.unlink, AutoReplenish.unlink); MapPathing extracted. Shard peak 18.3 GB -> 1.1 GB; CI unit-sim 7m25s -> 6m03s. Nits: S18 wording (parts unusable after world freed); load_map twice on one world still leaks the first links; follow-up idea: static cycle check in tools/.",
     "pr": 196
+  },
+  {
+    "id": "GD-52",
+    "title": "sim: map-spawned Relay Stations get a radial up, as every built structure (R0 B.33 A-157)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "GD-51",
+      "BUG-3"
+    ],
+    "milestone": "M3",
+    "acceptance": "MapRelays.spawn sets up = the entry's dir (radial), fwd = the facing projected on the tangent plane at dir (default Sphere.tangent_frame(dir).x) and pos = Terrain.surface_point(dir), as Build.stamp does (sim/build B10); a test on a sloped fixture asserts up == pos.normalized() within 1e-6 for every structure spawned by spawn_start_kit, Build.place and MapRelays; on a fixture map whose relay site slopes 10 degrees a Hauler lands tail-down and captures; Economy.solar_factor of a solar structure placed on a 15 degree slope equals the value at its latitude on level ground; sim/relay/MODULE.md and sim/build/MODULE.md B10 cite A-157; S4 round trip byte-exact, no FORMAT change (no shipped bake has a relay entry); no def or schema change",
+    "docs": [
+      "docs/reviews/R0-amendments-27.md",
+      "03 s7.6",
+      "02 s8.4"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "BUG-6",
+    "title": "sim: a ship resting off-centre on a sloped pad never docks: the landing band follows the terrain where it rises above the deck (R0 B.33 A-158)",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "BUG-3"
+    ],
+    "milestone": "M3",
+    "acceptance": "Collision._ship_structure: for a not-DOCKED ship the landing volume of a pad-friendly structure is offset <= pad_radius_m and -(r + 0.5) <= alt <= r + 0.5 + g, alt = altitude above the pad plane, g = max(0, (Terrain.surface_point(ship direction) - pos[pad]) . up[pad]); g = 0 on level ground, so every existing collision, docking and landing test passes unchanged; the deck half-space (A-109), the capturer exception (A-146), the lower bound and the docked position are unchanged; terrain is sampled only for a ship inside a pad column above the plain band (at most one height_at per such ship per tick); new tests on a sloped fixture with pad_radius_m 10: a ship settling 8 m uphill of the pad centre on 5 degree and on 15 degree ground gets C_PAD, is graded and DOCKED at pos[pad] + up x r; the same ship 8 m downhill docks; a ship hovering r + 1 above a level deck gets no C_PAD; the landing autopilot (05 L4-L6) docks on the 15 degree pad; S4 byte-equal, no FORMAT change; sim/MODULE.md Collision line, sim/docking/MODULE.md and sim/relay/MODULE.md R10 cite A-158; perf note with a perf_tick A/B",
+    "docs": [
+      "docs/reviews/R0-amendments-27.md",
+      "03 s6.1",
+      "03 s6.4"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "BUG-7",
+    "title": "sim+sim_ai: a ship's RETURN order head is never completed, so a serviced Dart relaunches and re-lands in a loop (AI-45 review)",
+    "lane": "sim+sim_ai",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-45",
+      "PM-07"
+    ],
+    "milestone": "M3",
+    "acceptance": "A ship's standing RETURN head is completed with ORDER_DONE(value = RETURN) (05 s2.3 C4) when the ship leaves DOCKED after SERVICED or after the R0 B.24 A-119 paused-fuel exit, through the path PM-07 rules (C2). Tests in test/sim/ai/test_docked_mode.gd: (1) a Dart docked with a system RETURN (FLAG_PREPEND) ahead of a PATROL order launches once after SERVICED, emits ORDER_DONE(RETURN) once and resumes the PATROL: exactly 1 LAUNCHED and 0 further DOCKED in 120 s; (2) a Dart whose only order is RETURN goes AUTO and is tagged PATROL above launch_climb_agl_m; (3) a Bomber docked with a RETURN head and an ATTACK queued behind it (FLAG_QUEUE) launches on the ATTACK; (4) DockedMode's Bomber clause head.kind != RETURN becomes 'an order head exists'; sim_ai/MODULE.md and the owning sim module updated; perf note",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/204",
+      "05 s3.2",
+      "05 s2.3"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "GD-53",
+    "title": "sim: test pin for basin vision (ADR-05 horizon rule on cradle slot 0; R0 B.33 A-159)",
+    "lane": "sim+core",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "BUG-3"
+    ],
+    "milestone": "M3",
+    "acceptance": "Tests only, no godot/src change. On cradle slot 0 (floor about -335 m) with the start kit: (1) an enemy Siege Crawler standing on the floor is visible to the Core's team at 200 m and not visible at 600 m (horizon sqrt(2 x |p_core| x 7) = about 282 m); (2) an enemy Dart 600 m from the Core and 40 m above the floor is visible; (3) with a finished Sensor Mast the Crawler at 1,150 m from the Mast is visible (deck_reveal_radius 1,200); (4) the same three cases on the flat datum give the same answers; test/unit/core/test_sphere.gd gains two vectors for is_occluded_by_datum: two points at R - 335 and 300 m apart: true; the second point raised 10 m: false; sim/vision/MODULE.md cites A-159 in one line",
+    "docs": [
+      "docs/reviews/R0-amendments-27.md",
+      "03 s3.7",
+      "03 s2.8"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "GD-54",
+    "title": "tools: econ_model.py prices Harvester trips with d as the driven leg and starts the kit Harvester mining (R0 B.33 A-160, BUG-4)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "BUG-4"
+    ],
+    "milestone": "M3",
+    "acceptance": "tools/econ_model.py takes each trip's d as the driven leg (centre-to-centre distance - spot_frac x radius_m - the dock stop offset, read from the defs and the map recipe, none typed in the script) and starts the kit Harvester mining at the field's near edge (R0 B.6); on cradle it reproduces the sim: first start-kit delivery 68 s +- 5 s and a steady cycle within 5 % of test_bug4_harvest_cycle.gd; a 02 s8.7 checkpoint that moves by more than 5 s is reported in the PR as a 02 s8.7 revision request ('needs docs:' with the old and new value; the tools lane does not edit docs/02, 10 s4.3); the 02 s8.2 table is unchanged; tools tests green",
+    "docs": [
+      "docs/reviews/R0-amendments-27.md",
+      "02 s8.2",
+      "02 s8.7"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "GD-55",
+    "title": "sim/steer: wire Assist.auto_dock into AssistStep, skipping a player whose DOCK press claimed a wreck (GD-40 review follow-up)",
+    "lane": "sim",
+    "tier": "Sonnet",
+    "size_days": 1.0,
+    "depends_on": [
+      "GD-40",
+      "AI-10",
+      "GD-15",
+      "PM-07"
+    ],
+    "milestone": "M3",
+    "acceptance": "AssistStep.run calls Assist.auto_dock (sim/steer MODULE.md) for each player whose possessed ship holds DOCK, is not under LINK_BRIDGE and is not DOCKED, with one LandingState per player slot (saved in S4 or derived; byte-exact save/restore mid-assist); it skips player p on any tick where Salvage.dock_claimed(p) is true (read after claim_docks, which stays the first line of SimWorld._assist_substitution) and, per PM-07's ruling on a held DOCK after a hook, while that press stays held; it does not clear DOCK from the entity input slot (W12 edge invariant); acting ticks call PilotTrack.note_assist so a landing with an assist tick in the last 150 m grades AUTO; tests: (a) a possessed Hauler with a free tow slot holding DOCK within auto_dock_radius_m of a free friendly pad and a free wreck within salvage_hook_m: on the edge tick the wreck is TETHERED and no assist tick is recorded; (b) the same without the wreck: auto_dock acts on the edge tick (SC-16 green); (c) a Dart in setup (a): auto_dock acts, nothing hooked; (d) S4 save/restore mid-assist byte-exact; perf note on the 03 s4.2 step-4 row",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/203",
+      "godot/src/sim/salvage/MODULE.md",
+      "godot/src/sim/steer/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "AI-50",
+    "title": "sim_ai: OpeningBook default when = affordable, a funds wait is never a stall; SC-41 exempts only an Expansion pair that waits on the clock (R0 B.33 A-162, A-163)",
+    "lane": "sim_ai",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-23"
+    ],
+    "milestone": "M3",
+    "acceptance": "OpeningBook applies the default where it compiles a step: a build or produce step is due only while its when holds and BookHost.affordable is true, with or without an explicit when (05 s7.3); an order, raid or set_replenish step with no when is due at once and BookHost.affordable is never called for a step without a cost; BookCondition.compile of an empty source stays always true (test_empty_condition_is_true unchanged, no Public API change); the presence retry of an Outpost step (_retry_move) re-sends the order move only while presence is false, not while presence holds and funds are short; tests: a step that waits for funds longer than stall_s is not SKIPPED_STALL and runs when the funds arrive, and it blocks the steps behind it; a due, affordable step blocked by a missing prerequisite is still SKIPPED_STALL after stall_s; SC-41 _assert_no_stall: a PENDING outcome at the hand-over passes only when the cursor step is the order move of an Expansion pair and waits on the clock (its when is false at the hand-over and either becomes true with t_s = +INF and the other terms kept, or stays false at this t_s with every other term forced true), through an appended pure BookCondition helper; a build outpost left pending on presence at the hand-over fails; the begins_with t>= test is gone; unit cases: t>=330 passes, t>=420|ore>=900 with Ore short passes, t>=270&ore>=900 with Ore short fails, an absent when with funds short fails; SC-40, SC-43, SC-47 still pass; no BookRun layout or AiDriver FORMAT change; commander/MODULE.md OB1 and OB3 reworded and citing A-162; perf note (test_commander_perf.gd)",
+    "docs": [
+      "docs/reviews/R0-amendments-27.md",
+      "05 s7.3",
+      "godot/src/sim_ai/commander/MODULE.md"
+    ],
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 206,
+    "notes": "OpeningBook: absent when on build/produce = affordable, funds wait never SKIPPED_STALL; BookCondition.waits_on_clock appended; SC-41 judges each slot on its own hand-over snapshot and exempts only a clock-waiting Expansion pair move. Fixture ai23_books.json: dead vanguard raid step removed (A-163 3c)."
   }
 ]

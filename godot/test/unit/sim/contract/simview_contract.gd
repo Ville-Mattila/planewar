@@ -102,6 +102,8 @@ func _vitals() -> void:
 	_t(&"cargo_kind", _v.cargo_kind(s.a) == SimViewScene.CARGO_KIND and _v.cargo_kind(s.b) == 0 and _v.cargo_kind(s.dead) == 0)
 	_t(&"link", _v.link(s.c) == s.pad and _v.link(s.a) == 0 and _v.link(s.dead) == 0)
 	_t(&"boost_state", _v.boost_state(s.a) == 2 and _v.boost_state(s.b) == 0 and _v.boost_state(s.dead) == 0)   # 2 cooling, 0 ready
+	_t(&"boost_cooldown01", _near(_v.boost_cooldown01(s.a), SimViewScene.BOOST_CD01, &"boost_cooldown01") and _v.boost_cooldown01(s.b) == 0.0
+			and _v.boost_cooldown01(s.dead) == 0.0)
 	_t(&"flip_cooldown01", _near(_v.flip_cooldown01(s.a), SimViewScene.FLIP_CD01, &"flip_cooldown01") and _v.flip_cooldown01(s.b) == 0.0)
 	_t(&"landing_grade_last", _v.landing_grade_last(s.c) == SimViewScene.C_GRADE and _v.landing_grade_last(s.a) == -1
 			and _v.landing_grade_last(s.dead) == -1)

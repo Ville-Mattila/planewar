@@ -189,6 +189,41 @@ func test_a_restored_world_with_a_pending_near_bomb_relocation_continues_byte_fo
 var _b2: CrawlerBrain
 
 
+# R0 B.33 A-161: `relocate_tries` is how many ring candidates a relocation tries. The first candidate (150 m along the
+# ring, away from the bomb) is blocked on the path grid; with 6 tries the second one is taken (no new spot search), with
+# 1 try the relocation falls back to a fresh ring search (`_spot`, `stats_spots` + 1). Fails with the literal 6.
+func test_relocate_tries_bounds_the_ring_candidates_of_a_relocation() -> void:
+	var spots: PackedInt32Array = PackedInt32Array()
+	for tries: int in [6, 1]:
+		var c: int = _world(1075.0)
+		var ap: Dictionary = Ai18Kit.ap().duplicate(true)
+		(ap["siege"] as Dictionary)["relocate_tries"] = tries
+		_b = CrawlerBrain.create(Ai18Kit.content(), ap, Ai18Kit.def(), _w.terrain())
+		assert_int(_b.prm.relocate_tries).is_equal(tries)
+		_d = Ai18Kit.driver(_w, _b)
+		_attack(c)
+		Ai16Kit.step(_w, 2 * _d.think_period())
+		assert_int(_tag(c)).is_equal(AiTag.Tag.SIEGE)
+		var home: Vector3 = _w.view().pos(_t)
+		var impact: Vector3 = Ai16Kit.dir_at(1075.0, 40.0)
+		var bearing: Vector3 = SiegeAim.tangent_to(home, _w.view().pos(c))
+		var away: float = -1.0 if SiegeAim.heading_error(home, bearing, impact * Ai16Kit.R) > 0.0 else 1.0
+		var first: Vector3 = SiegeAim.ring_point(home.normalized(), bearing, away * _b.prm.relocate_step_m / _b.prm.spot_mid_m,
+			_b.prm.spot_mid_m)
+		var fr: Basis = Sphere.tangent_frame(first)
+		for dx: int in range(-3, 4):
+			for dy: int in range(-3, 4):
+				var q: Vector3 = (first * Ai16Kit.R + fr.x * float(dx) * 36.8 + fr.y * float(dy) * 36.8).normalized()
+				_w._pathing.set_weight(PathGrid.cell_of(q), PathGrid.W_BLOCKED)
+		var before: int = _b.stats_spots
+		var _h: int = Ai18Kit.bomb(_w, impact, DartKit.FOE, 1, 0)
+		Ai16Kit.step(_w, 4 * HZ)
+		assert_int(_b.stats_relocations).is_equal(1)
+		var _a: bool = spots.append(_b.stats_spots - before)
+	assert_int(spots[0]).is_equal(0)                                                # a later candidate was good
+	assert_int(spots[1]).is_greater(0)                                              # the only candidate was blocked
+
+
 # A restored copy of `_w` with a fresh driver configured before `deserialize` (`_b2` its brain); bytes equal at once.
 func _restore() -> SimWorld:
 	var bytes: PackedByteArray = _w.serialize()

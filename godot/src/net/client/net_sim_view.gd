@@ -1,11 +1,8 @@
 class_name NetSimView extends SimView
 ## SimView over replicated state (04 s5.6, s3.7): roster, SnapshotDecoder frames sampled at a fractional render tick
 ## (NetPose; call `sample` before reads, R0 C2-12), the own possessed unit's pilot block, POSSESSED / RELEASED events, the
-## team's TEAM_STATE. Ids are EntityIds (roster index = Roster.index_of_slot(slot), generation from ENTITY_META). A field
-## not received returns the SimView default with `field_unknown` (NetUnknown, 04 s3.7): C-tier basis / vel, pilot fields
-## off the own possessed unit, other teams' ai_tag, a wreck's radius, a barrel not held from tier A (NET-61), accessors no
-## wire carries yet (overlay, cargo, cargo_kind, link, NET-39 rows, shield01 / wreck_ore -1.0, landing_grade_last). NET-39:
-## team_state / player_state / order_head / pending_order (A-111). Constants mirror EntityStore / Spatial / SimView (pinned).
+## team's TEAM_STATE. Ids are EntityIds (roster index = Roster.index_of_slot(slot), generation from ENTITY_META). A field not
+## received returns the SimView default with `field_unknown` (NetUnknown, 04 s3.7). Constants mirror EntityStore / Spatial / SimView.
 
 const K_STRUCTURE: int = 0                  ## EntityStore.K_* (def_kind)
 const K_SHIP: int = 1
@@ -265,6 +262,11 @@ func boost_state(id: int) -> int:
 	return decoder.pilot.boost_state & BOOST_MASK if i >= 0 and i == _own() else 0
 
 
+func boost_cooldown01(id: int) -> float:
+	var i: int = index_of(id)
+	return decoder.pilot.boost_cooldown01() if i >= 0 and i == _own() else 0.0
+
+
 func flip_cooldown01(id: int) -> float:
 	var i: int = index_of(id)
 	return float(decoder.pilot.flip_cooldown) / BYTE_MAX if i >= 0 and i == _own() else 0.0
@@ -272,19 +274,16 @@ func flip_cooldown01(id: int) -> float:
 
 func dock_state(id: int) -> int:
 	var i: int = index_of(id)
-	if i < 0:
-		return 0
-	if i == _own():
+	if i >= 0 and i == _own():
 		return decoder.pilot.dock_state
-	return Protocol.DockState.DOCKED if (_flags_byte(i) & Codec.FLAG_DOCKED) != 0 else Protocol.DockState.FLYING
+	return 0 if i < 0 else Protocol.DockState.DOCKED if (_flags_byte(i) & Codec.FLAG_DOCKED) != 0 else Protocol.DockState.FLYING
 
 
 func service_progress(id: int) -> Vector3:
 	var i: int = index_of(id)
 	if i < 0 or i != _own():
 		return Vector3.ZERO
-	var p: PilotBlock = decoder.pilot
-	return Vector3(float(p.service_refuel), float(p.service_rearm), float(p.service_repair)) / BYTE_MAX
+	return decoder.pilot.service01()
 
 
 func service_state(id: int) -> int:

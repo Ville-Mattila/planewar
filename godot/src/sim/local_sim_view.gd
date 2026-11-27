@@ -200,6 +200,10 @@ func boost_state(id: int) -> int:
 	return ShipReads.boost_state(_store, _ship_def(id), id)
 
 
+func boost_cooldown01(id: int) -> float:
+	return ShipReads.boost_cooldown01(_store, _ship_def(id), id)
+
+
 func flip_cooldown01(id: int) -> float:
 	return ShipReads.flip_cooldown01(_store, _ship_def(id), id)
 
