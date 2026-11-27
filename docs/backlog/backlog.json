@@ -8524,8 +8524,10 @@
       "07",
       "godot/assets/ui/theme_pw.tres"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 199,
+    "notes": "project theme gui/theme/custom = theme_pw.tres; build_theme.py styles pressed toggles with ui_accent (8.7:1 vs unselected). Follow-up UX-50: focus ring on a selected toggle is 1.88:1 against the accent fill (A11Y-13)."
   },
   {
     "id": "TA-69",
@@ -8664,6 +8666,25 @@
       "docs/reviews/R0-amendments-25.md",
       "06 s3.2",
       "06 s6.1"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "UX-50",
+    "title": "ui: focus outline on a selected (pressed) toggle meets 3:1 against the accent fill (A11Y-13; UX-47 review follow-up)",
+    "lane": "ui",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "UX-47"
+    ],
+    "milestone": "M3",
+    "acceptance": "tools/art/build_theme.py gives the focus style of pressed toggles an outline colour with >= 3:1 contrast against ui_accent (and keeps >= 3:1 against the dark background); theme_pw.tres regenerated (--check green); test_theme_pw.gd asserts both ratios; the literal 12 in build_theme.py replaced by BODY_SIZE",
+    "docs": [
+      "07 A11Y-13",
+      "godot/assets/ui/theme_pw.tres",
+      "https://github.com/Ville-Mattila/planewar/pull/199#issuecomment-7222925519"
     ],
     "status": "todo",
     "merged": null
