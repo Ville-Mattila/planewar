@@ -144,8 +144,11 @@ func test_a_claim_taken_in_reach_is_hooked_even_if_the_ship_has_left_it() -> voi
 	var wr: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3024.0))
 	assert_bool(DockingTestKit.possess(w, w.store().id_of(h), 0)).is_true()
 	assert_float(w.store().pos[h].distance_to(w.store().pos[wr])).is_less(w.economy().salvage.reach_m())
-	_fly(w, h, 3024.0, 3000.0, 90.0)
+	var dir: Vector3 = (K.at(0.0, 3030.0) - K.at(0.0, 3000.0)).normalized()
+	w.store().pos[wr] = w.store().pos[h] + dir * 32.9           # 0.1 m inside reach at the claim
+	w.store().vel[h] = -dir * 90.0                               # step 5 carries it 3 m away
 	var _e: Array[SimEvent] = _press(w, DOCK)
+	assert_float(w.store().pos[h].distance_to(w.store().pos[wr])).is_greater(w.economy().salvage.reach_m())
 	assert_bool(K.tethered(w, wr)).is_true()
 	assert_int(w.store().link[wr]).is_equal(w.store().id_of(h))
 
@@ -161,7 +164,7 @@ func test_a_claim_on_a_wreck_that_expires_this_tick_hooks_nothing_and_does_not_l
 	assert_bool(K.tethered(w, h)).is_false()
 
 
-func test_a_tie_takes_the_lowest_slot_and_the_boundary_hooks() -> void:
+func test_a_tie_takes_the_lowest_slot() -> void:
 	var w: SimWorld = K.world()
 	var h: int = K.put(w, &"hauler", 0, 0, 20.0, 3000.0)
 	var first: int = K.wreck_at(w, &"dart", 60.0, K.at(0.0, 3000.0))
