@@ -57,3 +57,41 @@ func test_view_lines_empty_when_hidden_and_marked_when_shown() -> void:
 	assert_str(ls[0]).contains("20")
 	assert_str(ls[1]).is_equal("0")
 	assert_str(ls[2]).is_equal("45")
+
+
+class UnknownView extends SimView:
+	var unknown: bool = false
+	var asked: StringName = &""
+
+	func field_unknown(_id: int, accessor: StringName) -> bool:
+		asked = accessor
+		return unknown
+
+	func barrel_elevation(_id: int) -> float:
+		return deg_to_rad(20.0)
+
+
+class PlainView extends SimView:
+	func barrel_elevation(_id: int) -> float:
+		return deg_to_rad(20.0)
+
+
+func test_from_view_hidden_when_field_unknown() -> void:
+	var v: UnknownView = UnknownView.new()
+	v.unknown = true
+	assert_bool(BarrelReadoutData.from_view(v, 1, _def(10.0, 0.0, 45.0)).shown).is_false()
+	assert_str(String(v.asked)).is_equal("barrel_elevation")
+
+
+func test_from_view_shown_when_field_known() -> void:
+	var v: UnknownView = UnknownView.new()
+	var d: BarrelReadoutData = BarrelReadoutData.from_view(v, 1, _def(10.0, 0.0, 45.0))
+	assert_bool(d.shown).is_true()
+	assert_int(d.deg).is_equal(20)
+	assert_str(String(v.asked)).is_equal("barrel_elevation")
+
+
+func test_from_view_shown_for_view_without_field_unknown() -> void:
+	var d: BarrelReadoutData = BarrelReadoutData.from_view(PlainView.new(), 1, _def(10.0, 0.0, 45.0))
+	assert_bool(d.shown).is_true()
+	assert_int(d.deg).is_equal(20)
