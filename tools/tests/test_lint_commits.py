@@ -26,7 +26,7 @@ def _git(repo: Path, *args: str) -> str:
 
 
 class SubjectRules(unittest.TestCase):
-    IDS = frozenset({"TA-03", "REPO-06", "V11-01"})
+    IDS = frozenset({"TA-03", "REPO-06", "V11-01", "AI-18b", "AI-33b"})
 
     def ok(self, subject: str) -> None:
         self.assertIsNone(lint_commits.check_subject(subject, self.IDS), subject)
@@ -59,6 +59,21 @@ class SubjectRules(unittest.TestCase):
     def test_missing_colon_space_fails(self) -> None:
         self.bad("TA-03 no colon")
         self.bad("TA-03:no space")
+
+    def test_lowercase_suffix_id_passes(self) -> None:
+        self.ok("AI-18b: suffixed backlog id")
+        self.ok("AI-33b: suffixed backlog id with text")
+
+    def test_malformed_suffix_ids_fail(self) -> None:
+        self.bad("ai-18: lower case prefix")
+        self.bad("AI-18bb: two lowercase letters")
+        self.bad("AI18b: no hyphen")
+        self.bad("AI-b: letter without a digit")
+
+    def test_real_backlog_has_suffixed_ids(self) -> None:
+        ids = lint_commits.load_ids(REPO / "docs" / "backlog" / "backlog.json")
+        for task_id in ("AI-18b", "AI-33b"):
+            self.assertIn(task_id, ids)
 
     def test_real_backlog_has_known_ids(self) -> None:
         ids = lint_commits.load_ids(REPO / "docs" / "backlog" / "backlog.json")
