@@ -79,6 +79,7 @@ python tools/validate_content.py                            # schemas, dangling 
 tools/gdunit_headless.sh -a res://test/unit -c -rd reports     # exit 0 ok, 100 failures, 101 warnings
 tools/gdunit_headless.sh -a res://test/unit/<lane>/test_x.gd    # one file
 python tools/gen_module_api.py --check                      # MODULE.md vs code
+"$GODOT_BIN" --headless --path godot res://test/perf/perf_tick.tscn -- --ticks=1800   # perf note; run the .tscn, never `-s perf_tick.gd` (Node script: blocking ALERT dialog)
 ```
 
 Run gdUnit4 only through `tools/gdunit_headless.sh` (headless, as CI does). Calling `addons/gdUnit4/runtest.sh` directly opens a "PLANEWAR (DEBUG)" window on the owner's desktop for every run; don't. Open a windowed Godot only for a screenshot your brief asks for, once, in one short run.
