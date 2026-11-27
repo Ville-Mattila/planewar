@@ -49,3 +49,44 @@ func test_tabular_digits_equal_width() -> void:
 	var w0: float = font.get_string_size("0", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 	for d: String in "123456789":
 		assert_float(font.get_string_size(d, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x).is_equal_approx(w0, 0.01)
+
+
+const MIN_CONTRAST: float = 3.0
+
+
+func _lum(c: Color) -> float:
+	var ch: Array[float] = []
+	for v: float in [c.r, c.g, c.b]:
+		ch.append(v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4))
+	return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+
+
+func _contrast(a: Color, b: Color) -> float:
+	var la: float = _lum(a)
+	var lb: float = _lum(b)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+
+func test_project_theme_is_theme_pw() -> void:
+	var t: Theme = ThemeDB.get_project_theme()
+	assert_object(t).is_not_null()
+	assert_str(t.resource_path).is_equal(THEME_PATH)
+
+
+func test_selected_toggle_contrasts_unselected() -> void:
+	var t: Theme = _theme()
+	var sel: StyleBoxFlat = t.get_stylebox("pressed", "Button") as StyleBoxFlat
+	var hov_sel: StyleBoxFlat = t.get_stylebox("hover_pressed", "Button") as StyleBoxFlat
+	var unsel: StyleBoxFlat = t.get_stylebox("normal", "Button") as StyleBoxFlat
+	assert_bool(sel.bg_color.is_equal_approx(UiTokens.UI_ACCENT)).is_true()
+	assert_float(_contrast(sel.bg_color, unsel.bg_color)).is_greater_equal(MIN_CONTRAST)
+	assert_float(_contrast(hov_sel.bg_color, unsel.bg_color)).is_greater_equal(MIN_CONTRAST)
+	var sel_font: Color = t.get_color("font_pressed_color", "Button")
+	assert_float(_contrast(sel_font, sel.bg_color)).is_greater_equal(MIN_CONTRAST)
+
+
+func test_tabbar_selected_contrasts_unselected() -> void:
+	var t: Theme = _theme()
+	var sel: StyleBoxFlat = t.get_stylebox("tab_selected", "TabBar") as StyleBoxFlat
+	var unsel: StyleBoxFlat = t.get_stylebox("tab_unselected", "TabBar") as StyleBoxFlat
+	assert_float(_contrast(sel.bg_color, unsel.bg_color)).is_greater_equal(MIN_CONTRAST)
