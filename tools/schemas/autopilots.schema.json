@@ -1294,6 +1294,9 @@
         "follow": {
           "$ref": "#/$defs/follow"
         },
+        "siege": {
+          "$ref": "#/$defs/siege"
+        },
         "harvest": {
           "$ref": "#/$defs/harvest"
         }
@@ -1304,7 +1307,7 @@
         "tags",
         "think_period_ticks"
       ],
-      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional on the base; on the ap_harvester branch flee_radius_m, quiet_s, follow and harvest are required (R0 B.29 A-144, brains/MODULE.md HV5). On the ap_crawler branch follow is required (R0 B.29 A-145, brains/MODULE.md CR5).",
+      "$comment": "05 s4.4 parameter set (R0 B.1: unchanged; rtb.fuel01 / rtb.hp01 public for 08 SL-3). Class-specific keys of 05 s4.4 prose (flee_radius_m, tow_scan_m, tow_enemy_clear_m, quiet_s) are optional on the base; on the ap_harvester branch flee_radius_m, quiet_s, follow and harvest are required (R0 B.29 A-144, brains/MODULE.md HV5). On the ap_crawler branch follow (R0 B.29 A-145) and siege (R0 B.33 A-161) are required (brains/MODULE.md CR5).",
       "anyOf": [
         {
           "properties": {
@@ -1394,7 +1397,8 @@
             }
           },
           "required": [
-            "follow"
+            "follow",
+            "siege"
           ]
         },
         {
@@ -1413,7 +1417,100 @@
           }
         }
       ],
-      "description": "R0 B.14 A-86: required per id: separation on every ship ap_* (dart, lancer, bomber, scout, hauler, harvester); formation on dart and lancer; guidance / intercept / attack_run / gun / evade with gun.aoa_comp_max_deg and evade.heading_change_deg on ap_dart (A-93); flee_radius_m / quiet_s / follow / harvest on ap_harvester (B.29 A-144); follow on ap_crawler (B.29 A-145)"
+      "description": "R0 B.14 A-86: required per id: separation on every ship ap_* (dart, lancer, bomber, scout, hauler, harvester); formation on dart and lancer; guidance / intercept / attack_run / gun / evade with gun.aoa_comp_max_deg and evade.heading_change_deg on ap_dart (A-93); flee_radius_m / quiet_s / follow / harvest on ap_harvester (B.29 A-144); follow on ap_crawler (B.29 A-145); siege on ap_crawler (B.33 A-161)"
+    },
+    "siege": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "R0 B.33 A-161: the ap_crawler siege block (05 s6.7, AI-18, AI-18b); required on ap_crawler, all 12 keys",
+      "required": [
+        "spot_min_m",
+        "spot_max_m",
+        "spot_slope_deg",
+        "relocate_bomb_m",
+        "relocate_step_m",
+        "aim_tol_deg",
+        "spot_samples",
+        "loft_tol_m",
+        "solve_tol_m",
+        "loft_iters",
+        "solve_step_ticks",
+        "relocate_tries"
+      ],
+      "properties": {
+        "spot_min_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 5000,
+          "description": "05 s6.7: nearest firing spot from the target"
+        },
+        "spot_max_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 5000,
+          "description": "05 s6.7: farthest firing spot"
+        },
+        "spot_slope_deg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 45,
+          "description": "05 s6.7: steepest ground a spot may stand on"
+        },
+        "relocate_bomb_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000,
+          "description": "05 s6.7: an enemy bomb this close relocates the Crawler"
+        },
+        "relocate_step_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1000,
+          "description": "AI-18: one relocation moves this far along the ring"
+        },
+        "aim_tol_deg": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 10,
+          "description": "AI-18: trigger held within this heading error"
+        },
+        "spot_samples": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "AI-18: ring candidates of a spot search"
+        },
+        "loft_tol_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "description": "AI-18: promised impact accuracy"
+        },
+        "solve_tol_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "description": "AI-18b: lofted solve stops at this along-track miss (<= loft_tol_m)"
+        },
+        "loft_iters": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "description": "AI-18b: secant steps of one lofted solve"
+        },
+        "solve_step_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "description": "AI-18b: predict_impact step in ticks"
+        },
+        "relocate_tries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "description": "AI-18: relocation candidates tried"
+        }
+      }
     },
     "follow": {
       "type": "object",

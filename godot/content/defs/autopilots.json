@@ -883,7 +883,7 @@
       "id": "ap_crawler",
       "status": "core",
       "tags": [],
-      "_doc": "R0 B.1 required keys only (05 s4.4 lists ap_crawler without values; 02 s3 minimum range is not an autopilot key). AI-19 (six damping_only flight gains from godot/test/tuning/recommended_gains.json, set named by A-68, auto_launch_fuel01 per A-119). AI-18 (R0 B.29 A-145, brains/MODULE.md CR5): follow is required on ap_crawler; the 05 s5.7 ground follower block, starting values ap_harvester's, kept unchanged by AI-18 (SC-AI18 scenarios on tiny_test).",
+      "_doc": "R0 B.1 required keys only (05 s4.4 lists ap_crawler without values; 02 s3 minimum range is not an autopilot key). AI-19 (six damping_only flight gains from godot/test/tuning/recommended_gains.json, set named by A-68, auto_launch_fuel01 per A-119). AI-18 (R0 B.29 A-145, brains/MODULE.md CR5): follow is required on ap_crawler; the 05 s5.7 ground follower block, starting values ap_harvester's, kept unchanged by AI-18 (SC-AI18 scenarios on tiny_test). AI-49 (R0 B.33 A-161): siege is required on ap_crawler, 12 keys; spot_min_m, spot_max_m, spot_slope_deg, relocate_bomb_m are 05 s6.7; relocate_step_m, aim_tol_deg, spot_samples, loft_tol_m, relocate_tries are AI-18; solve_tol_m, loft_iters, solve_step_ticks are AI-18b.",
       "think_period_ticks": 10,
       "follow": {
         "lookahead_m": 40,
@@ -897,6 +897,20 @@
         "stuck_window_s": 10,
         "deviate_m": 120,
         "aim_every_ticks": 4
+      },
+      "siege": {
+        "spot_min_m": 1000,
+        "spot_max_m": 1150,
+        "spot_slope_deg": 10,
+        "relocate_bomb_m": 60,
+        "relocate_step_m": 150,
+        "aim_tol_deg": 1,
+        "spot_samples": 24,
+        "loft_tol_m": 15,
+        "solve_tol_m": 2,
+        "loft_iters": 6,
+        "solve_step_ticks": 2,
+        "relocate_tries": 6
       }
     },
     {
