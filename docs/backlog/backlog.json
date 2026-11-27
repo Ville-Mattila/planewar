@@ -2492,7 +2492,7 @@
       "GD-41"
     ],
     "milestone": "M3",
-    "acceptance": "SC-35, SC-36, SC-37 pass; R0 B.30 A-146 / A-147: the Hauler brain captures by landing on an open pad its team does not hold (only a def with captures: true may) and stays DOCKED until SimView.team(relay) is its own team or the order is replaced; it never waits for SERVICED on a pad of another team (D14: none comes) and aborts when the pad is occupied",
+    "acceptance": "SC-35, SC-36, SC-37 pass; R0 B.30 A-146 / A-147: the Hauler brain captures by landing on an open pad its team does not hold (only a def with captures: true may) and stays DOCKED until SimView.team(relay) is its own team or the order is replaced; it never waits for SERVICED on a pad of another team (D14: none comes) and aborts when the pad is occupied; AI-45 follow-up (R0 B.24 A-119): on a service pad the Hauler brain runs DockedMode: AiTag.DOCKED and thrust 0 until DockedMode.leaves (service_progress full, or OV_SVC_PAUSED and fuel01 >= ap_hauler landing.auto_launch_fuel01 0.5), then LAUNCH drives thrust 1.0 along basis(link).y; HaulerBrain.hears_service_pause() is true; tests in test/sim/ai/test_docked_mode.gd: a full-service case and a paused-Ice case for &\"hauler\"; a capture stay on an open pad of another team (A-147 D14: no service, no ALERT) never takes the paused-fuel exit",
     "docs": [
       "05 s6.5",
       " R0 C3-17",
@@ -8004,7 +8004,10 @@
       "05 s6.2",
       "05 s2.5"
     ],
-    "status": "todo"
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 204,
+    "notes": "DockedMode (sim_ai/autopilot): leaves on service_progress full or OV_SVC_PAUSED (sticky, kept across overlays; Dart family only) with fuel01 >= 0.5; LAUNCH thrust 1.0 along the pad normal; Bomber needs a non-RETURN order head. Hauler deferred to AI-15 (F2). Stale RETURN head loop: BUG-7 after PM-07."
   },
   {
     "id": "CONTENT-2",
@@ -8883,7 +8886,7 @@
       "GD-40"
     ],
     "milestone": "M3",
-    "acceptance": "Ruling in R0-amendments-NN on: (Q1) after a DOCK press that hooks a wreck, may Assist.auto_dock start on a later tick while DOCK stays held (reviewer recommends no: latch per player until DOCK release, saved or derivable); (Q2) NET-18 prediction: recompute the W12 claim client-side from snapshot state and accept a reconciliation on mismatch, or have the server echo the claim (recommendation: recompute) - with the NET-18 acceptance append text; plus the AI-45 review's questions (docked-ship pause memory vs SimView.service_paused; RETURN order heads never completed on landing); each with a named follow-up",
+    "acceptance": "Ruling in R0-amendments-NN on: (Q1) after a DOCK press that hooks a wreck, may Assist.auto_dock start on a later tick while DOCK stays held (reviewer recommends no: latch per player until DOCK release, saved or derivable); (Q2) NET-18 prediction: recompute the W12 claim client-side from snapshot state and accept a reconciliation on mismatch, or have the server echo the claim (recommendation: recompute) - with the NET-18 acceptance append text; plus the AI-45 review's questions (docked-ship pause memory vs SimView.service_paused; RETURN order heads never completed on landing); each with a named follow-up; AI-45 C1: ratify the sticky paused-service reading in 05 s6.2 (OV_SVC_PAUSED kept until the ship flies) or append SimView.service_paused(id) -> bool (PadService BIT_WAIT_ICE | BIT_WAIT_ORE of the current stay) for DockedMode to read; AI-45 C2: which component completes a ship's RETURN head (05 s3.2 'completes when DOCKED and fully serviced'; nothing calls ControlOrders.complete_head): (a) the brain on leaving DOCKED via an appended CommandSinkBase.complete_head(id) routed by SimSink, or (b) Docking pops a RETURN head at SERVICED or LAUNCHED; BUG-7 implements it",
     "docs": [
       "https://github.com/Ville-Mattila/planewar/pull/203",
       "https://github.com/Ville-Mattila/planewar/pull/204",
@@ -8966,6 +8969,26 @@
       "docs/reviews/R0-amendments-27.md",
       "03 s6.1",
       "03 s6.4"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "BUG-7",
+    "title": "sim+sim_ai: a ship's RETURN order head is never completed, so a serviced Dart relaunches and re-lands in a loop (AI-45 review)",
+    "lane": "sim+sim_ai",
+    "tier": "Opus",
+    "size_days": 0.5,
+    "depends_on": [
+      "AI-45",
+      "PM-07"
+    ],
+    "milestone": "M3",
+    "acceptance": "A ship's standing RETURN head is completed with ORDER_DONE(value = RETURN) (05 s2.3 C4) when the ship leaves DOCKED after SERVICED or after the R0 B.24 A-119 paused-fuel exit, through the path PM-07 rules (C2). Tests in test/sim/ai/test_docked_mode.gd: (1) a Dart docked with a system RETURN (FLAG_PREPEND) ahead of a PATROL order launches once after SERVICED, emits ORDER_DONE(RETURN) once and resumes the PATROL: exactly 1 LAUNCHED and 0 further DOCKED in 120 s; (2) a Dart whose only order is RETURN goes AUTO and is tagged PATROL above launch_climb_agl_m; (3) a Bomber docked with a RETURN head and an ATTACK queued behind it (FLAG_QUEUE) launches on the ATTACK; (4) DockedMode's Bomber clause head.kind != RETURN becomes 'an order head exists'; sim_ai/MODULE.md and the owning sim module updated; perf note",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/204",
+      "05 s3.2",
+      "05 s2.3"
     ],
     "status": "todo",
     "merged": null
