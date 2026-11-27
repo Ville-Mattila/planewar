@@ -8790,9 +8790,10 @@
       ".github/workflows/ci.yml",
       ".github/scripts/gdunit_shard.sh"
     ],
-    "status": "todo",
-    "merged": null,
-    "notes": "unit-sim was cancelled at its time limit with no failing test on several PRs (GD-20 #169, GD-50 #182, AI-18b #186 twice); runner contention plus growing sim tests (AI-33 SC-47 ~45 s). Root cause of the shutdowns is the BUG-5 memory leak; split is still useful for wall time."
+    "status": "done",
+    "merged": "2026-11-27",
+    "notes": "unit-sim split into unit-sim-a (combat, steer, docking), unit-sim-b (economy..vision), unit-sim-c (rest:sim); p95 2:38/2:39/4:09 of 15 min; required checks 19 -> 21. Follow-up TA-73: split gdUnit4 sim (10-14 of 15 min).",
+    "pr": 197
   },
   {
     "id": "TA-72",
@@ -8810,6 +8811,24 @@
     "merged": "2026-11-27",
     "pr": 198,
     "notes": "lint_commits PREFIX_RE accepts one lowercase letter right after the id's final digit (AI-18b); review nits: regex alone accepts AI-1a-2b (backlog lookup rejects it)."
+  },
+  {
+    "id": "TA-73",
+    "title": "CI: split the gdUnit4 sim (test/sim layer) shard; it runs 10-14 min of its 15 min limit (TA-71 review follow-up)",
+    "lane": "tools",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "TA-71"
+    ],
+    "milestone": "M3",
+    "acceptance": "The gdUnit4 sim job is split into >= 2 shards with gdunit_shard.sh SHARD_DIRS (a+b / rest:<dir> forms), every test/sim test file selected exactly once (tools/tests/test_ci_shards.py extended to test/sim, and it also asserts every selected path exists); each shard's p95 over 5 runs < 50 % of its timeout; the run's job count stays within the free plan's 20 concurrent jobs or the PR states the queueing cost; the new required check names are listed in the PR body",
+    "docs": [
+      ".github/workflows/ci.yml",
+      ".github/scripts/gdunit_shard.sh"
+    ],
+    "status": "todo",
+    "merged": null
   },
   {
     "id": "PM-06",
