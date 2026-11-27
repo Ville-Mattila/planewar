@@ -9070,7 +9070,9 @@
       "05 s7.3",
       "godot/src/sim_ai/commander/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-27",
+    "pr": 206,
+    "notes": "OpeningBook: absent when on build/produce = affordable, funds wait never SKIPPED_STALL; BookCondition.waits_on_clock appended; SC-41 judges each slot on its own hand-over snapshot and exempts only a clock-waiting Expansion pair move. Fixture ai23_books.json: dead vanguard raid step removed (A-163 3c)."
   }
 ]
