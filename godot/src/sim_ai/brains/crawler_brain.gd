@@ -343,7 +343,7 @@ func _relocate(id: int, s: int, p: Vector3, st: AiState, sink: CommandSink, tick
 		bearing = Sphere.tangent_frame(tn).y
 	var away: float = -1.0 if SiegeAim.heading_error(t, bearing, st.land_mark[s]) > 0.0 else 1.0
 	var step: float = prm.relocate_step_m / prm.spot_mid_m
-	for k: int in 6:
+	for k: int in prm.relocate_tries:
 		var turn: float = away * step * float(1 + (k >> 1)) * (1.0 if (k & 1) == 0 else -1.0)
 		var d: Vector3 = SiegeAim.ring_point(tn, bearing, turn, prm.spot_mid_m)
 		if _good(d, sink):

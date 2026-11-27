@@ -487,6 +487,47 @@ class Ap18Crawler(Tree):
         self.assertIn("1 violations", out)
         self.assertIn("missing required key 'follow'", out)
 
+    def _siege(self, **kw: Any) -> None:
+        self._edit_crawler(lambda ap: ap["siege"].update(kw))
+
+    def test_the_shipped_crawler_with_the_siege_block_passes(self) -> None:
+        code, out = run(self.root)
+        self.assertEqual(code, 0, out)
+
+    def test_crawler_without_siege_fails(self) -> None:
+        self._edit_crawler(lambda ap: ap.pop("siege"))
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+
+    def test_a_siege_block_missing_one_key_fails(self) -> None:
+        self._edit_crawler(lambda ap: ap["siege"].pop("relocate_tries"))
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+        self.assertIn("relocate_tries", out)
+
+    def test_spot_min_not_below_spot_max_fails(self) -> None:
+        self._siege(spot_min_m=1150)
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+        self.assertIn("must be < spot_max_m", out)
+
+    def test_solve_tol_above_loft_tol_fails(self) -> None:
+        self._siege(solve_tol_m=20)
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+        self.assertIn("must be <= loft_tol_m", out)
+
+    def test_the_band_outside_the_weapon_range_fails(self) -> None:
+        self._siege(spot_max_m=1300)
+        code, out = run(self.root)
+        self.assertEqual(code, 1, out)
+        self.assertIn("1 violations", out)
+        self.assertIn("must lie inside the weapon's", out)
+
 
 class B30Capture(Tree):
     """GD-23 (R0 B.30 A-148): capture_s / contest_radius_m come as a pair on a structure with a pad; each negative trips exactly one rule."""
