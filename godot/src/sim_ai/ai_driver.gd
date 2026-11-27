@@ -160,9 +160,8 @@ func set_class_table(table: PackedByteArray) -> void:
 	_class_table = table
 
 
-## Feeds one drained sim event: SPAWN of an AI-driven def registers it in that def's class (A-71, AI-37); HIT on an AI
-## entity wakes it; DEATH unregisters the dead and wakes whoever targeted it; BOMB_IMPACT goes to `on_impact` (AI-18);
-## POSSESSED marks the entity for the per-tick release check (AI-08) and drops a running overlay.
+## Feeds one drained sim event: SPAWN registers an AI-driven def (A-71, AI-37); HIT wakes the entity; DEATH unregisters
+## and wakes its targeters; BOMB_IMPACT goes to `on_impact` (AI-18); POSSESSED marks it (AI-08); ALERT -> DockedMode (AI-45).
 func on_event(ev: SimEvent) -> void:
 	if ev.kind == SimEvent.Kind.SPAWN:
 		var c: int = AiClassTable.class_of(_class_table, ev.b)
@@ -178,6 +177,8 @@ func on_event(ev: SimEvent) -> void:
 		if s > 0 and s < state.capacity and state.cls[s] != AiState.NO_CLASS and state.eid[s] == ev.a:
 			Overlays.clear(state, s)
 			state.ov_flags[s] = state.ov_flags[s] | AiState.OV_POSSESSED
+	elif ev.kind == SimEvent.Kind.ALERT:
+		DockedMode.note_alert(state, ev)
 	elif ev.kind == SimEvent.Kind.BOMB_IMPACT:   # AI-18: to every class whose brain hears impacts (rare events)
 		for c: int in MAX_CLASSES:
 			if _brains[c] != null and _brains[c].hears_impacts():
@@ -266,11 +267,10 @@ func _collect_due(b: AiBatch, tick: int, p: int, view: SimView) -> int:
 	return n
 
 
-## AI-08 release edge. The control state is read every tick for entities marked possessed (OV_POSSESSED) or in an
-## overlay, and on the entity's think phase `(tick + stagger) % p == 0` otherwise (1/p of the roster per tick), so a
-## possession is noticed within p ticks or at once through `on_event(POSSESSED)`. POSSESSED marks the entity (and
-## drops a running overlay); the first tick a marked live entity is not POSSESSED starts the overlay (no latency).
-## Fills `_ov_ids` with the entities in an overlay, in batch (slot) order; returns the count.
+## AI-08 release edge. The control state is read every tick for entities marked OV_POSSESSED or in an overlay, and on
+## the entity's think phase `(tick + stagger) % p == 0` otherwise (1/p of the roster per tick): a possession is noticed
+## within p ticks or at once through `on_event(POSSESSED)` (drops a running overlay); the first tick a marked live
+## entity is not POSSESSED starts the overlay. Fills `_ov_ids` with the entities in an overlay, in batch (slot) order; returns the count.
 func _scan_overlays(b: AiBatch, view: SimView, tick: int, p: int, op: OverlayParams) -> int:
 	var n: int = 0
 	var flags: PackedByteArray = state.ov_flags

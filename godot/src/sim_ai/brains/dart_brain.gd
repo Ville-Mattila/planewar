@@ -121,8 +121,9 @@ func think_one(id: int, view: SimView, st: AiState, sink: CommandSink, tick: int
 func _think(id: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -> void:
 	var s: int = EntityId.slot(id)
 	if view.dock_state(id) == DOCKED_STATE:
-		_mode(id, s, AiTag.Tag.DOCKED, st, sink, tick)
+		_think_docked(id, s, view, st, sink, tick)
 		return
+	DockedMode.clear(st, s)
 	var head: OrderSpec = view.order_head(id)
 	var kind: int = head.kind if head != null else -1
 	_order_edge(id, s, head, st)
@@ -263,6 +264,8 @@ func _act(id: int, s: int, m: int, view: SimView, st: AiState, sink: CommandSink
 	var p: Vector3 = view.pos(id)
 	var v: Vector3 = view.vel(id)
 	var up: Vector3 = p.normalized()
+	if m == AiTag.Tag.LAUNCH and view.dock_state(id) == DOCKED_STATE:
+		up = view.basis(view.link(id)).y   # A-119: thrust 1.0 along the pad normal until the sim's hold launches
 	var b: Basis = view.basis(id)
 	_inp.buttons = 0   # one reused input: buttons cleared first, so a controller's BRAKE bit survives
 	if m == AiTag.Tag.RETURN:
@@ -328,6 +331,22 @@ func _enter_pull_up(id: int, s: int, m: int, st: AiState, sink: CommandSink, tic
 	st.integ[s] = Vector2.ZERO
 	sink.set_ai_tag(id, AiTag.Tag.PULL_UP)   # 05 s6.1: the HUD shows PULL_UP
 	stats_pull_ups += 1
+
+
+# 05 s6.2 / R0 B.24 A-119 DOCKED: AiTag.DOCKED, no input, until the service is done (or paused with fuel01 >= the class's
+# auto_launch_fuel01, `DockedMode`); then LAUNCH, driven by `_act`. The think runs at the class's slice (05 s10).
+func _think_docked(id: int, s: int, view: SimView, st: AiState, sink: CommandSink, tick: int) -> void:
+	if not DockedMode.leaves(id, s, view, st, _docked_needs_order(), prm.auto_launch_fuel01):
+		_mode(id, s, AiTag.Tag.DOCKED, st, sink, tick)
+		return
+	st.home[s] = view.pos(id)
+	st.ground_h[s] = st.home[s].length() - Sphere.PLANET_RADIUS   # the pad: AGL 0, so the launch stays on the normal
+	_mode(id, s, AiTag.Tag.LAUNCH, st, sink, tick)
+
+
+## AI-45 hook: the Bomber leaves its pad only on an order (05 s2.5 row 3).
+func _docked_needs_order() -> bool:
+	return false
 
 
 # 05 s6.2 LAUNCH: the thrust axis along the local up to `pitch_over_agl_m`, then tilted `launch_tilt_deg` toward the
