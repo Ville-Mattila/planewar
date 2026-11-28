@@ -68,7 +68,8 @@ Constants: `flight_common` (landing_safe_* / landing_damage_* bands via `Collisi
 
 ## Invariants
 
-- D1 Landing (03 s6.4, A-31). Every tick, each PAD contact of step 8 (contact order = ascending ship slot) whose ship is
+- D1 Landing (03 s6.4, A-31; on a sloped pad the volume's upper bound follows the terrain above the deck, R0 B.33 A-158,
+  BUG-6: `test_sloped_pad_landing.gd`). Every tick, each PAD contact of step 8 (contact order = ascending ship slot) whose ship is
   standing (not killed in step 9) and not DOCKED is judged. The pad must be a live, finished (`F_BUILDING` clear) service
   pad (`pad_radius_m` > 0 with `pads` > 0; never a `launch_pad` structure) of the ship's team, or an open pad for a capturer (Collision emits no other PAD contact, A-146), with no ship docked on it and either no queue
   or this ship at its head; otherwise the ship holds and nothing happens, unless its band is DESTROY (then it crashes:
