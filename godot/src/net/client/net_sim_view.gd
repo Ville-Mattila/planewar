@@ -138,7 +138,7 @@ func _own() -> int:
 	return possessed_index if possessed_index >= 0 and decoder.pilot_tick > 0 else -1
 
 
-func _flags_byte(i: int) -> int:
+func flags_byte(i: int) -> int:
 	var f: BaselineFrame = pose.frame()
 	return f.flags[i] if f != null else 0
 
@@ -191,32 +191,17 @@ func hp01(id: int) -> float:
 	return Codec.dequantize_hp(f.hp[i]) if f != null else 0.0
 
 
-func fuel01(id: int) -> float:
-	var i: int = index_of(id)
-	if i < 0 or i != _own() or not defs.valid(roster.def_of(i)):
-		return 0.0
-	var s: float = defs.fuel_s[roster.def_of(i)]
-	return clampf(float(decoder.pilot.fuel_ds) * FUEL_DS / s, 0.0, 1.0) if s > 0.0 else 0.0
+func fuel01(id: int) -> float: return NetOwnReads.fuel01(self, id)
 
+func ammo(id: int) -> int: return NetOwnReads.ammo(self, id)
 
-func ammo(id: int) -> int:
-	var i: int = index_of(id)
-	return decoder.pilot.ammo if i >= 0 and i == _own() else 0
+func bombs(id: int) -> int: return NetOwnReads.bombs(self, id)
 
-
-func bombs(id: int) -> int:
-	var i: int = index_of(id)
-	return decoder.pilot.bombs if i >= 0 and i == _own() else 0
-
-
-func rockets(id: int) -> int:
-	var i: int = index_of(id)
-	return decoder.pilot.rockets if i >= 0 and i == _own() else 0
-
+func rockets(id: int) -> int: return NetOwnReads.rockets(self, id)
 
 func control_state(id: int) -> int:
 	var i: int = index_of(id)
-	return Codec.flags_control(_flags_byte(i)) if i >= 0 else 0
+	return Codec.flags_control(flags_byte(i)) if i >= 0 else 0
 
 
 func possessor(id: int) -> int:
@@ -237,7 +222,7 @@ func flags(id: int) -> int:
 	if i < 0:
 		return 0
 	var out: int = F_ALIVE
-	if (_flags_byte(i) & Codec.FLAG_DOCKED) != 0:
+	if (flags_byte(i) & Codec.FLAG_DOCKED) != 0:
 		out |= F_DOCKED
 	var d: int = roster.def_of(i)
 	if defs.valid(d) and defs.possessable[d] != 0 and defs.kind_of(d, i) != K_WRECK:
@@ -257,38 +242,19 @@ func def_kind(id: int) -> int:
 	return defs.kind_of(roster.def_of(i), i) if i >= 0 else -1
 
 
-func boost_state(id: int) -> int:
-	var i: int = index_of(id)
-	return decoder.pilot.boost_state & BOOST_MASK if i >= 0 and i == _own() else 0
+func boost_state(id: int) -> int: return NetOwnReads.boost_state(self, id)
 
+func boost_cooldown01(id: int) -> float: return NetOwnReads.boost_cooldown01(self, id)
 
-func boost_cooldown01(id: int) -> float:
-	var i: int = index_of(id)
-	return decoder.pilot.boost_cooldown01() if i >= 0 and i == _own() else 0.0
+func flip_cooldown01(id: int) -> float: return NetOwnReads.flip_cooldown01(self, id)
 
+func dock_state(id: int) -> int: return NetOwnReads.dock_state(self, id)
 
-func flip_cooldown01(id: int) -> float:
-	var i: int = index_of(id)
-	return float(decoder.pilot.flip_cooldown) / BYTE_MAX if i >= 0 and i == _own() else 0.0
-
-
-func dock_state(id: int) -> int:
-	var i: int = index_of(id)
-	if i >= 0 and i == _own():
-		return decoder.pilot.dock_state
-	return 0 if i < 0 else Protocol.DockState.DOCKED if (_flags_byte(i) & Codec.FLAG_DOCKED) != 0 else Protocol.DockState.FLYING
-
-
-func service_progress(id: int) -> Vector3:
-	var i: int = index_of(id)
-	if i < 0 or i != _own():
-		return Vector3.ZERO
-	return decoder.pilot.service01()
-
+func service_progress(id: int) -> Vector3: return NetOwnReads.service_progress(self, id)
 
 func service_state(id: int) -> int:
 	var i: int = index_of(id)
-	return SERVICE_DOCKED if i >= 0 and (_flags_byte(i) & Codec.FLAG_DOCKED) != 0 else 0
+	return SERVICE_DOCKED if i >= 0 and (flags_byte(i) & Codec.FLAG_DOCKED) != 0 else 0
 
 
 ## R0 B.31 A-152 (NET-61): the barrel byte held from tier A (BaselineFrame.barrel); 0.0 + field_unknown at tier B / C or after a
@@ -299,60 +265,37 @@ func barrel_elevation(id: int) -> float:
 	return defs.barrel_rad(roster.def_of(i), f.barrel[i]) if i >= 0 and f != null else 0.0
 
 
-func incoming_rockets(id: int) -> int:
-	var i: int = index_of(id)
-	return decoder.pilot.incoming_rockets if i >= 0 and i == _own() else 0
+func incoming_rockets(id: int) -> int: return NetOwnReads.incoming_rockets(self, id)
 
+func tick() -> int: return maxi(floori(render_tick), 0)
 
-func tick() -> int:
-	return maxi(floori(render_tick), 0)
+func match_clock_s() -> float: return maxf(render_tick, 0.0) / float(defs.tick_hz)
 
+func terrain_height(dir: Vector3) -> float: return terrain.height_at(dir) if terrain != null else 0.0
 
-func match_clock_s() -> float:
-	return maxf(render_tick, 0.0) / float(defs.tick_hz)
+func ships() -> PackedInt32Array: return NetRosterQueries.of_kinds(self, 1 << K_SHIP)
 
+func structures() -> PackedInt32Array: return NetRosterQueries.of_kinds(self, 1 << K_STRUCTURE)
 
-func terrain_height(dir: Vector3) -> float:
-	return terrain.height_at(dir) if terrain != null else 0.0
+func wrecks() -> PackedInt32Array: return NetRosterQueries.of_kinds(self, 1 << K_WRECK)
 
-
-func ships() -> PackedInt32Array:
-	return NetRosterQueries.of_kinds(self, 1 << K_SHIP)
-
-
-func structures() -> PackedInt32Array:
-	return NetRosterQueries.of_kinds(self, 1 << K_STRUCTURE)
-
-
-func wrecks() -> PackedInt32Array:
-	return NetRosterQueries.of_kinds(self, 1 << K_WRECK)
-
-
-func visible_ids(t: int) -> PackedInt32Array:
-	return NetRosterQueries.visible_ids(self, t)
-
+func visible_ids(t: int) -> PackedInt32Array: return NetRosterQueries.visible_ids(self, t)
 
 func visible_to(t: int, id: int) -> bool:
 	var i: int = index_of(id)
 	return i >= 0 and t >= 0 and t < TEAMS and (t == team_id or roster.team_of(i) == t)
 
 
-func visible_enemy_ships(t: int, out: PackedInt32Array) -> int:
-	return NetRosterQueries.enemy_ships(self, t, out)
+func visible_enemy_ships(t: int, out: PackedInt32Array) -> int: return NetRosterQueries.enemy_ships(self, t, out)
 
-
-func ids_in_cell(cell: int) -> PackedInt32Array:
-	return NetRosterQueries.in_cell(self, cell)
-
+func ids_in_cell(cell: int) -> PackedInt32Array: return NetRosterQueries.in_cell(self, cell)
 
 func ids_near(p: Vector3, r: float, mask: int) -> PackedInt32Array:
 	return NetRosterQueries.near(self, p, r, mask)
 
 
 ## Replicated projectile entities within `r` whose team bit is in `team_mask` (A-112; client-spawned slugs have no id).
-func projectiles_near(p: Vector3, r: float, team_mask: int) -> PackedInt32Array:
-	return NetRosterQueries.projectiles_near(self, p, r, team_mask)
-
+func projectiles_near(p: Vector3, r: float, team_mask: int) -> PackedInt32Array: return NetRosterQueries.projectiles_near(self, p, r, team_mask)
 
 func nearest_friendly_pad(id: int) -> int:
 	var i: int = index_of(id)
@@ -363,26 +306,14 @@ func tech_available(t: int, d: int) -> bool:
 	return NetRosterQueries.tech_available(self, t, d)
 
 
-## TEAM_STATE (own team): ore, ice and the power ratio as SimView.stockpile; other teams ZERO (unknown).
-func stockpile(t: int) -> Vector3:
-	if team_flags_known(t):
-		var s: float = float(team_wire.power_supply)
-		var d: float = float(team_wire.power_demand)
-		return Vector3(float(team_wire.ore), float(team_wire.ice), 1.0 if d <= 0.0 else minf(s / d, 1.0))
-	return Vector3.ZERO
+## TEAM_STATE reads delegate to NetOwnReads (own team only; other teams ZERO / unknown).
+func stockpile(t: int) -> Vector3: return NetOwnReads.stockpile(self, t)
 
+func stockpile_cap(t: int) -> Vector2i: return NetOwnReads.stockpile_cap(self, t)
 
-func stockpile_cap(t: int) -> Vector2i:
-	return Vector2i(team_wire.ore_cap, team_wire.ice_cap) if team_flags_known(t) else Vector2i.ZERO
+func power_balance(t: int) -> Vector2: return NetOwnReads.power_balance(self, t)
 
-
-func power_balance(t: int) -> Vector2:
-	return Vector2(float(team_wire.power_supply), float(team_wire.power_demand)) if team_flags_known(t) else Vector2.ZERO
-
-
-func unit_count(player: int) -> int:
-	var k: int = team_wire.member_index(player) if team_wire.tick > 0 else -1
-	return team_wire.member_units[k] if k >= 0 else 0
+func unit_count(player: int) -> int: return NetOwnReads.unit_count(self, player)
 
 
 ## True when a TEAM_STATE for team `t` (the own team) has arrived.
@@ -391,9 +322,7 @@ func team_flags_known(t: int) -> bool:
 
 
 ## R0 B.11 A-56 over the sampled mirror (projectiles A-112): NetRosterQueries.read_poses, the EntityViewPool.sync hot path.
-func read_poses(ids: PackedInt32Array, out_pos: PackedVector3Array, out_rot: PackedVector4Array) -> int:
-	return NetRosterQueries.read_poses(self, ids, out_pos, out_rot)
-
+func read_poses(ids: PackedInt32Array, out_pos: PackedVector3Array, out_rot: PackedVector4Array) -> int: return NetRosterQueries.read_poses(self, ids, out_pos, out_rot)
 
 static func _u8(v: int) -> int:
 	return -1 if v == NONE else v
