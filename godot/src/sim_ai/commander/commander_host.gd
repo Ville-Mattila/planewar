@@ -137,7 +137,7 @@ func presence(tok: SiteToken, _def_id: int) -> bool:
 # An own, undocked unit inside the presence radius of the ground point under `dir` (current positions of own entities).
 func _present_at(dir: Vector3) -> bool:
 	var site: Vector3 = _ground(dir)
-	var reach: float = _presence_m - 4.0 * PI * 0.5 * Sphere.PLANET_RADIUS / float(Sphere.GRID_BUILD)   # two build cells of slack: the sim snaps the centre to its cell
+	var reach: float = _p.reach_m(_presence_m)   # presence_slack_cells of slack: the sim snaps the centre to its cell
 	var r: float = reach * reach
 	for i: int in _perc.n_own:
 		var id: int = _perc.own_id[i]
@@ -270,10 +270,13 @@ func _factory_for(unit_def: int) -> int:
 	return 0
 
 
-# The own unit of `classes` nearest to `site` that is free: not POSSESSED, not under a human's order inside the lock.
+# The own unit of `classes` nearest to `site` that is free: not POSSESSED, not under a human's order inside the lock. An
+# undocked unit is preferred (a docked one waits for SERVICED, 05 s6 DOCKED row); a docked one only when none else exists.
 func _pick_unit(classes: PackedInt32Array, site: Vector3) -> int:
 	var best: int = 0
 	var best_d: float = INF
+	var dock: int = 0
+	var dock_d: float = INF
 	for i: int in _perc.n_own:
 		var id: int = _perc.own_id[i]
 		if not classes.has(_perc.own_def[i]) or _v.owner(id) != _slot or _v.possessor(id) != -1:
@@ -282,7 +285,11 @@ func _pick_unit(classes: PackedInt32Array, site: Vector3) -> int:
 		if h != null and h.issuer != -1 and h.issuer != _slot and float(_tick - h.issue_tick) < _p.lock_s * float(_hz):
 			continue
 		var d: float = _perc.own_pos[i].distance_squared_to(site)
-		if d < best_d:
+		if (_v.flags(id) & EntityStore.F_DOCKED) != 0:
+			if d < dock_d:
+				dock_d = d
+				dock = id
+		elif d < best_d:
 			best_d = d
 			best = id
-	return best
+	return best if best != 0 else dock
