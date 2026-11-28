@@ -5954,6 +5954,24 @@
     "merged": null
   },
   {
+    "id": "DOC-06",
+    "title": "docs: 02 s8.7 Outpost #2 checkpoints follow the driven-leg econ model (GD-54 follow-up)",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 0.1,
+    "depends_on": [
+      "GD-54"
+    ],
+    "milestone": "M3",
+    "acceptance": "02 s8.7 1v1 checkpoint rows 'Outpost #2 placed' 9:31 -> 9:42 and 'Outpost #2 done' 10:16 -> 10:27 (tools/econ_model.py on main after GD-54, PR #210); H1 first delivery may read 1:06 (model) or stay 1:11 (inside 5 s; state which); 4v4 rows and the 02 s8.2 table unchanged; tools/tests/test_econ_model.py test_checkpoints_within_5_s drops the two known-miss rows in the same PR; no other text changed; Architect ack on the PR (10 s4.3)",
+    "docs": [
+      "02 s8.7",
+      "https://github.com/Ville-Mattila/planewar/pull/210"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
     "id": "QA-01",
     "title": "Device and browser test matrix (PC-mid, Deck, Android-mid, 3 GB Android, Chrome desktop/Android, Firefox, Edge) and the manual QA checklist per platform",
     "lane": "test",
@@ -9031,8 +9049,10 @@
       "02 s8.2",
       "02 s8.7"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 210,
+    "notes": "Field A d derived from defs + cradle recipe (469.5 m); kit Harvester starts at the near edge; first delivery 66.0 s vs sim 68.2 s, cycle -4.5 %. Fields B/C keep book-supplied d (bot-placed Refineries). 02 s8.7 revision filed as DOC-06."
   },
   {
     "id": "GD-55",
