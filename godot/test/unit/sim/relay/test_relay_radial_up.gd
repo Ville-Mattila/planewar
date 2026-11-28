@@ -57,6 +57,7 @@ func test_map_relays_up_is_radial_on_a_sloped_site() -> void:
 	assert_int(seen).is_equal(3)
 
 
+## Cannot fail on this ramp: the facing (0,1,0) is already tangent at dir (1,0,0) and the ramp tilts toward z, so projection is a no-op.
 func test_map_relays_fwd_is_the_facing_projected_on_the_tangent_plane() -> void:
 	var w: SimWorld = K.world()
 	var _n: int = _spawn(w, ramp(10.0), "one_relay")
@@ -103,20 +104,21 @@ func test_start_kit_up_is_radial_on_cradle() -> void:
 		assert_float(st.up[s].distance_to(st.pos[s].normalized())).is_less(1e-6)
 
 
+## The world is flat (K.world); only the relay spawn sees the ramp, so the stored `up` is the only thing the slope can change.
 func test_a_hauler_lands_tail_down_and_captures_on_a_10_degree_relay_site() -> void:
 	var w: SimWorld = K.world()
 	var _n: int = _spawn(w, ramp(10.0), "one_relay")
 	var _ev: Array[SimEvent] = w.drain_events()
 	var relay: int = w.store().id_of(w.store().structures[0])
 	var sd: ShipDef = DockingTestKit.ship_def(&"hauler")
-	var up: Vector3 = w.store().up[EntityId.slot(relay)]
+	var up: Vector3 = w.store().pos[EntityId.slot(relay)].normalized()   # radial, read from pos, not from the stored up under test
 	var h: int = DockingTestKit.ship_over(w, &"hauler", 0, 0, relay, sd.bounding_radius, 0.0, -up * 2.0)   # on the pad centre
 	var _d: Array[SimEvent] = w.drain_events()
 	w.step()
 	var hs: int = EntityId.slot(h)
 	assert_int(w.store().link[hs]).is_equal(relay)
 	assert_bool((w.store().flags[hs] & EntityStore.F_DOCKED) != 0).is_true()
-	assert_float(w.store().fwd[hs].dot(up)).is_greater(0.99)   # tail-down: thrust axis on the pad normal
+	assert_float(w.store().fwd[hs].dot(up)).is_greater(0.99)   # tail-down: thrust axis within 0.99 of radial (a 10 degree normal gives 0.985)
 	for _i: int in K.seconds(K.rule("capture_s")) + 5:
 		w.step()
 	assert_int(K.team_of(w, relay)).is_equal(0)
@@ -129,7 +131,10 @@ func test_solar_factor_on_a_15_degree_slope_equals_level_ground_at_its_latitude(
 	pl.active[0] = 1
 	pl.team[0] = 0
 	var t: RampTerrain = ramp(15.0)
-	var b: Build = Build.new(WorldDefs.new(content), st, pl, t, WorldTestKit.rules())
+	var defs: WorldDefs = WorldDefs.new(content)
+	var band: float = defs.economy.solar_band_deg
+	var mult: float = defs.economy.solar_plateau_mult
+	var b: Build = Build.new(defs, st, pl, t, WorldTestKit.rules())
 	var sun: Vector3 = Vector3(0.0, 0.0, 1.0)
 	var moved: int = 0
 	for lat: float in [-1.0, -0.2, 0.0, 0.2, 1.0, 20.0]:
@@ -137,8 +142,8 @@ func test_solar_factor_on_a_15_degree_slope_equals_level_ground_at_its_latitude(
 		var cell: int = Sphere.cell_of(dir, Sphere.GRID_BUILD)
 		var s: int = EntityId.slot(b.stamp(0, content.entity_index[&"solar_array"], cell, 0, true))
 		var c: Vector3 = st.pos[s].normalized()   # the footprint centre: the structure's own latitude
-		var level: float = Economy.solar_factor(c, sun, false, 0.5, 1.0)
-		assert_float(Economy.solar_factor(st.up[s], sun, false, 0.5, 1.0)).is_equal(level)
-		if absf(Economy.solar_factor(t.normal_at(c), sun, false, 0.5, 1.0) - level) > 0.01:
+		var level: float = Economy.solar_factor(c, sun, false, band, mult)
+		assert_float(Economy.solar_factor(st.up[s], sun, false, band, mult)).is_equal(level)
+		if absf(Economy.solar_factor(t.normal_at(c), sun, false, band, mult) - level) > 0.01:
 			moved += 1
 	assert_int(moved).is_greater(0)   # the fixture discriminates: the terrain normal would have moved the step
