@@ -176,6 +176,21 @@ func test_is_occluded_by_datum_below_datum_a10() -> void:
 	assert_bool(Sphere.is_occluded_by_datum(a, a)).is_false()
 
 
+## GD-53 (R0 B.33 A-159): the basin horizon. Two points on the floor sphere R - 335 (cradle slot 0) 300 m apart are
+## hidden by the datum between them; raise the second by 10 m and it clears the horizon (sqrt(2 x 5,665 x 10) = 337 m > 300 m).
+func test_is_occluded_by_datum_basin_floor_a159() -> void:
+	var r: float = Sphere.PLANET_RADIUS
+	var fr: float = r - 335.0
+	var a: Vector3 = Sphere.from_lat_lon(0.0, 0.0, fr)
+	var b: Vector3 = Sphere.from_lat_lon(0.0, 300.0 / fr, fr)
+	assert_float(a.distance_to(b)).is_between(299.9, 300.0)
+	assert_bool(Sphere.is_occluded_by_datum(a, b)).is_true()
+	assert_bool(Sphere.is_occluded_by_datum(b, a)).is_true()
+	var up: Vector3 = Sphere.from_lat_lon(0.0, 300.0 / fr, fr + 10.0)
+	assert_bool(Sphere.is_occluded_by_datum(a, up)).is_false()
+	assert_bool(Sphere.is_occluded_by_datum(up, a)).is_false()
+
+
 # --- C1-C5 property tests ----------------------------------------------------
 
 func test_c1_round_trip_dir_cell_center_10000() -> void:

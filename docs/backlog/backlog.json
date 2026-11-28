@@ -8762,8 +8762,10 @@
       "godot/assets/ui/theme_pw.tres",
       "https://github.com/Ville-Mattila/planewar/pull/199#issuecomment-7222925519"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 209,
+    "notes": "Focus ring is the white ui_focus offset 2 px outside the button with a 2 px background gap (expand_margin = STROKE + GAP); 19.7/18.5/16.4:1 vs bg_0/1/2; the vs-accent criterion met by separation (orchestrator ruling, 1.88:1 documented). Round 2 after a global-ring regression. ScrollContainer clipping filed as UX-53."
   },
   {
     "id": "UX-51",
@@ -8800,6 +8802,24 @@
       "02 s13",
       "06 s3.2",
       "godot/src/sim/salvage/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "UX-53",
+    "title": "ui: give scroll-hosted focusable rows inner padding so the offset focus ring is not clipped (UX-50 follow-up)",
+    "lane": "ui",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "UX-50"
+    ],
+    "milestone": "M3",
+    "acceptance": "Scroll-hosted focusable rows get >= the focus stylebox expand_margin (4 px) of inner padding (a MarginContainer inside the ScrollContainer) so the UX-50 focus ring is not clipped; applied to RemapScreen (remap_screen.gd:37) and every other ScrollContainer in godot/src/ui and godot/scenes/ui hosting buttons; a test asserts padding >= the theme's focus expand_margin; adjacent tab buttons keep >= the ring width clear of the neighbour edge or the PR states why not",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/209#issuecomment-7236527528",
+      "07 A11Y-13"
     ],
     "status": "todo",
     "merged": null
@@ -8972,8 +8992,10 @@
       "03 s7.6",
       "02 s8.4"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 208,
+    "notes": "MapRelays.spawn: radial up, fwd projected on the tangent plane, pos on terrain (A-157); tests on a ramp fixture incl. Hauler capture on 10 deg and solar_factor parity on 15 deg. Round 2: Hauler test asserts against the radial, not the stored up."
   },
   {
     "id": "BUG-6",
@@ -9030,8 +9052,10 @@
       "03 s3.7",
       "03 s2.8"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 213,
+    "notes": "Tests only: basin vision on cradle slot 0 (horizon 281.6 m), Dart 40 m up visible, Sensor Mast 1,150 m case, flat-datum parity; two is_occluded_by_datum vectors. Review nit: tests exercise sensor_groups._group_sees (inlined), not Vision.sees."
   },
   {
     "id": "GD-54",
@@ -9114,8 +9138,10 @@
       "05 s7.3",
       "godot/src/sim_ai/commander/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 212,
+    "notes": "Partial: tests 1 (orbit-vs-reach, presence_slack_cells 3, move_agl_m 80 in the fixture params) and 3 (_pick_unit prefers undocked) delivered; test 2 (SC-41 presence >= 95 %) moved to AI-53 after the Opus review found DartModes._orbit holds ~60 m wide at cruise (P-only radial term). Content follow-up named in AI-53."
   },
   {
     "id": "AI-52",
@@ -9132,6 +9158,26 @@
     "docs": [
       "https://github.com/Ville-Mattila/planewar/pull/193#issuecomment-7225502421",
       "05 s7.3"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "AI-53",
+    "title": "sim_ai brains: Dart hold orbit holds its radius (integral radial term, orbit speed from defs) so a book-move escort stays in Outpost presence reach (AI-51 test 2)",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 1.0,
+    "depends_on": [
+      "AI-51"
+    ],
+    "milestone": "M3",
+    "acceptance": "DartModes._orbit holds hold_orbit_radius_m on a MOVE arrival and on HOLD: it gains an integral (or equivalent zero-steady-state-error) radial term kept per slot in AiState (FORMAT append, covered by SC-47 save/load bytes), and the hold orbit flies at a speed read from defs (one new key with a _doc and a schema entry; the Architect names the file, autopilots.json or order_rules.json, on the PR), not at v_cruise; no sim/ change and no FlightController gain change. Tests: (1) on the flat datum a Dart with the shipped values ordered MOVE to a point move_agl_m (ai23_params.json) above the ground holds a horizontal orbit radius between hold_orbit_radius_m - 1 build cell and sqrt(BookParams.reach_m(outpost_presence_radius_m)^2 - move_agl_m^2) (260.4 m at the shipped values) over 60 s after a 60 s settle, and the GUARD and L2b-hold mean radius errors are no larger than before (before/after numbers in the PR); (2) AI-51 test 2 restored from commit 11e0a82 (test/sim/ai/test_sc41_book_move_presence.gd, threshold 0.95 unchanged): on the SC-41 world a Dart ordered by a book move to outpost_site:home_trap reports presence on >= 95 % of Commander thinks from arrival to RTB; (3) the existing Dart, Lancer and Bomber orbit scenarios, SC-06, SC-40, SC-41, SC-43 and SC-47 pass unchanged; test 1 of test_book_move_reach.gd also asserts move_agl_m >= deck_alt_agl_m. Perf note (perf_tick ai A/B delta, 05 s10 Dart think row). Then name the AI-51 content follow-up: bulwark_standard's home-trap move back to 05's form (no ore>=520) and foundry_standard's t>=270 contested pair re-added if SC-41 passes (per PM-07's foundry ruling). Contract question for the PR: the Commander measures presence from the token anchor while the sim measures from the resolved build site (up to 120 m apart), predating AI-51.",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/212#issuecomment-7236584329",
+      "05 s6.1",
+      "05 s7.3",
+      "godot/src/sim_ai/brains/MODULE.md"
     ],
     "status": "todo",
     "merged": null

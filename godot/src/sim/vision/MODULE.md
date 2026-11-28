@@ -16,6 +16,8 @@ to "Public API" or "Invariants" is a contract change: contract tests first, same
 
 ## Public API
 
+A-159 (R0 B.33, GD-53): basin vision is intended: a ground sensor on a basin floor sees a target of height h out to sqrt(2 r h) (282 m for a Siege Crawler on `cradle` slot 0); the Sensor Mast answers (test_basin_vision.gd).
+
 `SimWorld` composes one `Vision` (`SimWorld.vision`, read-only outside the sim lane) and calls `step` in tick step 11,
 `bind` after each doctrine resolve and `rebuild_lists` after deserialize. Not in `tools/deps.json` named types.
 
