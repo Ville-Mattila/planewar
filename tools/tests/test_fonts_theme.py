@@ -77,7 +77,7 @@ class ThemeTest(unittest.TestCase):
     def test_colours_only_from_palette(self) -> None:
         pal = json.loads(T.PALETTE.read_text(encoding="utf-8"))
         text = T.build(pal)
-        for key in ("ui_text", "ui_text_dim", "ui_accent", "ui_focus_on_accent", "ui_line"):
+        for key in ("ui_text", "ui_text_dim", "ui_accent", "ui_focus", "ui_line"):
             self.assertIn(T.col(pal["ui"][key]), text)
 
     def test_min_text_size(self) -> None:

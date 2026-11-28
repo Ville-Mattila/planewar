@@ -26,7 +26,7 @@ func test_colours_come_from_tokens() -> void:
 	var panel: StyleBoxFlat = t.get_stylebox("panel", "PanelContainer") as StyleBoxFlat
 	assert_bool(panel.border_color.is_equal_approx(UiTokens.UI_LINE)).is_true()
 	var focus: StyleBoxFlat = t.get_stylebox("focus", "Button") as StyleBoxFlat
-	assert_bool(focus.border_color.is_equal_approx(UiTokens.UI_FOCUS_ON_ACCENT)).is_true()
+	assert_bool(focus.border_color.is_equal_approx(UiTokens.UI_FOCUS)).is_true()
 
 
 func test_finnish_has_glyphs_in_both_fonts() -> void:
@@ -85,13 +85,26 @@ func test_selected_toggle_contrasts_unselected() -> void:
 	assert_float(_contrast(sel_font, sel.bg_color)).is_greater_equal(MIN_CONTRAST)
 
 
-func test_pressed_toggle_focus_ring_contrasts_accent_and_dark_bg() -> void:
-	var t: Theme = _theme()
-	var focus: StyleBoxFlat = t.get_stylebox("focus", "Button") as StyleBoxFlat
-	var accent: Color = UiTokens.UI_ACCENT
-	assert_float(_contrast(focus.border_color, accent)).override_failure_message("focus vs ui_accent").is_greater_equal(MIN_CONTRAST)
-	assert_float(_contrast(focus.border_color, UiTokens.UI_BG_1)).override_failure_message("focus vs ui_bg_1").is_greater_equal(MIN_CONTRAST)
+## Mirrors GAP in tools/art/build_theme.py (A11Y-13): background strip between button edge and ring.
+const FOCUS_GAP: int = 2
+
+
+func test_focus_ring_sits_outside_fill() -> void:
+	var focus: StyleBoxFlat = _theme().get_stylebox("focus", "Button") as StyleBoxFlat
+	var need: int = int(focus.border_width_left) + FOCUS_GAP
+	assert_int(int(focus.expand_margin_left)).is_greater_equal(need)
+	assert_int(int(focus.expand_margin_top)).is_greater_equal(need)
+	assert_int(int(focus.expand_margin_right)).is_greater_equal(need)
+	assert_int(int(focus.expand_margin_bottom)).is_greater_equal(need)
+
+
+func test_focus_ring_contrasts_every_dark_background() -> void:
+	var focus: StyleBoxFlat = _theme().get_stylebox("focus", "Button") as StyleBoxFlat
+	# Ring is separated from the accent fill by the gap, so the 1.4.11 check is against the backdrop.
+	# White vs ui_accent is 1.88:1 and is documented here only, not asserted.
 	assert_float(_contrast(focus.border_color, UiTokens.UI_BG_0)).override_failure_message("focus vs ui_bg_0").is_greater_equal(MIN_CONTRAST)
+	assert_float(_contrast(focus.border_color, UiTokens.UI_BG_1)).override_failure_message("focus vs ui_bg_1").is_greater_equal(MIN_CONTRAST)
+	assert_float(_contrast(focus.border_color, UiTokens.UI_BG_2)).override_failure_message("focus vs ui_bg_2").is_greater_equal(MIN_CONTRAST)
 
 
 func test_tabbar_selected_contrasts_unselected() -> void:
