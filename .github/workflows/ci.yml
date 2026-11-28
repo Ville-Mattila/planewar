@@ -155,7 +155,12 @@ jobs:
           - { name: unit-sim-b, layer: unit, shard: "sim/economy+sim/harvest+sim/salvage+sim/scoring+sim/production+sim/relay+sim/ground+sim/control+sim/orders+sim/vision" }
           - { name: unit-sim-c, layer: unit, shard: "rest:sim", dirs: "combat steer docking economy harvest salvage scoring production relay ground control orders vision" }
           - { name: unit-rest, layer: unit, shard: rest, dirs: "sim" }
-          - { name: sim, layer: sim, shard: all }
+          # TA-73: test/sim (~400 s of test time, 10-14 min job) is three shards. sim-ai-a names five heavy files of
+          # test/sim/ai; sim-ai-b is "rest:ai" minus those files (SHARD_DIRS must list them), so new ai tests land in b;
+          # sim-rest = every other test/sim entry (balance, structures, top-level files, new dirs). Each file is in one shard.
+          - { name: sim-ai-a, layer: sim, shard: "ai/test_sc41_all_books.gd+ai/test_sc47_save_load_ai_state.gd+ai/test_swarm_separation.gd+ai/test_sc_crawler_ceiling.gd+ai/test_sc_dart_terrain.gd" }
+          - { name: sim-ai-b, layer: sim, shard: "rest:ai", dirs: "test_sc41_all_books.gd test_sc47_save_load_ai_state.gd test_swarm_separation.gd test_sc_crawler_ceiling.gd test_sc_dart_terrain.gd" }
+          - { name: sim-rest, layer: sim, shard: rest, dirs: "ai" }
           - { name: net, layer: net, shard: all }
     steps:
       - uses: actions/checkout@v4

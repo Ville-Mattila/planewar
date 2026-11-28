@@ -36,6 +36,19 @@ func rows() -> Array[PackedStringArray]:
 	return out
 
 
+## Drawn extent in du, from the control origin: rows and rings start at x 0; the right edge is the boost ring (or the
+## shield ring while the badge shows); the top is the first row's cap line, the bottom the ring labels' baseline.
+func content_rect() -> Rect2:
+	var fs: float = float(HudText.font_size(profile))
+	var r: float = HudMath.param("cooldown_ring_du")
+	var top: float = fs * 0.3
+	var right: float = r + 2.0 + r * 3.5 + r
+	if shield_shown:
+		right = r + 2.0 + r * 3.5 + r * 3.5 + fs * 2.0 + HudMath.param("shield_ring_du")
+	var bottom: float = float(rows().size() + 1) * fs * 1.3 + 2.0 * r + fs
+	return Rect2(0.0, top, right, bottom - top)
+
+
 func _boost_color() -> Color:
 	if data.boost == StatusMath.Boost.ACTIVE:
 		return UiTokens.UI_ACCENT

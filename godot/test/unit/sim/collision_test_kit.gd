@@ -23,11 +23,12 @@ var pad_radius: float
 var p_ids: PackedStringArray = PackedStringArray()
 
 
-func _init(map_dir: String = "") -> void:
+## `with_terrain`: a Terrain (or a test subclass, e.g. one counting height_at) to use instead of a new one (BUG-6).
+func _init(map_dir: String = "", with_terrain: Terrain = null) -> void:
 	store = EntityStore.new()
 	proj = ProjectileStore.new(ProjectileStore.SLOT_COUNT)
 	spatial = Spatial.new(store, proj)
-	terrain = Terrain.new()
+	terrain = with_terrain if with_terrain != null else Terrain.new()
 	if not map_dir.is_empty():
 		var err: Error = terrain.load_map(map_dir)
 		assert(err == OK)

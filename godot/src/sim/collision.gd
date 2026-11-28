@@ -11,8 +11,11 @@ class_name Collision extends RefCounted
 ##      thresholds once per contact episode (R0 B.9 A-30: a run of contact ticks plus gaps shorter than
 ##      `scrape_clear_s`; the first tick's hit_normal_speed decides; a kill-speed hit destroys regardless) -> C_TERRAIN;
 ##   landing (A-31): every tick a not-DOCKED ship is inside a friendly pad's volume (offset in the pad frame <=
-##      pad_radius_m, |altitude above the pad plane| <= radius + 0.5) -> C_PAD with the landing band; its terrain
-##      contact is then the landing's, not a scrape or damage (kill speed still destroys);
+##      pad_radius_m, -(radius + 0.5) <= altitude above the pad plane <= radius + 0.5 + g) -> C_PAD with the landing
+##      band; g = max(0, (Terrain.surface_point(ship direction) - pos[pad]) . up[pad]) lifts the upper bound where the
+##      terrain under the ship stands above the deck (A-158, BUG-6: a sloped pad; 0 on level ground), sampled only for
+##      a ship in the column above the plain band, once per ship per tick; its terrain contact is then the landing's,
+##      not a scrape or damage (kill speed still destroys);
 ##   ship vs ship (each pair once) and ship vs structure (from the ship side) sphere-sphere -> C_RAM; a docked ship
 ##      is exempt against its own pad, a not-docked ship above a friendly pad structure's deck (A-53 widened by BUG-1:
 ##      altitude above the pad plane >= -(radius + 0.5), any horizontal offset; the sphere's body lies below the deck)
@@ -78,6 +81,8 @@ var _ram: PackedInt32Array = PackedInt32Array()
 var _ram_n: int = 0
 var _pad_slot: int = 0
 var _pad_off: float = 0.0
+var _ground_ok: bool = false        # A-158: _ground_pt holds Terrain.surface_point of the current ship (one per ship per tick)
+var _ground_pt: Vector3 = Vector3.ZERO
 var _best_t: float = 0.0
 var _hmax: PackedFloat32Array = PackedFloat32Array()
 var _hmax_ok: PackedByteArray = PackedByteArray()
@@ -227,6 +232,7 @@ func _ship(s: int, tick: int) -> void:
 	_pad_slot = -1
 	_pad_off = 0.0
 	_ram_n = 0
+	_ground_ok = false
 	var items: PackedInt32Array = _spatial.cell_items
 	var starts: PackedInt32Array = _spatial.cell_start
 	var ents: PackedInt32Array = _spatial.cell_entities
@@ -275,12 +281,21 @@ func _ship_structure(s: int, o: int, p: Vector3, r: float, docked: bool) -> void
 			var alt: float = rel.dot(up_p)
 			var off: float = (rel - up_p * alt).length()
 			in_col = alt >= -(r + 0.5)   # BUG-1: the whole half-space above the deck, not only the column over the pad
-			in_pad = in_col and off <= pad_r and alt <= r + 0.5
+			in_pad = in_col and off <= pad_r and (alt <= r + 0.5 or alt <= r + 0.5 + _rise(p, o, up_p))
 			if in_pad and (_pad_slot < 0 or off < _pad_off):
 				_pad_slot = o
 				_pad_off = off
 	if not (in_pad or in_col) and p.distance_to(_store.pos[o]) <= r + _store.radius[o]:
 		_add_ram(o)
+
+
+# A-158 (BUG-6): g = max(0, (surface_point(ship direction) - pos[pad]) . up[pad]), how far the terrain under the ship
+# stands above the deck of pad slot `o`. The surface point is sampled once per ship per tick (one height_at).
+func _rise(p: Vector3, o: int, up_p: Vector3) -> float:
+	if not _ground_ok:
+		_ground_ok = true
+		_ground_pt = _terrain.surface_point(p)
+	return maxf(0.0, (_ground_pt - _store.pos[o]).dot(up_p))
 
 
 # GD-15: a ship that also touched the terrain this tick was pushed out with its normal speed zeroed (Kinematics step
