@@ -26,7 +26,7 @@ func test_colours_come_from_tokens() -> void:
 	var panel: StyleBoxFlat = t.get_stylebox("panel", "PanelContainer") as StyleBoxFlat
 	assert_bool(panel.border_color.is_equal_approx(UiTokens.UI_LINE)).is_true()
 	var focus: StyleBoxFlat = t.get_stylebox("focus", "Button") as StyleBoxFlat
-	assert_bool(focus.border_color.is_equal_approx(UiTokens.UI_FOCUS)).is_true()
+	assert_bool(focus.border_color.is_equal_approx(UiTokens.UI_FOCUS_ON_ACCENT)).is_true()
 
 
 func test_finnish_has_glyphs_in_both_fonts() -> void:
@@ -83,6 +83,15 @@ func test_selected_toggle_contrasts_unselected() -> void:
 	assert_float(_contrast(hov_sel.bg_color, unsel.bg_color)).is_greater_equal(MIN_CONTRAST)
 	var sel_font: Color = t.get_color("font_pressed_color", "Button")
 	assert_float(_contrast(sel_font, sel.bg_color)).is_greater_equal(MIN_CONTRAST)
+
+
+func test_pressed_toggle_focus_ring_contrasts_accent_and_dark_bg() -> void:
+	var t: Theme = _theme()
+	var focus: StyleBoxFlat = t.get_stylebox("focus", "Button") as StyleBoxFlat
+	var accent: Color = UiTokens.UI_ACCENT
+	assert_float(_contrast(focus.border_color, accent)).override_failure_message("focus vs ui_accent").is_greater_equal(MIN_CONTRAST)
+	assert_float(_contrast(focus.border_color, UiTokens.UI_BG_1)).override_failure_message("focus vs ui_bg_1").is_greater_equal(MIN_CONTRAST)
+	assert_float(_contrast(focus.border_color, UiTokens.UI_BG_0)).override_failure_message("focus vs ui_bg_0").is_greater_equal(MIN_CONTRAST)
 
 
 func test_tabbar_selected_contrasts_unselected() -> void:

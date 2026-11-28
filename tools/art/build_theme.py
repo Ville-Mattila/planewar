@@ -47,7 +47,7 @@ def build(palette: dict) -> str:
         + box("btn_hover", col(u["ui_bg_2"]), col(u["ui_accent"]))
         + box("btn_pressed", col(u["ui_accent"]), col(u["ui_accent"]))
         + box("btn_disabled", col(u["ui_bg_1"]), col(u["ui_line"]))
-        + ["[sub_resource type=\"StyleBoxFlat\" id=\"focus\"]", "draw_center = false", f"border_color = {col(u['ui_focus'])}"]
+        + ["[sub_resource type=\"StyleBoxFlat\" id=\"focus\"]", "draw_center = false", f"border_color = {col(u['ui_focus_on_accent'])}"]
         + [f"border_width_{s} = {STROKE}" for s in ("left", "top", "right", "bottom")] + [""]
     )
     t = ["[gd_resource type=\"Theme\" load_steps=9 format=3]", "",
@@ -73,7 +73,7 @@ def build(palette: dict) -> str:
           "TabBar/styles/tab_hovered = SubResource(\"btn_hover\")",
           f"TabBar/colors/font_selected_color = {col(u['ui_bg_0'])}",
           f"TabBar/colors/font_unselected_color = {text}",
-          "TabBar/font_sizes/font_size = 12", "Button/styles/disabled = SubResource(\"btn_disabled\")",
+          f"TabBar/font_sizes/font_size = {BODY_SIZE}","Button/styles/disabled = SubResource(\"btn_disabled\")",
           "Button/styles/focus = SubResource(\"focus\")", f"Button/colors/font_color = {text}",
           f"Button/colors/font_hover_color = {col(u['ui_accent'])}", f"Button/colors/font_disabled_color = {dim}",
           f"Button/colors/font_focus_color = {text}", f"Button/font_sizes/font_size = {BODY_SIZE}",

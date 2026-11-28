@@ -67,7 +67,7 @@ content_margin_bottom = 8
 
 [sub_resource type="StyleBoxFlat" id="focus"]
 draw_center = false
-border_color = Color(1.000000, 1.000000, 1.000000, 1.000000)
+border_color = Color(0.164706, 0.415686, 0.588235, 1.000000)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
