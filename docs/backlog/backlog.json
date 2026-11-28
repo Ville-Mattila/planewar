@@ -8936,8 +8936,10 @@
       ".github/workflows/ci.yml",
       ".github/scripts/gdunit_shard.sh"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 207,
+    "notes": "gdUnit4 sim split into sim-ai-a (5 heavy ai files), sim-ai-b (rest:ai minus those), sim-rest (rest, SHARD_DIRS=ai); p95 4:56/5:26/4:21 of 15 min; 159 cases unchanged; 23 checks per run (was 21), queueing under contention noted. Required checks: gdUnit4 sim-ai-a, sim-ai-b, sim-rest replace gdUnit4 sim."
   },
   {
     "id": "PM-06",
