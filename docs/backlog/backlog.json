@@ -5972,6 +5972,24 @@
     "merged": null
   },
   {
+    "id": "DOC-07",
+    "title": "docs: 06 s3.2 Consumables row matches the status cluster widget (260x140 du, UX-51 follow-up)",
+    "lane": "docs",
+    "tier": "Haiku",
+    "size_days": 0.1,
+    "depends_on": [
+      "UX-51"
+    ],
+    "milestone": "M3",
+    "acceptance": "06 s3.2 Chase HUD table: the Consumables row size reads as the shipped StatusClusterView (260 x 140 du, content-centred, bottom-centre) or the Architect rules the widget back to 160 x 40; the barrel readout gets its own row (centred above the cluster, gap chase_gap_du from hud.json); ui/hud MODULE.md supersede note removed if the doc now matches; no other text changed; Architect ack (10 s4.3)",
+    "docs": [
+      "06 s3.2",
+      "https://github.com/Ville-Mattila/planewar/pull/216"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
     "id": "QA-01",
     "title": "Device and browser test matrix (PC-mid, Deck, Android-mid, 3 GB Android, Chrome desktop/Android, Firefox, Edge) and the manual QA checklist per platform",
     "lane": "test",
@@ -8785,8 +8803,10 @@
       "06 s3.2",
       "godot/src/ui/hud/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 216,
+    "notes": "New chase_hud.tscn (ChaseHud, ChaseLayout) + app ChaseHudHost feed StatusClusterView and BarrelReadoutView per frame from SimView; cluster centred on its drawn content; barrel readout only for ground units. No match controller exists yet, so in-match hosting + screenshot moved to UX-54; 06 s3.2 Consumables size to DOC-07. 3 rounds (anchor centring, duplicate locale keys)."
   },
   {
     "id": "UX-52",
@@ -8822,6 +8842,26 @@
     "docs": [
       "https://github.com/Ville-Mattila/planewar/pull/209#issuecomment-7236527528",
       "07 A11Y-13"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "UX-54",
+    "title": "app: the match controller instantiates ChaseHud under HudRoot and feeds it the possessed entity (UX-51 follow-up)",
+    "lane": "app",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "UX-51"
+    ],
+    "milestone": "M3",
+    "acceptance": "When a match runs, the app instantiates godot/scenes/ui/chase_hud.tscn under the HudRoot (hud_root.tscn), and ChaseHudHost is given view (the active SimView), possessed_id (on possess/release) and shield_until_s, with layout() and set_profile() called on resize and profile change; nothing possessed hides both widgets; a scene test drives a possess/release cycle through the host; windowed screenshot from a running match with a possessed Siege Crawler (barrel readout visible) and a Dart (hidden). If no match controller exists yet, depend on the task that creates it and say so",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/216",
+      "06 s3.2",
+      "godot/src/app/MODULE.md",
+      "godot/src/ui/hud/MODULE.md"
     ],
     "status": "todo",
     "merged": null
