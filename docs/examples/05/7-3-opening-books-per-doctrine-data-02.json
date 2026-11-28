@@ -57,9 +57,9 @@
       { "do": "build", "def": "ice_extractor", "near": "cold_trap:home", "when": "have:outpost>=1" },
       { "do": "produce", "def": "hauler", "n": 1 },
       { "do": "build", "def": "autocannon_turret", "near": "approach:nearest_enemy" },
-      { "do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field", "when": "t>=270" },
-      { "do": "build", "def": "outpost", "near": "contested_field", "when": "presence" },
-      { "do": "set_replenish", "def": "harvester", "n": 6 }
+      { "do": "set_replenish", "def": "harvester", "n": 6 },
+      { "do": "order", "kind": "move", "unit": "dart|scout", "to": "contested_field", "when": "t>=300" },
+      { "do": "build", "def": "outpost", "near": "contested_field", "when": "presence" }
     ]
   }
 }
