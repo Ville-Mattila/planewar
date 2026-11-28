@@ -1,4 +1,4 @@
-"""TA-71: every gdUnit4 test file under test/unit is selected by exactly one CI shard (TA-67 coverage guard)."""
+"""TA-71/TA-73: every gdUnit4 test file under test/unit and test/sim is selected by exactly one CI shard (TA-67 coverage guard)."""
 import os
 import re
 import shutil
@@ -25,16 +25,25 @@ def selected(name, layer, shard, dirs):
 
 @unittest.skipUnless(shutil.which("bash"), "bash required")
 class CiShardCoverage(unittest.TestCase):
-    def test_unit_shards_partition_the_layer(self):
-        entries = [(n, l, s.strip('"'), d) for n, l, s, d in ENTRY.findall(CI) if l == "unit"]
-        self.assertGreaterEqual(len(entries), 3)
+    def _partition(self, layer, minimum):
+        entries = [(n, l, s.strip('"'), d) for n, l, s, d in ENTRY.findall(CI) if l == layer]
+        self.assertGreaterEqual(len(entries), minimum)
         seen = {}
         for n, l, s, d in entries:
-            for f in selected(n, l, s, d):
+            sel = selected(n, l, s, d)
+            self.assertTrue(sel, f"shard {n} selects no test files")
+            for f in sel:
+                self.assertTrue(f.exists(), f"{n} selects a missing path {f}")
                 self.assertNotIn(f, seen, f"{f} is in both {seen.get(f)} and {n}")
                 seen[f] = n
-        every = set((ROOT / "godot/test/unit").rglob("test_*.gd"))
-        self.assertEqual(every - set(seen), set(), "test files covered by no unit shard")
+        every = set((ROOT / "godot/test" / layer).rglob("test_*.gd"))
+        self.assertEqual(every - set(seen), set(), f"test files covered by no {layer} shard")
+
+    def test_unit_shards_partition_the_layer(self):
+        self._partition("unit", 3)
+
+    def test_sim_shards_partition_the_layer(self):
+        self._partition("sim", 2)
 
 
 if __name__ == "__main__":
