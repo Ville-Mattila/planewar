@@ -1,5 +1,5 @@
 {
-  "_doc": "AI-23 opening-book constants until bot_profiles.json carries the `opening_book` block (needs content). 05 s7.3: book_end_s 300 (the book hands over to the reactive planner at 5:00), max_rejects 3 (three REJECTED_PLACEMENT skip a step), lock_s 60 (human_order_lock_s, s7.8); 05 s7.8 cmds_per_think 2/3/5/8 per tier (the CommandGovernor, AI-28, replaces the stand-in cap); site geometry is the planner's: structures are 6-74 m wide (9.2 m cells at 1024), the Core build radius is 600 m and the Pylon radius 250 m, so a Pylon chain starts at toward_first_m 450 (inside the Core's radius) and steps toward_step_m 220 (inside the previous Pylon's radius); outpost_cover 0.75: the home-trap Outpost site lies that share of the Outpost build radius short of the Cold Trap (and >= the 800 m spacing from the Core), so the Extractor is inside its radius; presence is 300 m (economy.json), so outpost_ring_m 40 x 4 rings plus move_agl_m 120 stays inside it.",
+  "_doc": "AI-23 opening-book constants until bot_profiles.json carries the `opening_book` block (needs content). 05 s7.3: book_end_s 300 (the book hands over to the reactive planner at 5:00), max_rejects 3 (three REJECTED_PLACEMENT skip a step), lock_s 60 (human_order_lock_s, s7.8); 05 s7.8 cmds_per_think 2/3/5/8 per tier (the CommandGovernor, AI-28, replaces the stand-in cap); site geometry is the planner's: structures are 6-74 m wide (9.2 m cells at 1024), the Core build radius is 600 m and the Pylon radius 250 m, so a Pylon chain starts at toward_first_m 450 (inside the Core's radius) and steps toward_step_m 220 (inside the previous Pylon's radius); outpost_cover 0.75: the home-trap Outpost site lies that share of the Outpost build radius short of the Cold Trap (and >= the 800 m spacing from the Core), so the Extractor is inside its radius; presence is 300 m (economy.json), so outpost_ring_m 40 x 4 rings plus move_agl_m 80 stays inside it. AI-51: presence_slack_cells 3 (AI-24 review F1): the Commander counts a unit present within the presence radius less 3 build cells (the sim snaps the site to its cell), and a book `order move` keeps its nominal hold orbit (order_rules.json hold_orbit_radius_m 250, horizontal, at move_agl_m 80 above the site: 262.5 m in 3-D) inside that reach (272.4 m). The orbit-vs-reach inequality is test_book_move_reach.gd.",
   "book_end_s": 300.0,
   "max_rejects": 3,
   "stall_s": 90.0,
@@ -14,7 +14,8 @@
   "slot_phase_rad": 0.4,
   "outpost_ring_m": 40.0,
   "outpost_cover": 0.75,
-  "move_agl_m": 120.0,
+  "move_agl_m": 80.0,
+  "presence_slack_cells": 3.0,
   "scan_cap": 64,
   "cmds_per_think": [2, 3, 5, 8]
 }

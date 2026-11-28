@@ -55,12 +55,13 @@ func test_the_retry_orders_the_airborne_dart_not_the_docked_one() -> void:
 	assert_int(run.cursor).is_equal(0)
 	# the docked Dart is the nearer one to the site: nearest-only would pick it
 	w.store().flags[EntityId.slot(docked)] |= EntityStore.F_DOCKED
-	w.store().pos[EntityId.slot(docked)] = IntelKit.at(w, home, 0.0, 0.0, 0.0)
+	w.store().pos[EntityId.slot(docked)] = IntelKit.at(w, home, 0.0, 0.0, 20.0)
 	run.cursor = 1
 	var p: BookParams = Ai23Kit.params()
 	var tick: int = 5 * HZ
 	assert_bool(book._retry_move(1, run, cb.host, tick, HZ, p)).is_false()   # the first call arms the clock
 	assert_bool(book._retry_move(1, run, cb.host, tick + int(p.presence_retry_s) * HZ + 1, HZ, p)).is_true()
+	var _s: Array[SimEvent] = Ai23Kit.run(w, 1)   # the sink queues the order for the next tick
 	var head: OrderSpec = w.view().order_head(air)
 	assert_object(head).is_not_null()
 	assert_int(head.kind).is_equal(OrderSpec.Kind.MOVE)
@@ -81,6 +82,7 @@ func test_a_docked_dart_is_ordered_only_when_no_undocked_one_exists() -> void:
 	var p: BookParams = Ai23Kit.params()
 	var _a: bool = book._retry_move(1, run, cb.host, 5 * HZ, HZ, p)
 	assert_bool(book._retry_move(1, run, cb.host, 5 * HZ + int(p.presence_retry_s) * HZ + 1, HZ, p)).is_true()
+	var _s: Array[SimEvent] = Ai23Kit.run(w, 1)   # the sink queues the order for the next tick
 	var head: OrderSpec = w.view().order_head(docked)
 	assert_object(head).is_not_null()
 	assert_int(head.kind).is_equal(OrderSpec.Kind.MOVE)
