@@ -8679,8 +8679,10 @@
       "04 s3.7",
       "godot/src/net/client/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 214,
+    "notes": "net_sim_view.gd 399 -> 328 lines; pilot-block and TEAM_STATE reads in static NetOwnReads; contract append (flags_byte public); tests-first split waived (pure refactor)."
   },
   {
     "id": "CONTENT-5",
