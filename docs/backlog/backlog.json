@@ -9136,8 +9136,10 @@
       "05 s7.3",
       "godot/src/sim_ai/commander/MODULE.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 212,
+    "notes": "Partial: tests 1 (orbit-vs-reach, presence_slack_cells 3, move_agl_m 80 in the fixture params) and 3 (_pick_unit prefers undocked) delivered; test 2 (SC-41 presence >= 95 %) moved to AI-53 after the Opus review found DartModes._orbit holds ~60 m wide at cruise (P-only radial term). Content follow-up named in AI-53."
   },
   {
     "id": "AI-52",
@@ -9154,6 +9156,26 @@
     "docs": [
       "https://github.com/Ville-Mattila/planewar/pull/193#issuecomment-7225502421",
       "05 s7.3"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "AI-53",
+    "title": "sim_ai brains: Dart hold orbit holds its radius (integral radial term, orbit speed from defs) so a book-move escort stays in Outpost presence reach (AI-51 test 2)",
+    "lane": "sim_ai",
+    "tier": "Opus",
+    "size_days": 1.0,
+    "depends_on": [
+      "AI-51"
+    ],
+    "milestone": "M3",
+    "acceptance": "DartModes._orbit holds hold_orbit_radius_m on a MOVE arrival and on HOLD: it gains an integral (or equivalent zero-steady-state-error) radial term kept per slot in AiState (FORMAT append, covered by SC-47 save/load bytes), and the hold orbit flies at a speed read from defs (one new key with a _doc and a schema entry; the Architect names the file, autopilots.json or order_rules.json, on the PR), not at v_cruise; no sim/ change and no FlightController gain change. Tests: (1) on the flat datum a Dart with the shipped values ordered MOVE to a point move_agl_m (ai23_params.json) above the ground holds a horizontal orbit radius between hold_orbit_radius_m - 1 build cell and sqrt(BookParams.reach_m(outpost_presence_radius_m)^2 - move_agl_m^2) (260.4 m at the shipped values) over 60 s after a 60 s settle, and the GUARD and L2b-hold mean radius errors are no larger than before (before/after numbers in the PR); (2) AI-51 test 2 restored from commit 11e0a82 (test/sim/ai/test_sc41_book_move_presence.gd, threshold 0.95 unchanged): on the SC-41 world a Dart ordered by a book move to outpost_site:home_trap reports presence on >= 95 % of Commander thinks from arrival to RTB; (3) the existing Dart, Lancer and Bomber orbit scenarios, SC-06, SC-40, SC-41, SC-43 and SC-47 pass unchanged; test 1 of test_book_move_reach.gd also asserts move_agl_m >= deck_alt_agl_m. Perf note (perf_tick ai A/B delta, 05 s10 Dart think row). Then name the AI-51 content follow-up: bulwark_standard's home-trap move back to 05's form (no ore>=520) and foundry_standard's t>=270 contested pair re-added if SC-41 passes (per PM-07's foundry ruling). Contract question for the PR: the Commander measures presence from the token anchor while the sim measures from the resolved build site (up to 120 m apart), predating AI-51.",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/212#issuecomment-7236584329",
+      "05 s6.1",
+      "05 s7.3",
+      "godot/src/sim_ai/brains/MODULE.md"
     ],
     "status": "todo",
     "merged": null
