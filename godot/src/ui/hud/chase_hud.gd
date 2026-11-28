@@ -7,6 +7,8 @@ class_name ChaseHud extends Control
 @onready var barrel: BarrelReadoutView = $BarrelReadout as BarrelReadoutView
 
 var profile: UiScale.Profile = UiScale.Profile.REGULAR
+var _canvas_du: Vector2 = Vector2.ZERO
+var _content_w: float = 0.0
 
 
 func _ready() -> void:
@@ -16,7 +18,9 @@ func _ready() -> void:
 
 ## Anchors both widgets inside a canvas of `canvas_du`.
 func layout(canvas_du: Vector2) -> void:
+	_canvas_du = canvas_du
 	size = canvas_du
+	_content_w = status.content_rect().size.x
 	status.position = ChaseLayout.status_pos(canvas_du, status.content_rect())
 	barrel.position = ChaseLayout.barrel_pos(canvas_du, status.content_rect(), barrel.size)
 
@@ -43,6 +47,8 @@ func feed(v: SimView, id: int, ground: GroundUnitDef, shield_until_s: float) -> 
 	status.visible = true
 	status.set_data(LandingHudData.from_view(v, id, 0.0, 0.0))   # agl / pad radius feed only the landing guide
 	status.set_shield(v.team_state(v.team(id)).flags, shield_until_s, v.match_clock_s())
+	if _canvas_du != Vector2.ZERO and not is_equal_approx(status.content_rect().size.x, _content_w):
+		layout(_canvas_du)      # the shield badge widened the cluster: keep it centred
 	var b: BarrelReadoutData = BarrelReadoutData.from_view(v, id, ground)
 	barrel.visible = b.shown
 	barrel.set_data(b)
