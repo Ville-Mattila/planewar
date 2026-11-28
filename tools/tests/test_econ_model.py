@@ -3,7 +3,7 @@
 Positive: the closed-form tables (8.2, 8.3, 8.6) and the 0-5 minute rows and checkpoints of 8.7 agree with the defs.
 Negative: a doc value changed in a copy of the text is flagged; a book step that can never run fails loudly; --check exits 1.
 NOTE: these tests pin live doc values. GD-48 (02 s8 revision) moved Dart #2 to 0:50 (6 s Core trickle in the 8.7
-ledger); the checkpoint test and the "-- checkpoint: 25/25" assertion pin that revision.
+ledger); the checkpoint test and the "-- checkpoint: 23/25" assertion pin that revision.
 The later rows are reported discrepancies (see the PR), not asserted here: this test pins that they are *reported*.
 """
 
@@ -70,6 +70,55 @@ class ClosedForm(unittest.TestCase):
         self.assertEqual(bad, ["8.2 d=200 T_trip"])
 
 
+class DrivenLeg(unittest.TestCase):
+    """GD-54 / R0 B.33 A-160: d is the driven leg, derived from the defs and the cradle recipe."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.defs = em.Defs()
+        cls.sim = em.run_book("1v1")
+        cls.field = cls.sim.players[0].fields["A"]
+
+    def test_field_a_leg_is_centre_minus_spot_minus_dock_stop(self) -> None:
+        d = self.defs
+        node = d.nodes["home_field_a_s0"]
+        centre = d.arc_m(d.slots[0]["dir"], node["dir"]) - d.eco["start_refinery_dist_m"]
+        self.assertAlmostEqual(centre, 600.0, places=3)                   # 02 s9.2: 600 m centre to centre
+        stop = d.structure_radius("refinery") + d.dock_frac * d.eco["salvage_deliver_m"]
+        self.assertAlmostEqual(self.field.d, centre - d.spot_frac * node["radius_m"] - stop, places=6)
+        self.assertAlmostEqual(self.field.d, 472, delta=5)                # A-160: "about 472 m"
+
+    def test_leg_follows_the_defs(self) -> None:
+        d = em.Defs()
+        before = d.driven_leg(600.0, 150.0)
+        d.dock_frac = 1.0                                                 # a def change moves the leg, nothing is typed
+        self.assertAlmostEqual(before - d.driven_leg(600.0, 150.0), 0.5 * d.eco["salvage_deliver_m"], places=6)
+        d.spot_frac = 0.0
+        self.assertAlmostEqual(d.driven_leg(600.0, 150.0), 600.0 - d.dock_stop_m(), places=6)
+
+    def test_kit_harvester_starts_mining_at_the_near_edge(self) -> None:
+        d, f = self.defs, self.field
+        bound = d.items["harvester"]["bounding_radius"]
+        self.assertAlmostEqual(f.first_leg, f.centre_m - (150.0 - bound) - d.dock_stop_m(), places=6)
+        self.assertGreater(f.d, f.first_leg - 100)                        # the kit leg is the shorter, sim 68 s run
+        self.assertLess(f.first_leg, f.d)
+
+    def test_first_start_kit_delivery_matches_the_sim_68_s(self) -> None:
+        self.assertAlmostEqual(self.sim.event_time("P0.H1.delivery.1"), 68.0, delta=5.0)   # test_bug4: 68.2 s
+
+    def test_steady_cycle_within_5_percent_of_the_sim(self) -> None:
+        t = self.sim.event_time("P0.H1.delivery.2") - self.sim.event_time("P0.H1.delivery.1")
+        self.assertAlmostEqual(t, self.defs.trip_time(self.field.d), delta=0.5)
+        self.assertAlmostEqual(t, 117.3, delta=117.3 * 0.05)              # PR #195: 68.2 / 185.4 / 302.7 s on cradle
+
+    def test_a_book_field_without_recipe_keeps_its_driven_leg(self) -> None:
+        self.assertEqual(self.sim.players[0].fields["B"].d, 600.0)
+        self.assertEqual(self.sim.players[0].fields["B"].first_leg, 600.0)
+
+    def test_02_s8_2_table_is_unchanged(self) -> None:
+        self.assertAlmostEqual(self.defs.trip_time(450), 108.5, places=3)
+
+
 class Opening1v1(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -86,8 +135,9 @@ class Opening1v1(unittest.TestCase):
         self.assertGreaterEqual(len(cps), 25)
         miss = [r["name"] for r in cps if not r["ok"]]
         # GD-48: 02 s8.7 credits the first six seconds of Core trickle (Ore after 0:06 = 106), so Dart #2 is
-        # affordable at 0:50, not 0:56. All 25 checkpoints now sit inside +-5 s.
-        self.assertEqual(miss, [])
+        # affordable at 0:50, not 0:56. GD-54 (A-160): Field A priced as the driven leg of the cradle recipe (469 m, not
+        # 450 m) moves Outpost #2 by +11 s (9:31 -> 9:42, 10:16 -> 10:27); reported to docs as a 02 s8.7 revision request.
+        self.assertEqual(miss, ["Outpost #2 placed", "Outpost #2 done"])
 
     def test_dart_airborne_checkpoint(self) -> None:
         self.assertAlmostEqual(self.sim.event_time("P0.dart1.airborne"), 28.0, delta=1.0)
@@ -103,7 +153,7 @@ class Opening1v1(unittest.TestCase):
     def test_rows_outside_tolerance_are_reported(self) -> None:
         out = cmp.render("1v1", self.sim, self.rows, False, False)
         self.assertIn("MISS", out)
-        self.assertIn("-- checkpoint: 25/25", out)
+        self.assertIn("-- checkpoint: 23/25", out)
 
 
 class Books(unittest.TestCase):

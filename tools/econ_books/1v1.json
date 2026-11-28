@@ -14,7 +14,7 @@
     {
       "name": "P0",
       "fields": [
-        {"name": "A", "node": "home_field_a_s0", "d": 450, "refinery": "P0.refinery_0"},
+        {"name": "A", "node": "home_field_a_s0", "from_start_refinery": true, "refinery": "P0.refinery_0"},
         {"name": "B", "node": "home_field_b_s0", "d": 600, "refinery": "P0.refinery2"},
         {"name": "C", "node": "contested_r0", "d": 250, "refinery": "P0.refinery3"}
       ],
