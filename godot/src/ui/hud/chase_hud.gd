@@ -17,8 +17,8 @@ func _ready() -> void:
 ## Anchors both widgets inside a canvas of `canvas_du`.
 func layout(canvas_du: Vector2) -> void:
 	size = canvas_du
-	status.position = ChaseLayout.status_pos(canvas_du, status.size)
-	barrel.position = ChaseLayout.barrel_pos(canvas_du, status.size, barrel.size)
+	status.position = ChaseLayout.status_pos(canvas_du, status.content_rect())
+	barrel.position = ChaseLayout.barrel_pos(canvas_du, status.content_rect(), barrel.size)
 
 
 func set_profile(p: UiScale.Profile) -> void:

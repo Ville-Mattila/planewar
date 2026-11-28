@@ -67,14 +67,15 @@ func test_another_players_unit_is_not_shown() -> void:
 	assert_bool(_hud.barrel.visible).is_false()
 
 
-func test_layout_anchors_bottom_centre_and_barrel_above_status() -> void:
+func test_layout_centres_the_drawn_content_and_barrel_above_it() -> void:
 	var canvas: Vector2 = Vector2(800.0, 450.0)
 	_hud.layout(canvas)
-	var s: Rect2 = Rect2(_hud.status.position, _hud.status.size)
+	var c: Rect2 = _hud.status.content_rect()
+	var drawn: Rect2 = Rect2(_hud.status.position + c.position, c.size)
 	var b: Rect2 = Rect2(_hud.barrel.position, _hud.barrel.size)
-	assert_float(s.get_center().x).is_equal_approx(400.0, 0.01)
-	assert_float(s.end.y).is_equal_approx(canvas.y - HudMath.param("chase_margin_du"), 0.01)
-	assert_float(b.get_center().x).is_equal_approx(400.0, 0.01)
-	assert_float(b.end.y).is_less_equal(s.position.y)
-	assert_bool(Rect2(Vector2.ZERO, canvas).encloses(s)).is_true()
+	assert_float(drawn.get_center().x).is_equal_approx(400.0, 1.0)
+	assert_float(drawn.end.y).is_equal_approx(canvas.y - HudMath.param("chase_margin_du"), 0.01)
+	assert_float(b.get_center().x).is_equal_approx(400.0, 1.0)
+	assert_float(drawn.position.y - b.end.y).is_equal_approx(HudMath.param("chase_gap_du"), 0.01)
+	assert_bool(Rect2(Vector2.ZERO, canvas).encloses(drawn)).is_true()
 	assert_bool(Rect2(Vector2.ZERO, canvas).encloses(b)).is_true()

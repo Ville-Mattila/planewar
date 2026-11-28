@@ -44,7 +44,7 @@ func set_data(d: BarrelReadoutData) -> void
 func lines() -> PackedStringArray
 class_name ChaseLayout extends RefCounted   # UX-51: pure Chase HUD anchors (06 s3.2); hud.json chase_margin_du, chase_gap_du
 static func bottom_centre(canvas_du: Vector2, size: Vector2, lift: float = 0.0) -> Vector2
-static func status_pos(canvas_du: Vector2, status_size: Vector2) -> Vector2; static func barrel_pos(canvas_du: Vector2, status_size: Vector2, barrel_size: Vector2) -> Vector2
+static func status_pos(canvas_du: Vector2, content: Rect2) -> Vector2; static func barrel_pos(canvas_du: Vector2, content: Rect2, barrel_size: Vector2) -> Vector2   # content = StatusClusterView.content_rect()
 class_name ChaseHud extends Control   # UX-51: scenes/ui/chase_hud.tscn; StatusCluster + BarrelReadout children, both hidden until fed a possessed id
 var status: StatusClusterView; var barrel: BarrelReadoutView; var profile: UiScale.Profile
 func layout(canvas_du: Vector2) -> void; func set_profile(p: UiScale.Profile) -> void; func hide_all() -> void
@@ -133,6 +133,7 @@ var shield_ring01: float
 var shield_shown: bool
 func set_data(d: LandingHudData) -> void
 func set_shield(team_flags: int, until_s: float, clock_s: float) -> void
+func content_rect() -> Rect2   # UX-51: drawn extent in du from the control origin (rings and rows start at x 0)
 func rows() -> Array[PackedStringArray]
 class_name ThreatMath extends RefCounted   # pure statics (UX-19, 06 s6.1)
 static func angle(rel: Vector3, b: Basis) -> float; static func ring_pos(a: float, radius: float) -> Vector2   # angle 0 = up, clockwise positive, (-PI, PI]
@@ -193,7 +194,7 @@ func lines() -> PackedStringArray; func font_size() -> int
 `godot/test/unit/ui/hud/test_chase_hud.gd` (UX-51: Crawler vs Dart in a LocalSimView world), `godot/test/unit/ui/test_threat_hud.gd` (U13, U14), `test_hud_social.gd` (U15, U16), `test_threat_overlay_scene.gd`; scripted views in `hud_scenario_view.gd`.
 
 ## Open items
-- UX-51: the status cluster takes the 06 s3.2 Consumables row (bottom-centre); the barrel readout has no row in the table and sits centred 8 du above it. The cluster is shown for any possessed entity (its fields read 0 for units without them).
+- UX-51: the 260 x 140 du cluster supersedes the 160 x 40 Consumables size in 06 s3.2 (rows plus rings; `needs docs`). The status cluster takes the 06 s3.2 Consumables row (bottom-centre); the barrel readout has no row in the table and sits centred 8 du above it. The cluster is shown for any possessed entity (its fields read 0 for units without them).
 - `StatusMath.boost_fill(state)` deprecated by GD-46 (no caller); delete at a major version, by ADR (10 s4.1).
 
 needs app: refresh `ThreatData`, `TowerHint.from_view` (agl from terrain), `PilotedBadges` and the pip list at their rates, feed `SimEvent`s to `HandoverToast` / `BeaconTracker`, project badge positions through the camera, submit `HandoverToast.accept`; the roster names come from the lobby.

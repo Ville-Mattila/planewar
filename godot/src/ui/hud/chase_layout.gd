@@ -9,9 +9,12 @@ static func bottom_centre(canvas_du: Vector2, size: Vector2, lift: float = 0.0) 
 	return Vector2((canvas_du.x - size.x) * 0.5, canvas_du.y - HudMath.param("chase_margin_du") - lift - size.y)
 
 
-static func status_pos(canvas_du: Vector2, status_size: Vector2) -> Vector2:
-	return bottom_centre(canvas_du, status_size)
+## Top-left of the status cluster control so the DRAWN content (`content`, from StatusClusterView.content_rect) is centred.
+static func status_pos(canvas_du: Vector2, content: Rect2) -> Vector2:
+	var p: Vector2 = bottom_centre(canvas_du, content.size)
+	return Vector2(p.x - content.position.x, p.y - content.position.y)
 
 
-static func barrel_pos(canvas_du: Vector2, status_size: Vector2, barrel_size: Vector2) -> Vector2:
-	return bottom_centre(canvas_du, barrel_size, status_size.y + HudMath.param("chase_gap_du"))
+## Barrel readout centred above the drawn status content, `chase_gap_du` clear of its top.
+static func barrel_pos(canvas_du: Vector2, content: Rect2, barrel_size: Vector2) -> Vector2:
+	return bottom_centre(canvas_du, barrel_size, content.size.y + HudMath.param("chase_gap_du"))
