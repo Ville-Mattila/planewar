@@ -2499,7 +2499,7 @@
       " 05 AI-15"
     ],
     "status": "todo",
-    "acceptance_append": "; brains call ControlOrders.complete_head / fail_head for C4 / C5 (R0 B.11 A-61); R0 B.20 A-108: the Hauler brain completes a HAUL / TOW head order with ControlOrders.complete_head on SALVAGE_DELIVERED for its own id (Salvage emits no ORDER_DONE) and fails it with fail_head(INVALID_TARGET) when the target wreck dies first (DEATH with cause EXPIRED, or hooked by another ship); it reads the wreck's value through SimView.wreck_ore (GD-41) and hooks only through a HAUL / TOW standing order (sim/salvage/MODULE.md W6); hover height for the attach comes from salvage_hook_m (economy.json), not a brain constant"
+    "acceptance_append": "; brains call ControlOrders.complete_head / fail_head for C4 / C5 (R0 B.11 A-61); R0 B.20 A-108: the Hauler brain completes a HAUL / TOW head order with ControlOrders.complete_head on SALVAGE_DELIVERED for its own id (Salvage emits no ORDER_DONE) and fails it with fail_head(INVALID_TARGET) when the target wreck dies first (DEATH with cause EXPIRED, or hooked by another ship); it reads the wreck's value through SimView.wreck_ore (GD-41) and hooks only through a HAUL / TOW standing order (sim/salvage/MODULE.md W6); hover height for the attach comes from salvage_hook_m (economy.json), not a brain constant; R0 B.34 A-166 / A-167: the Hauler's DockedMode uses the sticky pause memory as ratified; the Hauler brain never completes a RETURN head (Docking does); its complete_head / fail_head calls for HAUL / TOW (A-108) need a brain path to ControlOrders that does not exist: the task appends it to CommandSinkBase (10 s4.1 Append, 'Contract impact: append') or raises a contract question"
   },
   {
     "id": "AI-16",
@@ -3803,7 +3803,7 @@
       " 07 ART-17"
     ],
     "status": "todo",
-    "note": "vfx_tether needs the wreck -> Hauler pair on the client; R0 B.23 A-116 names the path (appended SimEvent.Kind TETHERED / UNTETHERED, wreck u16 + ship u16, roster scope, PROTOCOL_VERSION bump; sim task in GD-19's lane plus the EventRouter row and NetSimView.link). File it as a net + sim task when ART-17 starts; until then NetSimView.link(wreck) is 0 with field_unknown true."
+    "note": "vfx_tether needs the wreck -> Hauler pair on the client; R0 B.23 A-116 names the path (appended SimEvent.Kind TETHERED / UNTETHERED, wreck u16 + ship u16, roster scope, PROTOCOL_VERSION bump; sim task in GD-19's lane plus the EventRouter row and NetSimView.link). File it as a net + sim task when ART-17 starts; until then NetSimView.link(wreck) is 0 with field_unknown true. R0 B.34 A-165: NET-63 (M4) builds this path, so ART-17 does not file it; until NET-63 lands ART-17 draws vfx_tether only where NetSimView.link(wreck) is known (offline and host play)."
   },
   {
     "id": "ART-18",
@@ -4259,7 +4259,9 @@
       "NET-03",
       "NET-17",
       "TA-12",
-      "AI-10"
+      "AI-10",
+      "GD-55",
+      "NET-63"
     ],
     "milestone": "M4",
     "acceptance": "prediction_test p95 < 1 m (TARGET), no hard snap; stale-epoch inputs dropped; 60 fps displacement variance < 10 %; predicted auto-dock matches the server with no extra reconciliation error (AI-10 parity check lives here)",
@@ -4270,7 +4272,7 @@
       " 04 NET-18"
     ],
     "status": "todo",
-    "acceptance_append": "; local input reuse during a stall applies the A-44 button mask (BOOST/BRAKE held, FLIP/DOCK/RELEASE/FIRE cleared); R0 B.22 A-115: the perf note measures the full 03 s10.2 row (decode + NetSimView + prediction) on the canonical scene and states p50 / p95 on the dev box; report-only off the pinned runner (A-97); if the pinned runner later shows > 1.0 ms p95 the first lever is the A-115 L1 tier-C stagger in Interest, filed then",
+    "acceptance_append": "; local input reuse during a stall applies the A-44 button mask (BOOST/BRAKE held, FLIP/DOCK/RELEASE/FIRE cleared); R0 B.22 A-115: the perf note measures the full 03 s10.2 row (decode + NetSimView + prediction) on the canonical scene and states p50 / p95 on the dev box; report-only off the pinned runner (A-97); if the pinned runner later shows > 1.0 ms p95 the first lever is the A-115 L1 tier-C stagger in Interest, filed then; R0 B.34 A-165: predicted step 4 recomputes the W12 DOCK claim for the local player with Assist.dock_pick over the free wrecks NetSimView reports (TETHERED clear, NET-63), the DOCK edge from its own input history and the free tow slot from the def's tow_slots, the team's Doctrine and the wrecks linked to its ship; it skips Assist.auto_dock on a claimed tick and, per A-164, while that press stays held; the latch is corrected from the server: TETHERED(wreck, own ship) stamped with the edge tick sets it, a snapshot at or after the edge tick without that pair clears it; no server echo; a claim or latch mismatch is resolved by normal reconciliation; tests: a loaded Hauler (tow slots full) holding DOCK inside auto_dock_radius_m predicts the same auto-dock as the server (its own towed wreck is never claimed); an empty Hauler pressing DOCK with a free wreck in reach beside a free pad predicts no assist tick while held, as the server; a hook lost to another Hauler on the edge tick costs at most one reconciliation",
     "note": "R0 B.24 A-119: the service-pad launch is server-authoritative; a DOCKED ship is not stepped (03:553), the client holds the parked pose until wire flags bit 2 clears and LAUNCHED arrives; no prediction of the thrust hold."
   },
   {
@@ -7756,7 +7758,7 @@
       "05 s5.5"
     ],
     "status": "done",
-    "note": "OWNER default: DOCK reuse; alternative: a new PilotInput bit7 HOOK (wire and 06 s4.3 button budget change, not recommended).",
+    "note": "OWNER default: DOCK reuse; alternative: a new PilotInput bit7 HOOK (wire and 06 s4.3 button budget change, not recommended). R0 B.34 A-165: the acceptance's 'the client sees the TETHERED flag from the snapshot' does not hold on the current wire (04 s3.7: TETHERED is not carried); NET-63 makes it true.",
     "merged": "2026-11-27",
     "pr": 203,
     "notes": "DOCK edge claims a wreck once in step 4 (Salvage.claim_docks, dock_claimed(p) is the seam fact) and step 10 hooks exactly that wreck (W12). auto_dock is not wired yet: follow-up GD-55 carries the guard; Architect questions in PM-07; HUD prompt UX-52."
@@ -8703,6 +8705,28 @@
     "notes": "net_sim_view.gd 399 -> 328 lines; pilot-block and TEAM_STATE reads in static NetOwnReads; contract append (flags_byte public); tests-first split waived (pure refactor)."
   },
   {
+    "id": "NET-63",
+    "title": "sim+net: replicate the tow state: TETHERED / UNTETHERED events and wire flags bit 6 (R0 B.23 A-116 named path, pulled forward by R0 B.34 A-165)",
+    "lane": "sim+net",
+    "tier": "Sonnet",
+    "size_days": 1.0,
+    "depends_on": [
+      "GD-40",
+      "NET-17"
+    ],
+    "milestone": "M4",
+    "acceptance": "SimEvent.Kind gains TETHERED and UNTETHERED at the end (append; a = wreck, b = ship; sim/MODULE.md); Salvage emits TETHERED when a wreck is linked (W6 hook, W12 DOCK hook) and UNTETHERED when a tow ends other than by the wreck's delivery or death: a RELEASE drop, or the towing ship's death; 04 s3.6 payload row wreck u16 + ship u16, roster scope, EventRouter row; the snapshot encoder sets wire flags bit 6 per def class (04 s3.3): on a Hauler when it carries cargo or tows at least one wreck, on a wreck when it is towed (the wreck clause is A-165's); PROTOCOL_VERSION + 1; NetSimView.link(wreck) returns the towing ship and flags() reports TETHERED on both ends, derived from the TETHERED pairs and never from bit 6 on a ship (a ferrying Hauler is not TETHERED); a wreck with bit 6 set and no known pair reads TETHERED with link 0 and field_unknown true; NetUnknown lists updated (A-117); tests: an event round trip, a client that sees hook, tow and delivery reads link and flags as LocalSimView does on the same ticks, a late joiner reads a towed wreck as TETHERED with link unknown, a Hauler carrying Ice with no tow reads TETHERED clear; the task edits 04 s3.3 / s3.6 / s3.7 (shared file authorised by A-165); sim/salvage/MODULE.md and net MODULE.md files updated; perf note (snapshot bytes unchanged, one event per hook)",
+    "docs": [
+      "docs/reviews/R0-amendments-28.md",
+      "04 s3.3",
+      "04 s3.6",
+      "04 s3.7",
+      "godot/src/sim/salvage/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
     "id": "CONTENT-5",
     "title": "content+sim: typed GroundUnitDef.barrel_slew_dps / barrel_min_deg / barrel_max_deg; BarrelSlew reads them; cross-field rules (R0 B.31 A-151)",
     "lane": "content+sim",
@@ -8721,6 +8745,25 @@
     "merged": "2026-11-26",
     "pr": 192,
     "notes": "needs net: net/client/net_defs.gd still reads the three barrel keys raw."
+  },
+  {
+    "id": "CONTENT-6",
+    "title": "content: foundry_standard gains its contested Expansion pair as a deferred tail at t>=300 (R0 B.34 A-168)",
+    "lane": "content+sim_ai",
+    "tier": "Sonnet",
+    "size_days": 0.25,
+    "depends_on": [
+      "AI-24",
+      "AI-50"
+    ],
+    "milestone": "M3",
+    "acceptance": "build_orders.json foundry_standard ends with order move dart|scout to contested_field when t>=300 and build outpost near contested_field when presence, after set_replenish harvester 6; the _doc drops the 'cut' sentence and cites A-168; the file-level _doc says a deferred pair is gated 'at or after 5:00' (not 'after 5:00'); test_shipped_books.gd pins 3 deferred pairs (vanguard, bulwark, foundry) and asserts each deferred gate is >= book_end_s; test_sc41_all_books.gd judges a pending step at the last instant of the book: the hand-over snapshot's t_s is capped strictly below book_end_s before expansion_waits_on_clock (the interpreter ends the book at t_s >= book_end_s, so a gate equal to book_end_s never ran), and the verdicts of the other five books do not change; no godot/src change; SC-41 passes on all six books and both slots with foundry_standard pending at 5:00 only on that move, waiting on the clock; validate_content green; no other book changes",
+    "docs": [
+      "docs/reviews/R0-amendments-28.md",
+      "05 s7.3"
+    ],
+    "status": "todo",
+    "merged": null
   },
   {
     "id": "UX-48",
@@ -8977,8 +9020,11 @@
       "https://github.com/Ville-Mattila/planewar/pull/204",
       "docs/reviews/R0-amendments-14.md"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "note": "Ruling R0-amendments-28 (B.34 A-164..A-169): a hooking DOCK press is spent until release (Salvage latch); the client recomputes the claim after NET-63 puts the tow state on the wire; sticky service pause ratified; Docking completes RETURN at SERVICED / LAUNCHED; foundry's contested pair deferred to t>=300; affordable subtracts what the team owes.",
+    "pr": 211,
+    "notes": "R0-amendments-28, register B.34 A-164..A-169: DOCK press that hooks is spent until release (latch per player, S4); client recomputes the claim, NET-63 puts TETHERED on the wire first; sticky paused service ratified; Docking completes RETURN at SERVICED/LAUNCHED (BUG-7); foundry contested pair a deferred tail at t>=300 (CONTENT-6); affordable = stockpile - SimView.team_owed(team) (GD-57, AI-52). Four review rounds. Owner questions with defaults in the doc."
   },
   {
     "id": "BUG-4",
@@ -9073,7 +9119,7 @@
       "PM-07"
     ],
     "milestone": "M3",
-    "acceptance": "A ship's standing RETURN head is completed with ORDER_DONE(value = RETURN) (05 s2.3 C4) when the ship leaves DOCKED after SERVICED or after the R0 B.24 A-119 paused-fuel exit, through the path PM-07 rules (C2). Tests in test/sim/ai/test_docked_mode.gd: (1) a Dart docked with a system RETURN (FLAG_PREPEND) ahead of a PATROL order launches once after SERVICED, emits ORDER_DONE(RETURN) once and resumes the PATROL: exactly 1 LAUNCHED and 0 further DOCKED in 120 s; (2) a Dart whose only order is RETURN goes AUTO and is tagged PATROL above launch_climb_agl_m; (3) a Bomber docked with a RETURN head and an ATTACK queued behind it (FLAG_QUEUE) launches on the ATTACK; (4) DockedMode's Bomber clause head.kind != RETURN becomes 'an order head exists'; sim_ai/MODULE.md and the owning sim module updated; perf note",
+    "acceptance": "R0 B.34 A-167: in step 10 Docking completes a ship's standing RETURN head through ControlOrders.complete_head (ORDER_DONE, value = RETURN; 05 s2.3 C4) (a) on the tick it emits SERVICED for that ship, after the SERVICED event, and (b) on the tick the ship LAUNCHES from a service pad (D13) with a RETURN head still standing, after the LAUNCHED event (the R0 B.24 A-119 paused-fuel exit, a pilot's early launch); only a head of kind RETURN is touched, whatever pad id it names and whenever it was issued; a D10 release (pad gone) completes nothing; a POSSESSED ship's saved queue is popped the same way and its control state stays POSSESSED; the seam, authorised by A-167 (PR flagged 'Contract impact: append'): sim/docking/MODULE.md 'May depend on' gains sim/control/ ControlOrders; Docking gains var orders: ControlOrders (append, _init signature unchanged) which SimWorld sets to _control.orders right after it builds EconomyHub (the Salvage.players / inputs pattern); with orders null nothing is completed; no CommandSinkBase, SimView or enum change, no FORMAT change, S4 round trip across the completion byte-exact. Sim tests (docking suite): SERVICED then ORDER_DONE(RETURN) once on the same tick with a PATROL behind it becoming the head; a head that is not RETURN is untouched; a possessed docked ship reaching SERVICED loses its saved RETURN and stays POSSESSED; an early launch emits LAUNCHED then ORDER_DONE(RETURN); a pad destroyed under a docked ship leaves the RETURN head; a RETURN issued to an already-docked ship (naming another pad) is completed at SERVICED, and at LAUNCHED if the ship leaves first. Tests in test/sim/ai/test_docked_mode.gd: (1) a Dart docked with a system RETURN (FLAG_PREPEND) ahead of a PATROL order launches once after SERVICED, emits ORDER_DONE(RETURN) once and resumes the PATROL: exactly 1 LAUNCHED and 0 further DOCKED in 120 s; (2) a Dart whose only order is RETURN goes AUTO and is tagged PATROL above launch_climb_agl_m; (3) a Bomber docked with a RETURN head and an ATTACK queued behind it (FLAG_QUEUE) launches on the ATTACK after SERVICED; (4) DockedMode's Bomber clause head.kind != RETURN becomes 'an order head exists'; (5) a Dart on the paused-fuel exit (Ore 0, fuel01 >= auto_launch_fuel01) emits ORDER_DONE(RETURN) once at LAUNCHED and makes 0 further DOCKED for that order in 60 s; sim/docking/MODULE.md gains the invariant (D15), sim/control/MODULE.md Open items names Docking as the RETURN caller, sim_ai/MODULE.md updated; perf note",
     "docs": [
       "https://github.com/Ville-Mattila/planewar/pull/204",
       "05 s3.2",
@@ -9144,7 +9190,8 @@
       "godot/src/sim/steer/MODULE.md"
     ],
     "status": "todo",
-    "merged": null
+    "merged": null,
+    "acceptance_append": "; R0 B.34 A-164: Salvage owns the latch: per player slot the EntityId of the ship whose press hooked (0 = none; kept as dock_ship is), dock_spent(p) -> bool (append) = non-zero; set in step 10 when _dock_pass links p's claimed wreck; claim_docks clears it when players.possessed[p] is not that ship or that ship does not hold DOCK, for all 8 players and before its wrecks.is_empty() early return; no Salvage.clear_player and no ControlMachine change; the 8 ids are saved in S4 (FORMAT + 1, once, with the LandingState save; the claim stays unsaved); AssistStep skips p while dock_claimed(p) or dock_spent(p); a claim whose hook fails in step 10 sets no latch; tests: (e) setup (a) with DOCK held for 90 more ticks: no assist tick; release, then a press with no free wreck in reach: auto_dock acts; (f) a claimed wreck taken by another Hauler's W6 pass in step 10: auto_dock acts from the next tick; (g) save / restore mid-hold is byte-exact and the latch holds after it; (h) the hooked wreck is delivered while DOCK stays held and no wreck is left: the latch still holds, and clears on the release tick; (i) the player possesses another ship during the hold: the latch is clear on the next tick; R0 B.34 A-165: the pick rule (nearest free wreck with centre distance <= reach_m, lowest slot on a tie) is one pure static Assist.dock_pick (append; proposed (ship_pos: Vector3, ids: PackedInt64Array, pos: PackedVector3Array, reach_m: float) -> int, 0 = none) that claim_docks calls; the GD-40 suite passes unchanged"
   },
   {
     "id": "GD-56",
@@ -9161,6 +9208,27 @@
       "https://github.com/Ville-Mattila/planewar/pull/215#issuecomment-7236730249",
       "03 s4.2",
       "godot/src/sim/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "GD-57",
+    "title": "sim: SimView.team_owed(team): the Ore and Ice a team's unpaid sites and unstarted queue items still owe (R0 B.34 A-169)",
+    "lane": "sim+net",
+    "tier": "Sonnet",
+    "size_days": 0.5,
+    "depends_on": [
+      "GD-38"
+    ],
+    "milestone": "M3",
+    "acceptance": "SimView gains func team_owed(team: int) -> Vector2 (B.5 append; this task adds the line to sim/MODULE.md SimView): x = Ore, y = Ice the sim will still charge for the team's QUEUED construction sites (sim/build B7: charged when assembly starts) and factory queue items that have not started (sim/production P2), each priced exactly as the sim will charge it, with the Doctrine of the slot it charges; Vector2.ZERO for an invalid team and on the base SimView; LocalSimView implements it after extracting a cohesive helper in an earlier commit of the same PR (local_sim_view.gd is at 399 / 400 lines; A-73), no public symbol moved; no allocation per call beyond the returned value, cost O(the team's sites + queue items), not called by the sim tick; NetSimView returns Vector2.ZERO with field_unknown true for &\"team_owed\" (NetUnknown.NEVER; 04 s3.7 row added by this task, shared file authorised by A-169; no wire change, PROTOCOL_VERSION unchanged); tests: the value rises by a site's resolved cost on the tick it is placed and falls by it on the tick assembly starts and the stockpile is charged (the difference stockpile - owed, the amount AI-52 reads as available, is unchanged across that tick apart from income and refunds); the same for a queue item at its start; two slots of one team with different Doctrines each priced with their own; a cancelled site or item leaves the sum; identical after an S4 save / restore (derived, no FORMAT change); TEST-02 contract clause and mutant; perf note (accessor cost on the 8-player canonical scene)",
+    "docs": [
+      "docs/reviews/R0-amendments-28.md",
+      "godot/src/sim/MODULE.md",
+      "godot/src/sim/build/MODULE.md",
+      "godot/src/sim/production/MODULE.md",
+      "04 s3.7"
     ],
     "status": "todo",
     "merged": null
@@ -9210,13 +9278,14 @@
   },
   {
     "id": "AI-52",
-    "title": "sim_ai Commander: affordable counts Ore and Ice already owed to the slot's own unpaid sites and queue items (AI-24 review F2)",
+    "title": "sim_ai Commander: affordable counts Ore and Ice already owed to the team's unpaid sites and queue items (AI-24 review F2; R0 B.34 A-169)",
     "lane": "sim_ai",
     "tier": "Sonnet",
     "size_days": 0.5,
     "depends_on": [
       "AI-50",
-      "PM-07"
+      "PM-07",
+      "GD-57"
     ],
     "milestone": "M3",
     "acceptance": "Per PM-07's ruling on the definition of affordable: CommanderHost.affordable subtracts the doctrine-resolved Ore and Ice of the slot's own QUEUED construction sites and unstarted factory queue items placed by this Commander; test: with Ore = one Outpost's cost, a book's build outpost closes DONE and the next build step stays PENDING (not stalled) until the site starts assembling and the remaining Ore covers it; SC-41 passes on the shipped books or the books are refit by a named content task; commander/MODULE.md OB1 reworded citing the ruling; perf note",
@@ -9225,7 +9294,8 @@
       "05 s7.3"
     ],
     "status": "todo",
-    "merged": null
+    "merged": null,
+    "acceptance_append": "; R0 B.34 A-169: owed = SimView.team_owed(team): the Ore and Ice of the team's sites and factory queue items that the sim has not yet charged (B7, P2), priced by the sim; the team's, not only the slot's own (the stockpile is the team's, 02 s1 item 9): the test adds a teammate's QUEUED site that holds the next build step PENDING; ore>=X and ice>=X terms stay on-hand amounts; the reactive managers call the same function; the sum is not computed in sim_ai: CommanderHost.affordable reads SimView.stockpile(team) - SimView.team_owed(team) (GD-57) and this task appends nothing to SimView"
   },
   {
     "id": "AI-53",
@@ -9237,7 +9307,7 @@
       "AI-51"
     ],
     "milestone": "M3",
-    "acceptance": "DartModes._orbit holds hold_orbit_radius_m on a MOVE arrival and on HOLD: it gains an integral (or equivalent zero-steady-state-error) radial term kept per slot in AiState (FORMAT append, covered by SC-47 save/load bytes), and the hold orbit flies at a speed read from defs (one new key with a _doc and a schema entry; the Architect names the file, autopilots.json or order_rules.json, on the PR), not at v_cruise; no sim/ change and no FlightController gain change. Tests: (1) on the flat datum a Dart with the shipped values ordered MOVE to a point move_agl_m (ai23_params.json) above the ground holds a horizontal orbit radius between hold_orbit_radius_m - 1 build cell and sqrt(BookParams.reach_m(outpost_presence_radius_m)^2 - move_agl_m^2) (260.4 m at the shipped values) over 60 s after a 60 s settle, and the GUARD and L2b-hold mean radius errors are no larger than before (before/after numbers in the PR); (2) AI-51 test 2 restored from commit 11e0a82 (test/sim/ai/test_sc41_book_move_presence.gd, threshold 0.95 unchanged): on the SC-41 world a Dart ordered by a book move to outpost_site:home_trap reports presence on >= 95 % of Commander thinks from arrival to RTB; (3) the existing Dart, Lancer and Bomber orbit scenarios, SC-06, SC-40, SC-41, SC-43 and SC-47 pass unchanged; test 1 of test_book_move_reach.gd also asserts move_agl_m >= deck_alt_agl_m. Perf note (perf_tick ai A/B delta, 05 s10 Dart think row). Then name the AI-51 content follow-up: bulwark_standard's home-trap move back to 05's form (no ore>=520) and foundry_standard's t>=270 contested pair re-added if SC-41 passes (per PM-07's foundry ruling). Contract question for the PR: the Commander measures presence from the token anchor while the sim measures from the resolved build site (up to 120 m apart), predating AI-51.",
+    "acceptance": "DartModes._orbit holds hold_orbit_radius_m on a MOVE arrival and on HOLD: it gains an integral (or equivalent zero-steady-state-error) radial term kept per slot in AiState (FORMAT append, covered by SC-47 save/load bytes), and the hold orbit flies at a speed read from defs (one new key with a _doc and a schema entry; the Architect names the file, autopilots.json or order_rules.json, on the PR), not at v_cruise; no sim/ change and no FlightController gain change. Tests: (1) on the flat datum a Dart with the shipped values ordered MOVE to a point move_agl_m (ai23_params.json) above the ground holds a horizontal orbit radius between hold_orbit_radius_m - 1 build cell and sqrt(BookParams.reach_m(outpost_presence_radius_m)^2 - move_agl_m^2) (260.4 m at the shipped values) over 60 s after a 60 s settle, and the GUARD and L2b-hold mean radius errors are no larger than before (before/after numbers in the PR); (2) AI-51 test 2 restored from commit 11e0a82 (test/sim/ai/test_sc41_book_move_presence.gd, threshold 0.95 unchanged): on the SC-41 world a Dart ordered by a book move to outpost_site:home_trap reports presence on >= 95 % of Commander thinks from arrival to RTB; (3) the existing Dart, Lancer and Bomber orbit scenarios, SC-06, SC-40, SC-41, SC-43 and SC-47 pass unchanged; test 1 of test_book_move_reach.gd also asserts move_agl_m >= deck_alt_agl_m. Perf note (perf_tick ai A/B delta, 05 s10 Dart think row). Then name the AI-51 content follow-up: bulwark_standard's home-trap move back to 05's form (no ore>=520) only; foundry_standard's contested pair is CONTENT-6's (a deferred tail at t>=300, R0 B.34 A-168) and is not re-added at t>=270. Contract question for the PR: the Commander measures presence from the token anchor while the sim measures from the resolved build site (up to 120 m apart), predating AI-51.",
     "docs": [
       "https://github.com/Ville-Mattila/planewar/pull/212#issuecomment-7236584329",
       "05 s6.1",
