@@ -8762,8 +8762,10 @@
       "godot/assets/ui/theme_pw.tres",
       "https://github.com/Ville-Mattila/planewar/pull/199#issuecomment-7222925519"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 209,
+    "notes": "Focus ring is the white ui_focus offset 2 px outside the button with a 2 px background gap (expand_margin = STROKE + GAP); 19.7/18.5/16.4:1 vs bg_0/1/2; the vs-accent criterion met by separation (orchestrator ruling, 1.88:1 documented). Round 2 after a global-ring regression. ScrollContainer clipping filed as UX-53."
   },
   {
     "id": "UX-51",
@@ -8800,6 +8802,24 @@
       "02 s13",
       "06 s3.2",
       "godot/src/sim/salvage/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "UX-53",
+    "title": "ui: give scroll-hosted focusable rows inner padding so the offset focus ring is not clipped (UX-50 follow-up)",
+    "lane": "ui",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "UX-50"
+    ],
+    "milestone": "M3",
+    "acceptance": "Scroll-hosted focusable rows get >= the focus stylebox expand_margin (4 px) of inner padding (a MarginContainer inside the ScrollContainer) so the UX-50 focus ring is not clipped; applied to RemapScreen (remap_screen.gd:37) and every other ScrollContainer in godot/src/ui and godot/scenes/ui hosting buttons; a test asserts padding >= the theme's focus expand_margin; adjacent tab buttons keep >= the ring width clear of the neighbour edge or the PR states why not",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/209#issuecomment-7236527528",
+      "07 A11Y-13"
     ],
     "status": "todo",
     "merged": null
