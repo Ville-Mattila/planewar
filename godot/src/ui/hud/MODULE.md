@@ -42,6 +42,13 @@ var data: BarrelReadoutData
 var profile: UiScale.Profile
 func set_data(d: BarrelReadoutData) -> void
 func lines() -> PackedStringArray
+class_name ChaseLayout extends RefCounted   # UX-51: pure Chase HUD anchors (06 s3.2); hud.json chase_margin_du, chase_gap_du
+static func bottom_centre(canvas_du: Vector2, size: Vector2, lift: float = 0.0) -> Vector2
+static func status_pos(canvas_du: Vector2, status_size: Vector2) -> Vector2; static func barrel_pos(canvas_du: Vector2, status_size: Vector2, barrel_size: Vector2) -> Vector2
+class_name ChaseHud extends Control   # UX-51: scenes/ui/chase_hud.tscn; StatusCluster + BarrelReadout children, both hidden until fed a possessed id
+var status: StatusClusterView; var barrel: BarrelReadoutView; var profile: UiScale.Profile
+func layout(canvas_du: Vector2) -> void; func set_profile(p: UiScale.Profile) -> void; func hide_all() -> void
+func feed(v: SimView, id: int, ground: GroundUnitDef, shield_until_s: float) -> void   # id <= 0 or dead hides both; barrel shown only when BarrelReadoutData.from_view says so
 class_name FlightHudData extends RefCounted   # plain data for the instruments
 static func from_state(pos: Vector3, vel: Vector3, b: Basis, ground_radius: float, home_dir: Vector3) -> FlightHudData
 class_name FlightInstruments extends Control  # scenes/ui/flight_instruments.tscn; ladder, limb tick, tape, blocks, uplink
@@ -183,9 +190,10 @@ func lines() -> PackedStringArray; func font_size() -> int
 
 ## Test entry points
 
-`godot/test/unit/ui/test_threat_hud.gd` (U13, U14), `test_hud_social.gd` (U15, U16), `test_threat_overlay_scene.gd`; scripted views in `hud_scenario_view.gd`.
+`godot/test/unit/ui/hud/test_chase_hud.gd` (UX-51: Crawler vs Dart in a LocalSimView world), `godot/test/unit/ui/test_threat_hud.gd` (U13, U14), `test_hud_social.gd` (U15, U16), `test_threat_overlay_scene.gd`; scripted views in `hud_scenario_view.gd`.
 
 ## Open items
+- UX-51: the status cluster takes the 06 s3.2 Consumables row (bottom-centre); the barrel readout has no row in the table and sits centred 8 du above it. The cluster is shown for any possessed entity (its fields read 0 for units without them).
 - `StatusMath.boost_fill(state)` deprecated by GD-46 (no caller); delete at a major version, by ADR (10 s4.1).
 
 needs app: refresh `ThreatData`, `TowerHint.from_view` (agl from terrain), `PilotedBadges` and the pip list at their rates, feed `SimEvent`s to `HandoverToast` / `BeaconTracker`, project badge positions through the camera, submit `HandoverToast.accept`; the roster names come from the lobby.

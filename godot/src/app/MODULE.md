@@ -12,7 +12,7 @@ must pass; <= 300 lines.
 | May depend on | everything below it (`tools/deps.json`) |
 | Must never touch | sim internals; only `offline_host.gd` may use `Thread` (non-web branch) |
 | Autoloads used | `App` (stub) |
-| Status | UX-24 ScreenFlow and UX-44 CameraIntentDriver implemented; everything else planned |
+| Status | UX-24 ScreenFlow and UX-44 CameraIntentDriver and UX-51 ChaseHudHost implemented; everything else planned |
 
 ## Public API
 
@@ -51,6 +51,11 @@ func go(id: StringName, args: Dictionary = {}) -> bool
 func back() -> bool
 func on_intent(kind: StringName, _payload: Dictionary) -> void
 
+class_name ChaseHudHost extends Node   # UX-51: feeds ChaseHud each frame from the active SimView for the possessed entity; looks up the GroundUnitDef
+var hud: ChaseHud; var view: SimView; var local_player: int; var possessed_id: int; var shield_until_s: float   # match controller sets view / possessed_id
+func active_id() -> int                      # possessed_id while alive and view.possessor == local_player, else 0
+func refresh() -> void                       # _process calls it; hides both widgets when nothing is possessed
+
 class_name LoadingJob extends RefCounted   # TA-69: map output SHA-256 via ChunkedHasher, one budgeted step per frame
 const META_FILE: String
 var expected: Dictionary                     # file name -> hex digest from meta.json outputs
@@ -84,6 +89,7 @@ func compass_tap() -> void;  func toggle_north_up() -> void;  func follow(dir: V
 ## Test entry points
 
 - `godot/test/unit/app/test_screen_flow.gd`
+- `godot/test/unit/ui/hud/test_chase_hud.gd` (UX-51: ChaseHudHost + ChaseHud with a LocalSimView)
 - `godot/test/unit/app/test_loading_job.gd`, `godot/test/unit/input/remap/test_binding_store_saves.gd` (TA-69)
 - `godot/test/unit/app/test_camera_intent_driver.gd` (touch through InputRouter, mouse/gamepad intents, flight modes inert)
 
