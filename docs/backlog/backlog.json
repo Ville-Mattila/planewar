@@ -9030,8 +9030,10 @@
       "03 s3.7",
       "03 s2.8"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 213,
+    "notes": "Tests only: basin vision on cradle slot 0 (horizon 281.6 m), Dart 40 m up visible, Sensor Mast 1,150 m case, flat-datum parity; two is_occluded_by_datum vectors. Review nit: tests exercise sensor_groups._group_sees (inlined), not Vision.sees."
   },
   {
     "id": "GD-54",
