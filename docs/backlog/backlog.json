@@ -9015,8 +9015,10 @@
       "03 s6.1",
       "03 s6.4"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 215,
+    "notes": "Collision landing band upper bound r + 0.5 + g on sloped pads (A-158), one terrain sample per ship in a pad column above the plain band; uphill/downhill 5 and 15 deg dock; perf within noise. Follow-ups GD-56 (Collision row 8 over budget on main) and AI-54 (LandingWorld fake mirrors A-158)."
   },
   {
     "id": "BUG-7",
@@ -9103,6 +9105,25 @@
     "merged": null
   },
   {
+    "id": "GD-56",
+    "title": "sim/collision: bring perf_tick row 8 (Collision) under its 5.0 ms budget, or record the cost and the rung-4 lever (BUG-6 review)",
+    "lane": "sim",
+    "tier": "Opus",
+    "size_days": 1.0,
+    "depends_on": [
+      "TA-42"
+    ],
+    "milestone": "M3",
+    "acceptance": "sim/collision row 8 (03 s4.2) at perf_tick --full: profile step 8 / 8b on the pinned runner and bring the row p95 <= 5.0 ms with byte-equal contact results (golden contact log or S4 hash over a 1,800-tick run, before = after), or record the measured cost and the rung-4 lever with an 03 s4.2 revision request ('needs docs:'); same-job A/B in the PR (main measured 8.0-9.2 ms mean in BUG-6, PR #215)",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/215#issuecomment-7236730249",
+      "03 s4.2",
+      "godot/src/sim/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
     "id": "AI-50",
     "title": "sim_ai: OpeningBook default when = affordable, a funds wait is never a stall; SC-41 exempts only an Expansion pair that waits on the clock (R0 B.33 A-162, A-163)",
     "lane": "sim_ai",
@@ -9180,6 +9201,24 @@
       "05 s6.1",
       "05 s7.3",
       "godot/src/sim_ai/brains/MODULE.md"
+    ],
+    "status": "todo",
+    "merged": null
+  },
+  {
+    "id": "AI-54",
+    "title": "test/sim/ai: LandingWorld fake mirrors the A-158 terrain-following landing band (BUG-6 follow-up)",
+    "lane": "sim_ai",
+    "tier": "Haiku",
+    "size_days": 0.25,
+    "depends_on": [
+      "BUG-6"
+    ],
+    "milestone": "M3",
+    "acceptance": "godot/test/sim/ai/landing_world.gd step_ship (about :93) uses hh <= r + 0.5 + g with g = max(0, (terrain surface point under the ship - pad pos) . pad up), as sim Collision does after BUG-6 (R0 B.33 A-158); SC-02..SC-08 unchanged; a new case on a 15 degree pad with an 8 m uphill touchdown reports LANDED",
+    "docs": [
+      "https://github.com/Ville-Mattila/planewar/pull/215#issuecomment-7236730249",
+      "docs/reviews/R0-amendments-27.md"
     ],
     "status": "todo",
     "merged": null
