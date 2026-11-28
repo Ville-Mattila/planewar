@@ -23,8 +23,11 @@ class_name BookParams extends RefCounted             # the interpreter's and pla
 const KEYS: PackedStringArray
 var book_end_s: float; var max_rejects: int; var stall_s: float; var presence_retry_s: float; var lock_s: float
 var approach_m: float; var toward_first_m: float; var toward_step_m: float; var core_ring_m: float; var ring_step_m: float; var gap_m: float; var slot_phase_rad: float
-var outpost_ring_m: float; var outpost_cover: float; var move_agl_m: float; var scan_cap: int; var cmds_per_think: PackedInt32Array
+var outpost_ring_m: float; var outpost_cover: float; var move_agl_m: float; var presence_slack_cells: float; var scan_cap: int; var cmds_per_think: PackedInt32Array
 static func def_of(index: Dictionary, name: StringName) -> int                 # content entity_index lookup, -1 when absent
+static func cell_m() -> float                                                  # one build cell's ground width (m)
+func reach_m(presence_radius_m: float) -> float                                # presence radius less presence_slack_cells cells
+func orbit_dist_m(hold_orbit_radius_m: float) -> float                         # 3-D site-to-hold-orbit distance of a book move
 static func from_dict(d: Dictionary) -> BookParams                             # null on a missing key or a bad value
 
 class_name BookContext extends RefCounted            # what a condition reads, filled once per think
@@ -114,6 +117,7 @@ func run_of(slot: int) -> BookRun;  func book_of(slot: int) -> OpeningBook;  fun
 - OB3: a due step that cannot complete for `stall_s` is skipped (SKIPPED_STALL); the stall clock counts a due step's waits for prerequisites, caps, queue space and locks, never a wait on `when` or for funds (A-162; it restarts when the step stops being due). SC-41 leaves a step PENDING at the hand-over only as the `order move` of an Expansion pair that `BookCondition.waits_on_clock` (A-163).
 - OB4 (02 AR-1): `OpeningBook.compile` refuses a `build outpost` without `when: presence` or without an `order move` to the same site as the step before it. An Outpost step with no unit in place for `presence_retry_s` re-issues that `order move`.
 - OB5: the book hands over to the reactive planner after the last step or at `book_end_s` (`BookRun.done`); a handed-over run issues nothing.
+- OB6 (AI-24 review F1, AI-51): a book `order move`'s NOMINAL hold orbit lies inside presence reach: `BookParams.orbit_dist_m(hold_orbit_radius_m)` (order_rules.json hold orbit, horizontal, with `move_agl_m` up) <= `reach_m(outpost_presence_radius_m)` (presence less `presence_slack_cells` build cells); the Commander's own presence test uses the same reach. The order and its presence retry pick an own unit that is not DOCKED, and a docked one only when none else exists (`CommanderHost._pick_unit`). Tests: `test_book_move_reach.gd`,.
 - BP1 (ADR-05, 02 AR-1): `resolve_site` returns only candidates that pass the pre-check: footprint centre inside a finished friendly build radius, outside every known enemy build radius, clear of own footprints; an anchor outside every radius is pulled to the edge of the nearest one, except a structure on a node (Ice Extractor). Outposts: no radius; >= 800 m from friendly and >= 1,500 m from enemy Cores / Outposts (sites included); candidates within half the presence radius's horizontal reach of the anchor. The planner is a pure function of its loaded lists; the sim stays the judge.
 - CB1 (05 s7.1, s7.9): the Commander reads positions only from the team's `Perception` (own list, known list) and `SimView` reads of own entities; the book's `order` picks only own units that are not POSSESSED and whose head order was not issued by another player within `lock_s`.
 - CB2: a think submits at most the tier's `cmds_per_think` commands (the stand-in for the `CommandGovernor`, AI-28); the book is chosen once per slot by weighted draw on the driver's AI RNG among the books of the slot's doctrine; a doctrine with no book idles.
@@ -123,4 +127,4 @@ func run_of(slot: int) -> BookRun;  func book_of(slot: int) -> OpeningBook;  fun
 
 ## Tests
 
-`godot/test/unit/sim_ai/commander/`: `test_book_condition.gd` (grammar), `test_site_tokens.gd` (tokens, `MapSites`), `test_build_planner.gd` (BP1), `test_opening_book.gd` (OB1-OB5, `BookRun` bytes), `test_commander_brain.gd` (CB1, CB2, bytes), `test_commander_perf.gd` (the Commander row). Scenarios `godot/test/sim/ai/`: `test_sc40_opening_vanguard.gd` (SC-40), `test_sc41_all_books.gd` (SC-41), `test_sc43_commander_fog.gd` (SC-43 with the real Commander), `test_sc47_commander_save_load.gd` (CB3). Fixtures `ai23_kit.gd`, `ai23_params.json`, `ai23_books.json`.
+`godot/test/unit/sim_ai/commander/`: `test_book_condition.gd` (grammar), `test_site_tokens.gd` (tokens, `MapSites`), `test_build_planner.gd` (BP1), `test_opening_book.gd` (OB1-OB5, `BookRun` bytes), `test_commander_brain.gd` (CB1, CB2, bytes), `test_commander_perf.gd` (the Commander row), `test_book_move_reach.gd` (OB6). Scenarios `godot/test/sim/ai/`: `test_sc40_opening_vanguard.gd` (SC-40), `test_sc41_all_books.gd` (SC-41), `test_sc43_commander_fog.gd` (SC-43 with the real Commander), `test_sc47_commander_save_load.gd` (CB3). Fixtures `ai23_kit.gd`, `ai23_params.json`, `ai23_books.json`.

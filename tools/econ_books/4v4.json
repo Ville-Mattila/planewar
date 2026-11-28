@@ -13,7 +13,7 @@
   "templates": {
     "frontier": {
       "fields": [
-        {"name": "A", "node": "home_field_a_s0", "d": 450, "refinery": "{p}.refinery_0"},
+        {"name": "A", "node": "home_field_a_s0", "from_start_refinery": true, "refinery": "{p}.refinery_0"},
         {"name": "B", "node": "home_field_b_s0", "d": 600, "refinery": "{p}.refinery2"}
       ],
       "steps": [
@@ -58,7 +58,7 @@
     },
     "interior": {
       "fields": [
-        {"name": "A", "node": "home_field_a_s0", "d": 450, "refinery": "{p}.refinery_0"},
+        {"name": "A", "node": "home_field_a_s0", "from_start_refinery": true, "refinery": "{p}.refinery_0"},
         {"name": "C", "node": "contested_r0", "d": 250, "refinery": "{p}.refinery2", "capacity": 5000, "regen_per_s": 1.5}
       ],
       "steps": [

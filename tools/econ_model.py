@@ -18,6 +18,10 @@ Model assumptions the doc does not state (each is a book/CLI-visible constant, l
   launch_delay_s        a Dart is "airborne" this long after it completes (0:25 -> 0:28)
   service_gate          sortie service clocks start when the first player-built Pad finishes (matches the doc's min-6 rows)
   hauler_min_load       a Hauler leaves the Refinery once the Extractor buffer holds this much Ice
+Harvester distance (GD-54, R0 B.33 A-160): d is the driven leg, dock stop to mining spot = centre-to-centre - spot_frac x radius_m
+- the dock stop (Refinery radius + dock_frac x salvage_deliver_m). A book field with "from_start_refinery": true derives it from the
+cradle recipe (Core slot -> field arc - start_refinery_dist_m) and the kit Harvester starts mining at the field's near edge (R0 B.6);
+a field behind a Refinery the bot places (not in the recipe) gives its driven leg `d` in the book.
 Not modelled: repair, wrecks and salvage, the early share lock (the doc says it never binds), `max_miners`, the dock
 queue wait, placement rules (presence, spacing), fuel/ammo detail beyond the doc's per-sortie service charge.
 """
@@ -25,12 +29,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
+import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFS = ROOT / "godot" / "content" / "defs"
 MAP = ROOT / "godot" / "content" / "maps" / "cradle" / "features.json"
+SPHERE = ROOT / "godot" / "src" / "core" / "sphere.gd"
 BOOKS = Path(__file__).resolve().parent / "econ_books"
 DT = 0.25
 COMBAT = ("dart", "lancer", "bomber")
@@ -58,8 +65,43 @@ class Defs:
             self.items[x["id"]] = dict(x, kind="unit")
         for x in _load("ground_units.json")["ground_units"]:
             self.items[x["id"]] = dict(x, kind="unit")
-        nodes = json.loads(MAP.read_text(encoding="utf-8"))["nodes"]
-        self.nodes = {n["id"]: n for n in nodes}
+        recipe = json.loads(MAP.read_text(encoding="utf-8"))
+        self.nodes = {n["id"]: n for n in recipe["nodes"]}
+        self.slots = {x["slot"]: x for x in recipe["start_slots"]}
+        harvest = next(a for a in _load("autopilots.json")["autopilots"] if a["id"] == "ap_harvester")["harvest"]
+        self.spot_frac, self.dock_frac = float(harvest["spot_frac"]), float(harvest["dock_frac"])
+
+    @staticmethod
+    def sphere_const(name: str) -> float:
+        """A numeric `const NAME: type = expr` of core/sphere.gd (PLANET_RADIUS, GRID_BUILD): the one home of the number (D6)."""
+        text = SPHERE.read_text(encoding="utf-8")
+        m = re.search(rf"^const {name}\s*:\s*\w+\s*=\s*([0-9.]+)", text, re.M)
+        if not m:
+            raise BookError(f"core/sphere.gd has no numeric const {name}")
+        return float(m.group(1))
+
+    def structure_radius(self, item_id: str) -> float:
+        """sim/world WorldDefs.radius_of for a structure: half footprint diagonal in build cells, or the pad radius."""
+        it = self.item(item_id)
+        cell = self.sphere_const("PLANET_RADIUS") * math.pi * 0.5 / self.sphere_const("GRID_BUILD")
+        w, h = it["footprint"][0], it["footprint"][-1]
+        return max(math.hypot(w, h) * cell * 0.5, float(it.get("pad_radius_m", 0.0)))
+
+    def dock_stop_m(self) -> float:
+        """Where a Harvester stops at a Refinery: its radius + dock_frac x salvage_deliver_m (BUG-4 HarvesterBrain.dock_stop)."""
+        return self.structure_radius("refinery") + self.dock_frac * float(self.eco["salvage_deliver_m"])
+
+    def arc_m(self, dir_a: list[float], dir_b: list[float]) -> float:
+        dot = max(-1.0, min(1.0, sum(a * b for a, b in zip(dir_a, dir_b))))
+        return self.sphere_const("PLANET_RADIUS") * math.acos(dot)
+
+    def driven_leg(self, centre_m: float, radius_m: float) -> float:
+        """A-160: d = centre-to-centre - spot_frac x radius_m - the dock stop (the near-side mining spot, BUG-4)."""
+        return centre_m - self.spot_frac * radius_m - self.dock_stop_m()
+
+    def kit_first_leg(self, centre_m: float, radius_m: float) -> float:
+        """R0 B.6: the kit Harvester mines at the near edge (radius_m - bounding_radius from the centre); its first loaded leg."""
+        return centre_m - (radius_m - float(self.items["harvester"]["bounding_radius"])) - self.dock_stop_m()
 
     def item(self, item_id: str) -> dict:
         if item_id not in self.items:
@@ -82,8 +124,19 @@ class Field:
     def __init__(self, defs: Defs, spec: dict) -> None:
         node = defs.nodes[spec["node"]]
         self.name = spec["name"]
-        self.d = float(spec["d"])
         self.refinery = spec["refinery"]
+        radius = float(node["radius_m"])
+        if spec.get("from_start_refinery"):
+            # Field A: the start Refinery stands start_refinery_dist_m from the Core toward the field (02 s8.1).
+            slot = defs.slots[node["slot"]]
+            self.centre_m = defs.arc_m(slot["dir"], node["dir"]) - float(defs.eco["start_refinery_dist_m"])
+            self.d = defs.driven_leg(self.centre_m, radius)
+            self.first_leg = defs.kit_first_leg(self.centre_m, radius)
+        else:
+            # A Refinery the bot places (not in the recipe): the book gives the driven leg d itself (02 s8.2, A-160).
+            self.centre_m = None
+            self.d = float(spec["d"])
+            self.first_leg = self.d
         self.cap = float(spec.get("capacity", node["capacity"]))
         self.regen = float(spec.get("regen_per_s", node["regen_per_s"]))
         self.amount = self.cap
@@ -96,6 +149,7 @@ class Harv:
         self.until = t
         self.load = 0.0
         self.take = 0.0
+        self.first = first_trip                          # the kit Harvester's first loaded leg starts at the near edge
 
 
 class Ship:
@@ -326,7 +380,8 @@ class Sim:
                 elif h.state == "mine":
                     h.load = min(h_def["cargo_ore"], f.amount)
                     f.amount -= h.load
-                    h.state, h.until = "back", h.until + f.d / h_def["ground_speed_loaded"]
+                    leg = f.first_leg if h.first and h.trips == 0 else f.d
+                    h.state, h.until = "back", h.until + leg / h_def["ground_speed_loaded"]
                 elif h.state == "back":
                     if not p.label_done(f.refinery, t):
                         h.until = t + DT

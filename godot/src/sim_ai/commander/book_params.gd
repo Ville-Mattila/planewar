@@ -5,7 +5,7 @@ class_name BookParams extends RefCounted
 ## literal of this lane's behaviour lives in code.
 
 const KEYS: PackedStringArray = ["book_end_s", "max_rejects", "stall_s", "presence_retry_s", "lock_s", "approach_m",
-		"toward_first_m", "toward_step_m", "core_ring_m", "ring_step_m", "gap_m", "slot_phase_rad", "outpost_ring_m", "outpost_cover", "move_agl_m", "scan_cap",
+		"toward_first_m", "toward_step_m", "core_ring_m", "ring_step_m", "gap_m", "slot_phase_rad", "outpost_ring_m", "outpost_cover", "move_agl_m", "presence_slack_cells", "scan_cap",
 		"cmds_per_think"]
 
 var book_end_s: float = 0.0          ## match time at which the book hands over to the reactive planner (05 s7.3: 300)
@@ -23,6 +23,7 @@ var gap_m: float = 0.0               ## clearance kept between footprints
 var outpost_ring_m: float = 0.0      ## Outpost candidates: ring spacing around the anchor (inside the 300 m presence radius)
 var outpost_cover: float = 0.0       ## the home-trap Outpost site lies this share of the Outpost radius short of the trap
 var move_agl_m: float = 0.0          ## altitude of an `order move` point above the site
+var presence_slack_cells: float = 0.0   ## build cells kept inside the presence radius: the Commander's reach, and the margin its book-move orbit keeps (AI-51)
 var scan_cap: int = 0                ## candidates examined per `resolve_site` call
 var cmds_per_think: PackedInt32Array = PackedInt32Array()   ## per tier (easy, normal, hard, brutal) 05 s7.8; AI-28 replaces it
 
@@ -31,6 +32,22 @@ var cmds_per_think: PackedInt32Array = PackedInt32Array()   ## per tier (easy, n
 static func def_of(index: Dictionary, name: StringName) -> int:
 	var v: int = index.get(name, -1)
 	return v
+
+
+## One build cell's width on the ground (m): a cube face is a quarter-turn of arc over `GRID_BUILD` cells.
+static func cell_m() -> float:
+	return 0.5 * PI * Sphere.PLANET_RADIUS / float(Sphere.GRID_BUILD)
+
+
+## The distance from an Outpost site's ground point inside which the Commander counts a unit present: the presence radius
+## less `presence_slack_cells` build cells (the sim snaps the site to its cell).
+func reach_m(presence_radius_m: float) -> float:
+	return presence_radius_m - presence_slack_cells * cell_m()
+
+
+## 3-D distance from a book move's site to its nominal MOVE hold orbit: the orbit radius (horizontal) and `move_agl_m` (up).
+func orbit_dist_m(hold_orbit_radius_m: float) -> float:
+	return sqrt(hold_orbit_radius_m * hold_orbit_radius_m + move_agl_m * move_agl_m)
 
 
 static func from_dict(d: Dictionary) -> BookParams:
@@ -53,6 +70,7 @@ static func from_dict(d: Dictionary) -> BookParams:
 	p.outpost_ring_m = Def.num(d["outpost_ring_m"])
 	p.outpost_cover = Def.num(d["outpost_cover"])
 	p.move_agl_m = Def.num(d["move_agl_m"])
+	p.presence_slack_cells = Def.num(d["presence_slack_cells"])
 	p.scan_cap = roundi(Def.num(d["scan_cap"]))
 	var c: Variant = d["cmds_per_think"]
 	if not (c is Array):

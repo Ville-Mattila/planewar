@@ -8,7 +8,7 @@ const RELAY: StringName = &"relay_station"
 const NEUTRAL: int = 255
 
 
-## Spawns one Relay Station (owner and team 255, F_BUILDING clear, `up` = the terrain normal, resting on the surface) per
+## Spawns one Relay Station (owner and team 255, F_BUILDING clear, `up` = radial `dir` (A-157), resting on the surface) per
 ## entry; returns how many. 0 when the file is missing, malformed, the def is unknown or the map has none.
 static func spawn(map_dir: String, defs: WorldDefs, terrain: Terrain, store: EntityStore, applier: CommandApplier, tick: int) -> int:
 	var def: int = defs.content.entity_index.get(RELAY, -1)
@@ -20,7 +20,7 @@ static func spawn(map_dir: String, defs: WorldDefs, terrain: Terrain, store: Ent
 		if dir.length_squared() == 0.0:
 			continue
 		dir = dir.normalized()
-		var up: Vector3 = terrain.normal_at(dir)
+		var up: Vector3 = dir   # A-157: radial, as Build.stamp (sim/build B10), not the terrain normal
 		var face: Vector3 = _vec(e.get("facing_dir", null))
 		var fwd: Vector3 = face - up * face.dot(up)
 		if fwd.is_zero_approx():

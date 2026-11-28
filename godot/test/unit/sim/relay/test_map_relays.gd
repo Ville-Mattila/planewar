@@ -34,7 +34,7 @@ func test_one_entry_yields_one_finished_neutral_relay_station() -> void:
 	assert_int(st.team[r[0]]).is_equal(255)
 	assert_int(st.owner[r[0]]).is_equal(255)
 	assert_int(st.flags[r[0]] & EntityStore.F_BUILDING).is_equal(0)
-	assert_float(st.up[r[0]].distance_to(_w._terrain.normal_at(Vector3(1.0, 0.0, 0.0)))).is_less(0.0001)
+	assert_float(st.up[r[0]].distance_to(Vector3(1.0, 0.0, 0.0))).is_less(0.0001)
 	assert_float(st.fwd[r[0]].dot(Vector3(0.0, 1.0, 0.0))).is_greater(0.99)
 
 
