@@ -64,7 +64,7 @@ needs `pads` >= 1 and `pad_radius_m` > 0 (`validate_content`). A target is any s
 
 `MapRelays.spawn` reads `<map_dir>/features.json`: first `nodes[]` entries with `kind` "relay_station" (the 02 s9.1 `ring_features`;
 field `dir`), then `neutral_structures[]` entries with `def` "relay_station" (`dir`, optional `facing_dir`), each block in file order. One
-finished structure each (owner and team 255, F_BUILDING clear, on `Terrain.surface_point`, `up` = `Terrain.normal_at`, `fwd` = the facing or the
+finished structure each (owner and team 255, F_BUILDING clear, on `Terrain.surface_point`, `up` = the entry's `dir`, radial (R0 B.33 A-157, GD-52: as every built structure, so Collision's pad plane and `Economy.solar_factor` see a level deck), `fwd` = the facing projected on the tangent plane there or the
 tangent frame). Missing file, no entry or an unknown def spawns none. Skipped on a deserialize (the store comes from the bytes). The two blocks never overlap by
 design (03:992: `neutral_structures[]` holds the non-template structures, the template Relay Stations come from `ring_features`), so there is no
 de-duplication here. needs maps: a bake-side check that no `neutral_structures` entry restates a ring relay (`moonbake validate`). Each spawn
@@ -86,7 +86,7 @@ only while a capturer sits on a pad. Bound in `test_relay_perf.gd` (PerfGate).
 
 ## Test entry points
 
-`godot/test/unit/sim/relay/test_relay_capture.gd` (R1-R6), `test_relay_effects.gd` (R7-R10), `test_relay_perf.gd` (R11), `test_map_relays.gd` (GD-51); fixtures `relay_test_kit.gd`.
+`godot/test/unit/sim/relay/test_relay_capture.gd` (R1-R6), `test_relay_effects.gd` (R7-R10), `test_relay_perf.gd` (R11), `test_map_relays.gd` (GD-51), `test_relay_radial_up.gd` (GD-52, A-157); fixtures `relay_test_kit.gd`.
 
 ## How to add X
 
