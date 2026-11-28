@@ -8992,8 +8992,10 @@
       "03 s7.6",
       "02 s8.4"
     ],
-    "status": "todo",
-    "merged": null
+    "status": "done",
+    "merged": "2026-11-28",
+    "pr": 208,
+    "notes": "MapRelays.spawn: radial up, fwd projected on the tangent plane, pos on terrain (A-157); tests on a ramp fixture incl. Hauler capture on 10 deg and solar_factor parity on 15 deg. Round 2: Hauler test asserts against the radial, not the stored up."
   },
   {
     "id": "BUG-6",
