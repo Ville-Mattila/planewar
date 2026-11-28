@@ -50,7 +50,7 @@ var roster: Roster; var decoder: SnapshotDecoder; var defs: NetDefs; var terrain
 func _init(roster_ref: Roster, decoder_ref: SnapshotDecoder) -> void;  func bind(net_defs: NetDefs, map_terrain: Terrain) -> void
 func sample(at_render_tick: float) -> void            # R0 C2-12 signature
 func set_possessor(index: int, player: int) -> void;  func set_team_state(w: TeamStateWire) -> void
-func team_flags(t: int) -> int;  func team_flags_known(t: int) -> bool;  func own_index() -> int
+func team_flags(t: int) -> int;  func team_flags_known(t: int) -> bool;  func own_index() -> int;  func flags_byte(i: int) -> int   # NET-62: the sampled flags byte (was private, NetOwnReads.dock_state reads it)
 func unknown(id: int) -> bool;  func field_unknown(id: int, accessor: StringName) -> bool   # 04 s3.7 unknown bit: any field / one accessor (NetUnknown)
 func index_of(id: int) -> int;  func entry_of(id: int) -> int;  func live(i: int) -> bool;  func id_at(i: int) -> int   # roster index of a live unit / structure / wreck id (-1); of any live id incl. projectile entities (A-112); replicated entry; EntityId of an index
 func alive(id: int) -> bool;  func pos(id: int) -> Vector3;  func vel(id: int) -> Vector3;  func basis(id: int) -> Basis;  func def_id(id: int) -> int;  func owner(id: int) -> int;  func team(id: int) -> int
@@ -74,6 +74,12 @@ static func of_kinds(v: NetSimView, mask: int) -> PackedInt32Array;  static func
 static func enemy_ships(v: NetSimView, t: int, out: PackedInt32Array) -> int;  static func in_cell(v: NetSimView, cell: int) -> PackedInt32Array
 static func near(v: NetSimView, p: Vector3, r: float, mask: int) -> PackedInt32Array;  static func nearest_pad(v: NetSimView, i0: int) -> int;  static func tech_available(v: NetSimView, t: int, d: int) -> bool
 const PROJECTILE_KIND_BIT: int;  static func projectiles_near(v: NetSimView, p: Vector3, r: float, team_mask: int) -> PackedInt32Array;  static func read_poses(v: NetSimView, ids: PackedInt32Array, out_pos: PackedVector3Array, out_rot: PackedVector4Array) -> int   # 4 (MASK_PROJECTILE = 1 << 4); A-112
+
+class_name NetOwnReads extends RefCounted             # net/client/net_own_reads.gd (NET-62); static own-unit pilot-block + TEAM_STATE reads NetSimView delegates to
+static func fuel01(v: NetSimView, id: int) -> float;  static func ammo(v: NetSimView, id: int) -> int;  static func bombs(v: NetSimView, id: int) -> int;  static func rockets(v: NetSimView, id: int) -> int
+static func incoming_rockets(v: NetSimView, id: int) -> int;  static func boost_state(v: NetSimView, id: int) -> int;  static func boost_cooldown01(v: NetSimView, id: int) -> float;  static func flip_cooldown01(v: NetSimView, id: int) -> float
+static func dock_state(v: NetSimView, id: int) -> int;  static func service_progress(v: NetSimView, id: int) -> Vector3  # NetSimView.flags_byte(i) is now public (was _flags_byte)
+static func stockpile(v: NetSimView, t: int) -> Vector3;  static func stockpile_cap(v: NetSimView, t: int) -> Vector2i;  static func power_balance(v: NetSimView, t: int) -> Vector2;  static func unit_count(v: NetSimView, player: int) -> int
 
 class_name NetPose extends RefCounted                 # net/client/net_pose.gd: the sampled mirror (lazy per entry, cached per record)
 const EXTRAP_MAX_TICKS: int; const ALPHA_EPS: float; const NOT_YET: int  # 3 (100 ms); 1e-4 (a render tick this close to a frame shows that frame); 0x7FFFFFFF
