@@ -54,7 +54,7 @@ needs `pads` >= 1 and `pad_radius_m` > 0 (`validate_content`). A target is any s
 - R9 Plateau. `SimWorld.load_map` of a map id feeds `load_plateaus` to `Economy.set_plateaus`; the radius is `economy.json`
   `solar_plateau_radius_m` and the multiplier `solar_plateau_mult` (02 s8.4). The flat datum has none.
 - R10 Open pad (R0 B.30 A-146, A-147). A capturer, and nobody else, gets the A-109 shape on an open pad it does not hold: no RAM above the
-  deck at any offset, a C_PAD contact inside the pad volume (`Collision.open_pad`, `Collision.capturer`, set from `WorldDefs`); any other ship
+  deck at any offset, a C_PAD contact inside the pad volume (its upper bound following the terrain above the deck, A-158; `Collision.open_pad`, `Collision.capturer`, set from `WorldDefs`); any other ship
   rams it at every altitude, and a capturer is rammed below the deck plane and by any other enemy pad. `Docking` serves a docked ship only while
   the pad's team equals its team (docking D14; the holder and its teammates only) and never gates the launch. Tests: `test_collision.gd`,
   docking `test_service.gd` / `test_launch.gd` / `test_touchdown.gd`, `test_relay_effects.gd`.
